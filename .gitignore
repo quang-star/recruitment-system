@@ -1,12 +1,9 @@
-# Downloaded or derived datasets may be large or contain sensitive text.
-/data/raw/
-/data/interim/
-/data/processed/
-*.partial
-
-# Local historical inputs and generated QA artifacts are not versioned.
+# Project documents, datasets, and local working artifacts are not versioned.
+/data/
+/docs/
 /local-reference/
 /.qa/
+*.partial
 
 # Local secrets must never be committed.
 .env
