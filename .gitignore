@@ -1,9 +1,38 @@
-# Project documents, datasets, and local working artifacts are not versioned.
+# Raw datasets and local working artifacts are not versioned.
 /data/
-/docs/
 /local-reference/
 /.qa/
+# Only the two root project guides are public; keep all other documents local.
+/docs/
+**/*.md
+!/README.md
+!/ARCHITECTURE.md
 *.partial
+
+# Derived build and editor artifacts.
+**/target/
+**/node_modules/
+**/dist/
+**/.venv/
+**/__pycache__/
+**/.pytest_cache/
+**/pytest-cache-files-*/
+**/.mypy_cache/
+**/.ruff_cache/
+**/.coverage/
+**/coverage/
+coverage.xml
+.coverage
+*.pyc
+*.log
+*.tmp
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+.idea/
+*.tsbuildinfo
+.vscode/
 
 # Local secrets must never be committed.
 .env
