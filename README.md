@@ -10,7 +10,7 @@ Hệ thống tuyển dụng IT hỗ trợ phân tích CV, matching ứng viên�
 - `core-service`: recruitment workflow; vertical slice đầu tiên là Candidate Profile.
 - `ai-service`: FastAPI/Alembic; vertical slice đầu tiên là durable processing task.
 - `contracts`: HTTP/event schema dùng chung, không chứa domain hoặc persistence model.
-- `compose.yaml`: PostgreSQL với ba database owner riêng, RabbitMQ, MinIO và các service.
+- `compose.yaml`: PostgreSQL với ba database owner riêng, Kafka chạy KRaft, MinIO và các service.
 
 Ranh giới và invariant kiểm tra được mô tả tại [ARCHITECTURE.md](ARCHITECTURE.md).
 
@@ -24,8 +24,8 @@ Copy-Item .env.example .env
 docker compose up --build
 ~~~
 
-Chỉ Gateway (`8080`) và Web (`5173`) là entry point của ứng dụng. PostgreSQL,
-RabbitMQ và MinIO đang expose port cho development; production profile phải đóng các port nội bộ.
+Chỉ Gateway (`8080`) và Web (`5173`) là entry point của ứng dụng. Kafka và MinIO chỉ được
+expose port cho development; production profile phải đóng các port nội bộ.
 
 ## Kiểm chứng
 
@@ -46,5 +46,5 @@ Integration test Auth/Core dùng PostgreSQL Testcontainers nên Docker Desktop p
 - Auth đã có register, verify-email, login, JWT, refresh rotation, logout và JWKS.
 - Gateway, Core, AI và Web đã có baseline buildable để khóa convention và service boundary.
 - Core/AI mới có vertical slice kiểm chứng kiến trúc; CV, Job, Application, parsing và matching chưa hoàn thiện.
-- External email provider, outbox publisher/consumer và AI worker RabbitMQ chưa được triển khai.
+- External email provider, Kafka outbox publisher/consumer và AI worker Kafka chưa được triển khai.
 - Raw dataset và artifact local không được version; tài liệu, contract, source và manifest phải được version.
