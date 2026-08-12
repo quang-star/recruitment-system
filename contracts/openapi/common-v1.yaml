@@ -1,0 +1,59 @@
+openapi: 3.1.0
+info:
+  title: Smart Recruitment Common HTTP Contract
+  version: 1.0.0
+paths: {}
+components:
+  parameters:
+    CorrelationId:
+      name: X-Correlation-Id
+      in: header
+      required: false
+      schema:
+        type: string
+        format: uuid
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 200
+  schemas:
+    ApiError:
+      type: object
+      additionalProperties: false
+      required: [code, message, details, correlationId, timestamp]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+        correlationId:
+          type: string
+          format: uuid
+        timestamp:
+          type: string
+          format: date-time
+    AsyncCommandResponse:
+      type: object
+      additionalProperties: false
+      required: [taskId, resourceId, status, statusUrl, submittedAt]
+      properties:
+        taskId:
+          type: string
+          format: uuid
+        resourceId:
+          type: string
+          format: uuid
+        status:
+          const: QUEUED
+        statusUrl:
+          type: string
+          format: uri-reference
+        submittedAt:
+          type: string
+          format: date-time
