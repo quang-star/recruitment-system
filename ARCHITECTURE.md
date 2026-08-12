@@ -10,7 +10,7 @@ The detailed decisions remain in `docs/09-system-architecture.md` and
 | `auth-service` | Spring Boot + jOOQ | Account, credential, global role, JWT and session family | Candidate profile, Company, CV, Job or Application |
 | `core-service` | Spring Boot + jOOQ | Candidate/Recruiter profile and recruitment workflow | Password/token, parsing, taxonomy or matching details |
 | `ai-service` | FastAPI + SQLAlchemy/Alembic | Parsing, taxonomy, processing task, matching and research records | Credential or recruitment workflow |
-| AI worker process | Same AI codebase/image | RabbitMQ task execution | Public business API |
+| AI worker process | Same AI codebase/image | Kafka event consumption and task execution | Public business API |
 
 ## Boundary rules
 
@@ -20,10 +20,20 @@ The detailed decisions remain in `docs/09-system-architecture.md` and
 4. HTTP and event boundaries use versioned artifacts under `contracts/`.
 5. JWT consumers validate signature, issuer, expiry and audience.
 6. `X-Correlation-Id` is a UUID generated or normalized at the Gateway and propagated downstream.
-7. Async messages contain identifiers, versions and private object references?not raw CV/JD, PII or tokens.
+7. Async messages contain identifiers, versions and private object references—not raw CV/JD, PII or tokens.
 8. Auth/Core domain code is framework-free. Only persistence adapters import generated jOOQ records.
 9. AI domain/application code does not import FastAPI, SQLAlchemy or Pydantic.
 10. Database state and outbox are committed together when event-producing use cases are implemented.
+
+## Kafka conventions
+
+1. Kafka is the asynchronous event backbone; services do not communicate through broker-specific queues or exchanges.
+2. Topics are versioned event streams with lowercase dot-separated names, for example `cv.uploaded.v1`.
+3. Producers wrap event payloads with `contracts/schemas/event-envelope-v1.schema.json`. The Kafka record key is the aggregate or resource UUID to preserve ordering for that resource.
+4. Each consuming service uses its own stable consumer group. Instances of the same service share the group for horizontal scaling.
+5. Delivery is at-least-once. Consumers persist processed event IDs in their inbox to make handling idempotent.
+6. Failed records use bounded retries followed by a dead-letter topic named `<topic>.dlq`; raw CV/JD, PII and tokens must not appear in error metadata.
+7. Producers commit business state and outbox records in one database transaction. An outbox relay publishes to Kafka without coupling domain code to Kafka clients.
 
 ## Verification
 
