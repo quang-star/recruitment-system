@@ -1,0 +1,43 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: gateway-service
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${AUTH_JWKS_URI:http://auth-service:8081/.well-known/jwks.json}
+          issuer-uri: ${AUTH_JWT_ISSUER:http://localhost:8080}
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: auth-service
+              uri: ${AUTH_SERVICE_URL:http://auth-service:8081}
+              predicates:
+                - Path=/api/v1/auth/**,/api/v1/users/**,/.well-known/jwks.json
+            - id: core-service
+              uri: ${CORE_SERVICE_URL:http://core-service:8082}
+              predicates:
+                - Path=/api/v1/companies/**,/api/v1/candidates/**,/api/v1/cvs/**,/api/v1/jobs/**,/api/v1/applications/**
+            - id: ai-service
+              uri: ${AI_SERVICE_URL:http://ai-service:8083}
+              predicates:
+                - Path=/api/v1/parsed-cvs/**,/api/v1/parsed-jds/**,/api/v1/matching-requests/**,/api/v1/matching-results/**,/api/v1/rankings/**,/api/v1/taxonomy/**,/api/v1/ai-tasks/**
+          globalcors:
+            cors-configurations:
+              '[/**]':
+                allowed-origins: ${WEB_ORIGIN:http://localhost:5173}
+                allowed-methods: GET,POST,PUT,PATCH,DELETE,OPTIONS
+                allowed-headers: Authorization,Content-Type,Idempotency-Key,X-Correlation-Id
+                exposed-headers: X-Correlation-Id
+                allow-credentials: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
