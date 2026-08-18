@@ -1,0 +1,18 @@
+{
+  "cvId": "f0c0d6e6-1b5f-4f0e-a87d-2b3b0a9f2c19",
+  "candidateUserId": "6e4b2b0d-d4f7-4f3b-9df0-8b0d9a4b89fd",
+  "title": "Backend CV 2026",
+  "status": "ACTIVE",
+  "activeVersion": {
+    "cvVersionId": "f5b1244e-915f-4c4e-99f8-b0e8f4cd4f1f",
+    "versionNumber": 1,
+    "originalFilename": "resume.pdf",
+    "mimeType": "application/pdf",
+    "sizeBytes": 58231,
+    "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "processingStatus": "UPLOADED",
+    "failureCode": null,
+    "version": 0
+  },
+  "version": 0
+}
