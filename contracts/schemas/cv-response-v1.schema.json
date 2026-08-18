@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://smart-recruitment.local/contracts/schemas/cv-response-v1.schema.json",
+  "title": "CV response v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["cvId", "candidateUserId", "title", "status", "activeVersion", "version"],
+  "properties": {
+    "cvId": { "type": "string", "format": "uuid" },
+    "candidateUserId": { "type": "string", "format": "uuid" },
+    "title": { "type": "string", "minLength": 1, "maxLength": 160 },
+    "status": { "enum": ["ACTIVE", "ARCHIVED", "DELETED"] },
+    "activeVersion": { "$ref": "#/$defs/version" },
+    "version": { "type": "integer", "minimum": 0 }
+  },
+  "$defs": {
+    "version": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cvVersionId", "versionNumber", "originalFilename", "mimeType", "sizeBytes",
+        "sha256", "processingStatus", "failureCode", "version"
+      ],
+      "properties": {
+        "cvVersionId": { "type": "string", "format": "uuid" },
+        "versionNumber": { "type": "integer", "minimum": 1 },
+        "originalFilename": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "mimeType": { "const": "application/pdf" },
+        "sizeBytes": { "type": "integer", "minimum": 1, "maximum": 10485760 },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "processingStatus": {
+          "enum": [
+            "UPLOADED", "QUEUED", "PROCESSING", "PARSED", "NEEDS_REVIEW",
+            "CONFIRMED", "REJECTED", "FAILED", "SUPERSEDED", "DELETED"
+          ]
+        },
+        "failureCode": { "type": ["string", "null"] },
+        "version": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}
