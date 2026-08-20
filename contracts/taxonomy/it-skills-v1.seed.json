@@ -1,0 +1,321 @@
+{
+  "$schema": "https://smart-recruitment.local/contracts/schemas/skill-taxonomy-v1.schema.json",
+  "schemaVersion": "skill-taxonomy/1.0",
+  "semanticVersion": "1.0.0",
+  "status": "DRAFT",
+  "languageScope": ["vi", "en"],
+  "skills": [
+    {
+      "stableId": "32af50d2-0649-589a-b10c-ee404cef802d",
+      "canonicalName": "Java",
+      "normalizedName": "java",
+      "type": "language",
+      "category": "backend",
+      "aliases": [],
+      "relations": [],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "76240767-3058-5507-b6c3-3b16fc05bd8c",
+      "canonicalName": "Spring Boot",
+      "normalizedName": "spring-boot",
+      "type": "framework",
+      "category": "backend",
+      "aliases": [
+        { "value": "SpringBoot", "normalized": "springboot", "language": "neutral" }
+      ],
+      "relations": [
+        { "type": "RELATED", "targetSkillId": "32af50d2-0649-589a-b10c-ee404cef802d" }
+      ],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "9da49ca9-8c3d-5eff-8d1b-f435385d1e96",
+      "canonicalName": "Python",
+      "normalizedName": "python",
+      "type": "language",
+      "category": "backend",
+      "aliases": [],
+      "relations": [],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "7336682e-e97e-5349-bf01-2d9453c93c75",
+      "canonicalName": "FastAPI",
+      "normalizedName": "fastapi",
+      "type": "framework",
+      "category": "backend",
+      "aliases": [],
+      "relations": [
+        { "type": "RELATED", "targetSkillId": "9da49ca9-8c3d-5eff-8d1b-f435385d1e96" }
+      ],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "4eabcf91-c028-5bbf-a4d0-ce9add1fc447",
+      "canonicalName": "JavaScript",
+      "normalizedName": "javascript",
+      "type": "language",
+      "category": "frontend",
+      "aliases": [
+        { "value": "JS", "normalized": "js", "language": "neutral" },
+        { "value": "ECMAScript", "normalized": "ecmascript", "language": "neutral" }
+      ],
+      "relations": [],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "77647985-2117-54b1-805b-47929fb5fbad",
+      "canonicalName": "TypeScript",
+      "normalizedName": "typescript",
+      "type": "language",
+      "category": "frontend",
+      "aliases": [
+        { "value": "TS", "normalized": "ts", "language": "neutral" }
+      ],
+      "relations": [
+        { "type": "RELATED", "targetSkillId": "4eabcf91-c028-5bbf-a4d0-ce9add1fc447" }
+      ],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "d4f49f3b-a28e-5fd3-b558-94beba4054c0",
+      "canonicalName": "React",
+      "normalizedName": "react",
+      "type": "library",
+      "category": "frontend",
+      "aliases": [
+        { "value": "ReactJS", "normalized": "reactjs", "language": "neutral" },
+        { "value": "React.js", "normalized": "react.js", "language": "neutral" }
+      ],
+      "relations": [
+        { "type": "RELATED", "targetSkillId": "4eabcf91-c028-5bbf-a4d0-ce9add1fc447" },
+        { "type": "RELATED", "targetSkillId": "77647985-2117-54b1-805b-47929fb5fbad" }
+      ],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "04a3bacd-1d28-5d51-b8f8-e60bc3530401",
+      "canonicalName": "Next.js",
+      "normalizedName": "next.js",
+      "type": "framework",
+      "category": "frontend",
+      "aliases": [
+        { "value": "NextJS", "normalized": "nextjs", "language": "neutral" }
+      ],
+      "relations": [
+        { "type": "RELATED", "targetSkillId": "d4f49f3b-a28e-5fd3-b558-94beba4054c0" }
+      ],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "17f464dd-c8e5-50df-b8d2-db50ceae6a71",
+      "canonicalName": "Node.js",
+      "normalizedName": "node.js",
+      "type": "framework",
+      "category": "backend",
+      "aliases": [
+        { "value": "NodeJS", "normalized": "nodejs", "language": "neutral" }
+      ],
+      "relations": [
+        { "type": "RELATED", "targetSkillId": "4eabcf91-c028-5bbf-a4d0-ce9add1fc447" }
+      ],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "b78e841d-2382-5635-88a2-b8bf0d969144",
+      "canonicalName": "PostgreSQL",
+      "normalizedName": "postgresql",
+      "type": "database",
+      "category": "backend",
+      "aliases": [
+        { "value": "Postgres", "normalized": "postgres", "language": "neutral" }
+      ],
+      "relations": [],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "e1fe18a1-607b-558b-a2b2-8745ca79b5e1",
+      "canonicalName": "MySQL",
+      "normalizedName": "mysql",
+      "type": "database",
+      "category": "backend",
+      "aliases": [],
+      "relations": [],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "025b804c-5509-59e9-861f-cdcab7f3426d",
+      "canonicalName": "MongoDB",
+      "normalizedName": "mongodb",
+      "type": "database",
+      "category": "backend",
+      "aliases": [
+        { "value": "Mongo", "normalized": "mongo", "language": "neutral" }
+      ],
+      "relations": [],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "86a56f4d-ea8e-5fa8-acc1-9dbf79519a30",
+      "canonicalName": "Redis",
+      "normalizedName": "redis",
+      "type": "database",
+      "category": "backend",
+      "aliases": [],
+      "relations": [],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "b69da65b-d915-5710-9703-a218935b7688",
+      "canonicalName": "Docker",
+      "normalizedName": "docker",
+      "type": "devops",
+      "category": "devops",
+      "aliases": [],
+      "relations": [],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "679e9172-be80-58e5-95bc-e1785672eff4",
+      "canonicalName": "Kubernetes",
+      "normalizedName": "kubernetes",
+      "type": "devops",
+      "category": "devops",
+      "aliases": [
+        { "value": "K8s", "normalized": "k8s", "language": "neutral" }
+      ],
+      "relations": [
+        { "type": "RELATED", "targetSkillId": "b69da65b-d915-5710-9703-a218935b7688" }
+      ],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "492cd1bb-266f-5404-9e9d-604258344c18",
+      "canonicalName": "Amazon Web Services",
+      "normalizedName": "amazon-web-services",
+      "type": "cloud",
+      "category": "devops",
+      "aliases": [
+        { "value": "AWS", "normalized": "aws", "language": "neutral" }
+      ],
+      "relations": [],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "0c57728e-8343-5ef2-aa80-db3df230cc81",
+      "canonicalName": "Apache Kafka",
+      "normalizedName": "apache-kafka",
+      "type": "other",
+      "category": "backend",
+      "aliases": [
+        { "value": "Kafka", "normalized": "kafka", "language": "neutral" }
+      ],
+      "relations": [],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "5c033a03-d244-568f-bb31-79cb4edb70c9",
+      "canonicalName": "Git",
+      "normalizedName": "git",
+      "type": "devops",
+      "category": "cross_functional",
+      "aliases": [],
+      "relations": [],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "129f8cc5-61d5-5435-ada6-66fc80a145fb",
+      "canonicalName": "REST API",
+      "normalizedName": "rest-api",
+      "type": "methodology",
+      "category": "backend",
+      "aliases": [
+        { "value": "RESTful API", "normalized": "restful-api", "language": "neutral" }
+      ],
+      "relations": [],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "a2a50549-ca30-5c55-99ac-6999d60aa7ce",
+      "canonicalName": "Microservices",
+      "normalizedName": "microservices",
+      "type": "methodology",
+      "category": "backend",
+      "aliases": [
+        { "value": "Microservice Architecture", "normalized": "microservice-architecture", "language": "en" }
+      ],
+      "relations": [],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "424e0329-7d4c-5629-9e0e-e86f372fc98e",
+      "canonicalName": "CI/CD",
+      "normalizedName": "ci/cd",
+      "type": "devops",
+      "category": "devops",
+      "aliases": [
+        { "value": "CICD", "normalized": "cicd", "language": "neutral" },
+        {
+          "value": "Continuous Integration and Continuous Delivery",
+          "normalized": "continuous-integration-and-continuous-delivery",
+          "language": "en"
+        }
+      ],
+      "relations": [],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "784db85f-2094-5194-8631-200337a1c3a0",
+      "canonicalName": "Machine Learning",
+      "normalizedName": "machine-learning",
+      "type": "data_ai",
+      "category": "data_ai",
+      "aliases": [
+        { "value": "ML", "normalized": "ml", "language": "neutral" },
+        { "value": "Học máy", "normalized": "hoc-may", "language": "vi" }
+      ],
+      "relations": [
+        { "type": "RELATED", "targetSkillId": "9da49ca9-8c3d-5eff-8d1b-f435385d1e96" }
+      ],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "0e2c44a5-c5af-5103-a19f-c031f10352a9",
+      "canonicalName": "SQL",
+      "normalizedName": "sql",
+      "type": "language",
+      "category": "data_ai",
+      "aliases": [
+        { "value": "Structured Query Language", "normalized": "structured-query-language", "language": "en" }
+      ],
+      "relations": [],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "b9af794b-5229-5c58-99ee-a09d57a0dc32",
+      "canonicalName": "Linux",
+      "normalizedName": "linux",
+      "type": "devops",
+      "category": "cross_functional",
+      "aliases": [
+        { "value": "GNU/Linux", "normalized": "gnu-linux", "language": "neutral" }
+      ],
+      "relations": [],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "5b4320c2-1981-5938-a156-952bc86e6895",
+      "canonicalName": "Software Testing",
+      "normalizedName": "software-testing",
+      "type": "testing",
+      "category": "qa",
+      "aliases": [
+        { "value": "Kiểm thử phần mềm", "normalized": "kiem-thu-phan-mem", "language": "vi" },
+        { "value": "QA Testing", "normalized": "qa-testing", "language": "en" }
+      ],
+      "relations": [],
+      "status": "ACTIVE"
+    }
+  ]
+}

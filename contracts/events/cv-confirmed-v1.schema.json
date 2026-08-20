@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://smart-recruitment.local/contracts/events/cv-confirmed-v1.schema.json",
+  "title": "cv.confirmed.v1 payload",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["cvVersionId", "parsedRevisionId", "sourceHash", "confirmedBy"],
+  "properties": {
+    "cvVersionId": { "type": "string", "format": "uuid" },
+    "parsedRevisionId": { "type": "string", "format": "uuid" },
+    "sourceHash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "confirmedBy": { "type": "string", "format": "uuid" }
+  }
+}
