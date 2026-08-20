@@ -1,0 +1,174 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://smart-recruitment.local/contracts/schemas/parsed-jd-v1.schema.json",
+  "title": "ParsedJD v1",
+  "description": "Structured job description whose hard constraints require recruiter confirmation.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "document",
+    "title",
+    "requirements",
+    "responsibilities",
+    "overallConfidence",
+    "qualityFlags"
+  ],
+  "properties": {
+    "$schema": { "const": "https://smart-recruitment.local/contracts/schemas/parsed-jd-v1.schema.json" },
+    "schemaVersion": { "const": "parsed-jd/1.0" },
+    "document": { "$ref": "#/$defs/document" },
+    "title": { "$ref": "#/$defs/title" },
+    "requirements": { "$ref": "#/$defs/requirements" },
+    "responsibilities": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/requirement" }
+    },
+    "overallConfidence": { "$ref": "#/$defs/confidence" },
+    "qualityFlags": { "$ref": "#/$defs/qualityFlags" }
+  },
+  "$defs": {
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "evidenceIds": {
+      "type": "array",
+      "items": { "type": "string", "format": "uuid" },
+      "uniqueItems": true
+    },
+    "qualityFlags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Z][A-Z0-9_]{2,99}$"
+      },
+      "uniqueItems": true
+    },
+    "document": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["jobVersionId", "language", "sourceHash", "parserVersion"],
+      "properties": {
+        "jobVersionId": { "type": "string", "format": "uuid" },
+        "language": { "enum": ["vi", "en", "mixed", "unknown"] },
+        "sourceHash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "parserVersion": { "type": "string", "minLength": 1, "maxLength": 100 }
+      }
+    },
+    "title": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["raw", "canonicalFamily", "level", "confidence", "evidenceIds"],
+      "properties": {
+        "raw": { "type": "string", "minLength": 1, "maxLength": 240 },
+        "canonicalFamily": {
+          "type": ["string", "null"],
+          "enum": [
+            "BACKEND",
+            "FRONTEND",
+            "FULLSTACK",
+            "MOBILE",
+            "DEVOPS",
+            "DATA_AI",
+            "QA",
+            "SECURITY",
+            "OTHER",
+            null
+          ]
+        },
+        "level": {
+          "type": ["string", "null"],
+          "enum": ["INTERN", "FRESHER", "JUNIOR", "MIDDLE", "SENIOR", "LEAD", "MANAGER", null]
+        },
+        "confidence": { "$ref": "#/$defs/confidence" },
+        "evidenceIds": { "$ref": "#/$defs/evidenceIds" }
+      }
+    },
+    "requirements": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requiredSkills",
+        "preferredSkills",
+        "minimumRelevantExperienceMonths",
+        "education",
+        "languages"
+      ],
+      "properties": {
+        "requiredSkills": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/skillRequirement" }
+        },
+        "preferredSkills": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/skillRequirement" }
+        },
+        "minimumRelevantExperienceMonths": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "education": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/requirement" }
+        },
+        "languages": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/requirement" }
+        }
+      }
+    },
+    "skillRequirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "raw",
+        "canonicalSkillId",
+        "normalizationStatus",
+        "criticality",
+        "minimumMonths",
+        "evidenceIds",
+        "confidence",
+        "confirmedByRecruiter"
+      ],
+      "properties": {
+        "raw": { "type": "string", "minLength": 1, "maxLength": 240 },
+        "canonicalSkillId": { "type": ["string", "null"], "format": "uuid" },
+        "normalizationStatus": { "enum": ["KNOWN", "PENDING", "UNRESOLVED"] },
+        "criticality": { "enum": ["CRITICAL", "NORMAL"] },
+        "minimumMonths": { "type": ["integer", "null"], "minimum": 0 },
+        "evidenceIds": { "$ref": "#/$defs/evidenceIds" },
+        "confidence": { "$ref": "#/$defs/confidence" },
+        "confirmedByRecruiter": { "type": "boolean" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "normalizationStatus": { "const": "KNOWN" } },
+            "required": ["normalizationStatus"]
+          },
+          "then": {
+            "properties": { "canonicalSkillId": { "type": "string", "format": "uuid" } }
+          },
+          "else": {
+            "properties": { "canonicalSkillId": { "type": "null" } }
+          }
+        }
+      ]
+    },
+    "requirement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["raw", "normalizedValue", "required", "evidenceIds", "confidence", "confirmedByRecruiter"],
+      "properties": {
+        "raw": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "normalizedValue": { "type": ["string", "null"], "maxLength": 240 },
+        "required": { "type": "boolean" },
+        "evidenceIds": { "$ref": "#/$defs/evidenceIds" },
+        "confidence": { "$ref": "#/$defs/confidence" },
+        "confirmedByRecruiter": { "type": "boolean" }
+      }
+    }
+  }
+}

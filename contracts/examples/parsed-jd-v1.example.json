@@ -1,0 +1,58 @@
+{
+  "$schema": "https://smart-recruitment.local/contracts/schemas/parsed-jd-v1.schema.json",
+  "schemaVersion": "parsed-jd/1.0",
+  "document": {
+    "jobVersionId": "779494ac-c858-4570-a884-6e88423b8e2b",
+    "language": "vi",
+    "sourceHash": "0cb83583181fc5bdb09aa37cf82ab5f89e7438e88925de3e6e1f0f0eddb76382",
+    "parserVersion": "rules-v0.1.0"
+  },
+  "title": {
+    "raw": "Senior Backend Engineer",
+    "canonicalFamily": "BACKEND",
+    "level": "SENIOR",
+    "confidence": 0.93,
+    "evidenceIds": ["b8c6e861-0495-434a-a1b5-86bbeb2bbab1"]
+  },
+  "requirements": {
+    "requiredSkills": [
+      {
+        "raw": "Java",
+        "canonicalSkillId": "32af50d2-0649-589a-b10c-ee404cef802d",
+        "normalizationStatus": "KNOWN",
+        "criticality": "CRITICAL",
+        "minimumMonths": 24,
+        "evidenceIds": ["56f8cd28-8726-4983-95a2-85d245121a4c"],
+        "confidence": 0.96,
+        "confirmedByRecruiter": true
+      }
+    ],
+    "preferredSkills": [
+      {
+        "raw": "Kafka",
+        "canonicalSkillId": "0c57728e-8343-5ef2-aa80-db3df230cc81",
+        "normalizationStatus": "KNOWN",
+        "criticality": "NORMAL",
+        "minimumMonths": null,
+        "evidenceIds": ["bc916560-61e7-4873-b8e5-af9ffdccfdb4"],
+        "confidence": 0.88,
+        "confirmedByRecruiter": true
+      }
+    ],
+    "minimumRelevantExperienceMonths": 36,
+    "education": [],
+    "languages": []
+  },
+  "responsibilities": [
+    {
+      "raw": "Thiết kế và vận hành các dịch vụ backend.",
+      "normalizedValue": null,
+      "required": true,
+      "evidenceIds": ["468c04b5-730a-466c-917b-477d79f2b0ad"],
+      "confidence": 0.9,
+      "confirmedByRecruiter": true
+    }
+  ],
+  "overallConfidence": 0.91,
+  "qualityFlags": []
+}

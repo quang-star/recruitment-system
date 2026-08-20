@@ -1,0 +1,238 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://smart-recruitment.local/contracts/schemas/parsed-cv-v1.schema.json",
+  "title": "ParsedCV v1",
+  "description": "PII-minimized structured CV used for review, normalization and matching.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "document",
+    "skills",
+    "experiences",
+    "projects",
+    "education",
+    "certificates",
+    "languages",
+    "summary"
+  ],
+  "properties": {
+    "$schema": { "const": "https://smart-recruitment.local/contracts/schemas/parsed-cv-v1.schema.json" },
+    "schemaVersion": { "const": "parsed-cv/1.0" },
+    "document": { "$ref": "#/$defs/document" },
+    "skills": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/skill" }
+    },
+    "experiences": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/experience" }
+    },
+    "projects": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/project" }
+    },
+    "education": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/education" }
+    },
+    "certificates": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/certificate" }
+    },
+    "languages": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/language" }
+    },
+    "summary": { "$ref": "#/$defs/summary" }
+  },
+  "$defs": {
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "nullableMonth": {
+      "type": ["string", "null"],
+      "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$"
+    },
+    "evidenceIds": {
+      "type": "array",
+      "items": { "type": "string", "format": "uuid" },
+      "uniqueItems": true
+    },
+    "qualityFlags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Z][A-Z0-9_]{2,99}$"
+      },
+      "uniqueItems": true
+    },
+    "document": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cvVersionId", "language", "sourceHash", "parserVersion"],
+      "properties": {
+        "cvVersionId": { "type": "string", "format": "uuid" },
+        "language": { "enum": ["vi", "en", "mixed", "unknown"] },
+        "sourceHash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "parserVersion": { "type": "string", "minLength": 1, "maxLength": 100 }
+      }
+    },
+    "skill": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "raw",
+        "canonicalSkillId",
+        "normalizationStatus",
+        "evidenceIds",
+        "confidence",
+        "provenance"
+      ],
+      "properties": {
+        "raw": { "type": "string", "minLength": 1, "maxLength": 240 },
+        "canonicalSkillId": { "type": ["string", "null"], "format": "uuid" },
+        "normalizationStatus": { "enum": ["KNOWN", "PENDING", "UNRESOLVED"] },
+        "evidenceIds": { "$ref": "#/$defs/evidenceIds" },
+        "confidence": { "$ref": "#/$defs/confidence" },
+        "provenance": {
+          "enum": ["EXTRACTED", "USER_CONFIRMED", "USER_ASSERTED"]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "normalizationStatus": { "const": "KNOWN" } },
+            "required": ["normalizationStatus"]
+          },
+          "then": {
+            "properties": { "canonicalSkillId": { "type": "string", "format": "uuid" } }
+          },
+          "else": {
+            "properties": { "canonicalSkillId": { "type": "null" } }
+          }
+        }
+      ]
+    },
+    "experience": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "titleRaw",
+        "titleCanonical",
+        "companyRedacted",
+        "startMonth",
+        "endMonth",
+        "isCurrent",
+        "responsibilities",
+        "skillIds",
+        "evidenceIds",
+        "confidence"
+      ],
+      "properties": {
+        "titleRaw": { "type": "string", "minLength": 1, "maxLength": 240 },
+        "titleCanonical": { "type": ["string", "null"], "maxLength": 160 },
+        "companyRedacted": { "type": ["string", "null"], "maxLength": 240 },
+        "startMonth": { "$ref": "#/$defs/nullableMonth" },
+        "endMonth": { "$ref": "#/$defs/nullableMonth" },
+        "isCurrent": { "type": "boolean" },
+        "responsibilities": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 1000 }
+        },
+        "skillIds": {
+          "type": "array",
+          "items": { "type": "string", "format": "uuid" },
+          "uniqueItems": true
+        },
+        "evidenceIds": { "$ref": "#/$defs/evidenceIds" },
+        "confidence": { "$ref": "#/$defs/confidence" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "isCurrent": { "const": true } },
+            "required": ["isCurrent"]
+          },
+          "then": { "properties": { "endMonth": { "type": "null" } } }
+        }
+      ]
+    },
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "description", "skillIds", "evidenceIds", "confidence"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 240 },
+        "description": { "type": ["string", "null"], "maxLength": 2000 },
+        "skillIds": {
+          "type": "array",
+          "items": { "type": "string", "format": "uuid" },
+          "uniqueItems": true
+        },
+        "evidenceIds": { "$ref": "#/$defs/evidenceIds" },
+        "confidence": { "$ref": "#/$defs/confidence" }
+      }
+    },
+    "education": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "institutionRedacted",
+        "degreeLevel",
+        "fieldOfStudy",
+        "startMonth",
+        "endMonth",
+        "evidenceIds",
+        "confidence"
+      ],
+      "properties": {
+        "institutionRedacted": { "type": ["string", "null"], "maxLength": 240 },
+        "degreeLevel": { "type": ["string", "null"], "maxLength": 80 },
+        "fieldOfStudy": { "type": ["string", "null"], "maxLength": 180 },
+        "startMonth": { "$ref": "#/$defs/nullableMonth" },
+        "endMonth": { "$ref": "#/$defs/nullableMonth" },
+        "evidenceIds": { "$ref": "#/$defs/evidenceIds" },
+        "confidence": { "$ref": "#/$defs/confidence" }
+      }
+    },
+    "certificate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "issuer", "issuedMonth", "evidenceIds", "confidence"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 240 },
+        "issuer": { "type": ["string", "null"], "maxLength": 240 },
+        "issuedMonth": { "$ref": "#/$defs/nullableMonth" },
+        "evidenceIds": { "$ref": "#/$defs/evidenceIds" },
+        "confidence": { "$ref": "#/$defs/confidence" }
+      }
+    },
+    "language": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["languageCode", "proficiency", "evidenceIds", "confidence"],
+      "properties": {
+        "languageCode": {
+          "type": "string",
+          "pattern": "^[a-z]{2,3}(-[A-Z]{2})?$"
+        },
+        "proficiency": { "type": ["string", "null"], "maxLength": 80 },
+        "evidenceIds": { "$ref": "#/$defs/evidenceIds" },
+        "confidence": { "$ref": "#/$defs/confidence" }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["totalExperienceMonths", "overallConfidence", "qualityFlags"],
+      "properties": {
+        "totalExperienceMonths": { "type": "integer", "minimum": 0 },
+        "overallConfidence": { "$ref": "#/$defs/confidence" },
+        "qualityFlags": { "$ref": "#/$defs/qualityFlags" }
+      }
+    }
+  }
+}

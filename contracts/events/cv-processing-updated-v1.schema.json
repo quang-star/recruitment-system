@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://smart-recruitment.local/contracts/events/cv-processing-updated-v1.schema.json",
+  "title": "cv.processing.updated.v1 payload",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["cvId", "cvVersionId", "processingTaskId", "sourceHash", "status", "failureCode"],
+  "properties": {
+    "cvId": { "type": "string", "format": "uuid" },
+    "cvVersionId": { "type": "string", "format": "uuid" },
+    "processingTaskId": { "type": "string", "format": "uuid" },
+    "sourceHash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "status": { "enum": ["PARSED", "FAILED"] },
+    "failureCode": { "type": ["string", "null"], "pattern": "^[A-Z][A-Z0-9_]{2,79}$" }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "FAILED" } }, "required": ["status"] },
+      "then": { "properties": { "failureCode": { "type": "string" } } },
+      "else": { "properties": { "failureCode": { "type": "null" } } }
+    }
+  ]
+}
