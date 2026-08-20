@@ -1,7 +1,9 @@
 # Executable architecture baseline
 
-The detailed decisions remain in `docs/09-system-architecture.md` and
-`docs/16-api-service-contracts.md`. This file maps those decisions to code.
+This file is the canonical, versioned architecture baseline for the codebase.
+Material under the ignored `docs/` working directory may provide design context,
+but it must not override this file. In particular, Kafka supersedes older
+broker references that may still exist in local working notes.
 
 | Project | Runtime | Owns | Must not own |
 |---|---|---|---|
@@ -19,11 +21,13 @@ The detailed decisions remain in `docs/09-system-architecture.md` and
 3. No cross-database foreign keys, joins or generated persistence models.
 4. HTTP and event boundaries use versioned artifacts under `contracts/`.
 5. JWT consumers validate signature, issuer, expiry and audience.
+   Auth signing keys are persistent PEM secrets mounted read-only; they are never generated per process start.
 6. `X-Correlation-Id` is a UUID generated or normalized at the Gateway and propagated downstream.
 7. Async messages contain identifiers, versions and private object references—not raw CV/JD, PII or tokens.
 8. Auth/Core domain code is framework-free. Only persistence adapters import generated jOOQ records.
 9. AI domain/application code does not import FastAPI, SQLAlchemy or Pydantic.
 10. Database state and outbox are committed together when event-producing use cases are implemented.
+11. Base Compose exposes only Web and Gateway. Infrastructure debug ports belong in `compose.dev.yaml`.
 
 ## Kafka conventions
 
@@ -40,7 +44,7 @@ The detailed decisions remain in `docs/09-system-architecture.md` and
 Run:
 
 ```powershell
-powershell -File scripts/validate-architecture.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/validate-architecture.ps1
 .\auth-service\mvnw.cmd -f pom.xml -DskipTests package
 ```
 

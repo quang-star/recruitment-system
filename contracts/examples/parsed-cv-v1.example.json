@@ -1,0 +1,58 @@
+{
+  "$schema": "https://smart-recruitment.local/contracts/schemas/parsed-cv-v1.schema.json",
+  "schemaVersion": "parsed-cv/1.0",
+  "document": {
+    "cvVersionId": "a975924e-4419-4dc4-aa75-65d9a027a2d1",
+    "language": "mixed",
+    "sourceHash": "cc960cecfde0e66e21216bbae643504c258a30d2f3ab4e6cd133590b803e7494",
+    "parserVersion": "rules-v0.1.0"
+  },
+  "skills": [
+    {
+      "raw": "SpringBoot",
+      "canonicalSkillId": "76240767-3058-5507-b6c3-3b16fc05bd8c",
+      "normalizationStatus": "KNOWN",
+      "evidenceIds": ["214344eb-1423-4cb1-977f-9af3958d667c"],
+      "confidence": 0.94,
+      "provenance": "EXTRACTED"
+    },
+    {
+      "raw": "InternalPlatformX",
+      "canonicalSkillId": null,
+      "normalizationStatus": "PENDING",
+      "evidenceIds": ["286753df-f70a-4e77-8021-625cc730357e"],
+      "confidence": 0.64,
+      "provenance": "EXTRACTED"
+    }
+  ],
+  "experiences": [
+    {
+      "titleRaw": "Backend Developer",
+      "titleCanonical": "BACKEND_DEVELOPER",
+      "companyRedacted": "[COMPANY]",
+      "startMonth": "2023-01",
+      "endMonth": null,
+      "isCurrent": true,
+      "responsibilities": ["Phát triển REST API và xử lý sự kiện bất đồng bộ."],
+      "skillIds": ["76240767-3058-5507-b6c3-3b16fc05bd8c"],
+      "evidenceIds": ["fe46bd12-3944-4536-a6ca-d967fa36193c"],
+      "confidence": 0.88
+    }
+  ],
+  "projects": [],
+  "education": [],
+  "certificates": [],
+  "languages": [
+    {
+      "languageCode": "en",
+      "proficiency": "B2",
+      "evidenceIds": ["40c5ec32-3788-4c3f-a1a0-41d1df2a76ce"],
+      "confidence": 0.81
+    }
+  ],
+  "summary": {
+    "totalExperienceMonths": 30,
+    "overallConfidence": 0.86,
+    "qualityFlags": ["PENDING_SKILL_REVIEW"]
+  }
+}

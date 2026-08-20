@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://smart-recruitment.local/contracts/schemas/skill-taxonomy-v1.schema.json",
+  "title": "IT skill taxonomy v1",
+  "description": "Versioned canonical IT skills, aliases and explicit inter-skill relations.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "semanticVersion", "status", "languageScope", "skills"],
+  "properties": {
+    "$schema": { "const": "https://smart-recruitment.local/contracts/schemas/skill-taxonomy-v1.schema.json" },
+    "schemaVersion": { "const": "skill-taxonomy/1.0" },
+    "semanticVersion": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "status": { "enum": ["DRAFT", "PUBLISHED", "RETIRED"] },
+    "languageScope": {
+      "type": "array",
+      "items": { "enum": ["vi", "en"] },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "skills": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/skill" }
+    }
+  },
+  "$defs": {
+    "skill": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stableId",
+        "canonicalName",
+        "normalizedName",
+        "type",
+        "category",
+        "aliases",
+        "relations",
+        "status"
+      ],
+      "properties": {
+        "stableId": { "type": "string", "format": "uuid" },
+        "canonicalName": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "normalizedName": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:[.+#/-][a-z0-9]+|[.+#])*$",
+          "maxLength": 160
+        },
+        "type": {
+          "enum": [
+            "language",
+            "framework",
+            "library",
+            "database",
+            "cloud",
+            "devops",
+            "testing",
+            "data_ai",
+            "security",
+            "methodology",
+            "soft_skill",
+            "other"
+          ]
+        },
+        "category": {
+          "enum": [
+            "backend",
+            "frontend",
+            "fullstack",
+            "mobile",
+            "devops",
+            "data_ai",
+            "qa",
+            "security",
+            "cross_functional"
+          ]
+        },
+        "aliases": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/alias" }
+        },
+        "relations": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/relation" }
+        },
+        "status": { "enum": ["ACTIVE", "DEPRECATED"] }
+      }
+    },
+    "alias": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "normalized", "language"],
+      "properties": {
+        "value": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "normalized": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "language": { "enum": ["vi", "en", "neutral"] }
+      }
+    },
+    "relation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "targetSkillId"],
+      "properties": {
+        "type": { "enum": ["BROADER", "NARROWER", "RELATED", "SUPERSEDES"] },
+        "targetSkillId": { "type": "string", "format": "uuid" }
+      }
+    }
+  }
+}
