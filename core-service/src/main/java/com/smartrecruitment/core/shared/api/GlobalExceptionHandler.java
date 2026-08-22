@@ -5,6 +5,16 @@ import com.smartrecruitment.core.candidate.application.CandidateProfileNotFoundE
 import com.smartrecruitment.core.cv.application.CandidateCvNotFoundException;
 import com.smartrecruitment.core.cv.application.CvStorageException;
 import com.smartrecruitment.core.cv.application.CvUploadException;
+import com.smartrecruitment.core.recruiter.application.CompanyConflictException;
+import com.smartrecruitment.core.recruiter.application.CompanyNotFoundException;
+import com.smartrecruitment.core.recruiter.application.RecruiterProfileConflictException;
+import com.smartrecruitment.core.recruiter.application.RecruiterProfileNotFoundException;
+import com.smartrecruitment.core.job.application.JobConflictException;
+import com.smartrecruitment.core.job.application.JobNotFoundException;
+import com.smartrecruitment.core.job.application.JobStateException;
+import com.smartrecruitment.core.application.application.ApplicationConflictException;
+import com.smartrecruitment.core.application.application.ApplicationNotFoundException;
+import com.smartrecruitment.core.application.application.ApplicationStateException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +31,17 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(CandidateProfileNotFoundException.class)
     ResponseEntity<ApiError> handleNotFound(CandidateProfileNotFoundException exception, HttpServletRequest request) {
         return error(HttpStatus.NOT_FOUND, "CANDIDATE_PROFILE_NOT_FOUND", exception.getMessage(), Map.of(), request);
+    }
+
+    @ExceptionHandler(RecruiterProfileNotFoundException.class)
+    ResponseEntity<ApiError> handleRecruiterProfileNotFound(RecruiterProfileNotFoundException exception,
+                                                            HttpServletRequest request) {
+        return error(HttpStatus.NOT_FOUND, "RECRUITER_PROFILE_NOT_FOUND", exception.getMessage(), Map.of(), request);
+    }
+
+    @ExceptionHandler(CompanyNotFoundException.class)
+    ResponseEntity<ApiError> handleCompanyNotFound(CompanyNotFoundException exception, HttpServletRequest request) {
+        return error(HttpStatus.NOT_FOUND, "COMPANY_NOT_FOUND", exception.getMessage(), Map.of(), request);
     }
 
     @ExceptionHandler(CandidateCvNotFoundException.class)
@@ -46,6 +67,52 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(CandidateProfileConflictException.class)
     ResponseEntity<ApiError> handleConflict(CandidateProfileConflictException exception, HttpServletRequest request) {
         return error(HttpStatus.CONFLICT, "OPTIMISTIC_LOCK_CONFLICT", exception.getMessage(), Map.of(), request);
+    }
+
+    @ExceptionHandler(RecruiterProfileConflictException.class)
+    ResponseEntity<ApiError> handleRecruiterProfileConflict(RecruiterProfileConflictException exception,
+                                                             HttpServletRequest request) {
+        return error(HttpStatus.CONFLICT, "OPTIMISTIC_LOCK_CONFLICT", exception.getMessage(), Map.of(), request);
+    }
+
+    @ExceptionHandler(CompanyConflictException.class)
+    ResponseEntity<ApiError> handleCompanyConflict(CompanyConflictException exception, HttpServletRequest request) {
+        return error(HttpStatus.CONFLICT, "COMPANY_CONFLICT", exception.getMessage(), Map.of(), request);
+    }
+
+    @ExceptionHandler(JobNotFoundException.class)
+    ResponseEntity<ApiError> handleJobNotFound(JobNotFoundException exception, HttpServletRequest request) {
+        return error(HttpStatus.NOT_FOUND, "JOB_NOT_FOUND", exception.getMessage(), Map.of(), request);
+    }
+
+    @ExceptionHandler(JobConflictException.class)
+    ResponseEntity<ApiError> handleJobConflict(JobConflictException exception, HttpServletRequest request) {
+        return error(HttpStatus.CONFLICT, "JOB_CONFLICT", exception.getMessage(), Map.of(), request);
+    }
+
+    @ExceptionHandler(JobStateException.class)
+    ResponseEntity<ApiError> handleJobState(JobStateException exception, HttpServletRequest request) {
+        return error(HttpStatus.CONFLICT, "JOB_INVALID_STATE", exception.getMessage(), Map.of(), request);
+    }
+
+    @ExceptionHandler(ApplicationNotFoundException.class)
+    ResponseEntity<ApiError> handleApplicationNotFound(ApplicationNotFoundException exception, HttpServletRequest request) {
+        return error(HttpStatus.NOT_FOUND, "APPLICATION_NOT_FOUND", exception.getMessage(), Map.of(), request);
+    }
+
+    @ExceptionHandler(ApplicationConflictException.class)
+    ResponseEntity<ApiError> handleApplicationConflict(ApplicationConflictException exception, HttpServletRequest request) {
+        return error(HttpStatus.CONFLICT, "APPLICATION_CONFLICT", exception.getMessage(), Map.of(), request);
+    }
+
+    @ExceptionHandler(ApplicationStateException.class)
+    ResponseEntity<ApiError> handleApplicationState(ApplicationStateException exception, HttpServletRequest request) {
+        return error(HttpStatus.CONFLICT, "APPLICATION_INVALID_STATE", exception.getMessage(), Map.of(), request);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    ResponseEntity<ApiError> handleIllegalArgument(IllegalArgumentException exception, HttpServletRequest request) {
+        return error(HttpStatus.BAD_REQUEST, "INVALID_REQUEST", exception.getMessage(), Map.of(), request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

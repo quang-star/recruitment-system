@@ -90,6 +90,29 @@ button:disabled { cursor: wait; opacity: 0.65; }
 .profile-card .section-heading { align-items: center; }
 .profile-card .section-heading h2 { margin-bottom: 0; }
 
+.workspace-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin-top: 24px; }
+.workspace-panel { display: grid; gap: 16px; padding: 20px; border: 1px solid #d4ddd6; border-radius: 16px; background: rgba(255, 255, 255, 0.55); }
+.workspace-panel .section-heading { margin-bottom: 0; }
+.workspace-panel h3 { margin-bottom: 0; }
+.workspace-panel .section-heading span { color: #68756d; font-size: 0.82rem; }
+.company-list { display: grid; gap: 8px; }
+.company-option { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 12px 14px; border: 1px solid #d4ddd6; border-radius: 12px; color: #18201c; background: #fff; text-align: left; }
+.company-option:hover, .company-option.selected { border-color: #79a889; background: #eef7f0; }
+.company-option span:first-child { display: grid; gap: 3px; min-width: 0; }
+.company-option small { color: #68756d; }
+
+.job-board, .job-form { display: grid; gap: 1rem; }
+.job-list { display: grid; gap: 0.55rem; max-height: 18rem; overflow: auto; }
+.button-row { display: flex; flex-wrap: wrap; gap: 0.65rem; }
+.application-form { max-width: 560px; }
+.application-list { display: grid; gap: 8px; }
+.application-list h3 { margin-bottom: 0; }
+.application-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1px solid #d4ddd6; border-radius: 12px; background: rgba(255, 255, 255, 0.55); }
+.company-form { margin-top: 18px; }
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+textarea { width: 100%; resize: vertical; border: 1px solid #aebbb1; border-radius: 10px; padding: 12px 14px; color: #18201c; background: #fff; font: inherit; }
+textarea:focus { outline: 3px solid #c3dfcb; border-color: #42755b; }
+
 .cv-panel {
   margin-top: 44px;
   padding-top: 32px;
@@ -167,8 +190,12 @@ button:hover { background: #244a38; }
 button:focus-visible { outline: 3px solid #94bca6; outline-offset: 3px; }
 .success-message { color: #27603f !important; }
 .error-message { color: #9b2f2f !important; }
+.auth-switch { display: flex; gap: 8px; }
+.auth-switch button { flex: 1; color: #46534b; background: #eef2ed; }
+.auth-switch button.selected { color: #fff; background: #244f38; }
 
 @media (max-width: 680px) {
   .shell { padding: 40px 0; }
   .grid { grid-template-columns: 1fr; }
+  .workspace-grid, .form-grid { grid-template-columns: 1fr; }
 }

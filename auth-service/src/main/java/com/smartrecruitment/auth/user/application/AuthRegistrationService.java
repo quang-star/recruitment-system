@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Locale;
 
 @Service
 public class AuthRegistrationService {
@@ -42,12 +43,23 @@ public class AuthRegistrationService {
 
     @Transactional
     public RegistrationResult register(String email, String password) {
+        return register(email, password, "CANDIDATE");
+    }
+
+    @Transactional
+    public RegistrationResult register(String email, String password, String accountType) {
+        String roleCode = accountType == null || accountType.isBlank()
+                ? "CANDIDATE" : accountType.trim().toUpperCase(Locale.ROOT);
+        if (!roleCode.equals("CANDIDATE") && !roleCode.equals("RECRUITER")) {
+            throw new IllegalArgumentException("accountType must be CANDIDATE or RECRUITER");
+        }
         AuthUser pendingUser = AuthUser.pending(email);
         if (users.existsByNormalizedEmail(pendingUser.normalizedEmail())) throw new EmailAlreadyRegisteredException();
         AuthUser savedUser = users.insert(pendingUser);
         Instant now = Instant.now();
         credentials.insert(savedUser.id(), passwordEncoder.encode(password), now);
-        roles.assignCandidateRole(savedUser.id(), now);
+        if (roleCode.equals("RECRUITER")) roles.assignRecruiterRole(savedUser.id(), now);
+        else roles.assignCandidateRole(savedUser.id(), now);
         String rawToken = tokenGenerator.generate();
         Instant expiresAt = now.plus(EMAIL_VERIFICATION_TTL);
         tokens.insertEmailVerificationToken(savedUser.id(), tokenGenerator.hash(rawToken), now, expiresAt);

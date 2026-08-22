@@ -37,7 +37,8 @@ public class AuthController {
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     public RegistrationResponse register(@Valid @RequestBody RegisterRequest request) {
-        return RegistrationResponse.from(registrationService.register(request.email(), request.password()));
+        return RegistrationResponse.from(registrationService.register(request.email(), request.password(),
+                request.accountType()));
     }
     @PostMapping("/verify-email")
     public EmailVerificationResponse verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
@@ -62,7 +63,9 @@ public class AuthController {
         return CurrentUserResponse.from(currentUserService.get(java.util.UUID.fromString(jwt.getSubject())));
     }
     public record RegisterRequest(@NotBlank @Email @Size(max = 320) String email,
-                                  @NotBlank @Size(min = 8, max = 128) String password) {}
+                                  @NotBlank @Size(min = 8, max = 128) String password,
+                                  @jakarta.validation.constraints.Pattern(regexp = "CANDIDATE|RECRUITER")
+                                  String accountType) {}
     public record LoginRequest(@NotBlank @Email @Size(max = 320) String email,
                                @NotBlank @Size(min = 8, max = 128) String password,
                                @Size(max = 30) String clientType,

@@ -6,4 +6,5 @@ import java.util.List;
 public interface RoleRepository {
     List<String> findActiveRoleCodes(Long userId);
     default void assignCandidateRole(Long userId, Instant assignedAt) {}
+    default void assignRecruiterRole(Long userId, Instant assignedAt) {}
 }
