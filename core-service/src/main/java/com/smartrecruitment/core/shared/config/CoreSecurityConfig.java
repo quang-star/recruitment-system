@@ -35,7 +35,8 @@ public class CoreSecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
-                        .requestMatchers("/api/v1/candidates/**", "/api/v1/cvs/**").hasRole("CANDIDATE")
+                        .requestMatchers("/api/v1/candidates/**", "/api/v1/cvs/**", "/api/v1/candidate/**").hasRole("CANDIDATE")
+                .requestMatchers("/api/v1/recruiter/**", "/api/v1/companies/**", "/api/v1/jobs/**").hasRole("RECRUITER")
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(resourceServer -> resourceServer.jwt(jwt ->
                         jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())));

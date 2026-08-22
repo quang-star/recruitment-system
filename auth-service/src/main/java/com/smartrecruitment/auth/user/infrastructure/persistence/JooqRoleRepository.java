@@ -25,9 +25,18 @@ public class JooqRoleRepository implements RoleRepository {
     }
     @Override
     public void assignCandidateRole(Long userId, Instant assignedAt) {
-        Optional<Long> roleId = dsl.select(ROLES.ID).from(ROLES).where(ROLES.CODE.eq("CANDIDATE"))
+        assignRole(userId, "CANDIDATE", assignedAt);
+    }
+
+    @Override
+    public void assignRecruiterRole(Long userId, Instant assignedAt) {
+        assignRole(userId, "RECRUITER", assignedAt);
+    }
+
+    private void assignRole(Long userId, String roleCode, Instant assignedAt) {
+        Optional<Long> roleId = dsl.select(ROLES.ID).from(ROLES).where(ROLES.CODE.eq(roleCode))
                 .and(ROLES.STATUS.eq("ACTIVE")).fetchOptional(ROLES.ID);
-        if (roleId.isEmpty()) throw new IllegalStateException("CANDIDATE system role is not seeded");
+        if (roleId.isEmpty()) throw new IllegalStateException(roleCode + " system role is not seeded");
         if (!dsl.fetchExists(dsl.selectOne().from(USER_ROLES).where(USER_ROLES.USER_ID.eq(userId))
                 .and(USER_ROLES.ROLE_ID.eq(roleId.get()))) ) {
             dsl.insertInto(USER_ROLES).set(USER_ROLES.USER_ID, userId).set(USER_ROLES.ROLE_ID, roleId.get())

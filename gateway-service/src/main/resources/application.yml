@@ -22,7 +22,7 @@ spring:
             - id: core-service
               uri: ${CORE_SERVICE_URL:http://core-service:8082}
               predicates:
-                - Path=/api/v1/companies/**,/api/v1/candidates/**,/api/v1/cvs/**,/api/v1/jobs/**,/api/v1/applications/**
+                - Path=/api/v1/companies/**,/api/v1/recruiter/**,/api/v1/candidates/**,/api/v1/candidate/**,/api/v1/cvs/**,/api/v1/jobs/**,/api/v1/applications/**
             - id: ai-service
               uri: ${AI_SERVICE_URL:http://ai-service:8083}
               predicates:

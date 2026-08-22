@@ -5,6 +5,7 @@ import { LoginPage } from "./features/auth/LoginPage";
 import { VerifyEmailPage } from "./features/auth/VerifyEmailPage";
 import { apiRequest } from "./shared/api/client";
 import { SystemOverview } from "./features/system/SystemOverview";
+import { RecruiterWorkspace } from "./features/recruiter/RecruiterWorkspace";
 import { clearSession, loadSession, AuthSession } from "./shared/auth/session";
 
 export function App() {
@@ -32,12 +33,14 @@ export function App() {
   return (
     <main className="shell">
       <header>
-        <p className="eyebrow">DATN · Candidate vertical slice</p>
+      <p className="eyebrow">DATN · recruitment workspace</p>
         <h1>Explainable IT Recruitment</h1>
         <p>Web chỉ gọi public Gateway; hồ sơ ứng viên được lưu bởi Core và bảo vệ bằng JWT.</p>
       </header>
       {session ? (
-        <CandidateProfilePage session={session} onLogout={logout} />
+        session.roles.includes("RECRUITER")
+          ? <RecruiterWorkspace session={session} onLogout={logout} />
+          : <CandidateProfilePage session={session} onLogout={logout} />
       ) : (
         <>
           <LoginPage onSuccess={setSession} />

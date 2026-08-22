@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from "react";
 
 import { CandidateCvPanel } from "./CandidateCvPanel";
+import { CandidateJobsPanel } from "./CandidateJobsPanel";
 import { ApiClientError, apiRequest } from "../../shared/api/client";
 import { AuthSession } from "../../shared/auth/session";
 
@@ -156,6 +157,7 @@ export function CandidateProfilePage({ session, onLogout }: CandidateProfilePage
         </button>
       </form>
       <CandidateCvPanel session={session} />
+      <CandidateJobsPanel session={session} />
     </section>
   );
 }
