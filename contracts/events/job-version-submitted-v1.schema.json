@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://smart-recruitment.local/contracts/events/job-version-submitted-v1.schema.json",
+  "title": "job.version.submitted.v1 payload",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["jobId", "jobVersionId", "sourceHash", "objectRef"],
+  "properties": {
+    "jobId": { "type": "string", "format": "uuid" },
+    "jobVersionId": { "type": "string", "format": "uuid" },
+    "sourceHash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "objectRef": { "type": "string", "minLength": 1, "maxLength": 1024 }
+  }
+}

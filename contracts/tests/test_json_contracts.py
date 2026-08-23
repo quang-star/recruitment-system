@@ -24,6 +24,11 @@ def validator(schema_name: str) -> Draft202012Validator:
     return Draft202012Validator(schema, format_checker=FormatChecker())
 
 
+def event_validator(schema_name: str) -> Draft202012Validator:
+    schema = load_json(CONTRACTS_ROOT / "events" / schema_name)
+    return Draft202012Validator(schema, format_checker=FormatChecker())
+
+
 @pytest.mark.parametrize("schema_path", sorted(CONTRACTS_ROOT.rglob("*.schema.json")))
 def test_all_json_schemas_are_valid_draft_2020_12(schema_path: Path) -> None:
     schema = load_json(schema_path)
@@ -102,3 +107,18 @@ def test_taxonomy_rejects_unknown_fields() -> None:
 
     with pytest.raises(ValidationError):
         validator("skill-taxonomy-v1.schema.json").validate(taxonomy)
+
+
+def test_job_processing_event_contracts_reject_raw_jd_fields() -> None:
+    event = {
+        "jobId": "779494ac-c858-4570-a884-6e88423b8e2b",
+        "jobVersionId": "779494ac-c858-4570-a884-6e88423b8e2b",
+        "processingTaskId": "779494ac-c858-4570-a884-6e88423b8e2b",
+        "sourceHash": "0cb83583181fc5bdb09aa37cf82ab5f89e7438e88925de3e6e1f0f0eddb76382",
+        "status": "PARSED",
+        "failureCode": None,
+    }
+    event_validator("job-processing-updated-v1.schema.json").validate(event)
+    event["description"] = "raw JD must not be put in Kafka"
+    with pytest.raises(ValidationError):
+        event_validator("job-processing-updated-v1.schema.json").validate(event)
