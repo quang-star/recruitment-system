@@ -85,6 +85,40 @@ class ParsedCvRevisionRepository:
         self._session.flush()
         return self._to_domain(record, None)
 
+    def create_revision(self, cv_version_id: UUID, owner_user_id: UUID,
+                       source_hash: str, payload: dict,
+                       expected_revision_id: UUID | None = None) -> ParsedCvRevision:
+        """Create an immutable candidate-edited revision with optimistic locking."""
+        latest = self._session.scalar(
+            select(ParsedCvRevisionRecord)
+            .where(ParsedCvRevisionRecord.cv_version_id == cv_version_id)
+            .where(ParsedCvRevisionRecord.owner_user_id == owner_user_id)
+            .order_by(ParsedCvRevisionRecord.revision_number.desc())
+            .with_for_update()
+        )
+        if expected_revision_id is not None and (
+            latest is None or latest.public_id != expected_revision_id
+        ):
+            raise ValueError("ParsedCV revision is stale; reload the latest revision")
+
+        next_number = (latest.revision_number + 1) if latest else 1
+        now = datetime.now().astimezone()
+        record = ParsedCvRevisionRecord(
+            public_id=uuid4(),
+            cv_version_id=cv_version_id,
+            owner_user_id=owner_user_id,
+            revision_number=next_number,
+            source_hash=source_hash,
+            payload=payload,
+            status="PARSED",
+            created_at=now,
+            updated_at=now,
+            version=0,
+        )
+        self._session.add(record)
+        self._session.flush()
+        return self._to_domain(record, None)
+
     def find_owned(self, cv_version_id: UUID, owner_user_id: UUID) -> ParsedCvRevision | None:
         row = self._session.execute(
             select(ParsedCvRevisionRecord, ParsedCvHeadRecord)
@@ -93,6 +127,14 @@ class ParsedCvRevisionRepository:
             .where(ParsedCvRevisionRecord.cv_version_id == cv_version_id)
             .where(ParsedCvRevisionRecord.owner_user_id == owner_user_id)
             .order_by(ParsedCvRevisionRecord.revision_number.desc())
+        ).first()
+        return self._to_domain(row[0], row[1]) if row else None
+
+    def find_confirmed(self, cv_version_id: UUID) -> ParsedCvRevision | None:
+        row = self._session.execute(
+            select(ParsedCvRevisionRecord, ParsedCvHeadRecord)
+            .join(ParsedCvHeadRecord, ParsedCvHeadRecord.revision_id == ParsedCvRevisionRecord.id)
+            .where(ParsedCvHeadRecord.cv_version_id == cv_version_id)
         ).first()
         return self._to_domain(row[0], row[1]) if row else None
 

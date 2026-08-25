@@ -71,6 +71,9 @@ public class JobService {
         if (existing.status() != com.smartrecruitment.core.job.domain.JobStatus.DRAFT) {
             throw new JobStateException("Only draft jobs can be published");
         }
+        if (!jobs.isParsedJdConfirmed(existing.activeVersion().publicId())) {
+            throw new JobStateException("Parsed JD must be confirmed before publishing");
+        }
         return jobs.publish(jobId, userId, expectedVersion, OffsetDateTime.now()).orElseThrow(JobConflictException::new);
     }
 

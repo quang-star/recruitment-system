@@ -108,6 +108,9 @@ button:disabled { cursor: wait; opacity: 0.65; }
 .application-list { display: grid; gap: 8px; }
 .application-list h3 { margin-bottom: 0; }
 .application-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1px solid #d4ddd6; border-radius: 12px; background: rgba(255, 255, 255, 0.55); }
+.application-item small { display: block; color: #718076; margin-top: 3px; }
+.match-score { color: #1e6b4d; font-weight: 700; white-space: nowrap; }
+.parsed-jd-review { margin-top: 18px; padding: 16px; border: 1px solid #c9d9cd; border-radius: 14px; background: #f5faf6; }
 .company-form { margin-top: 18px; }
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 textarea { width: 100%; resize: vertical; border: 1px solid #aebbb1; border-radius: 10px; padding: 12px 14px; color: #18201c; background: #fff; font: inherit; }
@@ -143,6 +146,15 @@ textarea:focus { outline: 3px solid #c3dfcb; border-color: #42755b; }
   border-left: 3px solid #79a889;
   background: rgba(220, 233, 223, 0.55);
 }
+
+.parsed-section { display: grid; gap: 8px; margin: 12px 0; }
+.parsed-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.parsed-section-heading button { margin: 0; }
+.parsed-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.parsed-row button, .parsed-experience button { margin: 0; }
+.parsed-experience { display: grid; gap: 8px; padding: 10px; border: 1px solid #d4ddd6; border-radius: 10px; }
+.parsed-summary-fields { grid-template-columns: minmax(0, 16rem); }
+.danger-button { color: #8d2f2f; border-color: #d8aaaa; background: #fff7f7; }
 .parsed-review p { margin-bottom: 6px; }
 .parsed-review-title { color: #315f49 !important; font-weight: 800; }
 .parsed-review button { margin-top: 6px; padding: 8px 14px; font-size: 0.82rem; }

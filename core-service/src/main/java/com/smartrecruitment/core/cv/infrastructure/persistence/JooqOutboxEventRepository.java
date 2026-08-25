@@ -3,6 +3,7 @@ package com.smartrecruitment.core.cv.infrastructure.persistence;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 import com.smartrecruitment.core.cv.application.CvUploadedEvent;
+import com.smartrecruitment.core.application.application.ApplicationSubmittedEvent;
 import com.smartrecruitment.core.cv.application.port.OutboxEventRepository;
 import org.jooq.DSLContext;
 import org.jooq.JSON;
@@ -47,6 +48,34 @@ public class JooqOutboxEventRepository implements OutboxEventRepository {
                     .execute();
         } catch (JacksonException exception) {
             throw new IllegalStateException("Could not serialize CV upload event", exception);
+        }
+    }
+
+    @Override
+    public void append(ApplicationSubmittedEvent event) {
+        try {
+            String payload = objectMapper.writeValueAsString(new Object() {
+                public final UUID applicationId = event.applicationId();
+                public final UUID cvVersionId = event.cvVersionId();
+                public final UUID jobVersionId = event.jobVersionId();
+            });
+            OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+            dsl.insertInto(OUTBOX_EVENTS)
+                    .set(OUTBOX_EVENTS.PUBLIC_ID, UUID.randomUUID())
+                    .set(OUTBOX_EVENTS.AGGREGATE_TYPE, "APPLICATION")
+                    .set(OUTBOX_EVENTS.AGGREGATE_ID, event.applicationId())
+                    .set(OUTBOX_EVENTS.AGGREGATE_VERSION, 0L)
+                    .set(OUTBOX_EVENTS.EVENT_TYPE, "application.submitted.v1")
+                    .set(OUTBOX_EVENTS.SCHEMA_VERSION, (short) 1)
+                    .set(OUTBOX_EVENTS.IDEMPOTENCY_KEY, "application.submitted.v1:" + event.applicationId())
+                    .set(OUTBOX_EVENTS.CORRELATION_ID, event.correlationId())
+                    .set(OUTBOX_EVENTS.PAYLOAD, JSON.json(payload))
+                    .set(OUTBOX_EVENTS.OCCURRED_AT, event.occurredAt())
+                    .set(OUTBOX_EVENTS.AVAILABLE_AT, now)
+                    .set(OUTBOX_EVENTS.ATTEMPT_COUNT, 0)
+                    .execute();
+        } catch (JacksonException exception) {
+            throw new IllegalStateException("Could not serialize application submission event", exception);
         }
     }
 
