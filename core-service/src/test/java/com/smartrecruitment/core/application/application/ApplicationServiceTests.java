@@ -35,6 +35,14 @@ class ApplicationServiceTests {
                 .isInstanceOf(ApplicationStateException.class);
     }
 
+    @Test
+    void requiresExplicitCvSharingConsent() {
+        ApplicationService service = new ApplicationService(new FakeApplications(application(ApplicationStatus.SUBMITTED)));
+
+        assertThatThrownBy(() -> service.apply(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), false, "cv-sharing-v1"))
+                .isInstanceOf(ApplicationStateException.class);
+    }
+
     private static Application application(ApplicationStatus status) {
         OffsetDateTime now = OffsetDateTime.now();
         return new Application(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),

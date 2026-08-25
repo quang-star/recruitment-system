@@ -1,7 +1,10 @@
 package com.smartrecruitment.core.cv.application.port;
 
 import com.smartrecruitment.core.cv.application.CvUploadedEvent;
+import com.smartrecruitment.core.application.application.ApplicationSubmittedEvent;
 
 public interface OutboxEventRepository {
     void append(CvUploadedEvent event);
+
+    default void append(ApplicationSubmittedEvent event) { }
 }

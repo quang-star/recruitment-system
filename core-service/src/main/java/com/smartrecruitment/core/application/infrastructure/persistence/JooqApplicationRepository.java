@@ -21,6 +21,8 @@ import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.Cvs
 import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.JobVersions.JOB_VERSIONS;
 import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.Jobs.JOBS;
 import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.ApplicationStatusHistory.APPLICATION_STATUS_HISTORY;
+import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.CandidateConsents.CANDIDATE_CONSENTS;
+import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.ApplicationCvAccessGrants.APPLICATION_CV_ACCESS_GRANTS;
 
 @Repository
 public class JooqApplicationRepository implements ApplicationRepository {
@@ -30,6 +32,13 @@ public class JooqApplicationRepository implements ApplicationRepository {
 
     @Override
     public Application insert(UUID candidateUserId, UUID jobId, UUID cvId) {
+        return insert(candidateUserId, jobId, cvId, true, "cv-sharing-v1");
+    }
+
+    @Override
+    public Application insert(UUID candidateUserId, UUID jobId, UUID cvId,
+                              boolean consentAccepted, String policyVersion) {
+        if (!consentAccepted) throw new IllegalArgumentException("CV sharing consent is required");
         var snapshot = dsl.select(JOBS.ID, JOBS.COMPANY_ID, JOBS.ACTIVE_VERSION_ID,
                         JOB_VERSIONS.ID.as("selected_job_version_id"), CVS.ID.as("selected_cv_id"),
                         CV_VERSIONS.ID.as("selected_cv_version_id"))
@@ -54,11 +63,22 @@ public class JooqApplicationRepository implements ApplicationRepository {
                 .set(APPLICATIONS.JOB_VERSION_ID, row.get("selected_job_version_id", Long.class))
                 .set(APPLICATIONS.STATUS, ApplicationStatus.SUBMITTED.name())
                 .set(APPLICATIONS.SOURCE, ApplicationSource.DIRECT.name())
+                .set(APPLICATIONS.CONSENT_ACCEPTED, true)
+                .set(APPLICATIONS.CONSENT_POLICY_VERSION, policyVersion)
                 .set(APPLICATIONS.APPLIED_AT, now)
                 .set(APPLICATIONS.UPDATED_AT, now)
                 .set(APPLICATIONS.VERSION, 0L)
                 .returning().fetchOne();
         if (record == null) throw new IllegalStateException("Insert application returned no record");
+        Long consentId = consentId(candidateUserId, policyVersion, now);
+        dsl.insertInto(APPLICATION_CV_ACCESS_GRANTS)
+                .set(APPLICATION_CV_ACCESS_GRANTS.PUBLIC_ID, UUID.randomUUID())
+                .set(APPLICATION_CV_ACCESS_GRANTS.APPLICATION_ID, record.getId())
+                .set(APPLICATION_CV_ACCESS_GRANTS.CV_VERSION_ID, row.get("selected_cv_version_id", Long.class))
+                .set(APPLICATION_CV_ACCESS_GRANTS.COMPANY_ID, row.get(JOBS.COMPANY_ID))
+                .set(APPLICATION_CV_ACCESS_GRANTS.CONSENT_ID, consentId)
+                .set(APPLICATION_CV_ACCESS_GRANTS.GRANTED_AT, now)
+                .execute();
         history(record.getId(), null, ApplicationStatus.SUBMITTED, candidateUserId, null, now);
         return findForCandidateById(candidateUserId, record.getPublicId()).orElseThrow();
     }
@@ -116,6 +136,37 @@ public class JooqApplicationRepository implements ApplicationRepository {
     private Long internalId(UUID applicationId) {
         return dsl.select(APPLICATIONS.ID).from(APPLICATIONS)
                 .where(APPLICATIONS.PUBLIC_ID.eq(applicationId)).fetchOne(APPLICATIONS.ID);
+    }
+
+    private Long consentId(UUID candidateUserId, String policyVersion, OffsetDateTime now) {
+        Long existing = dsl.select(CANDIDATE_CONSENTS.ID).from(CANDIDATE_CONSENTS)
+                .where(CANDIDATE_CONSENTS.CANDIDATE_USER_ID.eq(candidateUserId))
+                .and(CANDIDATE_CONSENTS.CONSENT_TYPE.eq("CV_SHARING"))
+                .and(CANDIDATE_CONSENTS.POLICY_VERSION.eq(policyVersion))
+                .and(CANDIDATE_CONSENTS.REVOKED_AT.isNull())
+                .fetchOne(CANDIDATE_CONSENTS.ID);
+        if (existing != null) return existing;
+        Long revoked = dsl.select(CANDIDATE_CONSENTS.ID).from(CANDIDATE_CONSENTS)
+                .where(CANDIDATE_CONSENTS.CANDIDATE_USER_ID.eq(candidateUserId))
+                .and(CANDIDATE_CONSENTS.CONSENT_TYPE.eq("CV_SHARING"))
+                .and(CANDIDATE_CONSENTS.POLICY_VERSION.eq(policyVersion))
+                .fetchOne(CANDIDATE_CONSENTS.ID);
+        if (revoked != null) {
+            dsl.update(CANDIDATE_CONSENTS)
+                    .set(CANDIDATE_CONSENTS.ACCEPTED_AT, now)
+                    .set(CANDIDATE_CONSENTS.REVOKED_AT, (OffsetDateTime) null)
+                    .where(CANDIDATE_CONSENTS.ID.eq(revoked)).execute();
+            return revoked;
+        }
+        var record = dsl.insertInto(CANDIDATE_CONSENTS)
+                .set(CANDIDATE_CONSENTS.PUBLIC_ID, UUID.randomUUID())
+                .set(CANDIDATE_CONSENTS.CANDIDATE_USER_ID, candidateUserId)
+                .set(CANDIDATE_CONSENTS.CONSENT_TYPE, "CV_SHARING")
+                .set(CANDIDATE_CONSENTS.POLICY_VERSION, policyVersion)
+                .set(CANDIDATE_CONSENTS.ACCEPTED_AT, now)
+                .returning().fetchOne();
+        if (record == null) throw new IllegalStateException("Consent was not saved");
+        return record.getId();
     }
 
     private void history(Long applicationId, ApplicationStatus from, ApplicationStatus to, UUID actor,

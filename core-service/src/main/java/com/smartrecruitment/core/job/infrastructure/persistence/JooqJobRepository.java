@@ -82,6 +82,14 @@ public class JooqJobRepository implements JobRepository {
     }
 
     @Override
+    public boolean isParsedJdConfirmed(UUID jobVersionId) {
+        return dsl.fetchExists(dsl.selectOne()
+                .from(com.smartrecruitment.core.infrastructure.jooq.generated.tables.JobProcessingProjections.JOB_PROCESSING_PROJECTIONS)
+                .where(com.smartrecruitment.core.infrastructure.jooq.generated.tables.JobProcessingProjections.JOB_PROCESSING_PROJECTIONS.JOB_VERSION_ID.eq(jobVersionId))
+                .and(com.smartrecruitment.core.infrastructure.jooq.generated.tables.JobProcessingProjections.JOB_PROCESSING_PROJECTIONS.STATUS.eq("CONFIRMED")));
+    }
+
+    @Override
     public Optional<Job> updateDraft(Job job, JobVersion newVersion, long expectedVersion, UUID userId) {
         Long internalId = internalId(job.publicId());
         if (internalId == null) return Optional.empty();

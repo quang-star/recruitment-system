@@ -2,12 +2,14 @@ import { FormEvent, useEffect, useState } from "react";
 
 import { ApiClientError, apiRequest } from "../../shared/api/client";
 import { AuthSession } from "../../shared/auth/session";
+import { RecruiterApplicationsPanel } from "./RecruiterApplicationsPanel";
 
 type Job = {
   jobId: string;
   companyId: string;
   status: "DRAFT" | "PUBLISHED" | "CLOSED";
   version: number;
+  jobVersionId: string;
   jobVersionNumber: number;
   title: string;
   description: string;
@@ -25,6 +27,7 @@ type Job = {
   salaryPeriod: string | null;
   salaryNegotiable: boolean;
   applicationDeadline: string | null;
+  sourceHash: string;
 };
 
 type JobForm = {
@@ -46,6 +49,24 @@ type JobForm = {
   applicationDeadline: string;
 };
 
+type ParsedJd = {
+  revisionId: string;
+  jobId: string;
+  jobVersionId: string;
+  revisionNumber: number;
+  sourceHash: string;
+  status: "PARSED" | "CONFIRMED" | "SUPERSEDED";
+  payload: {
+    title?: { canonicalFamily?: string | null; level?: string | null };
+    requirements?: { requiredSkills?: Array<{ raw: string }>; preferredSkills?: Array<{ raw: string }> };
+    responsibilities?: Array<{ raw: string }>;
+    qualityFlags?: string[];
+  };
+  confirmedBy: string | null;
+  confirmedAt: string | null;
+  version: number;
+};
+
 const emptyJob: JobForm = {
   title: "", description: "", requirementsText: "", benefitsText: "", locationText: "",
   countryCode: "VN", workMode: "", employmentType: "FULL_TIME", seniorityLevel: "",
@@ -59,6 +80,8 @@ export function RecruiterJobBoard({ session, companyId }: { session: AuthSession
   const [form, setForm] = useState<JobForm>(emptyJob);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [parsedJd, setParsedJd] = useState<ParsedJd | null>(null);
+  const [loadingParsedJd, setLoadingParsedJd] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -74,6 +97,25 @@ export function RecruiterJobBoard({ session, companyId }: { session: AuthSession
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [companyId, session.accessToken]);
+
+  useEffect(() => {
+    let active = true;
+    const selected = jobs.find((job) => job.jobId === selectedJobId);
+    if (!selected) {
+      setParsedJd(null);
+      return () => { active = false; };
+    }
+    setLoadingParsedJd(true);
+    void apiRequest<ParsedJd>(`/api/v1/parsed-jds/${selected.jobVersionId}`, { accessToken: session.accessToken })
+      .then((result) => { if (active) setParsedJd(result); })
+      .catch((requestError) => {
+        if (!active) return;
+        if (requestError instanceof ApiClientError && requestError.status === 404) setParsedJd(null);
+        else setError(getErrorMessage(requestError));
+      })
+      .finally(() => { if (active) setLoadingParsedJd(false); });
+    return () => { active = false; };
+  }, [jobs, selectedJobId, session.accessToken]);
 
   function selectJob(job: Job) { setSelectedJobId(job.jobId); setForm(toForm(job)); setMessage(null); setError(null); }
   function newJob() { setSelectedJobId(null); setForm(emptyJob); setMessage(null); setError(null); }
@@ -103,17 +145,41 @@ export function RecruiterJobBoard({ session, companyId }: { session: AuthSession
         method: selectedJobId ? "PUT" : "POST", accessToken: session.accessToken, body: JSON.stringify(payload)
       });
       setJobs((current) => selectedJobId ? current.map((job) => job.jobId === saved.jobId ? saved : job) : [saved, ...current]);
-      setSelectedJobId(saved.jobId); setForm(toForm(saved)); setMessage(selectedJobId ? "JD đã được cập nhật." : "JD nháp đã được tạo.");
+      setSelectedJobId(saved.jobId); setForm(toForm(saved));
+      const parsed = await apiRequest<ParsedJd>(`/api/v1/parsed-jds/${saved.jobVersionId}`, {
+        method: "PUT", accessToken: session.accessToken,
+        body: JSON.stringify({ jobId: saved.jobId, title: saved.title, description: saved.description,
+          requirementsText: saved.requirementsText, sourceHash: saved.sourceHash })
+      });
+      setParsedJd(parsed);
+      setMessage(selectedJobId ? "JD đã được cập nhật và parse lại." : "JD nháp đã được tạo và parse.");
     } catch (requestError) { setError(getErrorMessage(requestError)); }
     finally { setSaving(false); }
   }
 
   async function changeState(job: Job, action: "publish" | "close") {
     setMessage(null); setError(null);
+    if (action === "publish" && parsedJd?.status !== "CONFIRMED") {
+      setError("Cần review và xác nhận ParsedJD trước khi đăng JD.");
+      return;
+    }
     try {
       const updated = await apiRequest<Job>(`/api/v1/jobs/${job.jobId}/${action}?version=${job.version}`, { method: "POST", accessToken: session.accessToken });
       setJobs((current) => current.map((item) => item.jobId === updated.jobId ? updated : item));
       selectJob(updated); setMessage(action === "publish" ? "JD đã được đăng." : "JD đã được đóng.");
+    } catch (requestError) { setError(getErrorMessage(requestError)); }
+  }
+
+  async function confirmParsedJd() {
+    if (!parsedJd) return;
+    setMessage(null); setError(null);
+    try {
+      const confirmed = await apiRequest<ParsedJd>(`/api/v1/parsed-jds/${parsedJd.jobVersionId}/confirm`, {
+        method: "POST", accessToken: session.accessToken,
+        body: JSON.stringify({ expectedRevisionId: parsedJd.revisionId })
+      });
+      setParsedJd(confirmed);
+      setMessage("ParsedJD đã được xác nhận. Có thể đăng JD sau khi Core nhận event.");
     } catch (requestError) { setError(getErrorMessage(requestError)); }
   }
 
@@ -141,9 +207,21 @@ export function RecruiterJobBoard({ session, companyId }: { session: AuthSession
       <label>Yêu cầu<textarea required rows={5} value={form.requirementsText} onChange={(e) => updateForm("requirementsText", e.target.value)} /></label>
       <label>Quyền lợi<textarea rows={3} value={form.benefitsText} onChange={(e) => updateForm("benefitsText", e.target.value)} /></label>
       <div className="form-grid"><label>Lương tối thiểu<input type="number" min={0} value={form.salaryMin} onChange={(e) => updateForm("salaryMin", e.target.value)} /></label><label>Lương tối đa<input type="number" min={0} value={form.salaryMax} onChange={(e) => updateForm("salaryMax", e.target.value)} /></label><label>Tiền tệ<input maxLength={3} value={form.salaryCurrency} onChange={(e) => updateForm("salaryCurrency", e.target.value.toUpperCase())} /></label><label>Kỳ lương<select value={form.salaryPeriod} onChange={(e) => updateForm("salaryPeriod", e.target.value)}><option>HOUR</option><option>MONTH</option><option>YEAR</option></select></label></div>
+      <div className="parsed-jd-review">
+        <div className="section-heading"><div><p className="eyebrow">AI review</p><h3>ParsedJD</h3></div><span className="status-pill">{loadingParsedJd ? "Đang parse…" : parsedJd?.status ?? "Chưa có"}</span></div>
+        {parsedJd && <>
+          <p className="muted">Revision v{parsedJd.revisionNumber} · family {parsedJd.payload.title?.canonicalFamily ?? "OTHER"} · level {parsedJd.payload.title?.level ?? "—"}</p>
+          <p><strong>Skill bắt buộc:</strong> {parsedJd.payload.requirements?.requiredSkills?.map((skill) => skill.raw).join(", ") || "Chưa nhận diện"}</p>
+          <p><strong>Skill ưu tiên:</strong> {parsedJd.payload.requirements?.preferredSkills?.map((skill) => skill.raw).join(", ") || "Không có"}</p>
+          {parsedJd.payload.qualityFlags && parsedJd.payload.qualityFlags.length > 0 && <p className="muted">Cờ chất lượng: {parsedJd.payload.qualityFlags.join(", ")}</p>}
+          {parsedJd.status === "PARSED" && <button className="secondary-button" type="button" onClick={() => void confirmParsedJd()}>Xác nhận ParsedJD</button>}
+        </>}
+        {!parsedJd && !loadingParsedJd && <p className="muted">Lưu JD để AI tạo bản parse review.</p>}
+      </div>
       {message && <p className="success-message" role="status">{message}</p>}{error && <p className="error-message" role="alert">{error}</p>}
       <div className="button-row"><button type="submit" disabled={saving}>{saving ? "Đang lưu…" : selectedJobId ? "Lưu JD" : "Tạo bản nháp"}</button>{selectedJobId && jobs.find((job) => job.jobId === selectedJobId)?.status === "DRAFT" && <button className="secondary-button" type="button" onClick={() => { const job = jobs.find((item) => item.jobId === selectedJobId); if (job) void changeState(job, "publish"); }}>Đăng JD</button>}{selectedJobId && jobs.find((job) => job.jobId === selectedJobId)?.status === "PUBLISHED" && <button className="secondary-button" type="button" onClick={() => { const job = jobs.find((item) => item.jobId === selectedJobId); if (job) void changeState(job, "close"); }}>Đóng JD</button>}</div>
     </form>
+    <RecruiterApplicationsPanel session={session} jobId={selectedJobId} />
   </div>;
 }
 

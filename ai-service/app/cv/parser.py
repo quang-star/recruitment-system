@@ -8,7 +8,7 @@ from pypdf import PdfReader
 def parse_pdf(cv_version_id: str, source_hash: str, content: bytes) -> dict[str, object]:
     reader = PdfReader(BytesIO(content))
     text = "\n".join(page.extract_text() or "" for page in reader.pages).strip()
-    quality_flags = ["LOW_TEXT_SIGNAL"] if len(text) < 100 else ["NO_STRUCTURED_DATA"]
+    quality_flags = ["LOW_TEXT_SIGNAL", "OCR_REQUIRED"] if len(text) < 100 else ["NO_STRUCTURED_DATA"]
     language = "vi" if any(character in text.lower() for character in "ăâđêôơư") else "unknown"
     return {
         "$schema": "https://smart-recruitment.local/contracts/schemas/parsed-cv-v1.schema.json",

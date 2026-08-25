@@ -13,12 +13,33 @@ from sqlalchemy.orm import sessionmaker
 
 from app.cv.parser import parse_pdf
 from app.cv.repository import ParsedCvRevisionRepository
+from app.jd.repository import ParsedJdRevisionRepository
+from app.matching.algorithm import compute_match
+from app.matching.repository import MatchingResultRepository
 from app.shared.config import get_settings
 from app.task.domain import TaskState
 from app.task.persistence import SqlAlchemyProcessingTaskRepository
 
 
 LOGGER = logging.getLogger(__name__)
+
+
+def _dead_letter_event(envelope: dict, message, exception: Exception, attempts: int) -> dict:
+    return {
+        "eventId": str(uuid4()),
+        "eventType": "ai.processing.dead-lettered.v1",
+        "schemaVersion": 1,
+        "correlationId": envelope.get("correlationId"),
+        "occurredAt": datetime.now(UTC).isoformat(),
+        "payload": {
+            "sourceTopic": message.topic,
+            "sourcePartition": message.partition,
+            "sourceOffset": message.offset,
+            "attempts": attempts,
+            "errorType": type(exception).__name__,
+            "originalEnvelope": envelope,
+        },
+    }
 
 
 def _object_parts(object_ref: str) -> tuple[str, str]:
@@ -62,6 +83,7 @@ async def run() -> None:
     settings = get_settings()
     consumer = AIOKafkaConsumer(
         settings.kafka_cv_uploaded_topic,
+        settings.kafka_application_submitted_topic,
         bootstrap_servers=settings.kafka_bootstrap_servers,
         group_id=settings.kafka_consumer_group,
         enable_auto_commit=False,
@@ -85,13 +107,29 @@ async def run() -> None:
     try:
         async for message in consumer:
             envelope = message.value
-            try:
-                await _process_one(envelope, factory, storage, producer, settings)
-                await consumer.commit()
-            except Exception as exc:
-                # Do not log event contents: the event contains private object references.
-                LOGGER.error("CV upload event failed error_type=%s", type(exc).__name__)
-                await asyncio.sleep(2)
+            for attempt in range(1, settings.kafka_max_processing_attempts + 1):
+                try:
+                    if envelope.get("eventType") == "cv.uploaded.v1":
+                        await _process_one(envelope, factory, storage, producer, settings)
+                    elif envelope.get("eventType") == "application.submitted.v1":
+                        await _process_application(envelope, factory, producer, settings)
+                    await consumer.commit()
+                    break
+                except Exception as exc:
+                    # Do not log event contents: events can contain private object references.
+                    LOGGER.error("AI event processing failed attempt=%s/%s error_type=%s",
+                                 attempt, settings.kafka_max_processing_attempts, type(exc).__name__)
+                    if attempt == settings.kafka_max_processing_attempts:
+                        dead_letter = _dead_letter_event(envelope, message, exc, attempt)
+                        await producer.send_and_wait(settings.kafka_dead_letter_topic,
+                                                     key=str(envelope.get("eventId", "unknown")).encode("utf-8"),
+                                                     value=dead_letter)
+                        await consumer.commit()
+                        LOGGER.error("AI event moved to DLQ topic=%s source_topic=%s partition=%s offset=%s",
+                                     settings.kafka_dead_letter_topic, message.topic,
+                                     message.partition, message.offset)
+                        break
+                    await asyncio.sleep(settings.kafka_retry_backoff_seconds * attempt)
     finally:
         await producer.stop()
         await consumer.stop()
@@ -140,6 +178,61 @@ async def _process_one(envelope: dict, factory, storage: Minio,
                                   cv_id, cv_version_id, failure_code)
     await producer.send_and_wait(settings.kafka_cv_processing_updated_topic,
                                  key=str(cv_id).encode("utf-8"), value=event)
+
+
+def _matching_event(envelope: dict, result, application_id: UUID,
+                    cv_version_id: UUID, job_version_id: UUID) -> dict:
+    return {
+        "eventId": str(uuid4()),
+        "eventType": "matching.completed.v1",
+        "schemaVersion": 1,
+        "correlationId": envelope["correlationId"],
+        "idempotencyKey": f"matching.completed.v1:{application_id}:{cv_version_id}:{job_version_id}",
+        "occurredAt": datetime.now(UTC).isoformat(),
+        "payload": {
+            "applicationId": str(application_id),
+            "cvVersionId": str(cv_version_id),
+            "jobVersionId": str(job_version_id),
+            "matchingResultId": str(result.public_id),
+            "status": result.status,
+            "finalScore": result.final_score,
+            "qualityFlags": result.quality_flags,
+            "components": result.components,
+            "claims": result.claims,
+        },
+    }
+
+
+async def _process_application(envelope: dict, factory,
+                               producer: AIOKafkaProducer, settings) -> None:
+    payload = envelope.get("payload", {})
+    application_id = UUID(payload["applicationId"])
+    cv_version_id = UUID(payload["cvVersionId"])
+    job_version_id = UUID(payload["jobVersionId"])
+    with factory() as session:
+        results = MatchingResultRepository(session)
+        existing = results.find_latest(application_id)
+        if existing and existing.cv_version_id == cv_version_id and existing.job_version_id == job_version_id:
+            result = existing
+        else:
+            cv_revision = ParsedCvRevisionRepository(session).find_confirmed(cv_version_id)
+            jd_revision = ParsedJdRevisionRepository(session).find_confirmed(job_version_id)
+            if cv_revision is None or jd_revision is None:
+                result = results.save(
+                    application_id, cv_version_id, job_version_id,
+                    "INSUFFICIENT_DATA", 0.0, ["INPUT_REVISION_UNAVAILABLE"], [], [],
+                )
+            else:
+                computed = compute_match(cv_revision.payload, jd_revision.payload)
+                result = results.save(
+                    application_id, cv_version_id, job_version_id,
+                    computed.status, computed.final_score, computed.quality_flags,
+                    computed.components, computed.claims,
+                )
+            session.commit()
+        event = _matching_event(envelope, result, application_id, cv_version_id, job_version_id)
+    await producer.send_and_wait(settings.kafka_matching_completed_topic,
+                                 key=str(application_id).encode("utf-8"), value=event)
 
 
 if __name__ == "__main__":

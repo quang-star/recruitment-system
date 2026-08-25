@@ -38,8 +38,11 @@ public class GatewaySecurityConfig {
                                 "/api/v1/auth/refresh",
                                 "/api/v1/auth/logout").permitAll()
                         .pathMatchers(HttpMethod.GET, "/.well-known/jwks.json", "/actuator/health").permitAll()
-                        .pathMatchers("/api/v1/candidates/**", "/api/v1/cvs/**", "/api/v1/candidate/**").hasRole("CANDIDATE")
-                        .pathMatchers("/api/v1/recruiter/**", "/api/v1/companies/**", "/api/v1/jobs/**").hasRole("RECRUITER")
+                        .pathMatchers("/api/v1/candidates/**", "/api/v1/cvs/**", "/api/v1/candidate/**",
+                                "/api/v1/parsed-cvs/**").hasRole("CANDIDATE")
+                        .pathMatchers("/api/v1/recruiter/**", "/api/v1/companies/**", "/api/v1/jobs/**",
+                                "/api/v1/parsed-jds/**").hasRole("RECRUITER")
+                        .pathMatchers("/api/v1/applications/**").hasAnyRole("CANDIDATE", "RECRUITER")
                         .anyExchange().authenticated())
                 .oauth2ResourceServer(resourceServer -> resourceServer.jwt(jwt ->
                         jwt.jwtAuthenticationConverter(jwtAuthenticationConverter)))

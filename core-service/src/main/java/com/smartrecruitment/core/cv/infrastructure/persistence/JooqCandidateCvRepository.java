@@ -80,6 +80,8 @@ public class JooqCandidateCvRepository implements CandidateCvRepository {
         return dsl.update(CV_VERSIONS)
                 .set(CV_VERSIONS.PROCESSING_STATUS, status.name())
                 .set(CV_VERSIONS.FAILURE_CODE, failureCode)
+                .set(CV_VERSIONS.CONFIRMED_AT,
+                        status == CvProcessingStatus.CONFIRMED ? now : null)
                 .set(CV_VERSIONS.UPDATED_AT, now)
                 .set(CV_VERSIONS.VERSION, CV_VERSIONS.VERSION.add(1L))
                 .where(CV_VERSIONS.PUBLIC_ID.eq(cvVersionId))

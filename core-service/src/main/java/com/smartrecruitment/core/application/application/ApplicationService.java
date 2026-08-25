@@ -3,6 +3,8 @@ package com.smartrecruitment.core.application.application;
 import com.smartrecruitment.core.application.application.port.ApplicationRepository;
 import com.smartrecruitment.core.application.domain.Application;
 import com.smartrecruitment.core.application.domain.ApplicationStatus;
+import com.smartrecruitment.core.cv.application.port.OutboxEventRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,13 +15,32 @@ import java.util.UUID;
 @Service
 public class ApplicationService {
     private final ApplicationRepository applications;
+    private final OutboxEventRepository outbox;
 
-    public ApplicationService(ApplicationRepository applications) { this.applications = applications; }
+    public ApplicationService(ApplicationRepository applications) { this(applications, event -> { }); }
+
+    @Autowired
+    public ApplicationService(ApplicationRepository applications, OutboxEventRepository outbox) {
+        this.applications = applications;
+        this.outbox = outbox;
+    }
 
     @Transactional
     public Application apply(UUID candidateUserId, UUID jobId, UUID cvId) {
+        return apply(candidateUserId, jobId, cvId, true, "cv-sharing-v1");
+    }
+
+    @Transactional
+    public Application apply(UUID candidateUserId, UUID jobId, UUID cvId,
+                             boolean consentAccepted, String policyVersion) {
+        if (!consentAccepted) throw new ApplicationStateException("CV sharing consent is required");
+        if (policyVersion == null || policyVersion.isBlank() || policyVersion.length() > 80) {
+            throw new ApplicationStateException("A valid consent policy version is required");
+        }
         try {
-            return applications.insert(candidateUserId, jobId, cvId);
+            Application application = applications.insert(candidateUserId, jobId, cvId, consentAccepted, policyVersion);
+            outbox.append(ApplicationSubmittedEvent.from(application, UUID.randomUUID()));
+            return application;
         } catch (DataIntegrityViolationException exception) {
             throw new ApplicationConflictException();
         }
