@@ -14,8 +14,10 @@ from sqlalchemy.orm import sessionmaker
 from app.cv.parser import parse_pdf
 from app.cv.repository import ParsedCvRevisionRepository
 from app.jd.repository import ParsedJdRevisionRepository
-from app.matching.algorithm import compute_match
+from app.jd.parser import parse_jd
+from app.matching.algorithm import ALGORITHM_VERSION, compute_match
 from app.matching.repository import MatchingResultRepository
+from app.taxonomy.normalizer import taxonomy_version
 from app.shared.config import get_settings
 from app.task.domain import TaskState
 from app.task.persistence import SqlAlchemyProcessingTaskRepository
@@ -83,6 +85,7 @@ async def run() -> None:
     settings = get_settings()
     consumer = AIOKafkaConsumer(
         settings.kafka_cv_uploaded_topic,
+        settings.kafka_job_submitted_topic,
         settings.kafka_application_submitted_topic,
         bootstrap_servers=settings.kafka_bootstrap_servers,
         group_id=settings.kafka_consumer_group,
@@ -111,6 +114,8 @@ async def run() -> None:
                 try:
                     if envelope.get("eventType") == "cv.uploaded.v1":
                         await _process_one(envelope, factory, storage, producer, settings)
+                    elif envelope.get("eventType") == "job.version.submitted.v1":
+                        await _process_job(envelope, factory, storage, producer, settings)
                     elif envelope.get("eventType") == "application.submitted.v1":
                         await _process_application(envelope, factory, producer, settings)
                     await consumer.commit()
@@ -161,7 +166,12 @@ async def _process_one(envelope: dict, factory, storage: Minio,
             try:
                 raw_document = _read_object(storage, object_ref)
                 stage = "parser"
-                parsed = parse_pdf(str(cv_version_id), source_hash, raw_document)
+                parsed = parse_pdf(
+                    str(cv_version_id), source_hash, raw_document,
+                    ocr_enabled=settings.ocr_enabled,
+                    ocr_max_pages=settings.ocr_max_pages,
+                    ocr_timeout_seconds=settings.ocr_timeout_seconds,
+                )
                 stage = "task-complete"
                 task = tasks.complete(task.public_id, parsed)
                 revisions.create(cv_version_id, owner_user_id, source_hash, parsed)
@@ -180,6 +190,61 @@ async def _process_one(envelope: dict, factory, storage: Minio,
                                  key=str(cv_id).encode("utf-8"), value=event)
 
 
+def _job_processing_event(envelope: dict, task_id: UUID, status: str, source_hash: str,
+                          job_id: UUID, job_version_id: UUID, failure_code: str | None) -> dict:
+    return {
+        "eventId": str(uuid4()),
+        "eventType": "job.processing.updated.v1",
+        "schemaVersion": 1,
+        "correlationId": envelope["correlationId"],
+        "idempotencyKey": f"job.processing.updated.v1:{job_version_id}:{status}",
+        "occurredAt": datetime.now(UTC).isoformat(),
+        "payload": {
+            "jobId": str(job_id), "jobVersionId": str(job_version_id),
+            "processingTaskId": str(task_id), "sourceHash": source_hash,
+            "status": status, "failureCode": failure_code,
+        },
+    }
+
+
+async def _process_job(envelope: dict, factory, storage: Minio,
+                       producer: AIOKafkaProducer, settings) -> None:
+    payload = envelope.get("payload", {})
+    job_id = UUID(payload["jobId"])
+    job_version_id = UUID(payload["jobVersionId"])
+    owner_user_id = UUID(payload["recruiterUserId"])
+    object_ref = payload["objectRef"]
+    source_hash = payload["sourceHash"]
+    with factory() as session:
+        tasks = SqlAlchemyProcessingTaskRepository(session)
+        revisions = ParsedJdRevisionRepository(session)
+        existing = tasks.find_by_resource_id(job_version_id)
+        if existing and existing.state is TaskState.COMPLETED:
+            task = existing
+            status, failure_code = "PARSED", None
+        else:
+            task = tasks.start_jd(job_version_id, owner_user_id, object_ref, source_hash)
+            session.commit()
+            try:
+                snapshot = json.loads(_read_object(storage, object_ref))
+                if snapshot.get("sourceHash") != source_hash:
+                    raise ValueError("JD snapshot source hash mismatch")
+                parsed = parse_jd(str(job_version_id), source_hash, snapshot["title"],
+                                  snapshot["description"], snapshot["requirementsText"])
+                task = tasks.complete(task.public_id, parsed)
+                revisions.upsert(job_id, job_version_id, owner_user_id, source_hash, parsed)
+                status, failure_code = "PARSED", None
+            except Exception as exc:
+                LOGGER.error("JD processing failed error_type=%s", type(exc).__name__)
+                task = tasks.fail(task.public_id, "JD_PARSE_FAILED")
+                status, failure_code = "FAILED", "JD_PARSE_FAILED"
+            session.commit()
+        event = _job_processing_event(envelope, task.public_id, status, source_hash,
+                                      job_id, job_version_id, failure_code)
+    await producer.send_and_wait(settings.kafka_job_processing_updated_topic,
+                                 key=str(job_id).encode("utf-8"), value=event)
+
+
 def _matching_event(envelope: dict, result, application_id: UUID,
                     cv_version_id: UUID, job_version_id: UUID) -> dict:
     return {
@@ -187,7 +252,10 @@ def _matching_event(envelope: dict, result, application_id: UUID,
         "eventType": "matching.completed.v1",
         "schemaVersion": 1,
         "correlationId": envelope["correlationId"],
-        "idempotencyKey": f"matching.completed.v1:{application_id}:{cv_version_id}:{job_version_id}",
+        "idempotencyKey": (
+            f"matching.completed.v1:{application_id}:"
+            f"{result.algorithm_version}:{result.taxonomy_version}"
+        ),
         "occurredAt": datetime.now(UTC).isoformat(),
         "payload": {
             "applicationId": str(application_id),
@@ -199,6 +267,8 @@ def _matching_event(envelope: dict, result, application_id: UUID,
             "qualityFlags": result.quality_flags,
             "components": result.components,
             "claims": result.claims,
+            "algorithmVersion": result.algorithm_version,
+            "taxonomyVersion": result.taxonomy_version,
         },
     }
 
@@ -212,7 +282,10 @@ async def _process_application(envelope: dict, factory,
     with factory() as session:
         results = MatchingResultRepository(session)
         existing = results.find_latest(application_id)
-        if existing and existing.cv_version_id == cv_version_id and existing.job_version_id == job_version_id:
+        if existing and existing.cv_version_id == cv_version_id \
+                and existing.job_version_id == job_version_id \
+                and existing.algorithm_version == ALGORITHM_VERSION \
+                and existing.taxonomy_version == taxonomy_version():
             result = existing
         else:
             cv_revision = ParsedCvRevisionRepository(session).find_confirmed(cv_version_id)

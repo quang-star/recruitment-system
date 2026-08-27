@@ -77,7 +77,8 @@
         "cvVersionId": { "type": "string", "format": "uuid" },
         "language": { "enum": ["vi", "en", "mixed", "unknown"] },
         "sourceHash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-        "parserVersion": { "type": "string", "minLength": 1, "maxLength": 100 }
+        "parserVersion": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "textExtractionMethod": { "enum": ["EMBEDDED_TEXT", "OCR", "NONE"] }
       }
     },
     "skill": {

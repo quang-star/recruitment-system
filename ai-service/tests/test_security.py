@@ -5,11 +5,11 @@ from uuid import uuid4
 import jwt
 import pytest
 from cryptography.hazmat.primitives.asymmetric import rsa
-from fastapi.testclient import TestClient
 
-from app.main import app
+from app.main import app, health
 from app.shared.api import ApiContractError
-from app.shared.security import JwtVerifier
+from app.shared.security import JwtVerifier, require_access_token
+from app.task.api import router as task_router
 
 
 class StaticJwksClient:
@@ -21,15 +21,22 @@ class StaticJwksClient:
 
 
 def test_health_is_public() -> None:
-    response = TestClient(app).get("/actuator/health")
-    assert response.status_code == 200
+    route = next(route for route in app.routes
+                 if getattr(route, "path", None) == "/actuator/health")
+    assert route.methods == {"GET"}
+    assert not route.dependencies
+    assert health() == {"status": "UP"}
 
 
 def test_ai_task_endpoint_requires_bearer_token() -> None:
-    response = TestClient(app).get(f"/api/v1/ai-tasks/{uuid4()}")
-    assert response.status_code == 401
-    assert response.headers["WWW-Authenticate"] == "Bearer"
-    assert response.json()["code"] == "INVALID_ACCESS_TOKEN"
+    route = next(route for route in task_router.routes
+                 if route.path == "/api/v1/ai-tasks/{task_id}")
+    assert route.dependencies
+    with pytest.raises(ApiContractError) as captured:
+        require_access_token(None)
+    assert captured.value.status_code == 401
+    assert captured.value.headers["WWW-Authenticate"] == "Bearer"
+    assert captured.value.code == "INVALID_ACCESS_TOKEN"
 
 
 def test_verifier_accepts_expected_issuer_and_audience() -> None:

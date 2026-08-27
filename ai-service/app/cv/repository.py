@@ -144,11 +144,13 @@ class ParsedCvRevisionRepository:
             select(ParsedCvRevisionRecord)
             .where(ParsedCvRevisionRecord.cv_version_id == cv_version_id)
             .where(ParsedCvRevisionRecord.owner_user_id == owner_user_id)
-            .where(ParsedCvRevisionRecord.public_id == expected_revision_id)
+            .order_by(ParsedCvRevisionRecord.revision_number.desc())
             .with_for_update()
         )
         if record is None:
             raise LookupError("ParsedCV revision was not found")
+        if record.public_id != expected_revision_id:
+            raise ValueError("ParsedCV revision is stale; reload the latest revision")
 
         head = self._session.scalar(
             select(ParsedCvHeadRecord)
