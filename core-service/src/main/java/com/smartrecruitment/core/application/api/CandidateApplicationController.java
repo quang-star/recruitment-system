@@ -22,7 +22,8 @@ public class CandidateApplicationController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ApplicationResponse apply(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody ApplyRequest request) {
-        return ApplicationResponse.from(applications.apply(userId(jwt), request.jobId(), request.cvId()));
+        return ApplicationResponse.from(applications.apply(userId(jwt), request.jobId(), request.cvId(),
+                request.consentAccepted(), request.policyVersion()));
     }
 
     @GetMapping

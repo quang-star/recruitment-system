@@ -13,6 +13,11 @@ greenlet==3.5.5
 h11==0.16.0
 httptools==0.8.0
 idna==3.18
+attrs==25.4.0
+jsonschema==4.25.0
+jsonschema-specifications==2025.9.1
+referencing==0.37.0
+rpds-py==0.28.0
 Mako==1.4.1
 MarkupSafe==3.0.3
 minio==7.2.18

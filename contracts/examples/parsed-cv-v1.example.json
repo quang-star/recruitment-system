@@ -5,7 +5,8 @@
     "cvVersionId": "a975924e-4419-4dc4-aa75-65d9a027a2d1",
     "language": "mixed",
     "sourceHash": "cc960cecfde0e66e21216bbae643504c258a30d2f3ab4e6cd133590b803e7494",
-    "parserVersion": "rules-v0.1.0"
+    "parserVersion": "rules-v0.1.0",
+    "textExtractionMethod": "EMBEDDED_TEXT"
   },
   "skills": [
     {

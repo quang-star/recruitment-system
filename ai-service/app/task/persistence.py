@@ -58,14 +58,25 @@ class SqlAlchemyProcessingTaskRepository(ProcessingTaskRepository):
 
     def start_cv(self, resource_id: UUID, owner_user_id: UUID,
                  object_ref: str, source_hash: str) -> ProcessingTask:
+        return self._start(resource_id, owner_user_id, object_ref, source_hash,
+                           TaskType.PARSE_CV, 1)
+
+    def start_jd(self, resource_id: UUID, owner_user_id: UUID,
+                 object_ref: str, source_hash: str) -> ProcessingTask:
+        return self._start(resource_id, owner_user_id, object_ref, source_hash,
+                           TaskType.PARSE_JD, 2)
+
+    def _start(self, resource_id: UUID, owner_user_id: UUID,
+               object_ref: str, source_hash: str, task_type: TaskType,
+               deterministic_salt: int) -> ProcessingTask:
         existing = self._session.scalar(
             select(ProcessingTaskRecord).where(ProcessingTaskRecord.resource_id == resource_id)
         )
         now = datetime.now().astimezone()
         if existing is None:
             existing = ProcessingTaskRecord(
-                public_id=UUID(int=resource_id.int ^ UUID(int=1).int),
-                task_type=TaskType.PARSE_CV.value,
+                public_id=UUID(int=resource_id.int ^ UUID(int=deterministic_salt).int),
+                task_type=task_type.value,
                 state=TaskState.PROCESSING.value,
                 attempt_count=1,
                 resource_id=resource_id,

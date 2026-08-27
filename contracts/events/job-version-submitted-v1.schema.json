@@ -4,10 +4,11 @@
   "title": "job.version.submitted.v1 payload",
   "type": "object",
   "additionalProperties": false,
-  "required": ["jobId", "jobVersionId", "sourceHash", "objectRef"],
+  "required": ["jobId", "jobVersionId", "recruiterUserId", "sourceHash", "objectRef"],
   "properties": {
     "jobId": { "type": "string", "format": "uuid" },
     "jobVersionId": { "type": "string", "format": "uuid" },
+    "recruiterUserId": { "type": "string", "format": "uuid" },
     "sourceHash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
     "objectRef": { "type": "string", "minLength": 1, "maxLength": 1024 }
   }

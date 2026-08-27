@@ -9,6 +9,10 @@ import java.util.UUID;
 
 public interface ApplicationRepository {
     Application insert(UUID candidateUserId, UUID jobId, UUID cvId);
+    default Application insert(UUID candidateUserId, UUID jobId, UUID cvId,
+                               boolean consentAccepted, String policyVersion) {
+        return insert(candidateUserId, jobId, cvId);
+    }
     List<Application> findAllForCandidate(UUID candidateUserId);
     List<Application> findAllForRecruiter(UUID recruiterUserId, UUID jobId);
     Optional<Application> findForRecruiter(UUID recruiterUserId, UUID applicationId);

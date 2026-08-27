@@ -16,4 +16,10 @@ public interface JobRepository {
     Optional<Job> updateDraft(Job job, JobVersion newVersion, long expectedVersion, UUID userId);
     Optional<Job> publish(UUID jobId, UUID userId, long expectedVersion, OffsetDateTime publishedAt);
     Optional<Job> close(UUID jobId, UUID userId, long expectedVersion, OffsetDateTime closedAt);
+
+    /**
+     * Implementations backed by the Core database enforce ParsedJD confirmation.
+     * The default keeps lightweight in-memory unit-test repositories source-compatible.
+     */
+    default boolean isParsedJdConfirmed(UUID jobVersionId) { return true; }
 }

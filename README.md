@@ -7,8 +7,8 @@ Hệ thống tuyển dụng IT hỗ trợ phân tích CV, matching ứng viên�
 - `web`: React/Vite, chỉ gọi public Gateway.
 - `gateway-service`: routing, JWT edge validation, CORS và correlation ID.
 - `auth-service`: account, credential, global role, JWT/JWKS và session family.
-- `core-service`: recruitment workflow; vertical slice đầu tiên là Candidate Profile và CV ingestion.
-- `ai-service`: FastAPI/Alembic; durable processing task và worker Kafka cho CV.
+- `core-service`: recruitment workflow, immutable Job/Application snapshots và các projection đọc nhanh.
+- `ai-service`: FastAPI/Alembic; durable processing task, ParsedCV/ParsedJD revisions và worker Kafka cho CV/matching.
 - `contracts`: HTTP/event schema dùng chung, không chứa domain hoặc persistence model.
 - `compose.yaml`: PostgreSQL với ba database owner riêng, Kafka chạy KRaft, MinIO và các service.
 
@@ -67,12 +67,15 @@ không thay thế cho full test.
 - Recruiter Profile và Company đã có Core vertical slice: role `RECRUITER`, Company owner membership,
   multi-tenant read/update authorization và optimistic locking qua Gateway.
 - Job/JD đã có Core vertical slice: company-scoped recruiter authorization, draft versioning,
-  optimistic locking và lifecycle `DRAFT` → `PUBLISHED` → `CLOSED`; Recruiter workspace đã có form tạo/sửa/đăng/đóng JD.
+  optimistic locking và lifecycle `DRAFT` → `PUBLISHED` → `CLOSED`; ParsedJD review/confirm cập nhật Core projection,
+  và publish bị chặn nếu active version chưa `CONFIRMED`.
 - Application baseline đã có: ứng viên chỉ apply bằng CV version `CONFIRMED` vào Job đang mở,
-  lưu snapshot job/CV version, recruiter xem danh sách và chuyển trạng thái có optimistic locking.
+  yêu cầu consent `CV_SHARING`/policy version, lưu snapshot job/CV version + access grant, transactional outbox `application.submitted.v1`, recruiter xem danh sách và chuyển trạng thái có optimistic locking.
 - CV upload hiện đi qua private MinIO → transactional outbox → Kafka `cv.uploaded.v1` → AI worker đọc/parse PDF text → Kafka `cv.processing.updated.v1`; Core cập nhật `processingStatus` có kiểm tra `sourceHash`.
-- AI lưu ParsedCV revision có ownership theo candidate, hỗ trợ review qua `GET /api/v1/parsed-cvs/{cvVersionId}` và confirm qua `POST /api/v1/parsed-cvs/{cvVersionId}/confirm`; event `cv.confirmed.v1` cập nhật Core sang `CONFIRMED`.
-- Parser hiện là baseline `pypdf`, trả structured `parsed-cv/1.0` tối thiểu cho PDF có text; OCR, chỉnh sửa ParsedCV, Application và matching chưa hoàn thiện.
+- AI lưu ParsedCV revision có ownership theo candidate, hỗ trợ review qua `GET /api/v1/parsed-cvs/{cvVersionId}`, sửa immutable revision qua `PUT /api/v1/parsed-cvs/{cvVersionId}` với optimistic locking và confirm qua `POST /api/v1/parsed-cvs/{cvVersionId}/confirm`; event `cv.confirmed.v1` cập nhật Core sang `CONFIRMED`.
+- AI có ParsedJD revision ownership theo recruiter, parser rule-based có canonical skill/evidence, review qua `GET/PUT /api/v1/parsed-jds/{jobVersionId}` và confirm qua `POST .../confirm`; event cập nhật projection Core.
+- Matching baseline deterministic (`required/preferred skills`, experience, title, metadata, responsibility keywords) chạy qua Kafka sau application submit, lưu explanation/components/claims và Core expose `GET /api/v1/applications/{applicationId}/match`.
+- Candidate workspace đã có structured ParsedCV editor cho kỹ năng, kinh nghiệm và tổng thời lượng kinh nghiệm. AI worker retry tối đa theo cấu hình với backoff rồi chuyển event sang DLQ có metadata replay; parser vẫn là baseline `pypdf` cho CV text, còn OCR và evaluation dataset ở backlog.
 - Email vẫn dùng Mailpit local; external email provider và production secret manager chưa được triển khai.
 - Auth dùng cặp RSA PEM bền vững được mount read-only; Gateway, Core và AI đều kiểm tra
   signature, issuer, expiry và audience.
