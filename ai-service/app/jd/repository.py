@@ -66,10 +66,6 @@ class ParsedJdRevisionRepository:
             .order_by(ParsedJdRevisionRecord.revision_number.desc())
         )
         if latest is not None and latest.source_hash == source_hash:
-            latest.payload = payload
-            latest.updated_at = datetime.now().astimezone()
-            latest.version += 1
-            self._session.flush()
             return self._to_domain(latest, None)
 
         next_number = self._session.scalar(
@@ -80,6 +76,29 @@ class ParsedJdRevisionRepository:
         record = ParsedJdRevisionRecord(
             public_id=uuid4(), job_id=job_id, job_version_id=job_version_id,
             owner_user_id=owner_user_id, revision_number=int(next_number),
+            source_hash=source_hash, payload=payload, status="PARSED",
+            created_at=now, updated_at=now, version=0,
+        )
+        self._session.add(record)
+        self._session.flush()
+        return self._to_domain(record, None)
+
+    def create_revision(self, job_id: UUID, job_version_id: UUID, owner_user_id: UUID,
+                        source_hash: str, payload: dict,
+                        expected_revision_id: UUID) -> ParsedJdRevision:
+        latest = self._session.scalar(
+            select(ParsedJdRevisionRecord)
+            .where(ParsedJdRevisionRecord.job_version_id == job_version_id)
+            .where(ParsedJdRevisionRecord.owner_user_id == owner_user_id)
+            .order_by(ParsedJdRevisionRecord.revision_number.desc())
+            .with_for_update()
+        )
+        if latest is None or latest.public_id != expected_revision_id:
+            raise ValueError("ParsedJD revision is stale; reload the latest revision")
+        now = datetime.now().astimezone()
+        record = ParsedJdRevisionRecord(
+            public_id=uuid4(), job_id=job_id, job_version_id=job_version_id,
+            owner_user_id=owner_user_id, revision_number=latest.revision_number + 1,
             source_hash=source_hash, payload=payload, status="PARSED",
             created_at=now, updated_at=now, version=0,
         )
@@ -112,11 +131,13 @@ class ParsedJdRevisionRepository:
             select(ParsedJdRevisionRecord)
             .where(ParsedJdRevisionRecord.job_version_id == job_version_id)
             .where(ParsedJdRevisionRecord.owner_user_id == owner_user_id)
-            .where(ParsedJdRevisionRecord.public_id == expected_revision_id)
+            .order_by(ParsedJdRevisionRecord.revision_number.desc())
             .with_for_update()
         )
         if record is None:
             raise LookupError("ParsedJD revision was not found")
+        if record.public_id != expected_revision_id:
+            raise ValueError("ParsedJD revision is stale; reload the latest revision")
 
         head = self._session.scalar(
             select(ParsedJdHeadRecord)

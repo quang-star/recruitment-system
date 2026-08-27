@@ -17,7 +17,7 @@ def test_parser_returns_contract_compatible_canonical_skills() -> None:
 
     schema = json.loads((Path(__file__).parents[2] / "contracts/schemas/parsed-jd-v1.schema.json").read_text())
     Draft202012Validator(schema, format_checker=FormatChecker()).validate(payload)
-    assert payload["document"]["parserVersion"] == "rules-v0.1.0"
+    assert payload["document"]["parserVersion"] == "rules-v0.2.0+taxonomy-1.0.0"
     assert {skill["raw"] for skill in payload["requirements"]["requiredSkills"]} == {"Java", "Kafka"}
     assert payload["requirements"]["minimumRelevantExperienceMonths"] == 36
     assert payload["responsibilities"]
@@ -44,5 +44,22 @@ def test_parser_normalizes_known_aliases_without_duplicate_skill_rows() -> None:
     )
 
     skills = payload["requirements"]["requiredSkills"]
-    assert {skill["raw"] for skill in skills} == {"Spring Boot", "PostgreSQL", "React"}
+    assert {skill["raw"] for skill in skills} == {"SpringBoot", "Postgres", "React.js"}
     assert len({skill["canonicalSkillId"] for skill in skills}) == 3
+
+
+def test_parser_keeps_required_and_preferred_skills_separate() -> None:
+    payload = parse_jd(
+        "779494ac-c858-4570-a884-6e88423b8e2b",
+        "0cb83583181fc5bdb09aa37cf82ab5f89e7438e88925de3e6e1f0f0eddb76382",
+        "Backend Engineer",
+        "Build APIs for the platform.",
+        "Required: Java and PostgreSQL.\nNice to have: Kafka and Docker.",
+    )
+
+    assert {skill["raw"] for skill in payload["requirements"]["requiredSkills"]} == {
+        "Java", "PostgreSQL",
+    }
+    assert {skill["raw"] for skill in payload["requirements"]["preferredSkills"]} == {
+        "Kafka", "Docker",
+    }

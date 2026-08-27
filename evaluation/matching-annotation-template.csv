@@ -1,0 +1,1 @@
+pair_id,job_id,candidate_id,job_family,language,split,source_type,anonymized,rater_1_label,rater_1_required_coverage,rater_1_confidence,rater_1_unsure,rater_2_label,rater_2_required_coverage,rater_2_confidence,rater_2_unsure,adjudicated_label,adjudication_reason,predicted_score,algorithm_version,taxonomy_version,notes

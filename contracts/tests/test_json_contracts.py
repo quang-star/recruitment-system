@@ -122,3 +122,17 @@ def test_job_processing_event_contracts_reject_raw_jd_fields() -> None:
     event["description"] = "raw JD must not be put in Kafka"
     with pytest.raises(ValidationError):
         event_validator("job-processing-updated-v1.schema.json").validate(event)
+
+
+def test_job_submission_uses_private_object_reference_instead_of_raw_jd() -> None:
+    event = {
+        "jobId": "779494ac-c858-4570-a884-6e88423b8e2b",
+        "jobVersionId": "879494ac-c858-4570-a884-6e88423b8e2b",
+        "recruiterUserId": "979494ac-c858-4570-a884-6e88423b8e2b",
+        "sourceHash": "0cb83583181fc5bdb09aa37cf82ab5f89e7438e88925de3e6e1f0f0eddb76382",
+        "objectRef": "private-jd/jobs/779494ac/version.json",
+    }
+    event_validator("job-version-submitted-v1.schema.json").validate(event)
+    event["description"] = "raw JD must not be put in Kafka"
+    with pytest.raises(ValidationError):
+        event_validator("job-version-submitted-v1.schema.json").validate(event)

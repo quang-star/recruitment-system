@@ -15,6 +15,7 @@ from app.shared.api import ApiContractError
 from app.shared.config import get_settings
 from app.shared.database import get_session
 from app.shared.security import AuthenticatedPrincipal, require_access_token
+from app.taxonomy.normalizer import normalize_skill
 
 router = APIRouter(
     prefix="/api/v1/parsed-cvs",
@@ -61,8 +62,7 @@ class ConfirmParsedCvRequest(BaseModel):
 
 class UpdateParsedCvRequest(BaseModel):
     cvId: UUID
-    expectedRevisionId: UUID | None = Field(default=None,
-                                             description="Latest revision used for optimistic locking")
+    expectedRevisionId: UUID = Field(description="Latest owned revision used for optimistic locking")
     payload: dict[str, Any]
 
 
@@ -83,10 +83,12 @@ async def update_parsed_cv(
     principal: AuthenticatedPrincipal = Depends(require_candidate),
     session: Session = Depends(get_session),
 ) -> ParsedCvResponse:
-    payload = _validate_user_payload(cv_version_id, request_body.payload)
     repository = ParsedCvRevisionRepository(session)
     latest = repository.find_owned(cv_version_id, principal.subject)
-    if latest is not None and latest.source_hash != payload["document"]["sourceHash"]:
+    if latest is None:
+        raise ApiContractError(404, "PARSED_CV_NOT_FOUND", "Parsed CV was not found")
+    payload = _validate_user_payload(cv_version_id, request_body.payload, latest.payload)
+    if latest.source_hash != payload["document"]["sourceHash"]:
         raise ApiContractError(422, "PARSED_CV_SOURCE_HASH_MISMATCH",
                                "document.sourceHash must match the uploaded CV version")
     try:
@@ -134,6 +136,8 @@ async def confirm_parsed_cv(
         )
     except LookupError as exception:
         raise ApiContractError(404, "PARSED_CV_REVISION_NOT_FOUND", str(exception)) from exception
+    except ValueError as exception:
+        raise ApiContractError(409, "PARSED_CV_REVISION_CONFLICT", str(exception)) from exception
 
     session.commit()
     settings = get_settings()
@@ -154,7 +158,8 @@ async def confirm_parsed_cv(
     return ParsedCvResponse.from_revision(revision)
 
 
-def _validate_user_payload(cv_version_id: UUID, payload: dict[str, Any]) -> dict[str, Any]:
+def _validate_user_payload(cv_version_id: UUID, payload: dict[str, Any],
+                           prior_payload: dict[str, Any] | None = None) -> dict[str, Any]:
     if payload.get("schemaVersion") != "parsed-cv/1.0":
         raise ApiContractError(422, "PARSED_CV_SCHEMA_INVALID", "payload.schemaVersion must be parsed-cv/1.0")
     required_sections = ("document", "skills", "experiences", "projects",
@@ -178,11 +183,33 @@ def _validate_user_payload(cv_version_id: UUID, payload: dict[str, Any]) -> dict
             raise ApiContractError(422, "PARSED_CV_SCHEMA_INVALID", f"payload.{section} must be an array")
     if not isinstance(payload.get("summary"), dict):
         raise ApiContractError(422, "PARSED_CV_SCHEMA_INVALID", "payload.summary must be an object")
-    # A candidate-authored skill is explicitly marked, so matching can distinguish
-    # extracted evidence from corrections/additions made during review.
+    prior_skills: dict[str, dict[str, Any]] = {}
+    for prior in (prior_payload or {}).get("skills", []):
+        if isinstance(prior, dict):
+            prior_skills[_skill_key(prior)] = prior
+    # Normalize corrections server-side. Evidence and extraction provenance can
+    # only be inherited from the prior owned revision; a browser cannot invent
+    # parser evidence IDs or promote a newly asserted skill to confirmed.
     for skill in payload["skills"]:
         if isinstance(skill, dict):
-            skill["provenance"] = "USER_CONFIRMED" if skill.get("provenance") else "USER_ASSERTED"
+            normalized = normalize_skill(str(skill.get("raw", "")))
+            if normalized is None:
+                skill["canonicalSkillId"] = None
+                skill["normalizationStatus"] = "PENDING"
+            else:
+                skill["canonicalSkillId"] = normalized.stable_id
+                skill["normalizationStatus"] = "KNOWN"
+                skill["confidence"] = max(float(skill.get("confidence", 0)), 0.95)
+            prior = prior_skills.get(_skill_key(skill))
+            if prior is None:
+                skill["evidenceIds"] = []
+                skill["provenance"] = "USER_ASSERTED"
+            else:
+                skill["evidenceIds"] = list(prior.get("evidenceIds", []))
+                skill["provenance"] = (
+                    "USER_ASSERTED" if prior.get("provenance") == "USER_ASSERTED"
+                    else "USER_CONFIRMED"
+                )
     schema_path = Path(__file__).resolve().parents[3] / "contracts" / "schemas" / "parsed-cv-v1.schema.json"
     if not schema_path.exists():
         schema_path = Path("/app/contracts/schemas/parsed-cv-v1.schema.json")
@@ -193,6 +220,13 @@ def _validate_user_payload(cv_version_id: UUID, payload: dict[str, Any]) -> dict
         location = ".".join(str(part) for part in errors[0].absolute_path) or "payload"
         raise ApiContractError(422, "PARSED_CV_SCHEMA_INVALID", f"{location}: {errors[0].message}")
     return payload
+
+
+def _skill_key(skill: dict[str, Any]) -> str:
+    normalized = normalize_skill(str(skill.get("raw", "")))
+    if normalized is not None:
+        return f"known:{normalized.stable_id}"
+    return f"raw:{str(skill.get('raw', '')).strip().casefold()}"
 
 
 def _event(event_type: str, correlation_id: UUID, idempotency_key: str,

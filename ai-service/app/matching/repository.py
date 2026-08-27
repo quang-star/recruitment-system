@@ -8,6 +8,8 @@ from sqlalchemy import BigInteger, DateTime, JSON, Numeric, String, Uuid, select
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
 from app.shared.database import Base
+from app.matching.algorithm import ALGORITHM_VERSION
+from app.taxonomy.normalizer import taxonomy_version
 
 
 class MatchingResultRecord(Base):
@@ -24,6 +26,7 @@ class MatchingResultRecord(Base):
     components: Mapped[list] = mapped_column(JSON, nullable=False)
     claims: Mapped[list] = mapped_column(JSON, nullable=False)
     algorithm_version: Mapped[str] = mapped_column(String(80), nullable=False)
+    taxonomy_version: Mapped[str] = mapped_column(String(32), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
@@ -47,6 +50,7 @@ class MatchingResult:
     components: list
     claims: list
     algorithm_version: str
+    taxonomy_version: str
     created_at: datetime
 
 
@@ -60,17 +64,21 @@ class MatchingResultRepository:
         existing_head = self._session.scalar(
             select(MatchingHeadRecord).where(MatchingHeadRecord.application_id == application_id)
         )
+        active_taxonomy_version = taxonomy_version()
         if existing_head is not None:
             existing = self._session.get(MatchingResultRecord, existing_head.result_id)
             if existing is not None and existing.cv_version_id == cv_version_id \
-                    and existing.job_version_id == job_version_id:
+                    and existing.job_version_id == job_version_id \
+                    and existing.algorithm_version == ALGORITHM_VERSION \
+                    and existing.taxonomy_version == active_taxonomy_version:
                 return self._to_domain(existing)
         now = datetime.now().astimezone()
         record = MatchingResultRecord(
             public_id=uuid4(), application_id=application_id,
             cv_version_id=cv_version_id, job_version_id=job_version_id,
             status=status, final_score=final_score, quality_flags=quality_flags,
-            components=components, claims=claims, algorithm_version="baseline-v1",
+            components=components, claims=claims, algorithm_version=ALGORITHM_VERSION,
+            taxonomy_version=active_taxonomy_version,
             created_at=now,
         )
         self._session.add(record)
@@ -100,5 +108,6 @@ class MatchingResultRepository:
             status=record.status, final_score=float(record.final_score),
             quality_flags=record.quality_flags, components=record.components,
             claims=record.claims, algorithm_version=record.algorithm_version,
+            taxonomy_version=record.taxonomy_version,
             created_at=record.created_at,
         )

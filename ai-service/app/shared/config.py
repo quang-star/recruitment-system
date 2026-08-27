@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     storage_access_key: str = Field(default="")
     storage_secret_key: str = Field(default="")
     storage_secure: bool = False
+    ocr_enabled: bool = True
+    ocr_max_pages: int = Field(default=5, ge=1, le=20)
+    ocr_timeout_seconds: float = Field(default=60.0, ge=5, le=300)
 
 
 @lru_cache

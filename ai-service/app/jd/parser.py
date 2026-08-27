@@ -3,25 +3,11 @@ from __future__ import annotations
 import re
 from uuid import UUID, uuid5
 
+from app.taxonomy.normalizer import extract_known_skills, taxonomy_version
+
 
 _EVIDENCE_NAMESPACE = UUID("6d3d1b4f-1d29-4eaa-8a8f-bcc2a66f7ce4")
-_SKILLS: tuple[tuple[str, str, str, str], ...] = (
-    ("java", "32af50d2-0649-589a-b10c-ee404cef802d", "Java", "BACKEND"),
-    ("spring boot", "76240767-3058-5507-b6c3-3b16fc05bd8c", "Spring Boot", "BACKEND"),
-    ("springboot", "76240767-3058-5507-b6c3-3b16fc05bd8c", "Spring Boot", "BACKEND"),
-    ("python", "9da49ca9-8c3d-5eff-8d1b-f435385d1e96", "Python", "BACKEND"),
-    ("fastapi", "7336682e-e97e-5349-bf01-2d9453c93c75", "FastAPI", "BACKEND"),
-    ("javascript", "4eabcf91-c028-5bbf-a4d0-ce9add1fc447", "JavaScript", "FRONTEND"),
-    ("ecmascript", "4eabcf91-c028-5bbf-a4d0-ce9add1fc447", "JavaScript", "FRONTEND"),
-    ("kafka", "0c57728e-8343-5ef2-aa80-db3df230cc81", "Kafka", "BACKEND"),
-    ("apache kafka", "0c57728e-8343-5ef2-aa80-db3df230cc81", "Kafka", "BACKEND"),
-    ("postgresql", "b78e841d-2382-5635-88a2-b8bf0d969144", "PostgreSQL", "BACKEND"),
-    ("postgres", "b78e841d-2382-5635-88a2-b8bf0d969144", "PostgreSQL", "BACKEND"),
-    ("docker", "b69da65b-d915-5710-9703-a218935b7688", "Docker", "DEVOPS"),
-    ("react", "d4f49f3b-a28e-5fd3-b558-94beba4054c0", "React", "FRONTEND"),
-    ("reactjs", "d4f49f3b-a28e-5fd3-b558-94beba4054c0", "React", "FRONTEND"),
-    ("react.js", "d4f49f3b-a28e-5fd3-b558-94beba4054c0", "React", "FRONTEND"),
-)
+_PREFERRED_MARKERS = ("nice to have", "preferred", "ưu tiên", "lợi thế", "điểm cộng")
 
 
 def parse_jd(job_version_id: str, source_hash: str, title: str,
@@ -38,25 +24,7 @@ def parse_jd(job_version_id: str, source_hash: str, title: str,
     family = _family(title)
     level = _level(title)
     title_evidence = str(uuid5(_EVIDENCE_NAMESPACE, f"{job_version_id}:title"))
-    required_text = requirements_text or ""
-    preferred_mode = any(marker in lowered for marker in ("nice to have", "preferred", "ưu tiên", "lợi thế"))
-    skills = []
-    seen_skills: set[str] = set()
-    for alias, stable_id, canonical_name, _category in _SKILLS:
-        if re.search(rf"(?<![a-z0-9]){re.escape(alias)}(?![a-z0-9])", lowered):
-            if stable_id in seen_skills:
-                continue
-            seen_skills.add(stable_id)
-            skills.append({
-                "raw": canonical_name,
-                "canonicalSkillId": stable_id,
-                "normalizationStatus": "KNOWN",
-                "criticality": "NORMAL" if preferred_mode else "CRITICAL",
-                "minimumMonths": _minimum_months(required_text, alias),
-                "evidenceIds": [str(uuid5(_EVIDENCE_NAMESPACE, f"{job_version_id}:skill:{alias}"))],
-                "confidence": 0.92,
-                "confirmedByRecruiter": False,
-            })
+    required_skills, preferred_skills = _skills(job_version_id, title, description, requirements_text)
     responsibilities = []
     for index, sentence in enumerate(_sentences(description), start=1):
         responsibilities.append({
@@ -70,7 +38,7 @@ def parse_jd(job_version_id: str, source_hash: str, title: str,
     quality_flags: list[str] = []
     if len(combined.strip()) < 120:
         quality_flags.append("LOW_TEXT_SIGNAL")
-    if not skills:
+    if not required_skills and not preferred_skills:
         quality_flags.append("NO_CANONICAL_SKILLS")
     if not responsibilities:
         quality_flags.append("NO_RESPONSIBILITIES")
@@ -81,7 +49,7 @@ def parse_jd(job_version_id: str, source_hash: str, title: str,
             "jobVersionId": job_version_id,
             "language": language,
             "sourceHash": source_hash,
-            "parserVersion": "rules-v0.1.0",
+            "parserVersion": f"rules-v0.2.0+taxonomy-{taxonomy_version()}",
         },
         "title": {
             "raw": title.strip(),
@@ -91,16 +59,52 @@ def parse_jd(job_version_id: str, source_hash: str, title: str,
             "evidenceIds": [title_evidence],
         },
         "requirements": {
-            "requiredSkills": skills if not preferred_mode else [],
-            "preferredSkills": skills if preferred_mode else [],
+            "requiredSkills": required_skills,
+            "preferredSkills": preferred_skills,
             "minimumRelevantExperienceMonths": _minimum_months(combined, ""),
             "education": [],
             "languages": [],
         },
         "responsibilities": responsibilities,
-        "overallConfidence": 0.78 if skills and responsibilities else 0.45,
+        "overallConfidence": 0.78 if (required_skills or preferred_skills) and responsibilities else 0.45,
         "qualityFlags": quality_flags,
     }
+
+
+def _skills(job_version_id: str, title: str, description: str,
+            requirements_text: str) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
+    required: list[dict[str, object]] = []
+    preferred: list[dict[str, object]] = []
+    seen: set[str] = set()
+    preferred_mode = False
+    lines = [title, description, *requirements_text.splitlines()]
+    for line_number, line in enumerate(lines, start=1):
+        lowered = line.casefold().strip()
+        if not lowered:
+            continue
+        if any(marker in lowered for marker in _PREFERRED_MARKERS):
+            preferred_mode = True
+        if any(marker in lowered for marker in ("required", "must have", "bắt buộc", "yêu cầu chính")):
+            preferred_mode = False
+        for skill in extract_known_skills(line):
+            if skill.stable_id in seen:
+                continue
+            seen.add(skill.stable_id)
+            item = {
+                "raw": skill.raw,
+                "canonicalSkillId": skill.stable_id,
+                "normalizationStatus": "KNOWN",
+                "criticality": "NORMAL" if preferred_mode else "CRITICAL",
+                "minimumMonths": _minimum_months(requirements_text, skill.raw),
+                "evidenceIds": [str(uuid5(
+                    _EVIDENCE_NAMESPACE,
+                    f"{job_version_id}:skill:{skill.stable_id}:line:{line_number}",
+                ))],
+                "confidence": 0.94,
+                "confirmedByRecruiter": False,
+            }
+            (preferred if preferred_mode else required).append(item)
+    return required, preferred
 
 
 def _sentences(value: str) -> list[str]:
