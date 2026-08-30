@@ -8,6 +8,9 @@ import com.smartrecruitment.auth.user.application.InvalidEmailVerificationTokenE
 import com.smartrecruitment.auth.user.application.InvalidRefreshTokenException;
 import com.smartrecruitment.auth.user.application.CurrentUserUnavailableException;
 import com.smartrecruitment.auth.user.application.VerificationEmailDeliveryException;
+import com.smartrecruitment.auth.user.application.InvalidPasswordResetTokenException;
+import com.smartrecruitment.auth.user.application.PasswordPolicyException;
+import com.smartrecruitment.auth.user.application.SessionNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,6 +34,26 @@ public class AuthExceptionHandler {
                                                 HttpServletRequest request) {
         return error(HttpStatus.BAD_REQUEST, "INVALID_EMAIL_VERIFICATION_TOKEN",
                 exception.getMessage(), Map.of(), request);
+    }
+
+    @ExceptionHandler(InvalidPasswordResetTokenException.class)
+    ResponseEntity<ApiError> handleInvalidPasswordResetToken(InvalidPasswordResetTokenException exception,
+                                                             HttpServletRequest request) {
+        return error(HttpStatus.BAD_REQUEST, "INVALID_PASSWORD_RESET_TOKEN",
+                exception.getMessage(), Map.of(), request);
+    }
+
+    @ExceptionHandler(PasswordPolicyException.class)
+    ResponseEntity<ApiError> handlePasswordPolicy(PasswordPolicyException exception,
+                                                   HttpServletRequest request) {
+        return error(HttpStatus.BAD_REQUEST, "PASSWORD_POLICY_VIOLATION",
+                exception.getMessage(), Map.of(), request);
+    }
+
+    @ExceptionHandler(SessionNotFoundException.class)
+    ResponseEntity<ApiError> handleSessionNotFound(SessionNotFoundException exception,
+                                                   HttpServletRequest request) {
+        return error(HttpStatus.NOT_FOUND, "SESSION_NOT_FOUND", exception.getMessage(), Map.of(), request);
     }
 
     @ExceptionHandler({InvalidCredentialsException.class, InvalidRefreshTokenException.class})

@@ -30,5 +30,21 @@ public class JooqPasswordCredentialRepository implements PasswordCredentialRepos
                 .set(PASSWORD_CREDENTIALS.UPDATED_AT, timestamp)
                 .set(PASSWORD_CREDENTIALS.VERSION, 0L).execute();
     }
+    @Override
+    public boolean updatePassword(Long userId, String passwordHash, Instant changedAt) {
+        OffsetDateTime timestamp = changedAt.atOffset(ZoneOffset.UTC);
+        return dsl.update(PASSWORD_CREDENTIALS)
+                .set(PASSWORD_CREDENTIALS.PASSWORD_HASH, passwordHash)
+                .set(PASSWORD_CREDENTIALS.HASH_ALGORITHM, "BCRYPT")
+                .set(PASSWORD_CREDENTIALS.PASSWORD_CHANGED_AT, timestamp)
+                .set(PASSWORD_CREDENTIALS.FAILED_ATTEMPT_COUNT, 0)
+                .setNull(PASSWORD_CREDENTIALS.LAST_FAILED_AT)
+                .setNull(PASSWORD_CREDENTIALS.LOCKED_UNTIL)
+                .set(PASSWORD_CREDENTIALS.MUST_CHANGE_PASSWORD, false)
+                .set(PASSWORD_CREDENTIALS.UPDATED_AT, timestamp)
+                .set(PASSWORD_CREDENTIALS.VERSION, PASSWORD_CREDENTIALS.VERSION.plus(1L))
+                .where(PASSWORD_CREDENTIALS.USER_ID.eq(userId))
+                .execute() == 1;
+    }
     private static Instant toInstant(OffsetDateTime value) { return value == null ? null : value.toInstant(); }
 }

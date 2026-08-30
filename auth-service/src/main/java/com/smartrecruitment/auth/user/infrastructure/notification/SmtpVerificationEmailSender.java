@@ -16,14 +16,17 @@ public class SmtpVerificationEmailSender implements VerificationEmailSender {
     private final JavaMailSender mailSender;
     private final String from;
     private final String verificationBaseUrl;
+    private final String passwordResetBaseUrl;
 
     public SmtpVerificationEmailSender(
             JavaMailSender mailSender,
             @Value("${auth.email.from:no-reply@smart-recruitment.local}") String from,
-            @Value("${auth.email.verification-base-url:http://localhost:5173/verify-email}") String verificationBaseUrl) {
+            @Value("${auth.email.verification-base-url:http://localhost:5173/verify-email}") String verificationBaseUrl,
+            @Value("${auth.email.password-reset-base-url:http://localhost:5173/reset-password}") String passwordResetBaseUrl) {
         this.mailSender = mailSender;
         this.from = from;
         this.verificationBaseUrl = verificationBaseUrl;
+        this.passwordResetBaseUrl = passwordResetBaseUrl;
     }
 
     @Override
@@ -47,6 +50,32 @@ public class SmtpVerificationEmailSender implements VerificationEmailSender {
                 If you did not create this account, ignore this email.
                 """.formatted(verificationUrl, expiresAt));
 
+        try {
+            mailSender.send(message);
+        } catch (MailException exception) {
+            throw new VerificationEmailDeliveryException(exception);
+        }
+    }
+
+    @Override
+    public void sendPasswordReset(String recipient, String rawToken, Instant expiresAt) {
+        String resetUrl = UriComponentsBuilder.fromUriString(passwordResetBaseUrl)
+                .queryParam("token", rawToken)
+                .build()
+                .toUriString();
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(from);
+        message.setTo(recipient);
+        message.setSubject("Reset your Smart Recruitment password");
+        message.setText("""
+                A password reset was requested for your Smart Recruitment account.
+
+                Set a new password by opening this link:
+                %s
+
+                This link expires at %s.
+                If you did not request a password reset, ignore this email.
+                """.formatted(resetUrl, expiresAt));
         try {
             mailSender.send(message);
         } catch (MailException exception) {
