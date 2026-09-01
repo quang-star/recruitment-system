@@ -22,9 +22,10 @@ public class JooqApplicationMatchingProjectionRepository {
     public JooqApplicationMatchingProjectionRepository(DSLContext dsl) { this.dsl = dsl; }
 
     @Transactional
-    public void update(UUID applicationId, UUID cvVersionId, UUID jobVersionId,
+    public boolean update(UUID applicationId, UUID cvVersionId, UUID jobVersionId,
                        UUID matchingResultId, String status, double finalScore,
-                       String qualityFlagsJson, String explanationJson) {
+                       String qualityFlagsJson, String explanationJson,
+                       String algorithmVersion, String taxonomyVersion) {
         var current = dsl.selectFrom(APPLICATION_MATCHING_PROJECTIONS)
                 .where(APPLICATION_MATCHING_PROJECTIONS.APPLICATION_ID.eq(applicationId)).fetchOne();
         if (current == null) {
@@ -37,22 +38,26 @@ public class JooqApplicationMatchingProjectionRepository {
                     .set(APPLICATION_MATCHING_PROJECTIONS.FINAL_SCORE, java.math.BigDecimal.valueOf(finalScore))
                     .set(APPLICATION_MATCHING_PROJECTIONS.QUALITY_FLAGS, JSON.json(qualityFlagsJson))
                     .set(APPLICATION_MATCHING_PROJECTIONS.EXPLANATION, JSON.json(explanationJson))
+                    .set(APPLICATION_MATCHING_PROJECTIONS.ALGORITHM_VERSION, algorithmVersion)
+                    .set(APPLICATION_MATCHING_PROJECTIONS.TAXONOMY_VERSION, taxonomyVersion)
                     .set(APPLICATION_MATCHING_PROJECTIONS.UPDATED_AT, OffsetDateTime.now(ZoneOffset.UTC))
                     .set(APPLICATION_MATCHING_PROJECTIONS.VERSION, 0L)
                     .execute();
-            return;
+            return true;
         }
-        if (!cvVersionId.equals(current.getCvVersionId()) || !jobVersionId.equals(current.getJobVersionId())) return;
-        if (matchingResultId.equals(current.getMatchingResultId())) return;
-        dsl.update(APPLICATION_MATCHING_PROJECTIONS)
+        if (!cvVersionId.equals(current.getCvVersionId()) || !jobVersionId.equals(current.getJobVersionId())) return false;
+        if (matchingResultId.equals(current.getMatchingResultId())) return false;
+        return dsl.update(APPLICATION_MATCHING_PROJECTIONS)
                 .set(APPLICATION_MATCHING_PROJECTIONS.MATCHING_RESULT_ID, matchingResultId)
                 .set(APPLICATION_MATCHING_PROJECTIONS.STATUS, status)
                 .set(APPLICATION_MATCHING_PROJECTIONS.FINAL_SCORE, java.math.BigDecimal.valueOf(finalScore))
                 .set(APPLICATION_MATCHING_PROJECTIONS.QUALITY_FLAGS, JSON.json(qualityFlagsJson))
                 .set(APPLICATION_MATCHING_PROJECTIONS.EXPLANATION, JSON.json(explanationJson))
+                .set(APPLICATION_MATCHING_PROJECTIONS.ALGORITHM_VERSION, algorithmVersion)
+                .set(APPLICATION_MATCHING_PROJECTIONS.TAXONOMY_VERSION, taxonomyVersion)
                 .set(APPLICATION_MATCHING_PROJECTIONS.UPDATED_AT, OffsetDateTime.now(ZoneOffset.UTC))
                 .set(APPLICATION_MATCHING_PROJECTIONS.VERSION, APPLICATION_MATCHING_PROJECTIONS.VERSION.plus(1L))
-                .where(APPLICATION_MATCHING_PROJECTIONS.APPLICATION_ID.eq(applicationId)).execute();
+                .where(APPLICATION_MATCHING_PROJECTIONS.APPLICATION_ID.eq(applicationId)).execute() == 1;
     }
 
     public Optional<Projection> findForViewer(UUID applicationId, UUID viewerId) {
@@ -74,10 +79,13 @@ public class JooqApplicationMatchingProjectionRepository {
                         record.get(APPLICATION_MATCHING_PROJECTIONS.FINAL_SCORE).doubleValue(),
                         record.get(APPLICATION_MATCHING_PROJECTIONS.QUALITY_FLAGS).data(),
                         record.get(APPLICATION_MATCHING_PROJECTIONS.EXPLANATION).data(),
+                        record.get(APPLICATION_MATCHING_PROJECTIONS.ALGORITHM_VERSION),
+                        record.get(APPLICATION_MATCHING_PROJECTIONS.TAXONOMY_VERSION),
                         record.get(APPLICATION_MATCHING_PROJECTIONS.UPDATED_AT)));
     }
 
     public record Projection(UUID applicationId, UUID cvVersionId, UUID jobVersionId,
                              UUID matchingResultId, String status, double finalScore,
-                             String qualityFlagsJson, String explanationJson, OffsetDateTime updatedAt) { }
+                             String qualityFlagsJson, String explanationJson,
+                             String algorithmVersion, String taxonomyVersion, OffsetDateTime updatedAt) { }
 }

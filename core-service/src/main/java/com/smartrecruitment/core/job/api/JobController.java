@@ -4,6 +4,8 @@ import com.smartrecruitment.core.job.api.dto.JobResponse;
 import com.smartrecruitment.core.job.api.dto.PutJobRequest;
 import com.smartrecruitment.core.job.application.JobService;
 import jakarta.validation.Valid;
+import jakarta.servlet.http.HttpServletRequest;
+import com.smartrecruitment.core.shared.api.CorrelationIdFilter;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -18,13 +20,15 @@ public class JobController {
     public JobController(JobService jobs) { this.jobs = jobs; }
 
     @PostMapping("/api/v1/companies/{companyId}/jobs")
-    public JobResponse create(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID companyId,
+    public JobResponse create(@AuthenticationPrincipal Jwt jwt, HttpServletRequest servletRequest,
+                              @PathVariable UUID companyId,
                               @Valid @RequestBody PutJobRequest request) {
         return JobResponse.from(jobs.create(userId(jwt), companyId, request.title(), request.description(),
                 request.requirementsText(), request.benefitsText(), request.locationText(), request.countryCode(),
                 request.workMode(), request.employmentType(), request.seniorityLevel(), request.openings(),
                 request.salaryMin(), request.salaryMax(), request.salaryCurrency(), request.salaryPeriod(),
-                request.salaryNegotiable(), request.applicationDeadline()));
+                request.salaryNegotiable(), request.applicationDeadline(),
+                UUID.fromString(CorrelationIdFilter.current(servletRequest))));
     }
 
     @GetMapping("/api/v1/companies/{companyId}/jobs")
@@ -43,14 +47,16 @@ public class JobController {
     }
 
     @PutMapping("/api/v1/jobs/{jobId}")
-    public JobResponse update(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID jobId,
+    public JobResponse update(@AuthenticationPrincipal Jwt jwt, HttpServletRequest servletRequest,
+                              @PathVariable UUID jobId,
                               @Valid @RequestBody PutJobRequest request) {
         if (request.version() == null) throw new IllegalArgumentException("version is required when updating a job");
         return JobResponse.from(jobs.updateDraft(userId(jwt), jobId, request.version(), request.title(),
                 request.description(), request.requirementsText(), request.benefitsText(), request.locationText(),
                 request.countryCode(), request.workMode(), request.employmentType(), request.seniorityLevel(),
                 request.openings(), request.salaryMin(), request.salaryMax(), request.salaryCurrency(),
-                request.salaryPeriod(), request.salaryNegotiable(), request.applicationDeadline()));
+                request.salaryPeriod(), request.salaryNegotiable(), request.applicationDeadline(),
+                UUID.fromString(CorrelationIdFilter.current(servletRequest))));
     }
 
     @PostMapping("/api/v1/jobs/{jobId}/publish")
