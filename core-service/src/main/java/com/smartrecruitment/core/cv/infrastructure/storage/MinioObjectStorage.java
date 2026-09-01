@@ -7,6 +7,7 @@ import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import io.minio.RemoveObjectArgs;
+import io.minio.GetObjectArgs;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
 
@@ -42,6 +43,18 @@ public class MinioObjectStorage implements ObjectStorage {
     public void delete(String objectKey) {
         try {
             client.removeObject(RemoveObjectArgs.builder().bucket(bucket).object(objectKey).build());
+        } catch (Exception exception) {
+            throw new CvStorageException(exception);
+        }
+    }
+
+    @Override
+    public InputStream openDownload(String objectBucket, String objectKey) {
+        try {
+            return client.getObject(GetObjectArgs.builder()
+                    .bucket(objectBucket)
+                    .object(objectKey)
+                    .build());
         } catch (Exception exception) {
             throw new CvStorageException(exception);
         }
