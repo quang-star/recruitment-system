@@ -9,6 +9,11 @@ import com.smartrecruitment.core.recruiter.application.CompanyConflictException;
 import com.smartrecruitment.core.recruiter.application.CompanyNotFoundException;
 import com.smartrecruitment.core.recruiter.application.RecruiterProfileConflictException;
 import com.smartrecruitment.core.recruiter.application.RecruiterProfileNotFoundException;
+import com.smartrecruitment.core.recruiter.application.CompanyInvitationConflictException;
+import com.smartrecruitment.core.recruiter.application.CompanyInvitationNotFoundException;
+import com.smartrecruitment.core.recruiter.application.CompanyInvitationDeliveryException;
+import com.smartrecruitment.core.recruiter.application.CompanyMemberConflictException;
+import com.smartrecruitment.core.recruiter.application.CompanyMemberNotFoundException;
 import com.smartrecruitment.core.job.application.JobConflictException;
 import com.smartrecruitment.core.job.application.JobNotFoundException;
 import com.smartrecruitment.core.job.application.JobStateException;
@@ -78,6 +83,37 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(CompanyConflictException.class)
     ResponseEntity<ApiError> handleCompanyConflict(CompanyConflictException exception, HttpServletRequest request) {
         return error(HttpStatus.CONFLICT, "COMPANY_CONFLICT", exception.getMessage(), Map.of(), request);
+    }
+
+    @ExceptionHandler(CompanyInvitationNotFoundException.class)
+    ResponseEntity<ApiError> handleInvitationNotFound(CompanyInvitationNotFoundException exception,
+                                                       HttpServletRequest request) {
+        return error(HttpStatus.NOT_FOUND, "COMPANY_INVITATION_NOT_FOUND", exception.getMessage(), Map.of(), request);
+    }
+
+    @ExceptionHandler(CompanyMemberNotFoundException.class)
+    ResponseEntity<ApiError> handleCompanyMemberNotFound(CompanyMemberNotFoundException exception,
+                                                          HttpServletRequest request) {
+        return error(HttpStatus.NOT_FOUND, "COMPANY_MEMBER_NOT_FOUND", exception.getMessage(), Map.of(), request);
+    }
+
+    @ExceptionHandler(CompanyInvitationConflictException.class)
+    ResponseEntity<ApiError> handleInvitationConflict(CompanyInvitationConflictException exception,
+                                                       HttpServletRequest request) {
+        return error(HttpStatus.CONFLICT, "COMPANY_INVITATION_CONFLICT", exception.getMessage(), Map.of(), request);
+    }
+
+    @ExceptionHandler(CompanyMemberConflictException.class)
+    ResponseEntity<ApiError> handleCompanyMemberConflict(CompanyMemberConflictException exception,
+                                                          HttpServletRequest request) {
+        return error(HttpStatus.CONFLICT, "COMPANY_MEMBER_CONFLICT", exception.getMessage(), Map.of(), request);
+    }
+
+    @ExceptionHandler(CompanyInvitationDeliveryException.class)
+    ResponseEntity<ApiError> handleInvitationDelivery(CompanyInvitationDeliveryException exception,
+                                                       HttpServletRequest request) {
+        return error(HttpStatus.SERVICE_UNAVAILABLE, "COMPANY_INVITATION_DELIVERY_FAILED",
+                exception.getMessage(), Map.of(), request);
     }
 
     @ExceptionHandler(JobNotFoundException.class)
