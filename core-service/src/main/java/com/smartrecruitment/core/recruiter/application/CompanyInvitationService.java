@@ -8,6 +8,8 @@ import com.smartrecruitment.core.recruiter.domain.CompanyInvitation;
 import com.smartrecruitment.core.recruiter.domain.CompanyMember;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
+import com.smartrecruitment.core.notification.application.NotificationService;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -27,15 +29,24 @@ public class CompanyInvitationService {
     private final CompanyInvitationTokenGenerator tokens;
     private final CompanyInvitationSender sender;
     private final Clock clock;
+    private final NotificationService notifications;
 
     public CompanyInvitationService(CompanyRepository companies, CompanyInvitationRepository invitations,
                                     CompanyInvitationTokenGenerator tokens, CompanyInvitationSender sender,
                                     Clock clock) {
+        this(companies, invitations, tokens, sender, clock, null);
+    }
+
+    @Autowired
+    public CompanyInvitationService(CompanyRepository companies, CompanyInvitationRepository invitations,
+                                    CompanyInvitationTokenGenerator tokens, CompanyInvitationSender sender,
+                                    Clock clock, NotificationService notifications) {
         this.companies = companies;
         this.invitations = invitations;
         this.tokens = tokens;
         this.sender = sender;
         this.clock = clock;
+        this.notifications = notifications;
     }
 
     @Transactional
@@ -87,6 +98,9 @@ public class CompanyInvitationService {
         });
         CompanyMember member = invitations.accept(invitation, userId, now)
                 .orElseThrow(() -> new CompanyInvitationConflictException("Invitation changed; reload and try again"));
+        if (notifications != null) {
+            notifications.invitationAccepted(invitation.invitedByUserId(), invitation.publicId(), invitation.email());
+        }
         return member;
     }
 
