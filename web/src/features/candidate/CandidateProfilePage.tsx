@@ -4,6 +4,10 @@ import { CandidateCvPanel } from "./CandidateCvPanel";
 import { CandidateJobsPanel } from "./CandidateJobsPanel";
 import { ApiClientError, apiRequest } from "../../shared/api/client";
 import { AuthSession } from "../../shared/auth/session";
+import { AccountSecurityPanel } from "../auth/AccountSecurityPanel";
+import { NotificationCenter } from "../notification/NotificationCenter";
+import { DashboardPanel } from "../system/DashboardPanel";
+import { WorkspaceNavItem, WorkspaceShell } from "../../shared/layout/WorkspaceShell";
 
 type ProfileVisibility = "PRIVATE" | "APPLICATION_ONLY";
 
@@ -36,6 +40,16 @@ const emptyForm: ProfileForm = {
   visibility: "APPLICATION_ONLY"
 };
 
+type CandidateView = "dashboard" | "profile" | "cv" | "jobs" | "notifications" | "security";
+const candidateNav: WorkspaceNavItem<CandidateView>[] = [
+  { id: "dashboard", label: "Tổng quan", icon: "⌂" },
+  { id: "profile", label: "Hồ sơ", icon: "◉" },
+  { id: "cv", label: "CV của tôi", icon: "▤" },
+  { id: "jobs", label: "Việc làm & ứng tuyển", icon: "⌕" },
+  { id: "notifications", label: "Thông báo", icon: "●" },
+  { id: "security", label: "Bảo mật", icon: "⚿" }
+];
+
 export function CandidateProfilePage({ session, onLogout }: CandidateProfilePageProps) {
   const [profile, setProfile] = useState<CandidateProfile | null>(null);
   const [form, setForm] = useState<ProfileForm>(emptyForm);
@@ -43,6 +57,7 @@ export function CandidateProfilePage({ session, onLogout }: CandidateProfilePage
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [activeView, setActiveView] = useState<CandidateView>("dashboard");
 
   useEffect(() => {
     let active = true;
@@ -107,23 +122,17 @@ export function CandidateProfilePage({ session, onLogout }: CandidateProfilePage
     setForm((current) => ({ ...current, [field]: value }));
   }
 
-  function logout() {
-    onLogout();
-  }
-
   if (loading) return <section className="profile-card"><p>Đang tải hồ sơ…</p></section>;
 
   return (
-    <section className="profile-card" aria-labelledby="profile-title">
-      <div className="section-heading">
-        <div>
-          <p className="eyebrow">Candidate profile</p>
-          <h2 id="profile-title">Hồ sơ ứng viên</h2>
-        </div>
-        <button className="secondary-button" type="button" onClick={logout}>Đăng xuất</button>
-      </div>
-      <p className="muted">User ID: {session.userId}</p>
-      <form className="profile-form" onSubmit={save}>
+    <WorkspaceShell activeItem={activeView} brandLabel="Candidate" eyebrow="Không gian ứng viên"
+      navItems={candidateNav} onLogout={onLogout} onNavigate={setActiveView}
+      title={candidateNav.find((item) => item.id === activeView)?.label ?? "Tổng quan"}
+      userLabel={profile?.displayName || "Ứng viên"} variant="candidate">
+      {activeView === "dashboard" && <DashboardPanel session={session} onLogout={onLogout} />}
+      {activeView === "profile" && <section className="workspace-panel" aria-labelledby="profile-title">
+        <div className="section-heading"><div><p className="eyebrow">Candidate profile</p><h2 id="profile-title">Hồ sơ ứng viên</h2></div><span>{profile ? `v${profile.version}` : "Mới"}</span></div>
+        <form className="profile-form" onSubmit={save}>
         <label>
           Tên hiển thị
           <input value={form.displayName} onChange={(event) => updateField("displayName", event.target.value)}
@@ -155,10 +164,13 @@ export function CandidateProfilePage({ session, onLogout }: CandidateProfilePage
         <button type="submit" disabled={saving}>
           {saving ? "Đang lưu…" : profile ? "Cập nhật hồ sơ" : "Tạo hồ sơ"}
         </button>
-      </form>
-      <CandidateCvPanel session={session} />
-      <CandidateJobsPanel session={session} />
-    </section>
+        </form>
+      </section>}
+      {activeView === "cv" && <CandidateCvPanel session={session} />}
+      {activeView === "jobs" && <CandidateJobsPanel session={session} />}
+      {activeView === "notifications" && <NotificationCenter session={session} onLogout={onLogout} />}
+      {activeView === "security" && <AccountSecurityPanel session={session} onLogout={onLogout} />}
+    </WorkspaceShell>
   );
 }
 
