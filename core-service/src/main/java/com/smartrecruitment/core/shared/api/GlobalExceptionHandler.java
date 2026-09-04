@@ -20,6 +20,7 @@ import com.smartrecruitment.core.job.application.JobStateException;
 import com.smartrecruitment.core.application.application.ApplicationConflictException;
 import com.smartrecruitment.core.application.application.ApplicationNotFoundException;
 import com.smartrecruitment.core.application.application.ApplicationStateException;
+import com.smartrecruitment.core.notification.application.NotificationNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -144,6 +145,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ApplicationStateException.class)
     ResponseEntity<ApiError> handleApplicationState(ApplicationStateException exception, HttpServletRequest request) {
         return error(HttpStatus.CONFLICT, "APPLICATION_INVALID_STATE", exception.getMessage(), Map.of(), request);
+    }
+
+    @ExceptionHandler(NotificationNotFoundException.class)
+    ResponseEntity<ApiError> handleNotificationNotFound(NotificationNotFoundException exception,
+                                                         HttpServletRequest request) {
+        return error(HttpStatus.NOT_FOUND, "NOTIFICATION_NOT_FOUND", exception.getMessage(), Map.of(), request);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
