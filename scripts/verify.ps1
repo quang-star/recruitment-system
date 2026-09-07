@@ -58,6 +58,9 @@ try {
 
     Push-Location (Join-Path $repoRoot "web")
     try {
+        Invoke-Gate "Web unit/component tests" {
+            npm.cmd test
+        }
         Invoke-Gate "Web typecheck and production build" {
             npm.cmd run build
         }
@@ -77,6 +80,10 @@ try {
 
         Invoke-Gate "Docker Compose service status" {
             docker compose -f compose.yaml -f compose.dev.yaml ps
+        }
+
+        Invoke-Gate "Gateway/Web smoke test" {
+            powershell -NoProfile -ExecutionPolicy Bypass -File scripts/smoke-test.ps1
         }
     }
 

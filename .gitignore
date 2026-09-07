@@ -1,5 +1,7 @@
 # Raw datasets and local working artifacts are not versioned.
 /data/
+/evaluation/*
+!/evaluation/matching-annotation-template.csv
 /local-reference/
 /.local/
 /.qa/
@@ -23,6 +25,8 @@
 **/*.egg-info/
 **/.coverage/
 **/coverage/
+**/playwright-report/
+**/test-results/
 coverage.xml
 .coverage
 *.pyc
