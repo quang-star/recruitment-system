@@ -61,11 +61,13 @@ services:
         && /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists
         --topic job.confirmed.v1 --partitions 3 --replication-factor 1
         && /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists
+        --topic job.version.submitted.v1 --partitions 3 --replication-factor 1
+        && /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists
         --topic application.submitted.v1 --partitions 3 --replication-factor 1
-         && /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists
-          --topic matching.completed.v1 --partitions 3 --replication-factor 1
-         && /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists
-          --topic ai.processing.dlq.v1 --partitions 3 --replication-factor 1
+        && /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists
+        --topic matching.completed.v1 --partitions 3 --replication-factor 1
+        && /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists
+        --topic ai.processing.dlq.v1 --partitions 3 --replication-factor 1
 
   minio:
     image: minio/minio:RELEASE.2025-07-23T15-54-02Z
@@ -107,6 +109,7 @@ services:
       AUTH_SMTP_PORT: 1025
       AUTH_EMAIL_FROM: ${AUTH_EMAIL_FROM:-no-reply@smart-recruitment.local}
       AUTH_EMAIL_VERIFICATION_BASE_URL: ${AUTH_EMAIL_VERIFICATION_BASE_URL:-http://localhost:5173/verify-email}
+      AUTH_EMAIL_PASSWORD_RESET_BASE_URL: ${AUTH_EMAIL_PASSWORD_RESET_BASE_URL:-http://localhost:5173/reset-password}
     volumes:
       - type: bind
         source: ${AUTH_JWT_PRIVATE_KEY_FILE:-./.local/secrets/auth-jwt-private.pem}
@@ -130,6 +133,10 @@ services:
       CORE_DB_URL: jdbc:postgresql://postgres:5432/core_db
       CORE_DB_USERNAME: core_service
       CORE_DB_PASSWORD: ${CORE_DB_PASSWORD}
+      CORE_SMTP_HOST: mailpit
+      CORE_SMTP_PORT: 1025
+      CORE_EMAIL_FROM: ${CORE_EMAIL_FROM:-no-reply@smart-recruitment.local}
+      CORE_EMAIL_COMPANY_INVITATION_BASE_URL: ${CORE_EMAIL_COMPANY_INVITATION_BASE_URL:-http://localhost:5173/accept-invitation}
       AUTH_JWKS_URI: http://auth-service:8081/.well-known/jwks.json
       AUTH_JWT_ISSUER: ${AUTH_JWT_ISSUER:-http://localhost:8080}
       AUTH_JWT_AUDIENCE: smart-recruitment-api
@@ -147,6 +154,8 @@ services:
         condition: service_healthy
       auth-service:
         condition: service_started
+      mailpit:
+        condition: service_healthy
       minio:
         condition: service_healthy
       kafka-init:
@@ -166,6 +175,7 @@ services:
       AI_KAFKA_CV_UPLOADED_TOPIC: cv.uploaded.v1
       AI_KAFKA_CV_PROCESSING_UPDATED_TOPIC: cv.processing.updated.v1
       AI_KAFKA_CV_CONFIRMED_TOPIC: cv.confirmed.v1
+      AI_KAFKA_JOB_SUBMITTED_TOPIC: job.version.submitted.v1
       AI_KAFKA_JOB_PROCESSING_UPDATED_TOPIC: job.processing.updated.v1
       AI_KAFKA_JOB_CONFIRMED_TOPIC: job.confirmed.v1
       AI_KAFKA_APPLICATION_SUBMITTED_TOPIC: application.submitted.v1
@@ -177,6 +187,9 @@ services:
       AI_STORAGE_ACCESS_KEY: ${MINIO_ROOT_USER}
       AI_STORAGE_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
       AI_STORAGE_BUCKET: ${CORE_STORAGE_BUCKET:-smart-recruitment-cv}
+      AI_OCR_ENABLED: ${AI_OCR_ENABLED:-true}
+      AI_OCR_MAX_PAGES: ${AI_OCR_MAX_PAGES:-5}
+      AI_OCR_TIMEOUT_SECONDS: ${AI_OCR_TIMEOUT_SECONDS:-60}
     depends_on:
       postgres:
         condition: service_healthy
@@ -214,6 +227,26 @@ services:
       - "5173:80"
     depends_on:
       - gateway-service
+
+  e2e:
+    image: mcr.microsoft.com/playwright:v1.62.1-noble
+    profiles: ["test"]
+    init: true
+    ipc: host
+    network_mode: host
+    working_dir: /workspace
+    environment:
+      E2E_BASE_URL: http://localhost:5173
+      E2E_CANDIDATE_EMAIL: ${DEMO_CANDIDATE_EMAIL:-candidate.demo@smart.local}
+      E2E_CANDIDATE_PASSWORD: ${DEMO_CANDIDATE_PASSWORD:-DemoCandidate!2026}
+      E2E_RECRUITER_EMAIL: ${DEMO_RECRUITER_EMAIL:-recruiter.demo@smart.local}
+      E2E_RECRUITER_PASSWORD: ${DEMO_RECRUITER_PASSWORD:-DemoRecruiter!2026}
+    volumes:
+      - ./web:/workspace
+    depends_on:
+      web:
+        condition: service_started
+    command: npm run test:e2e
 
 volumes:
   postgres_data:
