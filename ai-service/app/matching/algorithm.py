@@ -4,7 +4,18 @@ from dataclasses import dataclass
 from typing import Any
 
 
-ALGORITHM_VERSION = "baseline-v2"
+ALGORITHM_VERSION = "baseline-v3"
+
+
+_LANGUAGE_ALIASES = {
+    "english": "en", "tiếng anh": "en", "tieng anh": "en",
+    "vietnamese": "vi", "tiếng việt": "vi", "tieng viet": "vi",
+    "french": "fr", "tiếng pháp": "fr", "tieng phap": "fr",
+    "german": "de", "tiếng đức": "de", "tieng duc": "de",
+    "japanese": "ja", "tiếng nhật": "ja", "tieng nhat": "ja",
+    "korean": "ko", "tiếng hàn": "ko", "tieng han": "ko",
+    "chinese": "zh", "tiếng trung": "zh", "tieng trung": "zh",
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -77,18 +88,21 @@ def compute_match(cv_payload: dict[str, Any], jd_payload: dict[str, Any]) -> Mat
     components.append(_component("TITLE_SENIORITY", 10 if title_applicable else 0,
                                  title_score, {"family": family or None}))
 
-    education_score = 0.0
-    language_score = 0.0
-    applicable_metadata = False
-    if jd_payload.get("requirements", {}).get("education"):
-        applicable_metadata = True
-        education_score = 1.0 if cv_payload.get("education") else 0.0
-    if jd_payload.get("requirements", {}).get("languages"):
-        applicable_metadata = True
-        language_score = 1.0 if cv_payload.get("languages") else 0.0
-    metadata_score = (education_score + language_score) / 2 if applicable_metadata else 0.0
-    components.append(_component("EDUCATION_LANGUAGE", 10 if applicable_metadata else 0,
-                                 metadata_score, {"applicable": applicable_metadata}))
+    education_fact = _education_fact(
+        jd_payload.get("requirements", {}).get("education", []),
+        cv_payload.get("education", []),
+    )
+    language_fact = _language_fact(
+        jd_payload.get("requirements", {}).get("languages", []),
+        cv_payload.get("languages", []),
+    )
+    metadata_facts = [fact for fact in (education_fact, language_fact) if fact["applicable"]]
+    metadata_score = (sum(float(fact["score"]) for fact in metadata_facts) / len(metadata_facts)
+                      if metadata_facts else 0.0)
+    components.append(_component(
+        "EDUCATION_LANGUAGE", 10 if metadata_facts else 0, metadata_score,
+        {"applicable": bool(metadata_facts), "education": education_fact, "languages": language_fact},
+    ))
 
     jd_responsibilities = jd_payload.get("responsibilities", [])
     cv_text = " ".join(str(item) for experience in cv_payload.get("experiences", [])
@@ -142,3 +156,58 @@ def _keyword_similarity(responsibilities: list[dict[str, Any]], cv_text: str) ->
                 if len(word) > 3}
     cv_words = {word.casefold() for word in cv_text.split() if len(word) > 3}
     return len(jd_words & cv_words) / len(jd_words) if jd_words else 0.0
+
+
+def _education_fact(requirements: list[dict[str, Any]], education: list[dict[str, Any]]) -> dict[str, Any]:
+    required_values = {_normalized_requirement(item) for item in requirements}
+    required_values.discard("")
+    actual_values = {
+        normalized
+        for item in education
+        for normalized in (_normalize_text(item.get("degreeLevel")), _normalize_text(item.get("fieldOfStudy")))
+        if normalized
+    }
+    matched = sorted(required for required in required_values
+                     if any(_values_match(required, actual) for actual in actual_values))
+    return {
+        "applicable": bool(requirements),
+        "score": _ratio(set(matched), required_values) if requirements else 0.0,
+        "requiredValues": sorted(required_values),
+        "actualValues": sorted(actual_values),
+        "matchedValues": matched,
+        "dataAvailable": bool(actual_values),
+    }
+
+
+def _language_fact(requirements: list[dict[str, Any]], languages: list[dict[str, Any]]) -> dict[str, Any]:
+    required_codes = {_language_code(_normalized_requirement(item)) for item in requirements}
+    required_codes.discard("")
+    actual_codes = {_language_code(item.get("languageCode")) for item in languages}
+    actual_codes.discard("")
+    matched = sorted(required_codes & actual_codes)
+    return {
+        "applicable": bool(requirements),
+        "score": _ratio(set(matched), required_codes) if requirements else 0.0,
+        "requiredCodes": sorted(required_codes),
+        "actualCodes": sorted(actual_codes),
+        "matchedCodes": matched,
+        "dataAvailable": bool(actual_codes),
+        "proficiencyEvaluated": False,
+    }
+
+
+def _normalized_requirement(item: dict[str, Any]) -> str:
+    return _normalize_text(item.get("normalizedValue") or item.get("raw"))
+
+
+def _normalize_text(value: Any) -> str:
+    return " ".join(str(value or "").casefold().strip().split())
+
+
+def _language_code(value: Any) -> str:
+    normalized = _normalize_text(value)
+    return _LANGUAGE_ALIASES.get(normalized, normalized.split("-", 1)[0])
+
+
+def _values_match(required: str, actual: str) -> bool:
+    return required == actual or (len(required) >= 4 and (required in actual or actual in required))

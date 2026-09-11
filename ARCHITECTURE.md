@@ -5,6 +5,8 @@ Material under the ignored `docs/` working directory may provide design context,
 but it must not override this file. In particular, Kafka supersedes older
 broker references that may still exist in local working notes.
 
+Thesis title confirmed by the author on 2026-09-07: **Nghiên cứu, thiết kế và phát triển hệ thống tuyển dụng thông minh dựa trên kiến trúc Microservices và AI**.
+
 | Project | Runtime | Owns | Must not own |
 |---|---|---|---|
 | `web` | React/Vite | Browser UI and feature state | Credentials, business persistence, direct service URLs |
@@ -13,6 +15,14 @@ broker references that may still exist in local working notes.
 | `core-service` | Spring Boot + jOOQ | Candidate/Recruiter profile and recruitment workflow | Password/token, parsing, taxonomy or matching details |
 | `ai-service` | FastAPI + SQLAlchemy/Alembic | Parsing, taxonomy, processing task, matching and research records | Credential or recruitment workflow |
 | AI worker process | Same AI codebase/image | Kafka event consumption and task execution | Public business API |
+
+Implementation status as of the 2026-09-07 source review: `ai-service/start.sh`
+starts the worker and API as separate processes in the same container. Independent
+worker deployment/scaling is a proposed improvement, not a verified capability.
+Matching currently uses the deterministic rule/keyword baseline. Semantic matching,
+complete evidence/input-revision lineage, AI API outbox delivery, and final research
+evaluation remain work items. The rules below state architectural invariants;
+their presence in this document is not proof that every runtime path satisfies them.
 
 ## Boundary rules
 
