@@ -6,6 +6,7 @@ from sqlalchemy import engine_from_config, pool
 from app.shared.config import get_settings
 from app.shared.database import Base
 from app.task import persistence  # noqa: F401
+from app import outbox  # noqa: F401
 
 config = context.config
 config.set_main_option("sqlalchemy.url", get_settings().db_url)

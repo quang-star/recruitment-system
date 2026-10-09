@@ -19,8 +19,17 @@ done
 python -m app.worker &
 worker_pid=$!
 
-trap 'kill "$worker_pid" 2>/dev/null || true' TERM INT EXIT
+python -m app.outbox &
+outbox_pid=$!
 
-exec uvicorn app.main:app \
+uvicorn app.main:app \
   --host 0.0.0.0 \
-  --port 8083
+  --port 8083 &
+api_pid=$!
+trap 'kill "$worker_pid" "$outbox_pid" "$api_pid" 2>/dev/null || true; wait || true' TERM INT EXIT
+
+# Fail the container if any child exits so the supervisor can restart all three.
+while kill -0 "$worker_pid" 2>/dev/null && kill -0 "$outbox_pid" 2>/dev/null && kill -0 "$api_pid" 2>/dev/null; do
+  sleep 1
+done
+exit 1
