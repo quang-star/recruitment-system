@@ -5,6 +5,8 @@ import com.smartrecruitment.core.cv.application.port.ObjectStorage;
 import com.smartrecruitment.core.cv.application.port.OutboxEventRepository;
 import com.smartrecruitment.core.cv.domain.CandidateCv;
 import com.smartrecruitment.core.cv.domain.CvVersion;
+import com.smartrecruitment.core.cv.domain.CvProcessingStatus;
+import com.smartrecruitment.core.cv.domain.CvStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -87,6 +89,35 @@ public class CvService {
     @Transactional(readOnly = true)
     public CandidateCv getMine(UUID candidateUserId, UUID cvId) {
         return cvs.findByPublicId(candidateUserId, cvId).orElseThrow(CandidateCvNotFoundException::new);
+    }
+
+    @Transactional
+    public CandidateCv retry(UUID candidateUserId, UUID cvId, UUID cvVersionId,
+                             long expectedVersion, UUID correlationId) {
+        CandidateCv current = getMine(candidateUserId, cvId);
+        if (expectedVersion < 0 || current.status() != CvStatus.ACTIVE
+                || !current.activeVersion().publicId().equals(cvVersionId)) throw new CvRetryConflictException();
+        if (isSameQueuedRetry(current, cvVersionId, expectedVersion)) return current;
+        if (current.activeVersion().processingStatus() != CvProcessingStatus.FAILED
+                || !"SOURCE_STORAGE_UNAVAILABLE".equals(current.activeVersion().failureCode())
+                || current.activeVersion().version() != expectedVersion) throw new CvRetryConflictException();
+        var queued = cvs.queueRetry(candidateUserId, cvId, cvVersionId, expectedVersion);
+        if (queued.isEmpty()) {
+            // A concurrent click may already have queued exactly this retry.
+            current = getMine(candidateUserId, cvId);
+            if (isSameQueuedRetry(current, cvVersionId, expectedVersion)) return current;
+            throw new CvRetryConflictException();
+        }
+        outbox.append(CvUploadedEvent.from(queued.get(), correlationId, OffsetDateTime.now(ZoneOffset.UTC)));
+        return queued.get();
+    }
+
+    private static boolean isSameQueuedRetry(CandidateCv cv, UUID cvVersionId, long expectedVersion) {
+        var version = cv.activeVersion();
+        return cv.status() == CvStatus.ACTIVE && version.publicId().equals(cvVersionId)
+                && version.processingStatus() == CvProcessingStatus.QUEUED
+                && version.version() - 1 == expectedVersion
+                && version.processingGeneration() == version.version();
     }
 
     private static void validate(MultipartFile file) {

@@ -4,13 +4,13 @@ from typing import Any, Literal
 from uuid import UUID, uuid4, uuid5
 from pathlib import Path
 
-from aiokafka import AIOKafkaProducer
 from fastapi import APIRouter, Depends, Request
 from jsonschema import Draft202012Validator, FormatChecker
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.cv.repository import ParsedCvRevision, ParsedCvRevisionRepository
+from app.outbox import enqueue
 from app.shared.api import ApiContractError
 from app.shared.config import get_settings
 from app.shared.database import get_session
@@ -101,7 +101,6 @@ async def update_parsed_cv(
         )
     except ValueError as exception:
         raise ApiContractError(409, "PARSED_CV_REVISION_CONFLICT", str(exception)) from exception
-    session.commit()
     settings = get_settings()
     task_id = uuid5(UUID("f5c2b49a-9f40-4d7b-9b47-2aa83ea1a2e7"), str(cv_version_id))
     event = _event(
@@ -114,7 +113,8 @@ async def update_parsed_cv(
             "status": "PARSED", "failureCode": None,
         },
     )
-    await _publish(settings.kafka_cv_processing_updated_topic, str(cv_version_id), event)
+    enqueue(session, settings.kafka_cv_processing_updated_topic, str(cv_version_id), event)
+    session.commit()
     return ParsedCvResponse.from_revision(revision)
 
 
@@ -139,7 +139,6 @@ async def confirm_parsed_cv(
     except ValueError as exception:
         raise ApiContractError(409, "PARSED_CV_REVISION_CONFLICT", str(exception)) from exception
 
-    session.commit()
     settings = get_settings()
     event = _event(
         event_type="cv.confirmed.v1",
@@ -152,9 +151,8 @@ async def confirm_parsed_cv(
             "confirmedBy": str(principal.subject),
         },
     )
-    await _publish(settings.kafka_cv_confirmed_topic, str(cv_version_id), event,
-                   unavailable_code="CV_CONFIRMATION_EVENT_UNAVAILABLE",
-                   unavailable_message="CV confirmation is saved but status propagation is temporarily unavailable")
+    enqueue(session, settings.kafka_cv_confirmed_topic, str(cv_version_id), event)
+    session.commit()
     return ParsedCvResponse.from_revision(revision)
 
 
@@ -236,20 +234,3 @@ def _event(event_type: str, correlation_id: UUID, idempotency_key: str,
         "correlationId": str(correlation_id), "idempotencyKey": idempotency_key,
         "occurredAt": datetime.now(UTC).isoformat(), "payload": payload,
     }
-
-
-async def _publish(topic: str, key: str, event: dict[str, object],
-                   unavailable_code: str = "CV_PROCESSING_EVENT_UNAVAILABLE",
-                   unavailable_message: str = "Parsed CV is saved but status propagation is temporarily unavailable") -> None:
-    settings = get_settings()
-    producer = AIOKafkaProducer(
-        bootstrap_servers=settings.kafka_bootstrap_servers,
-        value_serializer=lambda value: json.dumps(value, separators=(",", ":")).encode("utf-8"),
-    )
-    try:
-        await producer.start()
-        await producer.send_and_wait(topic, key=key.encode("utf-8"), value=event)
-    except Exception as exception:
-        raise ApiContractError(503, unavailable_code, unavailable_message) from exception
-    finally:
-        await producer.stop()

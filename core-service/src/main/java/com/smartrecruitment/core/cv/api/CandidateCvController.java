@@ -4,6 +4,9 @@ import com.smartrecruitment.core.cv.api.dto.CandidateCvResponse;
 import com.smartrecruitment.core.cv.application.CvService;
 import com.smartrecruitment.core.shared.api.CorrelationIdFilter;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -14,6 +17,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
@@ -43,6 +47,16 @@ public class CandidateCvController {
     @GetMapping
     public List<CandidateCvResponse> list(@AuthenticationPrincipal Jwt jwt) {
         return cvs.listMine(userId(jwt)).stream().map(CandidateCvResponse::from).toList();
+    }
+
+    public record RetryCvRequest(@NotNull UUID cvVersionId, @NotNull @Min(0) Long expectedVersion) { }
+
+    @PostMapping("/{cvId}/retry")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public CandidateCvResponse retry(@AuthenticationPrincipal Jwt jwt, HttpServletRequest request,
+                                      @PathVariable UUID cvId, @Valid @RequestBody RetryCvRequest body) {
+        return CandidateCvResponse.from(cvs.retry(userId(jwt), cvId, body.cvVersionId(), body.expectedVersion(),
+                UUID.fromString(CorrelationIdFilter.current(request))));
     }
 
     @GetMapping("/{cvId}")

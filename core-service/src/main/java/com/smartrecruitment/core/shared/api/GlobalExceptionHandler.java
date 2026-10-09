@@ -5,6 +5,7 @@ import com.smartrecruitment.core.candidate.application.CandidateProfileNotFoundE
 import com.smartrecruitment.core.cv.application.CandidateCvNotFoundException;
 import com.smartrecruitment.core.cv.application.CvStorageException;
 import com.smartrecruitment.core.cv.application.CvUploadException;
+import com.smartrecruitment.core.cv.application.CvRetryConflictException;
 import com.smartrecruitment.core.recruiter.application.CompanyConflictException;
 import com.smartrecruitment.core.recruiter.application.CompanyNotFoundException;
 import com.smartrecruitment.core.recruiter.application.RecruiterProfileConflictException;
@@ -63,6 +64,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(CvStorageException.class)
     ResponseEntity<ApiError> handleCvStorage(CvStorageException exception, HttpServletRequest request) {
         return error(HttpStatus.SERVICE_UNAVAILABLE, "CV_STORAGE_UNAVAILABLE", exception.getMessage(), Map.of(), request);
+    }
+
+    @ExceptionHandler(CvRetryConflictException.class)
+    ResponseEntity<ApiError> handleCvRetryConflict(CvRetryConflictException exception, HttpServletRequest request) {
+        return error(HttpStatus.CONFLICT, "CV_RETRY_CONFLICT", exception.getMessage(), Map.of(), request);
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)

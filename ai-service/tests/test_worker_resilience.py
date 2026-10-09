@@ -1,7 +1,14 @@
 from types import SimpleNamespace
 from uuid import UUID
 
-from app.worker import _dead_letter_event, _job_processing_event, _matching_event
+import hashlib
+
+import pytest
+
+from app.worker import (
+    _dead_letter_event, _decode_envelope, _invalid_message_event,
+    _job_processing_event, _matching_event,
+)
 
 
 def test_dead_letter_event_is_replayable_without_exposing_error_message() -> None:
@@ -60,6 +67,36 @@ def test_matching_event_idempotency_changes_with_algorithm_and_taxonomy_version(
         UUID("979494ac-c858-4570-a884-6e88423b8e2b"),
     )
 
-    assert event["idempotencyKey"].endswith(":baseline-v2:1.0.0")
+    assert event["idempotencyKey"].endswith(
+        ":baseline-v2:1.0.0:679494ac-c858-4570-a884-6e88423b8e2b"
+    )
     assert event["payload"]["algorithmVersion"] == "baseline-v2"
     assert event["payload"]["taxonomyVersion"] == "1.0.0"
+
+
+@pytest.mark.parametrize("raw", [
+    None,
+    b"\xff\xfe", b'{"eventType":', b"[]", b'{"payload":{}}',
+    b'{"eventType":"cv.uploaded.v1","payload":[]}',
+])
+def test_invalid_raw_kafka_messages_are_rejected_inside_worker_boundary(raw: bytes) -> None:
+    with pytest.raises(ValueError):
+        _decode_envelope(raw)
+
+
+def test_invalid_message_dlq_contains_hash_not_private_raw_body() -> None:
+    raw = b'{"private":"candidate data"'
+    message = SimpleNamespace(topic="cv.uploaded.v1", partition=1, offset=9, value=raw)
+
+    event = _invalid_message_event(message, ValueError("invalid JSON"))
+
+    assert event["payload"]["errorCode"] == "INVALID_EVENT_ENVELOPE"
+    assert event["payload"]["rawSha256"] == hashlib.sha256(raw).hexdigest()
+    assert event["payload"]["rawSize"] == len(raw)
+    assert raw.decode() not in str(event)
+
+
+def test_valid_raw_kafka_envelope_is_decoded() -> None:
+    raw = b'{"eventType":"application.submitted.v1","payload":{}}'
+
+    assert _decode_envelope(raw)["eventType"] == "application.submitted.v1"

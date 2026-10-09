@@ -4,13 +4,13 @@ from pathlib import Path
 from typing import Any, Literal
 from uuid import UUID, uuid4, uuid5
 
-from aiokafka import AIOKafkaProducer
 from fastapi import APIRouter, Depends, Request
 from jsonschema import Draft202012Validator, FormatChecker
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.jd.repository import ParsedJdRevision, ParsedJdRevisionRepository
+from app.outbox import enqueue
 from app.shared.api import ApiContractError
 from app.shared.config import get_settings
 from app.shared.database import get_session
@@ -95,7 +95,6 @@ async def update_parsed_jd(
         )
     except ValueError as exception:
         raise ApiContractError(409, "PARSED_JD_REVISION_CONFLICT", str(exception)) from exception
-    session.commit()
     settings = get_settings()
     task_id = uuid5(UUID("b73b8a62-d9ba-4d26-9a7e-96f1c84c3e75"), str(job_version_id))
     event = _event(
@@ -108,7 +107,8 @@ async def update_parsed_jd(
             "status": "PARSED", "failureCode": None,
         },
     )
-    await _publish(settings.kafka_job_processing_updated_topic, str(job_version_id), event)
+    enqueue(session, settings.kafka_job_processing_updated_topic, str(job_version_id), event)
+    session.commit()
     return ParsedJdResponse.from_revision(revision)
 
 
@@ -130,7 +130,6 @@ async def confirm_parsed_jd(
         raise ApiContractError(404, "PARSED_JD_REVISION_NOT_FOUND", str(exception)) from exception
     except ValueError as exception:
         raise ApiContractError(409, "PARSED_JD_REVISION_CONFLICT", str(exception)) from exception
-    session.commit()
     settings = get_settings()
     event = _event(
         event_type="job.confirmed.v1",
@@ -142,7 +141,8 @@ async def confirm_parsed_jd(
             "confirmedBy": str(principal.subject),
         },
     )
-    await _publish(settings.kafka_job_confirmed_topic, str(job_version_id), event)
+    enqueue(session, settings.kafka_job_confirmed_topic, str(job_version_id), event)
+    session.commit()
     return ParsedJdResponse.from_revision(revision)
 
 
@@ -227,21 +227,3 @@ def _event(event_type: str, correlation_id: UUID, idempotency_key: str,
         "correlationId": str(correlation_id), "idempotencyKey": idempotency_key,
         "occurredAt": datetime.now(UTC).isoformat(), "payload": payload,
     }
-
-
-async def _publish(topic: str, key: str, event: dict[str, object]) -> None:
-    settings = get_settings()
-    producer = AIOKafkaProducer(
-        bootstrap_servers=settings.kafka_bootstrap_servers,
-        value_serializer=lambda value: json.dumps(value, separators=(",", ":")).encode("utf-8"),
-    )
-    try:
-        await producer.start()
-        await producer.send_and_wait(topic, key=key.encode("utf-8"), value=event)
-    except Exception as exception:
-        raise ApiContractError(
-            503, "JOB_PROCESSING_EVENT_UNAVAILABLE",
-            "Parsed JD is saved but status propagation is temporarily unavailable",
-        ) from exception
-    finally:
-        await producer.stop()

@@ -1,0 +1,45 @@
+openapi: 3.1.0
+info:
+  title: Candidate CV retry contract
+  version: 1.0.0
+paths:
+  /api/v1/cvs/{cvId}/retry:
+    post:
+      summary: Retry an owned active CV after a transient storage failure
+      description: >-
+        Reuses the same file and CV version. Only SOURCE_STORAGE_UNAVAILABLE
+        failures are eligible. expectedVersion is activeVersion.version from
+        the latest CV response. Concurrent clicks queue one logical retry;
+        repeat requests while that retry is queued return the queued CV.
+        Permanent file failures require a new upload.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: cvId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: common-v1.yaml#/components/parameters/CorrelationId
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [cvVersionId, expectedVersion]
+              properties:
+                cvVersionId: { type: string, format: uuid }
+                expectedVersion: { type: integer, minimum: 0 }
+      responses:
+        '202':
+          description: Retry queued or this request already queued it
+          content:
+            application/json:
+              schema: { $ref: ../schemas/cv-response-v1.schema.json }
+        '400': { description: Invalid request fields }
+        '401': { description: Valid bearer token required }
+        '403': { description: Candidate role required }
+        '404': { description: Owned CV not found }
+        '409': { description: CV_RETRY_CONFLICT - stale or ineligible version/state }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
