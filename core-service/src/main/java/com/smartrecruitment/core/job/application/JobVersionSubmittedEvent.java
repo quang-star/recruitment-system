@@ -1,5 +1,7 @@
 package com.smartrecruitment.core.job.application;
 
+import com.smartrecruitment.core.shared.domain.ExternalAiConsent;
+
 import com.smartrecruitment.core.job.domain.Job;
 
 import java.time.OffsetDateTime;
@@ -8,9 +10,15 @@ import java.util.UUID;
 
 public record JobVersionSubmittedEvent(UUID jobId, UUID jobVersionId, UUID recruiterUserId,
                                        String objectRef, String sourceHash, UUID correlationId,
-                                       OffsetDateTime occurredAt) {
+                                       OffsetDateTime occurredAt, ExternalAiConsent externalAiConsent) {
+    public JobVersionSubmittedEvent(UUID jobId, UUID jobVersionId, UUID recruiterUserId,
+                                    String objectRef, String sourceHash, UUID correlationId, OffsetDateTime occurredAt) {
+        this(jobId, jobVersionId, recruiterUserId, objectRef, sourceHash, correlationId, occurredAt,
+                ExternalAiConsent.declined());
+    }
     public JobVersionSubmittedEvent {
         Objects.requireNonNull(jobId, "jobId");
+        Objects.requireNonNull(externalAiConsent, "externalAiConsent");
         Objects.requireNonNull(jobVersionId, "jobVersionId");
         Objects.requireNonNull(recruiterUserId, "recruiterUserId");
         if (objectRef == null || objectRef.isBlank()) throw new IllegalArgumentException("objectRef is required");
@@ -25,7 +33,7 @@ public record JobVersionSubmittedEvent(UUID jobId, UUID jobVersionId, UUID recru
                                                 OffsetDateTime occurredAt) {
         var version = job.activeVersion();
         return new JobVersionSubmittedEvent(job.publicId(), version.publicId(), version.createdByUserId(),
-                objectRef, version.sourceHash(), correlationId, occurredAt);
+                objectRef, version.sourceHash(), correlationId, occurredAt, version.externalAiConsent());
     }
 }
 

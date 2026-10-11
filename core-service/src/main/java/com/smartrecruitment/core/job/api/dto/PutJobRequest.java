@@ -27,5 +27,7 @@ public record PutJobRequest(
         @Pattern(regexp = "HOUR|MONTH|YEAR") String salaryPeriod,
         boolean salaryNegotiable,
         OffsetDateTime applicationDeadline,
-        Long version) {
+        Long version,
+        boolean externalAiConsent,
+        @Size(max = 40) String externalAiPolicyVersion) {
 }

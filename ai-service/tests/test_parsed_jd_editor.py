@@ -1,4 +1,5 @@
 from datetime import UTC, datetime
+from copy import deepcopy
 from uuid import UUID, uuid4
 
 import pytest
@@ -17,6 +18,27 @@ def payload() -> dict:
         str(JOB_VERSION_ID), SOURCE_HASH, "Backend Engineer",
         "Build APIs.", "Java and PostgreSQL are required.",
     )
+
+
+@pytest.mark.parametrize("section,new_value", [("education", "doctorate"), ("languages", "ja")])
+def test_edited_jd_metadata_cannot_reuse_parser_evidence(section, new_value):
+    prior = parse_jd(str(JOB_VERSION_ID), SOURCE_HASH, "Backend Engineer", "Build services.",
+                     "Bachelor degree required. English B2 required.")
+    value = deepcopy(prior)
+    value["requirements"][section][0]["normalizedValue"] = new_value
+    validated = _validate_user_payload(JOB_VERSION_ID, SOURCE_HASH, value, prior)
+    assert validated["requirements"][section][0]["evidenceIds"] == []
+
+
+def test_new_jd_requirement_cannot_copy_an_existing_evidence_id():
+    prior = parse_jd(str(JOB_VERSION_ID), SOURCE_HASH, "Backend Engineer", "Build services.",
+                     "English B2 required.")
+    value = deepcopy(prior)
+    value["requirements"]["languages"].append({**prior["requirements"]["languages"][0],
+                                               "raw": "Japanese N1 required.", "normalizedValue": "ja"})
+    validated = _validate_user_payload(JOB_VERSION_ID, SOURCE_HASH, value, prior)
+    assert validated["requirements"]["languages"][0]["evidenceIds"] == prior["requirements"]["languages"][0]["evidenceIds"]
+    assert validated["requirements"]["languages"][1]["evidenceIds"] == []
 
 
 def test_recruiter_edit_normalizes_known_and_preserves_unknown_skill() -> None:
@@ -42,7 +64,8 @@ def test_recruiter_edit_normalizes_known_and_preserves_unknown_skill() -> None:
         "d4f49f3b-a28e-5fd3-b558-94beba4054c0"
     assert validated["requirements"]["preferredSkills"][1]["normalizationStatus"] == "PENDING"
     assert validated["requirements"]["preferredSkills"][1]["canonicalSkillId"] is None
-    assert all(skill["confirmedByRecruiter"] for skill in validated["requirements"]["preferredSkills"])
+    assert validated["requirements"]["preferredSkills"][0]["confirmedByRecruiter"] is True
+    assert validated["requirements"]["preferredSkills"][1]["confirmedByRecruiter"] is False
 
 
 def test_public_parsed_jd_api_does_not_accept_raw_jd_upserts() -> None:

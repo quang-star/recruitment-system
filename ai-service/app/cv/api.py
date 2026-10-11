@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 import json
-from typing import Any, Literal
+from typing import Any
 from uuid import UUID, uuid4, uuid5
 from pathlib import Path
 
@@ -14,8 +14,13 @@ from app.outbox import enqueue
 from app.shared.api import ApiContractError
 from app.shared.config import get_settings
 from app.shared.database import get_session
+from app.shared.evidence import inherit_review_evidence
+from app.shared.skill_proposals import skill_name_key
 from app.shared.security import AuthenticatedPrincipal, require_access_token
 from app.taxonomy.normalizer import normalize_skill
+from app.taxonomy.normalizer import taxonomy_version
+from app.shared.revision_status import ParsedRevisionStatus, validate_revision_status
+from app.cv.parser import _title
 
 router = APIRouter(
     prefix="/api/v1/parsed-cvs",
@@ -35,7 +40,7 @@ class ParsedCvResponse(BaseModel):
     cvVersionId: UUID
     revisionNumber: int
     sourceHash: str
-    status: Literal["PARSED", "CONFIRMED", "SUPERSEDED"]
+    status: ParsedRevisionStatus
     payload: dict[str, Any]
     confirmedBy: UUID | None
     confirmedAt: datetime | None
@@ -48,7 +53,7 @@ class ParsedCvResponse(BaseModel):
             cvVersionId=revision.cv_version_id,
             revisionNumber=revision.revision_number,
             sourceHash=revision.source_hash,
-            status=revision.status,
+            status=validate_revision_status(revision.status),
             payload=revision.payload,
             confirmedBy=revision.confirmed_by,
             confirmedAt=revision.confirmed_at,
@@ -181,7 +186,10 @@ def _validate_user_payload(cv_version_id: UUID, payload: dict[str, Any],
             raise ApiContractError(422, "PARSED_CV_SCHEMA_INVALID", f"payload.{section} must be an array")
     if not isinstance(payload.get("summary"), dict):
         raise ApiContractError(422, "PARSED_CV_SCHEMA_INVALID", "payload.summary must be an object")
+    document["taxonomyVersion"] = taxonomy_version()
     prior_skills: dict[str, dict[str, Any]] = {}
+    # Source coordinates are parser-owned, including after candidate edits.
+    payload["evidence"] = list((prior_payload or {}).get("evidence", []))
     for prior in (prior_payload or {}).get("skills", []):
         if isinstance(prior, dict):
             prior_skills[_skill_key(prior)] = prior
@@ -217,6 +225,18 @@ def _validate_user_payload(cv_version_id: UUID, payload: dict[str, Any],
     if errors:
         location = ".".join(str(part) for part in errors[0].absolute_path) or "payload"
         raise ApiContractError(422, "PARSED_CV_SCHEMA_INVALID", f"{location}: {errors[0].message}")
+    for section in ("experiences", "projects", "education", "certificates", "languages"):
+        inherit_review_evidence(payload[section], (prior_payload or {}).get(section, []))
+    for experience in payload["experiences"]:
+        start, end = experience.get("startMonth"), experience.get("endMonth")
+        if start and end and end < start:
+            raise ApiContractError(422, "PARSED_CV_DATES_INVALID", "Work end month precedes start month")
+        # A changed raw title must not retain the old canonical role.
+        experience["titleCanonical"] = _title(experience["titleRaw"])[1]
+    for education in payload["education"]:
+        start, end = education.get("startMonth"), education.get("endMonth")
+        if start and end and end < start:
+            raise ApiContractError(422, "PARSED_CV_DATES_INVALID", "Education end month precedes start month")
     return payload
 
 
@@ -224,7 +244,7 @@ def _skill_key(skill: dict[str, Any]) -> str:
     normalized = normalize_skill(str(skill.get("raw", "")))
     if normalized is not None:
         return f"known:{normalized.stable_id}"
-    return f"raw:{str(skill.get('raw', '')).strip().casefold()}"
+    return f"raw:{skill_name_key(str(skill.get('raw', '')))}"
 
 
 def _event(event_type: str, correlation_id: UUID, idempotency_key: str,

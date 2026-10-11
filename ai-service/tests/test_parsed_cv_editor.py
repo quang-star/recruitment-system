@@ -24,6 +24,60 @@ def payload() -> dict:
     return value
 
 
+def details_payload() -> dict:
+    value = payload()
+    common = {"evidenceIds": [str(uuid4())], "confidence": 0.8}
+    value["education"] = [{**common, "institutionRedacted": None, "degreeLevel": "BACHELOR",
+                           "fieldOfStudy": "Computer Science", "startMonth": None, "endMonth": None}]
+    value["projects"] = [{**common, "name": "Recruitment portal", "description": "Build Java services", "skillIds": []}]
+    value["certificates"] = [{**common, "name": "AWS Certified Developer", "issuer": None, "issuedMonth": None}]
+    return value
+
+
+def test_user_cannot_replace_parser_owned_evidence_locations():
+    prior = payload()
+    prior["evidence"] = [{"id": str(uuid4()), "page": 1, "start": 2, "end": 6}]
+    value = copy.deepcopy(prior)
+    value["evidence"][0]["page"] = 999
+    assert _validate_user_payload(CV_VERSION_ID, value, prior)["evidence"] == prior["evidence"]
+
+
+@pytest.mark.parametrize("section,field,changed", [
+    ("experiences", "titleRaw", "Unrelated role"),
+    ("education", "degreeLevel", "DOCTORATE"),
+    ("languages", "proficiency", "C2"),
+    ("projects", "description", "Unrelated project"),
+    ("certificates", "issuer", "Unrelated issuer"),
+])
+def test_changed_cv_details_cannot_reuse_source_evidence(section, field, changed):
+    prior = details_payload()
+    value = copy.deepcopy(prior)
+    value[section][0][field] = changed
+    validated = _validate_user_payload(CV_VERSION_ID, value, prior)
+    assert validated[section][0]["evidenceIds"] == []
+
+
+def test_unchanged_cv_details_inherit_only_prior_evidence_even_when_reordered():
+    prior = details_payload()
+    value = copy.deepcopy(prior)
+    for section in ("experiences", "education", "languages", "projects", "certificates"):
+        value[section].reverse()
+        for item in value[section]:
+            item["evidenceIds"] = [str(uuid4())]
+    validated = _validate_user_payload(CV_VERSION_ID, value, prior)
+    for section in ("experiences", "education", "languages", "projects", "certificates"):
+        assert [item["evidenceIds"] for item in validated[section]] == [
+            item["evidenceIds"] for item in reversed(prior[section])
+        ]
+
+
+def test_editor_rejects_reversed_work_dates():
+    value = payload()
+    value["experiences"][0].update(startMonth="2025-12", endMonth="2024-01", isCurrent=False)
+    with pytest.raises(ApiContractError):
+        _validate_user_payload(CV_VERSION_ID, value)
+
+
 def test_user_payload_confirms_skills_from_the_prior_owned_revision() -> None:
     prior = payload()
     value = copy.deepcopy(prior)

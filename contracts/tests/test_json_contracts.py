@@ -136,3 +136,30 @@ def test_job_submission_uses_private_object_reference_instead_of_raw_jd() -> Non
     event["description"] = "raw JD must not be put in Kafka"
     with pytest.raises(ValidationError):
         event_validator("job-version-submitted-v1.schema.json").validate(event)
+
+
+@pytest.mark.parametrize("kind", ["cv", "jd"])
+def test_external_ai_consent_is_optional_for_legacy_events_but_requires_policy_when_granted(kind: str) -> None:
+    event = {
+        "sourceHash": "a" * 64,
+        "objectRef": "private-sources/synthetic-version",
+    }
+    identity = "779494ac-c858-4570-a884-6e88423b8e2b"
+    if kind == "cv":
+        schema_name = "cv-uploaded-v1.schema.json"
+        event.update(cvId=identity, cvVersionId=identity, candidateUserId=identity)
+    else:
+        schema_name = "job-version-submitted-v1.schema.json"
+        event.update(jobId=identity, jobVersionId=identity, recruiterUserId=identity)
+    contract = event_validator(schema_name)
+    contract.validate(event)
+    contract.validate({**event, "externalAiConsent": False, "externalAiPolicyVersion": None})
+    contract.validate({**event, "externalAiConsent": True, "externalAiPolicyVersion": "external-ai/1.0"})
+    for fields in [
+        {"externalAiConsent": True},
+        {"externalAiConsent": True, "externalAiPolicyVersion": None},
+        {"externalAiConsent": True, "externalAiPolicyVersion": ""},
+        {"externalAiConsent": 1, "externalAiPolicyVersion": "external-ai/1.0"},
+    ]:
+        with pytest.raises(ValidationError):
+            contract.validate({**event, **fields})

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from copy import deepcopy
 from datetime import datetime
 from uuid import UUID, uuid4
 
@@ -68,10 +69,10 @@ class ParsedJdRevisionRepository:
         if latest is not None and latest.source_hash == source_hash:
             return self._to_domain(latest, None)
 
-        next_number = self._session.scalar(
+        next_number = self._session.execute(
             select(func.coalesce(func.max(ParsedJdRevisionRecord.revision_number), 0) + 1)
             .where(ParsedJdRevisionRecord.job_version_id == job_version_id)
-        )
+        ).scalar_one()
         now = datetime.now().astimezone()
         record = ParsedJdRevisionRecord(
             public_id=uuid4(), job_id=job_id, job_version_id=job_version_id,
@@ -138,6 +139,13 @@ class ParsedJdRevisionRepository:
             raise LookupError("ParsedJD revision was not found")
         if record.public_id != expected_revision_id:
             raise ValueError("ParsedJD revision is stale; reload the latest revision")
+
+        if record.status != "CONFIRMED":
+            confirmed_payload = deepcopy(record.payload)
+            for section in ("requiredSkills", "preferredSkills"):
+                for skill in confirmed_payload.get("requirements", {}).get(section, []):
+                    skill["confirmedByRecruiter"] = True
+            record.payload = confirmed_payload
 
         head = self._session.scalar(
             select(ParsedJdHeadRecord)

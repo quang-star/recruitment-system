@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 import json
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 from uuid import UUID, uuid4, uuid5
 
 from fastapi import APIRouter, Depends, Request
@@ -14,8 +14,12 @@ from app.outbox import enqueue
 from app.shared.api import ApiContractError
 from app.shared.config import get_settings
 from app.shared.database import get_session
+from app.shared.revision_status import ParsedRevisionStatus, validate_revision_status
+from app.shared.evidence import inherit_review_evidence
+from app.shared.skill_proposals import skill_name_key
 from app.shared.security import AuthenticatedPrincipal, require_access_token
 from app.taxonomy.normalizer import normalize_skill
+from app.taxonomy.normalizer import taxonomy_version
 
 router = APIRouter(
     prefix="/api/v1/parsed-jds",
@@ -45,7 +49,7 @@ class ParsedJdResponse(BaseModel):
     jobVersionId: UUID
     revisionNumber: int
     sourceHash: str
-    status: Literal["PARSED", "CONFIRMED", "SUPERSEDED"]
+    status: ParsedRevisionStatus
     payload: dict[str, Any]
     confirmedBy: UUID | None
     confirmedAt: datetime | None
@@ -56,7 +60,8 @@ class ParsedJdResponse(BaseModel):
         return cls(
             revisionId=revision.public_id, jobId=revision.job_id,
             jobVersionId=revision.job_version_id, revisionNumber=revision.revision_number,
-            sourceHash=revision.source_hash, status=revision.status, payload=revision.payload,
+            sourceHash=revision.source_hash,
+            status=validate_revision_status(revision.status), payload=revision.payload,
             confirmedBy=revision.confirmed_by, confirmedAt=revision.confirmed_at,
             version=revision.version,
         )
@@ -159,13 +164,16 @@ def _validate_user_payload(job_version_id: UUID, source_hash: str,
     requirements = payload.get("requirements")
     if not isinstance(requirements, dict):
         raise ApiContractError(422, "PARSED_JD_SCHEMA_INVALID", "payload.requirements is required")
+    document["taxonomyVersion"] = taxonomy_version()
     prior_skills: dict[str, dict[str, Any]] = {}
+    payload["evidence"] = list((prior_payload or {}).get("evidence", []))
     prior_requirements = (prior_payload or {}).get("requirements", {})
     if isinstance(prior_requirements, dict):
         for section in ("requiredSkills", "preferredSkills"):
             for skill in prior_requirements.get(section, []):
                 if isinstance(skill, dict):
                     prior_skills[_skill_key(skill)] = skill
+    seen_skills: set[str] = set()
     for section, criticality in (("requiredSkills", "CRITICAL"), ("preferredSkills", "NORMAL")):
         skills = requirements.get(section)
         if not isinstance(skills, list):
@@ -174,11 +182,23 @@ def _validate_user_payload(job_version_id: UUID, source_hash: str,
         for skill in skills:
             if not isinstance(skill, dict):
                 continue
-            normalized = normalize_skill(str(skill.get("raw", "")))
+            raw = skill.get("raw")
+            if not isinstance(raw, str) or not raw.strip() or len(raw) > 240 or any(
+                character in raw for character in "\r\n"
+            ):
+                raise ApiContractError(422, "PARSED_JD_SKILL_NAME_INVALID",
+                                       "Skill names must contain 1–240 characters on one line")
+            normalized = normalize_skill(raw)
             skill["canonicalSkillId"] = normalized.stable_id if normalized else None
             skill["normalizationStatus"] = "KNOWN" if normalized else "PENDING"
             skill["criticality"] = criticality
-            skill["confirmedByRecruiter"] = True
+            # Saving an unknown name is not the confirmation of this JD revision.
+            skill["confirmedByRecruiter"] = normalized is not None
+            key = _skill_key(skill)
+            if key in seen_skills:
+                raise ApiContractError(422, "PARSED_JD_DUPLICATE_SKILL",
+                                       "A skill cannot occur twice or in both requirement groups")
+            seen_skills.add(key)
             prior = prior_skills.get(_skill_key(skill))
             skill["evidenceIds"] = list(prior.get("evidenceIds", [])) if prior else []
             if normalized:
@@ -210,6 +230,9 @@ def _validate_user_payload(job_version_id: UUID, source_hash: str,
     if errors:
         location = ".".join(str(part) for part in errors[0].absolute_path) or "payload"
         raise ApiContractError(422, "PARSED_JD_SCHEMA_INVALID", f"{location}: {errors[0].message}")
+    for section in ("education", "languages"):
+        inherit_review_evidence(requirements[section], prior_requirements.get(section, []))
+    inherit_review_evidence(payload["responsibilities"], (prior_payload or {}).get("responsibilities", []))
     return payload
 
 
@@ -217,7 +240,7 @@ def _skill_key(skill: dict[str, Any]) -> str:
     normalized = normalize_skill(str(skill.get("raw", "")))
     if normalized is not None:
         return f"known:{normalized.stable_id}"
-    return f"raw:{str(skill.get('raw', '')).strip().casefold()}"
+    return f"raw:{skill_name_key(str(skill.get('raw', '')))}"
 
 
 def _event(event_type: str, correlation_id: UUID, idempotency_key: str,

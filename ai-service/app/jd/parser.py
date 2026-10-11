@@ -1,23 +1,26 @@
 from __future__ import annotations
 
 import re
+from typing import Any
 from uuid import UUID, uuid5
 
 from app.taxonomy.normalizer import extract_known_skills, taxonomy_version
+from app.shared.evidence import attach_source_evidence, skill_locations
 
 
+PARSER_VERSION = "rules-v0.4.1"
 _EVIDENCE_NAMESPACE = UUID("6d3d1b4f-1d29-4eaa-8a8f-bcc2a66f7ce4")
 _PREFERRED_MARKERS = ("nice to have", "preferred", "ưu tiên", "lợi thế", "điểm cộng")
 
 
 def parse_jd(job_version_id: str, source_hash: str, title: str,
-             description: str, requirements_text: str) -> dict[str, object]:
+             description: str, requirements_text: str, *, enricher=None) -> dict[str, object]:
     """Create a conservative, contract-compatible ParsedJD baseline.
 
     The parser only emits a canonical skill when an exact taxonomy alias is found.
     Unknown terms are intentionally left out instead of inventing taxonomy IDs.
     """
-    job_uuid = UUID(job_version_id)
+    UUID(job_version_id)
     combined = f"{title}\n{description}\n{requirements_text}"
     lowered = combined.casefold()
     language = "vi" if any(character in lowered for character in "ăâđêôơư") else "en"
@@ -25,7 +28,9 @@ def parse_jd(job_version_id: str, source_hash: str, title: str,
     level = _level(title)
     title_evidence = str(uuid5(_EVIDENCE_NAMESPACE, f"{job_version_id}:title"))
     required_skills, preferred_skills = _skills(job_version_id, title, description, requirements_text)
-    responsibilities = []
+    education = _education_requirements(job_version_id, combined)
+    languages = _language_requirements(job_version_id, combined)
+    responsibilities: list[dict[str, Any]] = []
     for index, sentence in enumerate(_sentences(description), start=1):
         responsibilities.append({
             "raw": sentence[:1000],
@@ -42,14 +47,15 @@ def parse_jd(job_version_id: str, source_hash: str, title: str,
         quality_flags.append("NO_CANONICAL_SKILLS")
     if not responsibilities:
         quality_flags.append("NO_RESPONSIBILITIES")
-    return {
+    payload: dict[str, Any] = {
         "$schema": "https://smart-recruitment.local/contracts/schemas/parsed-jd-v1.schema.json",
         "schemaVersion": "parsed-jd/1.0",
         "document": {
             "jobVersionId": job_version_id,
             "language": language,
             "sourceHash": source_hash,
-            "parserVersion": f"rules-v0.2.0+taxonomy-{taxonomy_version()}",
+            "taxonomyVersion": taxonomy_version(),
+            "parserVersion": f"{PARSER_VERSION}+taxonomy-{taxonomy_version()}",
         },
         "title": {
             "raw": title.strip(),
@@ -62,13 +68,20 @@ def parse_jd(job_version_id: str, source_hash: str, title: str,
             "requiredSkills": required_skills,
             "preferredSkills": preferred_skills,
             "minimumRelevantExperienceMonths": _minimum_months(combined, ""),
-            "education": [],
-            "languages": [],
+            "education": education,
+            "languages": languages,
         },
         "responsibilities": responsibilities,
+        "evidence": skill_locations(combined, required_skills + preferred_skills),
         "overallConfidence": 0.78 if (required_skills or preferred_skills) and responsibilities else 0.45,
         "qualityFlags": quality_flags,
     }
+    attach_source_evidence(payload["title"], combined, title.strip(), payload["evidence"], within=title)
+    for item in responsibilities:
+        attach_source_evidence(item, combined, item["raw"], payload["evidence"], within=description)
+    for requirement in education + languages:
+        attach_source_evidence(requirement, combined, str(requirement["raw"]), payload["evidence"])
+    return enricher("jd", combined, payload) if enricher is not None else payload
 
 
 def _skills(job_version_id: str, title: str, description: str,
@@ -90,7 +103,7 @@ def _skills(job_version_id: str, title: str, description: str,
             if skill.stable_id in seen:
                 continue
             seen.add(skill.stable_id)
-            item = {
+            item: dict[str, object] = {
                 "raw": skill.raw,
                 "canonicalSkillId": skill.stable_id,
                 "normalizationStatus": "KNOWN",
@@ -108,7 +121,7 @@ def _skills(job_version_id: str, title: str, description: str,
 
 
 def _sentences(value: str) -> list[str]:
-    return [part.strip(" -•\t") for part in re.split(r"[\n.!?;]+", value) if part.strip(" -•\t")]
+    return [part.strip(" -•\t") for part in re.split(r"[\n!?;]+|(?<!\d)\.|\.(?!\d)", value) if part.strip(" -•\t")]
 
 
 def _minimum_months(value: str, alias: str) -> int | None:
@@ -119,6 +132,54 @@ def _minimum_months(value: str, alias: str) -> int | None:
     else:
         match = re.search(r"(\d+)\s*(?:\+\s*)?(?:năm|years?)\b", value.casefold())
     return int(match.group(1)) * 12 if match else None
+
+
+_DEGREE_REQUIREMENTS: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"\b(?:ph\.?d|doctorate|tiến\s+sĩ)\b", re.I), "doctorate"),
+    (re.compile(r"\b(?:master(?:'s)?|m\.?sc|thạc\s+sĩ)\b", re.I), "master"),
+    (re.compile(r"\b(?:bachelor(?:'s)?|b\.?sc|cử\s+nhân|đại\s+học)\b", re.I), "bachelor"),
+    (re.compile(r"\b(?:associate|cao\s+đẳng)\b", re.I), "associate"),
+)
+_LANGUAGE_REQUIREMENTS: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"\b(?:english|tiếng\s+anh)\b", re.I), "en"),
+    (re.compile(r"\b(?:vietnamese|tiếng\s+việt)\b", re.I), "vi"),
+    (re.compile(r"\b(?:japanese|tiếng\s+nhật)\b", re.I), "ja"),
+    (re.compile(r"\b(?:korean|tiếng\s+hàn)\b", re.I), "ko"),
+    (re.compile(r"\b(?:chinese|tiếng\s+trung)\b", re.I), "zh"),
+    (re.compile(r"\b(?:french|tiếng\s+pháp)\b", re.I), "fr"),
+    (re.compile(r"\b(?:german|tiếng\s+đức)\b", re.I), "de"),
+)
+
+
+def _fact_requirements(job_version_id: str, text: str, patterns, kind: str) -> list[dict[str, object]]:
+    results: list[dict[str, object]] = []
+    for sentence_index, sentence in enumerate(_sentences(text), start=1):
+        if re.search(r"không\s+yêu\s+cầu|not\s+required|no\s+.{0,40}required", sentence, re.I):
+            continue
+        for pattern, normalized in patterns:
+            if pattern.search(sentence) is None:
+                continue
+            lowered = sentence.casefold()
+            required = not any(marker in lowered for marker in _PREFERRED_MARKERS)
+            results.append({
+                "raw": sentence[:1000],
+                "normalizedValue": normalized,
+                "required": required,
+                "evidenceIds": [str(uuid5(
+                    _EVIDENCE_NAMESPACE, f"{job_version_id}:{kind}:{normalized}:{sentence_index}",
+                ))],
+                "confidence": 0.84,
+                "confirmedByRecruiter": False,
+            })
+    return results
+
+
+def _education_requirements(job_version_id: str, text: str) -> list[dict[str, object]]:
+    return _fact_requirements(job_version_id, text, _DEGREE_REQUIREMENTS, "education")
+
+
+def _language_requirements(job_version_id: str, text: str) -> list[dict[str, object]]:
+    return _fact_requirements(job_version_id, text, _LANGUAGE_REQUIREMENTS, "language")
 
 
 def _family(title: str) -> str:

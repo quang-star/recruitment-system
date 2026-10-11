@@ -1,5 +1,7 @@
 package com.smartrecruitment.core.job.application;
 
+import com.smartrecruitment.core.shared.domain.ExternalAiConsent;
+
 import com.smartrecruitment.core.job.application.port.JobRepository;
 import com.smartrecruitment.core.recruiter.application.CompanyNotFoundException;
 import com.smartrecruitment.core.recruiter.application.port.CompanyRepository;
@@ -65,10 +67,22 @@ public class JobService {
                       EmploymentType employmentType, String seniorityLevel, int openings,
                       BigDecimal salaryMin, BigDecimal salaryMax, String salaryCurrency, String salaryPeriod,
                       boolean salaryNegotiable, OffsetDateTime applicationDeadline, UUID correlationId) {
+        return create(userId, companyId, title, description, requirementsText, benefitsText, locationText,
+                countryCode, workMode, employmentType, seniorityLevel, openings, salaryMin, salaryMax,
+                salaryCurrency, salaryPeriod, salaryNegotiable, applicationDeadline, correlationId,
+                ExternalAiConsent.declined());
+    }
+
+    @Transactional
+    public Job create(UUID userId, UUID companyId, String title, String description, String requirementsText,
+                      String benefitsText, String locationText, String countryCode, WorkMode workMode,
+                      EmploymentType employmentType, String seniorityLevel, int openings,
+                      BigDecimal salaryMin, BigDecimal salaryMax, String salaryCurrency, String salaryPeriod,
+                      boolean salaryNegotiable, OffsetDateTime applicationDeadline, UUID correlationId, ExternalAiConsent consent) {
         if (!companies.canRecruit(companyId, userId)) throw new CompanyNotFoundException();
         JobVersion version = version(1, userId, title, description, requirementsText, benefitsText, locationText,
                 countryCode, workMode, employmentType, seniorityLevel, openings, salaryMin, salaryMax,
-                salaryCurrency, salaryPeriod, salaryNegotiable, applicationDeadline);
+                salaryCurrency, salaryPeriod, salaryNegotiable, applicationDeadline, consent);
         Job saved = jobs.insert(Job.draft(companyId, userId, version));
         submitForParsing(saved, correlationId);
         return saved;
@@ -100,6 +114,18 @@ public class JobService {
                            WorkMode workMode, EmploymentType employmentType, String seniorityLevel, int openings,
                            BigDecimal salaryMin, BigDecimal salaryMax, String salaryCurrency, String salaryPeriod,
                            boolean salaryNegotiable, OffsetDateTime applicationDeadline, UUID correlationId) {
+        return updateDraft(userId, jobId, expectedVersion, title, description, requirementsText, benefitsText,
+                locationText, countryCode, workMode, employmentType, seniorityLevel, openings, salaryMin,
+                salaryMax, salaryCurrency, salaryPeriod, salaryNegotiable, applicationDeadline, correlationId,
+                ExternalAiConsent.declined());
+    }
+
+    @Transactional
+    public Job updateDraft(UUID userId, UUID jobId, long expectedVersion, String title, String description,
+                           String requirementsText, String benefitsText, String locationText, String countryCode,
+                           WorkMode workMode, EmploymentType employmentType, String seniorityLevel, int openings,
+                           BigDecimal salaryMin, BigDecimal salaryMax, String salaryCurrency, String salaryPeriod,
+                           boolean salaryNegotiable, OffsetDateTime applicationDeadline, UUID correlationId, ExternalAiConsent consent) {
         Job existing = getMine(userId, jobId);
         ensureCanRecruit(existing.companyId(), userId);
         if (existing.status() != com.smartrecruitment.core.job.domain.JobStatus.DRAFT) {
@@ -107,7 +133,7 @@ public class JobService {
         }
         JobVersion newVersion = version(existing.activeVersion().versionNumber() + 1, userId, title, description,
                 requirementsText, benefitsText, locationText, countryCode, workMode, employmentType, seniorityLevel,
-                openings, salaryMin, salaryMax, salaryCurrency, salaryPeriod, salaryNegotiable, applicationDeadline);
+                openings, salaryMin, salaryMax, salaryCurrency, salaryPeriod, salaryNegotiable, applicationDeadline, consent);
         Job saved = jobs.updateDraft(existing, newVersion, expectedVersion, userId)
                 .orElseThrow(JobConflictException::new);
         submitForParsing(saved, correlationId);
@@ -141,12 +167,12 @@ public class JobService {
                                String benefitsText, String locationText, String countryCode, WorkMode workMode,
                                EmploymentType employmentType, String seniorityLevel, int openings,
                                BigDecimal salaryMin, BigDecimal salaryMax, String salaryCurrency, String salaryPeriod,
-                               boolean salaryNegotiable, OffsetDateTime deadline) {
+                               boolean salaryNegotiable, OffsetDateTime deadline, ExternalAiConsent consent) {
         return new JobVersion(UUID.randomUUID(), number, title, description, requirementsText, benefitsText,
                 locationText, countryCode, workMode, employmentType, seniorityLevel, openings, salaryMin, salaryMax,
                 salaryCurrency, salaryPeriod, salaryNegotiable, deadline, hash(title, description, requirementsText,
                 benefitsText, locationText, countryCode, workMode, employmentType, seniorityLevel, openings, salaryMin,
-                salaryMax, salaryCurrency, salaryPeriod, salaryNegotiable, deadline), userId);
+                salaryMax, salaryCurrency, salaryPeriod, salaryNegotiable, deadline), userId, consent);
     }
 
     private void ensureCanRecruit(UUID companyId, UUID userId) {

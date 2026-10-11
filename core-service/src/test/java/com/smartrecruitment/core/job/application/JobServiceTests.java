@@ -65,7 +65,9 @@ class JobServiceTests {
 
         Job created = service.create(userId, companyId, "Backend Engineer", "Build internal APIs",
                 "Java and Kafka", null, null, "VN", null, null, null, 1,
-                null, null, null, null, false, null, correlationId);
+                null, null, null, null, false, null, correlationId,
+                com.smartrecruitment.core.shared.domain.ExternalAiConsent.fromChoice(true,
+                        com.smartrecruitment.core.shared.domain.ExternalAiConsent.POLICY_VERSION));
 
         assertThat(storage.objectKey).isEqualTo("jobs/" + created.publicId() + "/"
                 + created.activeVersion().publicId() + ".json");
@@ -81,6 +83,8 @@ class JobServiceTests {
         assertThat(outbox.event.objectRef()).isEqualTo("private-jd/" + storage.objectKey);
         assertThat(outbox.event.sourceHash()).isEqualTo(created.activeVersion().sourceHash());
         assertThat(outbox.event.correlationId()).isEqualTo(correlationId);
+        assertThat(outbox.event.externalAiConsent().granted()).isTrue();
+        assertThat(outbox.event.externalAiConsent()).isEqualTo(created.activeVersion().externalAiConsent());
     }
 
     @Test

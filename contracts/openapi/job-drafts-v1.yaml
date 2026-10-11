@@ -1,0 +1,112 @@
+openapi: 3.1.0
+info:
+  title: Recruiter job draft and external AI consent contract
+  version: 1.0.0
+paths:
+  /api/v1/companies/{companyId}/jobs:
+    post:
+      summary: Create a job draft and submit its first JD version for parsing
+      description: >-
+        Existing company membership and recruiter permission rules apply.
+        External AI assistance defaults to declined and requires the current notice
+        version when granted. Only title, description and requirements are used as
+        the JD extraction source. Parsing is asynchronous and requires human review.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: common-v1.yaml#/components/parameters/CorrelationId
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PutJob' }
+      responses:
+        '200':
+          description: Draft created and parsing queued
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Job' }
+        '400': { description: Invalid request or missing/outdated consent notice }
+        '401': { description: Valid bearer token required }
+        '403': { description: Company recruiter permission required }
+        '404': { description: Company not found }
+  /api/v1/jobs/{jobId}:
+    put:
+      summary: Save a new JD version for an existing draft
+      description: >-
+        Include version from the latest Job response for optimistic concurrency.
+        Consent is supplied for the new version; omission declines and does not
+        silently inherit an earlier version's consent. Earlier snapshots retain
+        their recorded choice. Withdrawing external assistance on a new version
+        does not retract data already sent to a provider for an earlier version.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: common-v1.yaml#/components/parameters/CorrelationId
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/PutJob'
+                - type: object
+                  required: [version]
+                  properties:
+                    version: { type: integer, minimum: 0 }
+      responses:
+        '200':
+          description: Draft updated and new version queued
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Job' }
+        '400': { description: Invalid request or missing/outdated consent notice }
+        '401': { description: Valid bearer token required }
+        '403': { description: Company recruiter permission required }
+        '404': { description: Job not found }
+        '409': { description: Stale version or non-editable state }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  schemas:
+    PutJob:
+      type: object
+      required: [title, description, requirementsText, openings]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 240 }
+        description: { type: string, minLength: 1, maxLength: 30000 }
+        requirementsText: { type: string, minLength: 1, maxLength: 30000 }
+        benefitsText: { type: [string, 'null'], maxLength: 30000 }
+        locationText: { type: [string, 'null'], maxLength: 300 }
+        countryCode: { type: [string, 'null'], pattern: '^[A-Z]{2}$' }
+        workMode: { type: [string, 'null'], enum: [ONSITE, HYBRID, REMOTE, null] }
+        employmentType: { type: [string, 'null'], enum: [FULL_TIME, PART_TIME, CONTRACT, INTERNSHIP, null] }
+        seniorityLevel: { type: [string, 'null'], maxLength: 30 }
+        openings: { type: integer, minimum: 1 }
+        salaryMin: { type: [number, 'null'] }
+        salaryMax: { type: [number, 'null'] }
+        salaryCurrency: { type: [string, 'null'], pattern: '^[A-Z]{3}$' }
+        salaryPeriod: { type: [string, 'null'], enum: [HOUR, MONTH, YEAR, null] }
+        salaryNegotiable: { type: boolean, default: false }
+        applicationDeadline: { type: [string, 'null'], format: date-time }
+        version: { type: [integer, 'null'], minimum: 0 }
+        externalAiConsent: { type: boolean, default: false }
+        externalAiPolicyVersion:
+          type: [string, 'null']
+          maxLength: 40
+          description: external-ai/1.0 required when consent is true; null when false
+    Job:
+      type: object
+      required: [jobId, jobVersionId, version, externalAiConsent, externalAiPolicyVersion]
+      properties:
+        jobId: { type: string, format: uuid }
+        jobVersionId: { type: string, format: uuid }
+        version: { type: integer, minimum: 0 }
+        externalAiConsent: { type: boolean }
+        externalAiPolicyVersion: { type: [string, 'null'], maxLength: 40 }

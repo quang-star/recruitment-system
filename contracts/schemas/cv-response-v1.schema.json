@@ -35,7 +35,9 @@
           ]
         },
         "failureCode": { "type": ["string", "null"] },
-        "version": { "type": "integer", "minimum": 0 }
+        "version": { "type": "integer", "minimum": 0 },
+        "externalAiConsent": { "type": "boolean", "default": false },
+        "externalAiPolicyVersion": { "type": ["string", "null"], "maxLength": 40 }
       }
     }
   }

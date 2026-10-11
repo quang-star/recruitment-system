@@ -1,12 +1,22 @@
 package com.smartrecruitment.core.cv.domain;
 
+import com.smartrecruitment.core.shared.domain.ExternalAiConsent;
+
 import java.util.Objects;
 import java.util.UUID;
 
 public record CvVersion(UUID publicId, int versionNumber, String objectBucket, String objectKey,
                         String originalFilename, String mimeType, long sizeBytes, String sha256,
                         String languageHint, CvProcessingStatus processingStatus, String failureCode,
-                        long version, long processingGeneration) {
+                        long version, long processingGeneration, ExternalAiConsent externalAiConsent) {
+    public CvVersion(UUID publicId, int versionNumber, String objectBucket, String objectKey,
+                     String originalFilename, String mimeType, long sizeBytes, String sha256,
+                     String languageHint, CvProcessingStatus processingStatus, String failureCode,
+                     long version, long processingGeneration) {
+        this(publicId, versionNumber, objectBucket, objectKey, originalFilename, mimeType, sizeBytes,
+                sha256, languageHint, processingStatus, failureCode, version, processingGeneration,
+                ExternalAiConsent.declined());
+    }
     public CvVersion(UUID publicId, int versionNumber, String objectBucket, String objectKey,
                      String originalFilename, String mimeType, long sizeBytes, String sha256,
                      String languageHint, CvProcessingStatus processingStatus, String failureCode, long version) {
@@ -15,6 +25,7 @@ public record CvVersion(UUID publicId, int versionNumber, String objectBucket, S
     }
     public CvVersion {
         Objects.requireNonNull(publicId, "publicId");
+        Objects.requireNonNull(externalAiConsent, "externalAiConsent");
         if (versionNumber < 1) throw new IllegalArgumentException("versionNumber must be positive");
         objectBucket = requireText(objectBucket, "objectBucket", 120);
         objectKey = requireText(objectKey, "objectKey", 600);
@@ -40,9 +51,16 @@ public record CvVersion(UUID publicId, int versionNumber, String objectBucket, S
     public static CvVersion uploaded(UUID publicId, String objectBucket, String objectKey,
                                      String originalFilename, long sizeBytes, String sha256,
                                      UUID createdByUserId) {
+        return uploaded(publicId, objectBucket, objectKey, originalFilename, sizeBytes, sha256,
+                createdByUserId, ExternalAiConsent.declined());
+    }
+
+    public static CvVersion uploaded(UUID publicId, String objectBucket, String objectKey,
+                                     String originalFilename, long sizeBytes, String sha256,
+                                     UUID createdByUserId, ExternalAiConsent consent) {
         Objects.requireNonNull(createdByUserId, "createdByUserId");
         return new CvVersion(publicId, 1, objectBucket, objectKey, originalFilename,
-                "application/pdf", sizeBytes, sha256, null, CvProcessingStatus.UPLOADED, null, 0, 0);
+                "application/pdf", sizeBytes, sha256, null, CvProcessingStatus.UPLOADED, null, 0, 0, consent);
     }
 
     private static String requireText(String value, String field, int maxLength) {

@@ -116,6 +116,7 @@ def processing(request, monkeypatch):
                                ocr_enabled=False, ocr_max_pages=5, ocr_timeout_seconds=60)
     parser = Mock(return_value={"synthetic": True})
     monkeypatch.setattr(worker, parser_name, parser)
+    monkeypatch.setattr(worker, "get_extractor", lambda _, **kwargs: None)
     response = Mock()
     response.read.return_value = raw
     storage = Mock()

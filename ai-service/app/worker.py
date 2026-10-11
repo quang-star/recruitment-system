@@ -20,6 +20,8 @@ from app.jd.parser import parse_jd
 from app.matching.algorithm import ALGORITHM_VERSION, compute_match
 from app.matching.repository import MatchingResultRepository, _input_unavailable
 from app.shared.config import get_settings
+from app.shared.extraction import get_extractor
+from app.shared.extraction_types import ExtractionContext
 from app.shared.processing_errors import ProcessingFailure, storage_failure
 from app.task.domain import TaskState
 from app.task.persistence import SqlAlchemyProcessingTaskRepository
@@ -275,6 +277,10 @@ async def _process_one(envelope: dict, factory, storage: Minio,
                     ocr_enabled=settings.ocr_enabled,
                     ocr_max_pages=settings.ocr_max_pages,
                     ocr_timeout_seconds=settings.ocr_timeout_seconds,
+                    enricher=get_extractor(settings, kind="cv", session_factory=factory, context=ExtractionContext(
+                        owner_user_id, cv_version_id, source_hash,
+                        payload.get("externalAiConsent") is True, payload.get("externalAiPolicyVersion"),
+                    )),
 
                 )
             except Exception as exc:
@@ -351,7 +357,10 @@ async def _process_job(envelope: dict, factory, storage: Minio,
                     raise ProcessingFailure("JD_SOURCE_HASH_MISMATCH")
                 parsed = await asyncio.to_thread(parse_jd, str(job_version_id), source_hash, snapshot["title"],
                                   snapshot["description"], snapshot["requirementsText"],
-                                  )
+                                  enricher=get_extractor(settings, kind="jd", session_factory=factory, context=ExtractionContext(
+                                      owner_user_id, job_version_id, source_hash,
+                                      payload.get("externalAiConsent") is True, payload.get("externalAiPolicyVersion"),
+                                  )))
             except Exception as exc:
                 LOGGER.error("JD processing failed error_type=%s", type(exc).__name__)
                 if isinstance(exc, ProcessingFailure) and exc.retryable and not final_attempt:

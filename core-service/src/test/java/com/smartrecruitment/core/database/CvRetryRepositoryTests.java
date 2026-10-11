@@ -24,6 +24,26 @@ import static org.mockito.Mockito.*;
 import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.OutboxEvents.OUTBOX_EVENTS;
 
 class CvRetryRepositoryTests {
+    @Test
+    void explicitExternalAiConsentSurvivesDatabaseAndRetryOutbox() {
+        var repository = new JooqCandidateCvRepository(dsl);
+        UUID owner = UUID.randomUUID();
+        var consent = com.smartrecruitment.core.shared.domain.ExternalAiConsent.fromChoice(true,
+                com.smartrecruitment.core.shared.domain.ExternalAiConsent.POLICY_VERSION);
+        var cv = repository.insert(CandidateCv.uploaded(owner, "Consented synthetic CV",
+                CvVersion.uploaded(UUID.randomUUID(), "test-bucket", UUID.randomUUID() + ".pdf", "cv.pdf",
+                        100, "a".repeat(64), owner, consent)));
+        repository.updateProcessingAttemptStatus(cv.activeVersion().publicId(), "a".repeat(64),
+                CvProcessingStatus.FAILED, "SOURCE_STORAGE_UNAVAILABLE", 0);
+        var queued = repository.queueRetry(owner, cv.publicId(), cv.activeVersion().publicId(), 1).orElseThrow();
+        assertThat(queued.activeVersion().externalAiConsent()).isEqualTo(consent);
+        new JooqOutboxEventRepository(dsl, new ObjectMapper())
+                .append(CvUploadedEvent.from(queued, UUID.randomUUID(), OffsetDateTime.now()));
+        var row = dsl.selectFrom(OUTBOX_EVENTS).where(OUTBOX_EVENTS.AGGREGATE_ID.eq(cv.publicId())).fetchOne();
+        var payload = new ObjectMapper().readTree(row.getPayload().data());
+        assertThat(payload.path("externalAiConsent").asBoolean()).isTrue();
+        assertThat(payload.path("externalAiPolicyVersion").asText()).isEqualTo(consent.policyVersion());
+    }
     private static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17.10-alpine");
     private static DSLContext dsl;
 
