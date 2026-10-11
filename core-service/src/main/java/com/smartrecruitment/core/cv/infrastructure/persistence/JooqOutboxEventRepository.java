@@ -88,6 +88,8 @@ public class JooqOutboxEventRepository implements OutboxEventRepository {
                 public final UUID jobId = event.jobId();
                 public final UUID jobVersionId = event.jobVersionId();
                 public final UUID recruiterUserId = event.recruiterUserId();
+                public final boolean externalAiConsent = event.externalAiConsent().granted();
+                public final String externalAiPolicyVersion = event.externalAiConsent().policyVersion();
                 public final String sourceHash = event.sourceHash();
                 public final String objectRef = event.objectRef();
             });
@@ -175,6 +177,8 @@ public class JooqOutboxEventRepository implements OutboxEventRepository {
             public final String objectRef = event.objectRef();
             public final String sourceHash = event.sourceHash();
             public final long processingGeneration = event.processingGeneration();
+            public final boolean externalAiConsent = event.externalAiConsent().granted();
+            public final String externalAiPolicyVersion = event.externalAiConsent().policyVersion();
         };
     }
 

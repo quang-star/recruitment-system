@@ -14,11 +14,13 @@ public record CandidateCvResponse(UUID cvId, UUID candidateUserId, String title,
                         cv.activeVersion().originalFilename(), cv.activeVersion().mimeType(),
                         cv.activeVersion().sizeBytes(), cv.activeVersion().sha256(),
                         cv.activeVersion().processingStatus(), cv.activeVersion().failureCode(),
-                        cv.activeVersion().version()), cv.version());
+                        cv.activeVersion().version(), cv.activeVersion().externalAiConsent().granted(),
+                        cv.activeVersion().externalAiConsent().policyVersion()), cv.version());
     }
 
     public record CvVersionResponse(UUID cvVersionId, int versionNumber, String originalFilename,
                                     String mimeType, long sizeBytes, String sha256,
-                                    CvProcessingStatus processingStatus, String failureCode, long version) {
+                                    CvProcessingStatus processingStatus, String failureCode, long version,
+                                    boolean externalAiConsent, String externalAiPolicyVersion) {
     }
 }

@@ -1,5 +1,7 @@
 package com.smartrecruitment.core.cv.infrastructure.persistence;
 
+import com.smartrecruitment.core.shared.domain.ExternalAiConsent;
+
 import com.smartrecruitment.core.cv.application.port.CandidateCvRepository;
 import com.smartrecruitment.core.cv.domain.CandidateCv;
 import com.smartrecruitment.core.cv.domain.CvProcessingStatus;
@@ -54,6 +56,8 @@ public class JooqCandidateCvRepository implements CandidateCvRepository {
                 .set(CV_VERSIONS.MIME_TYPE, version.mimeType())
                 .set(CV_VERSIONS.SIZE_BYTES, version.sizeBytes())
                 .set(CV_VERSIONS.SHA256, version.sha256())
+                .set(CV_VERSIONS.EXTERNAL_AI_CONSENT, version.externalAiConsent().granted())
+                .set(CV_VERSIONS.EXTERNAL_AI_POLICY_VERSION, version.externalAiConsent().policyVersion())
                 .set(CV_VERSIONS.LANGUAGE_HINT, version.languageHint())
                 .set(CV_VERSIONS.PROCESSING_STATUS, version.processingStatus().name())
                 .set(CV_VERSIONS.CREATED_BY_USER_ID, candidateCv.candidateUserId())
@@ -179,7 +183,8 @@ public class JooqCandidateCvRepository implements CandidateCvRepository {
                         versionRecord.getLanguageHint(),
                         CvProcessingStatus.valueOf(versionRecord.getProcessingStatus()),
                         versionRecord.getFailureCode(),
-                        versionRecord.getVersion(), versionRecord.getProcessingGeneration()),
+                        versionRecord.getVersion(), versionRecord.getProcessingGeneration(),
+                        new ExternalAiConsent(versionRecord.getExternalAiConsent(), versionRecord.getExternalAiPolicyVersion())),
                 cvRecord.getVersion());
     }
 }

@@ -1,8 +1,44 @@
 openapi: 3.1.0
 info:
-  title: Candidate CV retry contract
-  version: 1.0.0
+  title: Candidate CV upload and retry contract
+  version: 1.2.0
 paths:
+  /api/v1/cvs:
+    post:
+      summary: Upload an owned CV with optional external AI assistance
+      description: >-
+        Candidate role required. External assistance is optional and defaults to
+        declined. Granting it requires externalAiPolicyVersion=external-ai/1.0.
+        The choice belongs to this CV version and is retained on a storage retry.
+        Existing versions and legacy requests default to declined. Local parsing
+        and manual review remain available when assistance is declined or unavailable.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: common-v1.yaml#/components/parameters/CorrelationId
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary, description: PDF up to 10 MiB }
+                title: { type: string, maxLength: 160 }
+                externalAiConsent: { type: boolean, default: false }
+                externalAiPolicyVersion:
+                  type: string
+                  maxLength: 40
+                  description: external-ai/1.0 is required when consent is true; omit when false
+      responses:
+        '201':
+          description: CV uploaded and asynchronous processing queued
+          content:
+            application/json:
+              schema: { $ref: ../schemas/cv-response-v1.schema.json }
+        '400': { description: Invalid document, request or missing/outdated consent notice }
+        '401': { description: Valid bearer token required }
+        '403': { description: Candidate role required }
   /api/v1/cvs/{cvId}/retry:
     post:
       summary: Retry an owned active CV after a transient storage failure

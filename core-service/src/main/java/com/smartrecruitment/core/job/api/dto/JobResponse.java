@@ -13,7 +13,8 @@ public record JobResponse(UUID jobId, UUID companyId, UUID createdByUserId, Stri
                           String requirementsText, String benefitsText, String locationText, String countryCode,
                           String workMode, String employmentType, String seniorityLevel, int openings,
                           BigDecimal salaryMin, BigDecimal salaryMax, String salaryCurrency, String salaryPeriod,
-                          boolean salaryNegotiable, OffsetDateTime applicationDeadline, String sourceHash) {
+                          boolean salaryNegotiable, OffsetDateTime applicationDeadline, String sourceHash,
+                          boolean externalAiConsent, String externalAiPolicyVersion) {
     public static JobResponse from(Job job) {
         JobVersion v = job.activeVersion();
         return new JobResponse(job.publicId(), job.companyId(), job.createdByUserId(), job.status().name(),
@@ -22,6 +23,6 @@ public record JobResponse(UUID jobId, UUID companyId, UUID createdByUserId, Stri
                 v.workMode() == null ? null : v.workMode().name(),
                 v.employmentType() == null ? null : v.employmentType().name(), v.seniorityLevel(), v.openings(),
                 v.salaryMin(), v.salaryMax(), v.salaryCurrency(), v.salaryPeriod(), v.salaryNegotiable(),
-                v.applicationDeadline(), v.sourceHash());
+                v.applicationDeadline(), v.sourceHash(), v.externalAiConsent().granted(), v.externalAiConsent().policyVersion());
     }
 }

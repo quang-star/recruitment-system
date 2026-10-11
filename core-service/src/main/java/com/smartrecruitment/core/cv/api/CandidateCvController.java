@@ -1,5 +1,7 @@
 package com.smartrecruitment.core.cv.api;
 
+import com.smartrecruitment.core.shared.domain.ExternalAiConsent;
+
 import com.smartrecruitment.core.cv.api.dto.CandidateCvResponse;
 import com.smartrecruitment.core.cv.application.CvService;
 import com.smartrecruitment.core.shared.api.CorrelationIdFilter;
@@ -39,9 +41,12 @@ public class CandidateCvController {
     public CandidateCvResponse upload(@AuthenticationPrincipal Jwt jwt,
                                       HttpServletRequest request,
                                       @RequestPart("file") MultipartFile file,
-                                      @RequestParam(required = false) @Size(max = 160) String title) {
+                                      @RequestParam(required = false) @Size(max = 160) String title,
+                                      @RequestParam(defaultValue = "false") boolean externalAiConsent,
+                                      @RequestParam(required = false) String externalAiPolicyVersion) {
         return CandidateCvResponse.from(cvs.upload(userId(jwt), title, file,
-                UUID.fromString(CorrelationIdFilter.current(request))));
+                UUID.fromString(CorrelationIdFilter.current(request)),
+                ExternalAiConsent.fromChoice(externalAiConsent, externalAiPolicyVersion)));
     }
 
     @GetMapping

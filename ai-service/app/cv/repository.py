@@ -64,10 +64,10 @@ class ParsedCvRevisionRepository:
         if existing is not None:
             return self._to_domain(existing, None)
 
-        next_number = self._session.scalar(
+        next_number = self._session.execute(
             select(func.coalesce(func.max(ParsedCvRevisionRecord.revision_number), 0) + 1)
             .where(ParsedCvRevisionRecord.cv_version_id == cv_version_id)
-        )
+        ).scalar_one()
         now = datetime.now().astimezone()
         record = ParsedCvRevisionRecord(
             public_id=uuid4(),

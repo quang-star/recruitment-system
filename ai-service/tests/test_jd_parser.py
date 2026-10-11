@@ -17,7 +17,7 @@ def test_parser_returns_contract_compatible_canonical_skills() -> None:
 
     schema = json.loads((Path(__file__).parents[2] / "contracts/schemas/parsed-jd-v1.schema.json").read_text())
     Draft202012Validator(schema, format_checker=FormatChecker()).validate(payload)
-    assert payload["document"]["parserVersion"] == "rules-v0.2.0+taxonomy-1.0.0"
+    assert payload["document"]["parserVersion"] == "rules-v0.4.1+taxonomy-1.0.0"
     assert {skill["raw"] for skill in payload["requirements"]["requiredSkills"]} == {"Java", "Kafka"}
     assert payload["requirements"]["minimumRelevantExperienceMonths"] == 36
     assert payload["responsibilities"]
@@ -63,3 +63,28 @@ def test_parser_keeps_required_and_preferred_skills_separate() -> None:
     assert {skill["raw"] for skill in payload["requirements"]["preferredSkills"]} == {
         "Kafka", "Docker",
     }
+
+
+def test_parser_extracts_education_and_language_requirements() -> None:
+    payload = parse_jd(
+        "779494ac-c858-4570-a884-6e88423b8e2b",
+        "0cb83583181fc5bdb09aa37cf82ab5f89e7438e88925de3e6e1f0f0eddb76382",
+        "Backend Engineer",
+        "Xây dựng dịch vụ backend.",
+        "Tốt nghiệp Đại học ngành Công nghệ thông tin. Tiếng Anh tối thiểu B1.",
+    )
+
+    assert payload["requirements"]["education"][0]["normalizedValue"] == "bachelor"
+    assert payload["requirements"]["languages"][0]["normalizedValue"] == "en"
+    assert payload["requirements"]["education"][0]["required"] is True
+    assert payload["requirements"]["languages"][0]["required"] is True
+
+
+def test_negated_degree_requirement_is_not_scored_and_languages_are_not_dropped():
+    payload = parse_jd(
+        "779494ac-c858-4570-a884-6e88423b8e2b", "0" * 64,
+        "Backend Engineer", "Build services.",
+        "Không yêu cầu bằng đại học. English B2 and Japanese N3 required.",
+    )
+    assert payload["requirements"]["education"] == []
+    assert {item["normalizedValue"] for item in payload["requirements"]["languages"]} == {"en", "ja"}

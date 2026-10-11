@@ -1,5 +1,7 @@
 package com.smartrecruitment.core.job.domain;
 
+import com.smartrecruitment.core.shared.domain.ExternalAiConsent;
+
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.Locale;
@@ -10,8 +12,20 @@ public record JobVersion(UUID publicId, int versionNumber, String title, String 
                          String countryCode, WorkMode workMode, EmploymentType employmentType,
                          String seniorityLevel, int openings, BigDecimal salaryMin, BigDecimal salaryMax,
                          String salaryCurrency, String salaryPeriod, boolean salaryNegotiable,
-                         OffsetDateTime applicationDeadline, String sourceHash, UUID createdByUserId) {
+                         OffsetDateTime applicationDeadline, String sourceHash, UUID createdByUserId, ExternalAiConsent externalAiConsent) {
+    public JobVersion(UUID publicId, int versionNumber, String title, String description,
+                      String requirementsText, String benefitsText, String locationText,
+                      String countryCode, WorkMode workMode, EmploymentType employmentType,
+                      String seniorityLevel, int openings, BigDecimal salaryMin, BigDecimal salaryMax,
+                      String salaryCurrency, String salaryPeriod, boolean salaryNegotiable,
+                      OffsetDateTime applicationDeadline, String sourceHash, UUID createdByUserId) {
+        this(publicId, versionNumber, title, description, requirementsText, benefitsText, locationText,
+                countryCode, workMode, employmentType, seniorityLevel, openings, salaryMin, salaryMax,
+                salaryCurrency, salaryPeriod, salaryNegotiable, applicationDeadline, sourceHash,
+                createdByUserId, ExternalAiConsent.declined());
+    }
     public JobVersion {
+        java.util.Objects.requireNonNull(externalAiConsent, "externalAiConsent");
         title = required(title, "title");
         description = required(description, "description");
         requirementsText = required(requirementsText, "requirementsText");
