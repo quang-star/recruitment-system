@@ -1,5 +1,7 @@
 package com.smartrecruitment.core.job.api;
 
+import com.smartrecruitment.core.shared.domain.ExternalAiConsent;
+
 import com.smartrecruitment.core.job.api.dto.JobResponse;
 import com.smartrecruitment.core.job.api.dto.PutJobRequest;
 import com.smartrecruitment.core.job.application.JobService;
@@ -28,7 +30,8 @@ public class JobController {
                 request.workMode(), request.employmentType(), request.seniorityLevel(), request.openings(),
                 request.salaryMin(), request.salaryMax(), request.salaryCurrency(), request.salaryPeriod(),
                 request.salaryNegotiable(), request.applicationDeadline(),
-                UUID.fromString(CorrelationIdFilter.current(servletRequest))));
+                UUID.fromString(CorrelationIdFilter.current(servletRequest)),
+                ExternalAiConsent.fromChoice(request.externalAiConsent(), request.externalAiPolicyVersion())));
     }
 
     @GetMapping("/api/v1/companies/{companyId}/jobs")
@@ -56,7 +59,8 @@ public class JobController {
                 request.countryCode(), request.workMode(), request.employmentType(), request.seniorityLevel(),
                 request.openings(), request.salaryMin(), request.salaryMax(), request.salaryCurrency(),
                 request.salaryPeriod(), request.salaryNegotiable(), request.applicationDeadline(),
-                UUID.fromString(CorrelationIdFilter.current(servletRequest))));
+                UUID.fromString(CorrelationIdFilter.current(servletRequest)),
+                ExternalAiConsent.fromChoice(request.externalAiConsent(), request.externalAiPolicyVersion())));
     }
 
     @PostMapping("/api/v1/jobs/{jobId}/publish")

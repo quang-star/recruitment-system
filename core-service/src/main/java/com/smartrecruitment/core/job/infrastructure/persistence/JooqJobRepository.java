@@ -1,5 +1,7 @@
 package com.smartrecruitment.core.job.infrastructure.persistence;
 
+import com.smartrecruitment.core.shared.domain.ExternalAiConsent;
+
 import com.smartrecruitment.core.job.application.port.JobRepository;
 import com.smartrecruitment.core.job.domain.EmploymentType;
 import com.smartrecruitment.core.job.domain.Job;
@@ -173,6 +175,8 @@ public class JooqJobRepository implements JobRepository {
                 .set(JOB_VERSIONS.SALARY_NEGOTIABLE, version.salaryNegotiable())
                 .set(JOB_VERSIONS.APPLICATION_DEADLINE, version.applicationDeadline())
                 .set(JOB_VERSIONS.SOURCE_HASH, version.sourceHash())
+                .set(JOB_VERSIONS.EXTERNAL_AI_CONSENT, version.externalAiConsent().granted())
+                .set(JOB_VERSIONS.EXTERNAL_AI_POLICY_VERSION, version.externalAiConsent().policyVersion())
                 .set(JOB_VERSIONS.CREATED_BY_USER_ID, version.createdByUserId())
                 .set(JOB_VERSIONS.CREATED_AT, OffsetDateTime.now(ZoneOffset.UTC))
                 .returning().fetchOne();
@@ -195,7 +199,8 @@ public class JooqJobRepository implements JobRepository {
                 enumValue(WorkMode.class, record.getWorkMode()), enumValue(EmploymentType.class, record.getEmploymentType()),
                 record.getSeniorityLevel(), record.getOpenings(), record.getSalaryMin(), record.getSalaryMax(),
                 record.getSalaryCurrency(), record.getSalaryPeriod(), record.getSalaryNegotiable(),
-                record.getApplicationDeadline(), record.getSourceHash(), record.getCreatedByUserId());
+                record.getApplicationDeadline(), record.getSourceHash(), record.getCreatedByUserId(),
+                new ExternalAiConsent(record.getExternalAiConsent(), record.getExternalAiPolicyVersion()));
     }
 
     private <T extends Enum<T>> T enumValue(Class<T> type, String value) {

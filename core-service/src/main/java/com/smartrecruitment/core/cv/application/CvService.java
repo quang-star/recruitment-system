@@ -1,10 +1,14 @@
 package com.smartrecruitment.core.cv.application;
 
+import com.smartrecruitment.core.shared.domain.ExternalAiConsent;
+
 import com.smartrecruitment.core.cv.application.port.CandidateCvRepository;
 import com.smartrecruitment.core.cv.application.port.ObjectStorage;
 import com.smartrecruitment.core.cv.application.port.OutboxEventRepository;
 import com.smartrecruitment.core.cv.domain.CandidateCv;
 import com.smartrecruitment.core.cv.domain.CvVersion;
+import com.smartrecruitment.core.cv.domain.CvProcessingStatus;
+import com.smartrecruitment.core.cv.domain.CvStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,6 +29,7 @@ import java.time.ZoneOffset;
 public class CvService {
     private static final long MAX_SIZE_BYTES = 10 * 1024 * 1024;
     private static final String PDF_MIME_TYPE = "application/pdf";
+    private static final int PDF_HEADER_SCAN_BYTES = 1024;
     private final CandidateCvRepository cvs;
     private final ObjectStorage storage;
     private final OutboxEventRepository outbox;
@@ -50,6 +55,12 @@ public class CvService {
 
     @Transactional
     public CandidateCv upload(UUID candidateUserId, String requestedTitle, MultipartFile file, UUID correlationId) {
+        return upload(candidateUserId, requestedTitle, file, correlationId, ExternalAiConsent.declined());
+    }
+
+    @Transactional
+    public CandidateCv upload(UUID candidateUserId, String requestedTitle, MultipartFile file,
+                              UUID correlationId, ExternalAiConsent consent) {
         validate(file);
         String filename = safeFilename(file.getOriginalFilename());
         String title = normalizeTitle(requestedTitle, filename);
@@ -57,7 +68,7 @@ public class CvService {
         String sha256 = sha256(file);
         UUID versionId = UUID.randomUUID();
         CvVersion version = CvVersion.uploaded(versionId, storageBucket, objectKey, filename,
-                file.getSize(), sha256, candidateUserId);
+                file.getSize(), sha256, candidateUserId, consent);
         CandidateCv candidateCv = CandidateCv.uploaded(candidateUserId, title, version);
 
         try (InputStream input = file.getInputStream()) {
@@ -89,6 +100,35 @@ public class CvService {
         return cvs.findByPublicId(candidateUserId, cvId).orElseThrow(CandidateCvNotFoundException::new);
     }
 
+    @Transactional
+    public CandidateCv retry(UUID candidateUserId, UUID cvId, UUID cvVersionId,
+                             long expectedVersion, UUID correlationId) {
+        CandidateCv current = getMine(candidateUserId, cvId);
+        if (expectedVersion < 0 || current.status() != CvStatus.ACTIVE
+                || !current.activeVersion().publicId().equals(cvVersionId)) throw new CvRetryConflictException();
+        if (isSameQueuedRetry(current, cvVersionId, expectedVersion)) return current;
+        if (current.activeVersion().processingStatus() != CvProcessingStatus.FAILED
+                || !"SOURCE_STORAGE_UNAVAILABLE".equals(current.activeVersion().failureCode())
+                || current.activeVersion().version() != expectedVersion) throw new CvRetryConflictException();
+        var queued = cvs.queueRetry(candidateUserId, cvId, cvVersionId, expectedVersion);
+        if (queued.isEmpty()) {
+            // A concurrent click may already have queued exactly this retry.
+            current = getMine(candidateUserId, cvId);
+            if (isSameQueuedRetry(current, cvVersionId, expectedVersion)) return current;
+            throw new CvRetryConflictException();
+        }
+        outbox.append(CvUploadedEvent.from(queued.get(), correlationId, OffsetDateTime.now(ZoneOffset.UTC)));
+        return queued.get();
+    }
+
+    private static boolean isSameQueuedRetry(CandidateCv cv, UUID cvVersionId, long expectedVersion) {
+        var version = cv.activeVersion();
+        return cv.status() == CvStatus.ACTIVE && version.publicId().equals(cvVersionId)
+                && version.processingStatus() == CvProcessingStatus.QUEUED
+                && version.version() - 1 == expectedVersion
+                && version.processingGeneration() == version.version();
+    }
+
     private static void validate(MultipartFile file) {
         if (file == null || file.isEmpty()) throw new CvUploadException("CV file must not be empty");
         if (file.getSize() > MAX_SIZE_BYTES) throw new CvUploadException("CV file must not exceed 10 MiB");
@@ -96,14 +136,22 @@ public class CvService {
             throw new CvUploadException("CV file must be a PDF");
         }
         try (InputStream input = file.getInputStream()) {
-            byte[] signature = input.readNBytes(5);
-            if (signature.length < 5 || signature[0] != '%' || signature[1] != 'P'
-                    || signature[2] != 'D' || signature[3] != 'F' || signature[4] != '-') {
+            byte[] signature = input.readNBytes(PDF_HEADER_SCAN_BYTES);
+            int offset = 0;
+            // Some PDF exporters prepend whitespace. Allow only that prefix,
+            // not arbitrary content containing an embedded PDF signature.
+            while (offset < signature.length && isHeaderWhitespace(signature[offset])) offset++;
+            if (signature.length - offset < 5 || signature[offset] != '%' || signature[offset + 1] != 'P'
+                    || signature[offset + 2] != 'D' || signature[offset + 3] != 'F' || signature[offset + 4] != '-') {
                 throw new CvUploadException("CV file is not a valid PDF");
             }
         } catch (IOException exception) {
             throw new CvUploadException("CV file could not be read");
         }
+    }
+
+    private static boolean isHeaderWhitespace(byte value) {
+        return value == ' ' || value == '\t' || value == '\r' || value == '\n' || value == '\f';
     }
 
     private static String sha256(MultipartFile file) {

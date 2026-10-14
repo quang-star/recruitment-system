@@ -31,10 +31,13 @@ class ProcessingTask:
     resource_id: UUID | None = None
     result_payload: dict[str, object] | None = None
     owner_user_id: UUID | None = None
+    processing_generation: int = 0
 
     def __post_init__(self) -> None:
         if self.attempt_count < 0:
             raise ValueError("attempt_count must not be negative")
+        if self.processing_generation < 0:
+            raise ValueError("processing_generation must not be negative")
         if self.updated_at < self.submitted_at:
             raise ValueError("updated_at must not precede submitted_at")
         if self.state is TaskState.FAILED and not self.safe_error_code:

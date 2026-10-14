@@ -1,21 +1,26 @@
 from datetime import UTC, datetime
 import json
-from typing import Any, Literal
+from typing import Any
 from uuid import UUID, uuid4, uuid5
 from pathlib import Path
 
-from aiokafka import AIOKafkaProducer
 from fastapi import APIRouter, Depends, Request
 from jsonschema import Draft202012Validator, FormatChecker
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.cv.repository import ParsedCvRevision, ParsedCvRevisionRepository
+from app.outbox import enqueue
 from app.shared.api import ApiContractError
 from app.shared.config import get_settings
 from app.shared.database import get_session
+from app.shared.evidence import inherit_review_evidence
+from app.shared.skill_proposals import skill_name_key
 from app.shared.security import AuthenticatedPrincipal, require_access_token
 from app.taxonomy.normalizer import normalize_skill
+from app.taxonomy.normalizer import taxonomy_version
+from app.shared.revision_status import ParsedRevisionStatus, validate_revision_status
+from app.cv.parser import _title
 
 router = APIRouter(
     prefix="/api/v1/parsed-cvs",
@@ -35,7 +40,7 @@ class ParsedCvResponse(BaseModel):
     cvVersionId: UUID
     revisionNumber: int
     sourceHash: str
-    status: Literal["PARSED", "CONFIRMED", "SUPERSEDED"]
+    status: ParsedRevisionStatus
     payload: dict[str, Any]
     confirmedBy: UUID | None
     confirmedAt: datetime | None
@@ -48,7 +53,7 @@ class ParsedCvResponse(BaseModel):
             cvVersionId=revision.cv_version_id,
             revisionNumber=revision.revision_number,
             sourceHash=revision.source_hash,
-            status=revision.status,
+            status=validate_revision_status(revision.status),
             payload=revision.payload,
             confirmedBy=revision.confirmed_by,
             confirmedAt=revision.confirmed_at,
@@ -101,7 +106,6 @@ async def update_parsed_cv(
         )
     except ValueError as exception:
         raise ApiContractError(409, "PARSED_CV_REVISION_CONFLICT", str(exception)) from exception
-    session.commit()
     settings = get_settings()
     task_id = uuid5(UUID("f5c2b49a-9f40-4d7b-9b47-2aa83ea1a2e7"), str(cv_version_id))
     event = _event(
@@ -114,7 +118,8 @@ async def update_parsed_cv(
             "status": "PARSED", "failureCode": None,
         },
     )
-    await _publish(settings.kafka_cv_processing_updated_topic, str(cv_version_id), event)
+    enqueue(session, settings.kafka_cv_processing_updated_topic, str(cv_version_id), event)
+    session.commit()
     return ParsedCvResponse.from_revision(revision)
 
 
@@ -139,7 +144,6 @@ async def confirm_parsed_cv(
     except ValueError as exception:
         raise ApiContractError(409, "PARSED_CV_REVISION_CONFLICT", str(exception)) from exception
 
-    session.commit()
     settings = get_settings()
     event = _event(
         event_type="cv.confirmed.v1",
@@ -152,9 +156,8 @@ async def confirm_parsed_cv(
             "confirmedBy": str(principal.subject),
         },
     )
-    await _publish(settings.kafka_cv_confirmed_topic, str(cv_version_id), event,
-                   unavailable_code="CV_CONFIRMATION_EVENT_UNAVAILABLE",
-                   unavailable_message="CV confirmation is saved but status propagation is temporarily unavailable")
+    enqueue(session, settings.kafka_cv_confirmed_topic, str(cv_version_id), event)
+    session.commit()
     return ParsedCvResponse.from_revision(revision)
 
 
@@ -183,7 +186,10 @@ def _validate_user_payload(cv_version_id: UUID, payload: dict[str, Any],
             raise ApiContractError(422, "PARSED_CV_SCHEMA_INVALID", f"payload.{section} must be an array")
     if not isinstance(payload.get("summary"), dict):
         raise ApiContractError(422, "PARSED_CV_SCHEMA_INVALID", "payload.summary must be an object")
+    document["taxonomyVersion"] = taxonomy_version()
     prior_skills: dict[str, dict[str, Any]] = {}
+    # Source coordinates are parser-owned, including after candidate edits.
+    payload["evidence"] = list((prior_payload or {}).get("evidence", []))
     for prior in (prior_payload or {}).get("skills", []):
         if isinstance(prior, dict):
             prior_skills[_skill_key(prior)] = prior
@@ -219,6 +225,18 @@ def _validate_user_payload(cv_version_id: UUID, payload: dict[str, Any],
     if errors:
         location = ".".join(str(part) for part in errors[0].absolute_path) or "payload"
         raise ApiContractError(422, "PARSED_CV_SCHEMA_INVALID", f"{location}: {errors[0].message}")
+    for section in ("experiences", "projects", "education", "certificates", "languages"):
+        inherit_review_evidence(payload[section], (prior_payload or {}).get(section, []))
+    for experience in payload["experiences"]:
+        start, end = experience.get("startMonth"), experience.get("endMonth")
+        if start and end and end < start:
+            raise ApiContractError(422, "PARSED_CV_DATES_INVALID", "Work end month precedes start month")
+        # A changed raw title must not retain the old canonical role.
+        experience["titleCanonical"] = _title(experience["titleRaw"])[1]
+    for education in payload["education"]:
+        start, end = education.get("startMonth"), education.get("endMonth")
+        if start and end and end < start:
+            raise ApiContractError(422, "PARSED_CV_DATES_INVALID", "Education end month precedes start month")
     return payload
 
 
@@ -226,7 +244,7 @@ def _skill_key(skill: dict[str, Any]) -> str:
     normalized = normalize_skill(str(skill.get("raw", "")))
     if normalized is not None:
         return f"known:{normalized.stable_id}"
-    return f"raw:{str(skill.get('raw', '')).strip().casefold()}"
+    return f"raw:{skill_name_key(str(skill.get('raw', '')))}"
 
 
 def _event(event_type: str, correlation_id: UUID, idempotency_key: str,
@@ -236,20 +254,3 @@ def _event(event_type: str, correlation_id: UUID, idempotency_key: str,
         "correlationId": str(correlation_id), "idempotencyKey": idempotency_key,
         "occurredAt": datetime.now(UTC).isoformat(), "payload": payload,
     }
-
-
-async def _publish(topic: str, key: str, event: dict[str, object],
-                   unavailable_code: str = "CV_PROCESSING_EVENT_UNAVAILABLE",
-                   unavailable_message: str = "Parsed CV is saved but status propagation is temporarily unavailable") -> None:
-    settings = get_settings()
-    producer = AIOKafkaProducer(
-        bootstrap_servers=settings.kafka_bootstrap_servers,
-        value_serializer=lambda value: json.dumps(value, separators=(",", ":")).encode("utf-8"),
-    )
-    try:
-        await producer.start()
-        await producer.send_and_wait(topic, key=key.encode("utf-8"), value=event)
-    except Exception as exception:
-        raise ApiContractError(503, unavailable_code, unavailable_message) from exception
-    finally:
-        await producer.stop()

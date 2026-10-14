@@ -36,7 +36,12 @@ public class CvProcessingUpdatedListener {
             CvProcessingStatus status = CvProcessingStatus.valueOf(payload.path("status").asText());
             String failureCode = payload.path("failureCode").isNull()
                     ? null : payload.path("failureCode").asText(null);
-            if (!cvs.updateProcessingStatus(versionId, sourceHash, status, failureCode)) {
+            JsonNode generationNode = payload.get("processingGeneration");
+            if (generationNode != null && (!generationNode.isIntegralNumber() || !generationNode.canConvertToLong())) {
+                throw new IllegalArgumentException("Invalid CV processing generation");
+            }
+            long generation = generationNode == null ? 0 : generationNode.asLong();
+            if (!cvs.updateProcessingAttemptStatus(versionId, sourceHash, status, failureCode, generation)) {
                 log.warn("Ignoring CV processing event for unknown or changed version {}", versionId);
             }
         } catch (Exception exception) {

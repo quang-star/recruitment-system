@@ -37,10 +37,11 @@ public class JooqOutboxEventRepository implements OutboxEventRepository {
                     .set(OUTBOX_EVENTS.PUBLIC_ID, UUID.randomUUID())
                     .set(OUTBOX_EVENTS.AGGREGATE_TYPE, "CV")
                     .set(OUTBOX_EVENTS.AGGREGATE_ID, event.cvId())
-                    .set(OUTBOX_EVENTS.AGGREGATE_VERSION, 1L)
+                    .set(OUTBOX_EVENTS.AGGREGATE_VERSION, Math.max(1L, event.processingGeneration()))
                     .set(OUTBOX_EVENTS.EVENT_TYPE, "cv.uploaded.v1")
                     .set(OUTBOX_EVENTS.SCHEMA_VERSION, (short) 1)
-                    .set(OUTBOX_EVENTS.IDEMPOTENCY_KEY, "cv.uploaded.v1:" + event.cvVersionId())
+                    .set(OUTBOX_EVENTS.IDEMPOTENCY_KEY, "cv.uploaded.v1:" + event.cvVersionId()
+                            + (event.processingGeneration() == 0 ? "" : ":retry:" + event.processingGeneration()))
                     .set(OUTBOX_EVENTS.CORRELATION_ID, event.correlationId())
                     .set(OUTBOX_EVENTS.PAYLOAD, JSON.json(payload))
                     .set(OUTBOX_EVENTS.OCCURRED_AT, event.occurredAt())
@@ -87,6 +88,8 @@ public class JooqOutboxEventRepository implements OutboxEventRepository {
                 public final UUID jobId = event.jobId();
                 public final UUID jobVersionId = event.jobVersionId();
                 public final UUID recruiterUserId = event.recruiterUserId();
+                public final boolean externalAiConsent = event.externalAiConsent().granted();
+                public final String externalAiPolicyVersion = event.externalAiConsent().policyVersion();
                 public final String sourceHash = event.sourceHash();
                 public final String objectRef = event.objectRef();
             });
@@ -173,6 +176,9 @@ public class JooqOutboxEventRepository implements OutboxEventRepository {
             public final UUID candidateUserId = event.candidateUserId();
             public final String objectRef = event.objectRef();
             public final String sourceHash = event.sourceHash();
+            public final long processingGeneration = event.processingGeneration();
+            public final boolean externalAiConsent = event.externalAiConsent().granted();
+            public final String externalAiPolicyVersion = event.externalAiConsent().policyVersion();
         };
     }
 

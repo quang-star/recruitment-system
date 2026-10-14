@@ -5,6 +5,7 @@ import com.smartrecruitment.core.candidate.application.CandidateProfileNotFoundE
 import com.smartrecruitment.core.cv.application.CandidateCvNotFoundException;
 import com.smartrecruitment.core.cv.application.CvStorageException;
 import com.smartrecruitment.core.cv.application.CvUploadException;
+import com.smartrecruitment.core.cv.application.CvRetryConflictException;
 import com.smartrecruitment.core.recruiter.application.CompanyConflictException;
 import com.smartrecruitment.core.recruiter.application.CompanyNotFoundException;
 import com.smartrecruitment.core.recruiter.application.RecruiterProfileConflictException;
@@ -20,6 +21,7 @@ import com.smartrecruitment.core.job.application.JobStateException;
 import com.smartrecruitment.core.application.application.ApplicationConflictException;
 import com.smartrecruitment.core.application.application.ApplicationNotFoundException;
 import com.smartrecruitment.core.application.application.ApplicationStateException;
+import com.smartrecruitment.core.notification.application.NotificationNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -62,6 +64,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(CvStorageException.class)
     ResponseEntity<ApiError> handleCvStorage(CvStorageException exception, HttpServletRequest request) {
         return error(HttpStatus.SERVICE_UNAVAILABLE, "CV_STORAGE_UNAVAILABLE", exception.getMessage(), Map.of(), request);
+    }
+
+    @ExceptionHandler(CvRetryConflictException.class)
+    ResponseEntity<ApiError> handleCvRetryConflict(CvRetryConflictException exception, HttpServletRequest request) {
+        return error(HttpStatus.CONFLICT, "CV_RETRY_CONFLICT", exception.getMessage(), Map.of(), request);
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
@@ -144,6 +151,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ApplicationStateException.class)
     ResponseEntity<ApiError> handleApplicationState(ApplicationStateException exception, HttpServletRequest request) {
         return error(HttpStatus.CONFLICT, "APPLICATION_INVALID_STATE", exception.getMessage(), Map.of(), request);
+    }
+
+    @ExceptionHandler(NotificationNotFoundException.class)
+    ResponseEntity<ApiError> handleNotificationNotFound(NotificationNotFoundException exception,
+                                                         HttpServletRequest request) {
+        return error(HttpStatus.NOT_FOUND, "NOTIFICATION_NOT_FOUND", exception.getMessage(), Map.of(), request);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

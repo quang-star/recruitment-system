@@ -1,5 +1,7 @@
 package com.smartrecruitment.core.cv.infrastructure.persistence;
 
+import com.smartrecruitment.core.shared.domain.ExternalAiConsent;
+
 import com.smartrecruitment.core.cv.application.port.CandidateCvRepository;
 import com.smartrecruitment.core.cv.domain.CandidateCv;
 import com.smartrecruitment.core.cv.domain.CvProcessingStatus;
@@ -54,6 +56,8 @@ public class JooqCandidateCvRepository implements CandidateCvRepository {
                 .set(CV_VERSIONS.MIME_TYPE, version.mimeType())
                 .set(CV_VERSIONS.SIZE_BYTES, version.sizeBytes())
                 .set(CV_VERSIONS.SHA256, version.sha256())
+                .set(CV_VERSIONS.EXTERNAL_AI_CONSENT, version.externalAiConsent().granted())
+                .set(CV_VERSIONS.EXTERNAL_AI_POLICY_VERSION, version.externalAiConsent().policyVersion())
                 .set(CV_VERSIONS.LANGUAGE_HINT, version.languageHint())
                 .set(CV_VERSIONS.PROCESSING_STATUS, version.processingStatus().name())
                 .set(CV_VERSIONS.CREATED_BY_USER_ID, candidateCv.candidateUserId())
@@ -76,6 +80,20 @@ public class JooqCandidateCvRepository implements CandidateCvRepository {
     @Override
     public boolean updateProcessingStatus(UUID cvVersionId, String sourceHash,
                                           CvProcessingStatus status, String failureCode) {
+        return updateStatus(cvVersionId, sourceHash, status, failureCode, null);
+    }
+
+    @Override
+    public boolean updateProcessingAttemptStatus(UUID cvVersionId, String sourceHash,
+                                                 CvProcessingStatus status, String failureCode, long generation) {
+        if (generation < 0 || (status != CvProcessingStatus.PARSED && status != CvProcessingStatus.FAILED)) {
+            throw new IllegalArgumentException("Invalid CV processing attempt result");
+        }
+        return updateStatus(cvVersionId, sourceHash, status, failureCode, generation);
+    }
+
+    private boolean updateStatus(UUID cvVersionId, String sourceHash, CvProcessingStatus status,
+                                 String failureCode, Long generation) {
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         return dsl.update(CV_VERSIONS)
                 .set(CV_VERSIONS.PROCESSING_STATUS, status.name())
@@ -85,8 +103,36 @@ public class JooqCandidateCvRepository implements CandidateCvRepository {
                 .set(CV_VERSIONS.UPDATED_AT, now)
                 .set(CV_VERSIONS.VERSION, CV_VERSIONS.VERSION.add(1L))
                 .where(CV_VERSIONS.PUBLIC_ID.eq(cvVersionId))
+                .and(CV_VERSIONS.PROCESSING_STATUS.ne("DELETED"))
                 .and(CV_VERSIONS.SHA256.eq(sourceHash))
+                .and(generation == null ? org.jooq.impl.DSL.noCondition()
+                        : CV_VERSIONS.PROCESSING_GENERATION.eq(generation))
+                .and(CV_VERSIONS.PROCESSING_STATUS.ne(status.name()))
+                .and(generation != null && status == CvProcessingStatus.FAILED
+                        ? CV_VERSIONS.PROCESSING_STATUS.in("UPLOADED", "QUEUED", "PROCESSING")
+                        : org.jooq.impl.DSL.noCondition())
+                .and(status == CvProcessingStatus.CONFIRMED ? org.jooq.impl.DSL.noCondition()
+                        : CV_VERSIONS.PROCESSING_STATUS.notIn("CONFIRMED", "DELETED", "SUPERSEDED"))
                 .execute() == 1;
+    }
+
+    @Override
+    public Optional<CandidateCv> queueRetry(UUID candidateUserId, UUID cvId, UUID cvVersionId, long expectedVersion) {
+        int updated = dsl.update(CV_VERSIONS)
+                .set(CV_VERSIONS.PROCESSING_STATUS, CvProcessingStatus.QUEUED.name())
+                .set(CV_VERSIONS.FAILURE_CODE, (String) null)
+                .set(CV_VERSIONS.UPDATED_AT, OffsetDateTime.now(ZoneOffset.UTC))
+                .set(CV_VERSIONS.VERSION, CV_VERSIONS.VERSION.add(1L))
+                .set(CV_VERSIONS.PROCESSING_GENERATION, CV_VERSIONS.VERSION.add(1L))
+                .where(CV_VERSIONS.PUBLIC_ID.eq(cvVersionId))
+                .and(CV_VERSIONS.VERSION.eq(expectedVersion))
+                .and(CV_VERSIONS.PROCESSING_STATUS.eq(CvProcessingStatus.FAILED.name()))
+                .and(CV_VERSIONS.FAILURE_CODE.eq("SOURCE_STORAGE_UNAVAILABLE"))
+                .and(CV_VERSIONS.ID.in(dsl.select(CVS.ACTIVE_VERSION_ID).from(CVS)
+                        .where(CVS.PUBLIC_ID.eq(cvId)).and(CVS.CANDIDATE_USER_ID.eq(candidateUserId))
+                        .and(CVS.STATUS.eq(CvStatus.ACTIVE.name()))))
+                .execute();
+        return updated == 1 ? findByPublicId(candidateUserId, cvId) : Optional.empty();
     }
 
     @Override
@@ -137,7 +183,8 @@ public class JooqCandidateCvRepository implements CandidateCvRepository {
                         versionRecord.getLanguageHint(),
                         CvProcessingStatus.valueOf(versionRecord.getProcessingStatus()),
                         versionRecord.getFailureCode(),
-                        versionRecord.getVersion()),
+                        versionRecord.getVersion(), versionRecord.getProcessingGeneration(),
+                        new ExternalAiConsent(versionRecord.getExternalAiConsent(), versionRecord.getExternalAiPolicyVersion())),
                 cvRecord.getVersion());
     }
 }

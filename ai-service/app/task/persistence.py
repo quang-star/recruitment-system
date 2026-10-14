@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import BigInteger, DateTime, Integer, JSON, String, Uuid, select
@@ -17,6 +17,7 @@ class ProcessingTaskRecord(Base):
     task_type: Mapped[str] = mapped_column(String(40), nullable=False)
     state: Mapped[str] = mapped_column(String(20), nullable=False)
     attempt_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    processing_generation: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0, server_default="0")
     safe_error_code: Mapped[str | None] = mapped_column(String(80))
     resource_id: Mapped[UUID | None] = mapped_column(Uuid, unique=True)
     object_ref: Mapped[str | None] = mapped_column(String(1024))
@@ -37,18 +38,7 @@ class SqlAlchemyProcessingTaskRepository(ProcessingTaskRepository):
         )
         if record is None:
             return None
-        return ProcessingTask(
-            public_id=record.public_id,
-            task_type=TaskType(record.task_type),
-            state=TaskState(record.state),
-            attempt_count=record.attempt_count,
-            submitted_at=record.submitted_at,
-            updated_at=record.updated_at,
-            safe_error_code=record.safe_error_code,
-            resource_id=record.resource_id,
-            result_payload=record.result_payload,
-            owner_user_id=record.owner_user_id,
-        )
+        return _to_domain(record)
 
     def find_by_resource_id(self, resource_id: UUID) -> ProcessingTask | None:
         record = self._session.scalar(
@@ -57,9 +47,9 @@ class SqlAlchemyProcessingTaskRepository(ProcessingTaskRepository):
         return _to_domain(record) if record else None
 
     def start_cv(self, resource_id: UUID, owner_user_id: UUID,
-                 object_ref: str, source_hash: str) -> ProcessingTask:
+                 object_ref: str, source_hash: str, processing_generation: int = 0) -> ProcessingTask:
         return self._start(resource_id, owner_user_id, object_ref, source_hash,
-                           TaskType.PARSE_CV, 1)
+                           TaskType.PARSE_CV, 1, processing_generation)
 
     def start_jd(self, resource_id: UUID, owner_user_id: UUID,
                  object_ref: str, source_hash: str) -> ProcessingTask:
@@ -68,17 +58,20 @@ class SqlAlchemyProcessingTaskRepository(ProcessingTaskRepository):
 
     def _start(self, resource_id: UUID, owner_user_id: UUID,
                object_ref: str, source_hash: str, task_type: TaskType,
-               deterministic_salt: int) -> ProcessingTask:
+               deterministic_salt: int, processing_generation: int = 0) -> ProcessingTask:
+        if processing_generation < 0:
+            raise ValueError("processing_generation must not be negative")
         existing = self._session.scalar(
             select(ProcessingTaskRecord).where(ProcessingTaskRecord.resource_id == resource_id)
         )
-        now = datetime.now().astimezone()
+        now = _stored_time(self._session, datetime.now(UTC))
         if existing is None:
             existing = ProcessingTaskRecord(
                 public_id=UUID(int=resource_id.int ^ UUID(int=deterministic_salt).int),
                 task_type=task_type.value,
                 state=TaskState.PROCESSING.value,
                 attempt_count=1,
+                processing_generation=processing_generation,
                 resource_id=resource_id,
                 owner_user_id=owner_user_id,
                 object_ref=object_ref,
@@ -87,11 +80,18 @@ class SqlAlchemyProcessingTaskRepository(ProcessingTaskRepository):
                 updated_at=now,
             )
             self._session.add(existing)
-        elif existing.state != TaskState.COMPLETED.value:
-            existing.state = TaskState.PROCESSING.value
-            existing.attempt_count += 1
-            existing.safe_error_code = None
-            existing.updated_at = now
+        else:
+            if existing.owner_user_id != owner_user_id or existing.source_hash != source_hash \
+                    or existing.object_ref != object_ref or existing.task_type != task_type.value:
+                raise ValueError("Processing source identity mismatch")
+            if processing_generation < existing.processing_generation:
+                return _to_domain(existing)
+            existing.processing_generation = processing_generation
+            if existing.state != TaskState.COMPLETED.value:
+                existing.state = TaskState.PROCESSING.value
+                existing.attempt_count += 1
+                existing.safe_error_code = None
+                existing.updated_at = _stored_time(self._session, _update_time(existing))
         self._session.flush()
         return _to_domain(existing)
 
@@ -100,7 +100,7 @@ class SqlAlchemyProcessingTaskRepository(ProcessingTaskRepository):
         record.state = TaskState.COMPLETED.value
         record.safe_error_code = None
         record.result_payload = result_payload
-        record.updated_at = datetime.now().astimezone()
+        record.updated_at = _stored_time(self._session, _update_time(record))
         self._session.flush()
         return _to_domain(record)
 
@@ -108,7 +108,15 @@ class SqlAlchemyProcessingTaskRepository(ProcessingTaskRepository):
         record = self._record(task_id)
         record.state = TaskState.FAILED.value
         record.safe_error_code = safe_error_code
-        record.updated_at = datetime.now().astimezone()
+        record.updated_at = _stored_time(self._session, _update_time(record))
+        self._session.flush()
+        return _to_domain(record)
+
+    def retry(self, task_id: UUID) -> ProcessingTask:
+        record = self._record(task_id)
+        record.state = TaskState.RETRYING.value
+        record.safe_error_code = None
+        record.updated_at = _stored_time(self._session, _update_time(record))
         self._session.flush()
         return _to_domain(record)
 
@@ -121,16 +129,35 @@ class SqlAlchemyProcessingTaskRepository(ProcessingTaskRepository):
         return record
 
 
+def _update_time(record: ProcessingTaskRecord) -> datetime:
+    # Wall-clock corrections must not violate the persisted timestamp invariant.
+    return max(datetime.now(UTC), _utc_time(record.submitted_at), _utc_time(record.updated_at))
+
+
+def _utc_time(value: datetime) -> datetime:
+    # Legacy SQLite rows store local wall time without an offset. astimezone
+    # interprets those naive values locally; PostgreSQL TIMESTAMPTZ stays aware.
+    return value.astimezone(UTC)
+
+
+def _stored_time(session: Session, value: datetime) -> datetime:
+    if session.get_bind().dialect.name == "sqlite":
+        # Keep the legacy SQLite convention so old and new rows remain readable.
+        return value.astimezone().replace(tzinfo=None)
+    return value.astimezone(UTC)
+
+
 def _to_domain(record: ProcessingTaskRecord) -> ProcessingTask:
     return ProcessingTask(
         public_id=record.public_id,
         task_type=TaskType(record.task_type),
         state=TaskState(record.state),
         attempt_count=record.attempt_count,
-        submitted_at=record.submitted_at,
-        updated_at=record.updated_at,
+        submitted_at=_utc_time(record.submitted_at),
+        updated_at=_utc_time(record.updated_at),
         safe_error_code=record.safe_error_code,
         resource_id=record.resource_id,
         result_payload=record.result_payload,
         owner_user_id=record.owner_user_id,
+        processing_generation=record.processing_generation,
     )
