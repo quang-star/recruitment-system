@@ -1,0 +1,68 @@
+openapi: 3.1.0
+info:
+  title: Job classification and skill catalogs
+  version: 1.0.0
+paths:
+  /api/v1/public/job-categories:
+    get:
+      summary: Approved industry, specialization and position catalog
+      responses:
+        '200':
+          description: Active entries with merged parent aliases resolved
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/CategoryEntry' } }
+  /api/v1/dashboard/catalog:
+    get:
+      security: [{ bearerAuth: [] }]
+      summary: Admin catalog including proposals and retired entries
+      responses:
+        '200':
+          description: Catalog entries including proposals
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/CategoryEntry' } }
+        '403': { description: SYSTEM_ADMIN role required }
+  /api/v1/taxonomy/skills:
+    get:
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Catalog version, taxonomyVersion and skill definitions }
+        '403': { description: SYSTEM_ADMIN role required }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  schemas:
+    CategoryEntry:
+      type: object
+      required: [id, kind, parentId, name, status, version]
+      properties:
+        id: { type: string, format: uuid }
+        kind: { enum: [INDUSTRY, SPECIALIZATION, POSITION] }
+        parentId: { type: [string, 'null'], format: uuid }
+        name: { type: string, minLength: 1, maxLength: 160 }
+        status: { enum: [ACTIVE, PENDING, REJECTED, MERGED] }
+        mergedIntoId: { type: [string, 'null'], format: uuid }
+        version: { type: integer, minimum: 0 }
+    CategoryChoice:
+      type: object
+      description: Select approved IDs or propose missing names. Omission of category preserves legacy IT behavior. Parent-child scopes are validated; pending names are usable immediately.
+      properties:
+        industryId: { type: [string, 'null'], format: uuid }
+        industryName: { type: [string, 'null'], maxLength: 160 }
+        specializationId: { type: [string, 'null'], format: uuid }
+        specializationName: { type: [string, 'null'], maxLength: 160 }
+        positionId: { type: [string, 'null'], format: uuid }
+        positionName: { type: [string, 'null'], maxLength: 160 }
+    CategorySnapshot:
+      type: object
+      required: [industryName, positionName, matchingDomain]
+      properties:
+        industryId: { type: [string, 'null'], format: uuid }
+        industryName: { type: string, minLength: 1, maxLength: 160 }
+        specializationId: { type: [string, 'null'], format: uuid }
+        specializationName: { type: [string, 'null'], maxLength: 160 }
+        positionId: { type: [string, 'null'], format: uuid }
+        positionName: { type: string, minLength: 1, maxLength: 240 }
+        matchingDomain: { enum: [IT, OUTSIDE_IT] }
+      description: Classification belongs to the immutable JD version. Pending IDs can be null while labels are retained. Outside-IT applications have matchingSupported=false and use manual review without AI scoring or ranking.

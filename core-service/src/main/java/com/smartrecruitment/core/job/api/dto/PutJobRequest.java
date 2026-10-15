@@ -29,5 +29,6 @@ public record PutJobRequest(
         OffsetDateTime applicationDeadline,
         Long version,
         boolean externalAiConsent,
-        @Size(max = 40) String externalAiPolicyVersion) {
+        @Size(max = 40) String externalAiPolicyVersion,
+        com.smartrecruitment.core.catalog.domain.CategoryChoice category) {
 }

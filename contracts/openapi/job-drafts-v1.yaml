@@ -79,6 +79,8 @@ components:
       type: object
       required: [title, description, requirementsText, openings]
       properties:
+        category:
+          $ref: catalog-privacy-v1.yaml#/components/schemas/CategoryChoice
         title: { type: string, minLength: 1, maxLength: 240 }
         description: { type: string, minLength: 1, maxLength: 30000 }
         requirementsText: { type: string, minLength: 1, maxLength: 30000 }
@@ -105,6 +107,9 @@ components:
       type: object
       required: [jobId, jobVersionId, version, externalAiConsent, externalAiPolicyVersion]
       properties:
+        matchingSupported: { type: boolean, description: Only IT snapshots support AI matching }
+        category:
+          $ref: catalog-privacy-v1.yaml#/components/schemas/CategorySnapshot
         jobId: { type: string, format: uuid }
         jobVersionId: { type: string, format: uuid }
         version: { type: integer, minimum: 0 }

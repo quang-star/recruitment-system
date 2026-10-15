@@ -19,6 +19,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class ApplicationServiceTests {
     @Test
+    void outsideIndustryApplicationDoesNotRequestMatching() {
+        var c = application(ApplicationStatus.SUBMITTED);
+        var outside = new Application(c.publicId(), c.candidateUserId(), c.companyId(), c.cvId(), c.cvVersionId(),
+                c.jobId(), c.jobVersionId(), c.coverLetter(), c.status(), c.source(), c.appliedAt(), c.updatedAt(), c.version(), false);
+        var outbox = new RecordingOutbox();
+        var service = new ApplicationService(new FakeApplications(outside), outbox);
+        assertThat(service.apply(c.candidateUserId(), c.jobId(), c.cvId()).matchingSupported()).isFalse();
+        assertThat(outbox.applicationEvents).isZero();
+    }
+    @Test
     void rejectsInvalidStatusTransition() {
         UUID recruiter = UUID.randomUUID();
         FakeApplications repository = new FakeApplications(application(ApplicationStatus.REJECTED));

@@ -8,6 +8,7 @@ from app.shared.database import Base
 from app.task import persistence  # noqa: F401
 from app import outbox  # noqa: F401
 from app.shared import extraction_usage  # noqa: F401
+from app.taxonomy import catalog  # noqa: F401
 
 config = context.config
 config.set_main_option("sqlalchemy.url", get_settings().db_url)

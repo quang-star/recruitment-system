@@ -31,7 +31,7 @@ public class JobController {
                 request.salaryMin(), request.salaryMax(), request.salaryCurrency(), request.salaryPeriod(),
                 request.salaryNegotiable(), request.applicationDeadline(),
                 UUID.fromString(CorrelationIdFilter.current(servletRequest)),
-                ExternalAiConsent.fromChoice(request.externalAiConsent(), request.externalAiPolicyVersion())));
+                ExternalAiConsent.fromChoice(request.externalAiConsent(), request.externalAiPolicyVersion()), request.category()));
     }
 
     @GetMapping("/api/v1/companies/{companyId}/jobs")
@@ -60,7 +60,7 @@ public class JobController {
                 request.openings(), request.salaryMin(), request.salaryMax(), request.salaryCurrency(),
                 request.salaryPeriod(), request.salaryNegotiable(), request.applicationDeadline(),
                 UUID.fromString(CorrelationIdFilter.current(servletRequest)),
-                ExternalAiConsent.fromChoice(request.externalAiConsent(), request.externalAiPolicyVersion())));
+                ExternalAiConsent.fromChoice(request.externalAiConsent(), request.externalAiPolicyVersion()), request.category()));
     }
 
     @PostMapping("/api/v1/jobs/{jobId}/publish")

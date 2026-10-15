@@ -219,7 +219,7 @@ public class JooqApplicationRepository implements ApplicationRepository {
 
     private org.jooq.SelectJoinStep<org.jooq.Record> applicationQuery() {
         return dsl.select(APPLICATIONS.fields()).select(COMPANIES.PUBLIC_ID, JOBS.PUBLIC_ID,
-                        JOB_VERSIONS.PUBLIC_ID, CVS.PUBLIC_ID, CV_VERSIONS.PUBLIC_ID)
+                        JOB_VERSIONS.PUBLIC_ID, JOB_VERSIONS.MATCHING_DOMAIN, CVS.PUBLIC_ID, CV_VERSIONS.PUBLIC_ID)
                 .from(APPLICATIONS).join(COMPANIES).on(COMPANIES.ID.eq(APPLICATIONS.COMPANY_ID))
                 .join(JOBS).on(JOBS.ID.eq(APPLICATIONS.JOB_ID))
                 .join(JOB_VERSIONS).on(JOB_VERSIONS.ID.eq(APPLICATIONS.JOB_VERSION_ID))
@@ -308,6 +308,6 @@ public class JooqApplicationRepository implements ApplicationRepository {
                 record.get(JOBS.PUBLIC_ID), record.get(JOB_VERSIONS.PUBLIC_ID), record.get(APPLICATIONS.COVER_LETTER),
                 ApplicationStatus.valueOf(record.get(APPLICATIONS.STATUS)),
                 ApplicationSource.valueOf(record.get(APPLICATIONS.SOURCE)), record.get(APPLICATIONS.APPLIED_AT),
-                record.get(APPLICATIONS.UPDATED_AT), record.get(APPLICATIONS.VERSION));
+                record.get(APPLICATIONS.UPDATED_AT), record.get(APPLICATIONS.VERSION), "IT".equals(record.get(JOB_VERSIONS.MATCHING_DOMAIN)));
     }
 }
