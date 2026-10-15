@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import lru_cache
+from contextlib import contextmanager
+from contextvars import ContextVar
 import json
 from pathlib import Path
 import re
@@ -66,10 +68,30 @@ def taxonomy_version() -> str:
     return taxonomy().version
 
 
-@lru_cache(maxsize=1)
+_runtime_taxonomy: ContextVar[Taxonomy | None] = ContextVar("runtime_taxonomy", default=None)
+
+
 def taxonomy() -> Taxonomy:
+    return _runtime_taxonomy.get() or _seed_taxonomy()
+
+
+@contextmanager
+def use_taxonomy(snapshot: Taxonomy):
+    token = _runtime_taxonomy.set(snapshot)
+    try:
+        yield
+    finally:
+        _runtime_taxonomy.reset(token)
+
+
+@lru_cache(maxsize=1)
+def _seed_taxonomy() -> Taxonomy:
     source = _taxonomy_path()
     payload = json.loads(source.read_text(encoding="utf-8"))
+    return build_taxonomy(payload)
+
+
+def build_taxonomy(payload: dict) -> Taxonomy:
     by_alias: dict[str, tuple[str, str]] = {}
     searchable: dict[str, tuple[str, str]] = {}
     for skill in payload["skills"]:

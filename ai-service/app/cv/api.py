@@ -18,7 +18,8 @@ from app.shared.evidence import inherit_review_evidence
 from app.shared.skill_proposals import skill_name_key
 from app.shared.security import AuthenticatedPrincipal, require_access_token
 from app.taxonomy.normalizer import normalize_skill
-from app.taxonomy.normalizer import taxonomy_version
+from app.taxonomy.normalizer import use_taxonomy, taxonomy_version
+from app.taxonomy.catalog import snapshot
 from app.shared.revision_status import ParsedRevisionStatus, validate_revision_status
 from app.cv.parser import _title
 
@@ -92,7 +93,8 @@ async def update_parsed_cv(
     latest = repository.find_owned(cv_version_id, principal.subject)
     if latest is None:
         raise ApiContractError(404, "PARSED_CV_NOT_FOUND", "Parsed CV was not found")
-    payload = _validate_user_payload(cv_version_id, request_body.payload, latest.payload)
+    with use_taxonomy(snapshot(session)):
+        payload = _validate_user_payload(cv_version_id, request_body.payload, latest.payload)
     if latest.source_hash != payload["document"]["sourceHash"]:
         raise ApiContractError(422, "PARSED_CV_SOURCE_HASH_MISMATCH",
                                "document.sourceHash must match the uploaded CV version")

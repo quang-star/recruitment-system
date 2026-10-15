@@ -35,6 +35,12 @@ import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    @ExceptionHandler(com.smartrecruitment.core.catalog.application.CategoryConflictException.class)
+    ResponseEntity<ApiError> handleCategoryConflict(com.smartrecruitment.core.catalog.application.CategoryConflictException exception,
+                                                   HttpServletRequest request) {
+        return error(HttpStatus.CONFLICT, "CATEGORY_CONFLICT", exception.getMessage(), Map.of(), request);
+    }
+
     @ExceptionHandler(CandidateProfileNotFoundException.class)
     ResponseEntity<ApiError> handleNotFound(CandidateProfileNotFoundException exception, HttpServletRequest request) {
         return error(HttpStatus.NOT_FOUND, "CANDIDATE_PROFILE_NOT_FOUND", exception.getMessage(), Map.of(), request);

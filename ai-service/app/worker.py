@@ -17,6 +17,8 @@ from app.outbox import enqueue
 from app.cv.repository import ParsedCvRevisionRepository
 from app.jd.repository import ParsedJdRevisionRepository
 from app.jd.parser import parse_jd
+from app.taxonomy.normalizer import use_taxonomy
+from app.taxonomy.catalog import snapshot as taxonomy_snapshot
 from app.matching.algorithm import ALGORITHM_VERSION, compute_match
 from app.matching.repository import MatchingResultRepository, _input_unavailable
 from app.shared.config import get_settings
@@ -28,6 +30,13 @@ from app.task.persistence import SqlAlchemyProcessingTaskRepository
 
 
 LOGGER = logging.getLogger(__name__)
+
+
+async def _catalog_parse(factory, parser, *args, **kwargs):
+    with factory() as session:
+        catalog = taxonomy_snapshot(session)
+    with use_taxonomy(catalog):
+        return await asyncio.to_thread(parser, *args, **kwargs)
 
 
 def _decode_envelope(value: bytes) -> dict:
@@ -271,7 +280,7 @@ async def _process_one(envelope: dict, factory, storage: Minio,
                 if hashlib.sha256(raw_document).hexdigest() != source_hash:
                     raise ProcessingFailure("CV_SOURCE_HASH_MISMATCH")
                 stage = "parser"
-                parsed = await asyncio.to_thread(
+                parsed = await _catalog_parse(factory,
                     parse_pdf,
                     str(cv_version_id), source_hash, raw_document,
                     ocr_enabled=settings.ocr_enabled,
@@ -329,6 +338,8 @@ def _job_processing_event(envelope: dict, task_id: UUID, status: str, source_has
 async def _process_job(envelope: dict, factory, storage: Minio,
                        producer: AIOKafkaProducer, settings, *, final_attempt: bool = True) -> None:
     payload = envelope.get("payload", {})
+    if payload.get("matchingDomain", "IT") != "IT":
+        return
     job_id = UUID(payload["jobId"])
     job_version_id = UUID(payload["jobVersionId"])
     owner_user_id = UUID(payload["recruiterUserId"])
@@ -355,7 +366,7 @@ async def _process_job(envelope: dict, factory, storage: Minio,
                     raise ProcessingFailure("JD_SOURCE_INVALID")
                 if snapshot.get("sourceHash") != source_hash:
                     raise ProcessingFailure("JD_SOURCE_HASH_MISMATCH")
-                parsed = await asyncio.to_thread(parse_jd, str(job_version_id), source_hash, snapshot["title"],
+                parsed = await _catalog_parse(factory, parse_jd, str(job_version_id), source_hash, snapshot["title"],
                                   snapshot["description"], snapshot["requirementsText"],
                                   enricher=get_extractor(settings, kind="jd", session_factory=factory, context=ExtractionContext(
                                       owner_user_id, job_version_id, source_hash,
@@ -416,6 +427,8 @@ def _matching_event(envelope: dict, result, application_id: UUID,
 async def _process_application(envelope: dict, factory,
                                producer: AIOKafkaProducer, settings) -> None:
     payload = envelope.get("payload", {})
+    if payload.get("matchingDomain", "IT") != "IT":
+        return
     application_id = UUID(payload["applicationId"])
     cv_version_id = UUID(payload["cvVersionId"])
     job_version_id = UUID(payload["jobVersionId"])

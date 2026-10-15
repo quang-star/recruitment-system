@@ -72,7 +72,9 @@ public class ApplicationService {
             ApplicationSubmission submission = applications.submit(candidateUserId, jobId, cvId, cvVersionId,
                     normalizedCoverLetter, consentAccepted, policyVersion.trim(), idempotencyKeyHash, requestHash);
             if (submission.created()) {
-                outbox.append(ApplicationSubmittedEvent.from(submission.application(), correlationId));
+                if (submission.application().matchingSupported()) {
+                    outbox.append(ApplicationSubmittedEvent.from(submission.application(), correlationId));
+                }
                 if (notifications != null) notifications.applicationSubmitted(submission.application());
             }
             return submission.application();

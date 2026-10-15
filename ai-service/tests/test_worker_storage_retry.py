@@ -19,6 +19,7 @@ from app.jd.repository import ParsedJdHeadRecord, ParsedJdRevisionRecord
 from app.outbox import OutboxEvent
 from app.shared.processing_errors import ProcessingFailure, storage_failure
 from app.task.persistence import ProcessingTaskRecord
+from app.taxonomy.catalog import SkillCatalogRecord, seed_skills
 
 
 def s3_error(code):
@@ -75,13 +76,17 @@ def processing(request, monkeypatch):
     if not db_url:
         metadata = MetaData()
         for record in (ProcessingTaskRecord, ParsedCvRevisionRecord, ParsedJdRevisionRecord,
-                       ParsedCvHeadRecord, ParsedJdHeadRecord, OutboxEvent):
+                       ParsedCvHeadRecord, ParsedJdHeadRecord, OutboxEvent, SkillCatalogRecord):
             table = record.__table__.to_metadata(metadata)
             # SQLite needs INTEGER for autoincrement; production models remain BIGINT.
             if "id" in table.c and isinstance(table.c.id.type, Integer):
                 table.c.id.type = Integer()
         metadata.create_all(engine)
     sessions = sessionmaker(engine, expire_on_commit=False)
+    if not db_url:
+        with sessions() as session:
+            session.add(SkillCatalogRecord(id=1, version=0, skills=seed_skills()))
+            session.commit()
     @event.listens_for(sessions, "loaded_as_persistent")
     def restore_sqlite_timezone(session, record):
         # SQLite strips offsets; PostgreSQL TIMESTAMPTZ (the production DB)

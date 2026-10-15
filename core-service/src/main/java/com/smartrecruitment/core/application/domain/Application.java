@@ -6,7 +6,14 @@ import java.util.UUID;
 public record Application(UUID publicId, UUID candidateUserId, UUID companyId, UUID cvId, UUID cvVersionId,
                           UUID jobId, UUID jobVersionId, String coverLetter,
                           ApplicationStatus status, ApplicationSource source,
+                          OffsetDateTime appliedAt, OffsetDateTime updatedAt, long version, boolean matchingSupported) {
+    public Application(UUID publicId, UUID candidateUserId, UUID companyId, UUID cvId, UUID cvVersionId,
+                          UUID jobId, UUID jobVersionId, String coverLetter,
+                          ApplicationStatus status, ApplicationSource source,
                           OffsetDateTime appliedAt, OffsetDateTime updatedAt, long version) {
+        this(publicId, candidateUserId, companyId, cvId, cvVersionId, jobId, jobVersionId, coverLetter, status, source, appliedAt, updatedAt, version, true);
+    }
+
     public Application {
         if (publicId == null || candidateUserId == null || companyId == null || cvId == null || cvVersionId == null
                 || jobId == null || jobVersionId == null) throw new IllegalArgumentException("Application snapshot is required");

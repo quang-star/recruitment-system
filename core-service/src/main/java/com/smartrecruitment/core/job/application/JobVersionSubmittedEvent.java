@@ -10,14 +10,20 @@ import java.util.UUID;
 
 public record JobVersionSubmittedEvent(UUID jobId, UUID jobVersionId, UUID recruiterUserId,
                                        String objectRef, String sourceHash, UUID correlationId,
-                                       OffsetDateTime occurredAt, ExternalAiConsent externalAiConsent) {
+                                       OffsetDateTime occurredAt, ExternalAiConsent externalAiConsent, String matchingDomain) {
     public JobVersionSubmittedEvent(UUID jobId, UUID jobVersionId, UUID recruiterUserId,
                                     String objectRef, String sourceHash, UUID correlationId, OffsetDateTime occurredAt) {
         this(jobId, jobVersionId, recruiterUserId, objectRef, sourceHash, correlationId, occurredAt,
                 ExternalAiConsent.declined());
     }
+    public JobVersionSubmittedEvent(UUID jobId, UUID jobVersionId, UUID recruiterUserId,
+                                    String objectRef, String sourceHash, UUID correlationId, OffsetDateTime occurredAt, ExternalAiConsent externalAiConsent) {
+        this(jobId, jobVersionId, recruiterUserId, objectRef, sourceHash, correlationId, occurredAt,
+                externalAiConsent, "IT");
+    }
     public JobVersionSubmittedEvent {
         Objects.requireNonNull(jobId, "jobId");
+        if (!java.util.List.of("IT", "OUTSIDE_IT").contains(matchingDomain)) throw new IllegalArgumentException("Invalid matching domain");
         Objects.requireNonNull(externalAiConsent, "externalAiConsent");
         Objects.requireNonNull(jobVersionId, "jobVersionId");
         Objects.requireNonNull(recruiterUserId, "recruiterUserId");
@@ -33,7 +39,7 @@ public record JobVersionSubmittedEvent(UUID jobId, UUID jobVersionId, UUID recru
                                                 OffsetDateTime occurredAt) {
         var version = job.activeVersion();
         return new JobVersionSubmittedEvent(job.publicId(), version.publicId(), version.createdByUserId(),
-                objectRef, version.sourceHash(), correlationId, occurredAt, version.externalAiConsent());
+                objectRef, version.sourceHash(), correlationId, occurredAt, version.externalAiConsent(), version.category().matchingDomain().name());
     }
 }
 

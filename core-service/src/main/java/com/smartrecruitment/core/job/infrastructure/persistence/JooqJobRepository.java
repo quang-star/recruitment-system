@@ -1,6 +1,7 @@
 package com.smartrecruitment.core.job.infrastructure.persistence;
 
 import com.smartrecruitment.core.shared.domain.ExternalAiConsent;
+import com.smartrecruitment.core.job.domain.JobCategorySnapshot;
 
 import com.smartrecruitment.core.job.application.port.JobRepository;
 import com.smartrecruitment.core.job.domain.EmploymentType;
@@ -177,6 +178,13 @@ public class JooqJobRepository implements JobRepository {
                 .set(JOB_VERSIONS.SOURCE_HASH, version.sourceHash())
                 .set(JOB_VERSIONS.EXTERNAL_AI_CONSENT, version.externalAiConsent().granted())
                 .set(JOB_VERSIONS.EXTERNAL_AI_POLICY_VERSION, version.externalAiConsent().policyVersion())
+                .set(JOB_VERSIONS.INDUSTRY_ID, version.category().industryId())
+                .set(JOB_VERSIONS.INDUSTRY_NAME, version.category().industryName())
+                .set(JOB_VERSIONS.SPECIALIZATION_ID, version.category().specializationId())
+                .set(JOB_VERSIONS.SPECIALIZATION_NAME, version.category().specializationName())
+                .set(JOB_VERSIONS.POSITION_ID, version.category().positionId())
+                .set(JOB_VERSIONS.POSITION_NAME, version.category().positionName())
+                .set(JOB_VERSIONS.MATCHING_DOMAIN, version.category().matchingDomain().name())
                 .set(JOB_VERSIONS.CREATED_BY_USER_ID, version.createdByUserId())
                 .set(JOB_VERSIONS.CREATED_AT, OffsetDateTime.now(ZoneOffset.UTC))
                 .returning().fetchOne();
@@ -200,7 +208,10 @@ public class JooqJobRepository implements JobRepository {
                 record.getSeniorityLevel(), record.getOpenings(), record.getSalaryMin(), record.getSalaryMax(),
                 record.getSalaryCurrency(), record.getSalaryPeriod(), record.getSalaryNegotiable(),
                 record.getApplicationDeadline(), record.getSourceHash(), record.getCreatedByUserId(),
-                new ExternalAiConsent(record.getExternalAiConsent(), record.getExternalAiPolicyVersion()));
+                new ExternalAiConsent(record.getExternalAiConsent(), record.getExternalAiPolicyVersion()),
+                new JobCategorySnapshot(record.getIndustryId(), record.getIndustryName(), record.getSpecializationId(),
+                        record.getSpecializationName(), record.getPositionId(), record.getPositionName(),
+                        JobCategorySnapshot.MatchingDomain.valueOf(record.getMatchingDomain())));
     }
 
     private <T extends Enum<T>> T enumValue(Class<T> type, String value) {

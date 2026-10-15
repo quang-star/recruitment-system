@@ -26,6 +26,26 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class JobServiceTests {
     @Test
+    void outsideIndustrySkipsParsingAndCanPublishWithoutParsedJd() {
+        var jobs = new FakeJobs();
+        var storage = new RecordingStorage();
+        var outbox = new RecordingOutbox(false);
+        var categories = org.mockito.Mockito.mock(com.smartrecruitment.core.catalog.application.CategoryService.class);
+        var classification = new com.smartrecruitment.core.job.domain.JobCategorySnapshot(null, "Accounting", null, "Finance",
+                null, "Accountant", com.smartrecruitment.core.job.domain.JobCategorySnapshot.MatchingDomain.OUTSIDE_IT);
+        org.mockito.Mockito.when(categories.resolve(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyString()))
+                .thenReturn(classification);
+        var service = new JobService(jobs, new AllowCompany(), storage, outbox, JsonMapper.builder().build(), "private-jd", categories);
+        var created = service.create(UUID.randomUUID(), UUID.randomUUID(), "Accountant", "Description", "Accounting", null,
+                null, "VN", null, null, null, 1, null, null, null, null, false, null, UUID.randomUUID(),
+                com.smartrecruitment.core.shared.domain.ExternalAiConsent.declined(),
+                new com.smartrecruitment.core.catalog.domain.CategoryChoice(null, "Accounting", null, "Finance", null, "Accountant"));
+        assertThat(created.activeVersion().category()).isEqualTo(classification);
+        assertThat(storage.objectKey).isNull();
+        assertThat(outbox.event.matchingDomain()).isEqualTo("OUTSIDE_IT");
+        service.publish(created.createdByUserId(), created.publicId(), 0);
+    }
+    @Test
     void createsDraftWithContentHash() {
         FakeJobs jobs = new FakeJobs();
         UUID companyId = UUID.randomUUID();
@@ -116,7 +136,12 @@ class JobServiceTests {
         @Override public List<Job> findAllForMember(UUID companyId, UUID userId) { return job == null ? List.of() : List.of(job); }
         @Override public List<Job> findPublished() { return job == null ? List.of() : List.of(job); }
         @Override public Optional<Job> updateDraft(Job value, JobVersion newVersion, long expectedVersion, UUID userId) { return Optional.empty(); }
-        @Override public Optional<Job> publish(UUID jobId, UUID userId, long expectedVersion, OffsetDateTime publishedAt) { return Optional.empty(); }
+        @Override public Optional<Job> publish(UUID jobId, UUID userId, long expectedVersion, OffsetDateTime publishedAt) {
+            if (job == null || expectedVersion != job.version()) return Optional.empty();
+            job = new Job(job.publicId(), job.companyId(), job.createdByUserId(), JobStatus.PUBLISHED,
+                    publishedAt, null, job.version() + 1, job.activeVersion());
+            return Optional.of(job);
+        }
         @Override public Optional<Job> close(UUID jobId, UUID userId, long expectedVersion, OffsetDateTime closedAt) { return Optional.empty(); }
     }
 

@@ -19,7 +19,8 @@ from app.shared.evidence import inherit_review_evidence
 from app.shared.skill_proposals import skill_name_key
 from app.shared.security import AuthenticatedPrincipal, require_access_token
 from app.taxonomy.normalizer import normalize_skill
-from app.taxonomy.normalizer import taxonomy_version
+from app.taxonomy.normalizer import use_taxonomy, taxonomy_version
+from app.taxonomy.catalog import snapshot
 
 router = APIRouter(
     prefix="/api/v1/parsed-jds",
@@ -89,9 +90,10 @@ async def update_parsed_jd(
     latest = repository.find_owned(job_version_id, principal.subject)
     if latest is None:
         raise ApiContractError(404, "PARSED_JD_NOT_FOUND", "Parsed JD was not found")
-    payload = _validate_user_payload(
-        job_version_id, latest.source_hash, request_body.payload, latest.payload,
-    )
+    with use_taxonomy(snapshot(session)):
+        payload = _validate_user_payload(
+            job_version_id, latest.source_hash, request_body.payload, latest.payload,
+        )
     try:
         revision = repository.create_revision(
             job_id=latest.job_id, job_version_id=job_version_id,
