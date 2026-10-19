@@ -54,7 +54,7 @@ public class NotificationService {
 
     public void matchingCompleted(UUID applicationId, UUID matchingResultId, double score) {
         notifications.insertForApplicationParticipants(applicationId, "MATCHING_COMPLETED",
-                "Đã có kết quả đối sánh", "Điểm phù hợp mới nhất là " + String.format(java.util.Locale.ROOT, "%.1f", score) + "/100.",
+                "Đã có kết quả đối sánh", "Mở hồ sơ ứng tuyển để xem kết quả khi quyền chia sẻ còn hiệu lực.",
                 "/", "matching-completed:" + matchingResultId, OffsetDateTime.now(clock));
     }
 
@@ -66,4 +66,3 @@ public class NotificationService {
 
     public record NotificationFeed(List<Notification> items, long unreadCount) { }
 }
-

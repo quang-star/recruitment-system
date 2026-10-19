@@ -69,11 +69,29 @@ class ApplicationServiceTests {
     }
 
     @Test
-    void candidateCannotWithdrawShortlistedApplication() {
+    void candidateCanWithdrawShortlistedApplication() {
         Application current = application(ApplicationStatus.SHORTLISTED);
         ApplicationService service = new ApplicationService(new FakeApplications(current));
 
-        assertThatThrownBy(() -> service.withdraw(current.candidateUserId(), current.publicId(), "Changed plans", 0))
+        assertThat(service.withdraw(current.candidateUserId(), current.publicId(), "Changed plans", 0).status())
+                .isEqualTo(ApplicationStatus.WITHDRAWN);
+    }
+
+    @Test
+    void candidateCannotWithdrawTerminalApplication() {
+        for (var status : List.of(ApplicationStatus.REJECTED, ApplicationStatus.WITHDRAWN)) {
+            Application current = application(status);
+            ApplicationService service = new ApplicationService(new FakeApplications(current));
+            assertThatThrownBy(() -> service.withdraw(current.candidateUserId(), current.publicId(), "Changed plans", 0))
+                    .isInstanceOf(ApplicationStateException.class);
+        }
+    }
+
+    @Test
+    void shortlistedWithdrawalStillRequiresReason() {
+        Application current = application(ApplicationStatus.SHORTLISTED);
+        ApplicationService service = new ApplicationService(new FakeApplications(current));
+        assertThatThrownBy(() -> service.withdraw(current.candidateUserId(), current.publicId(), " ", 0))
                 .isInstanceOf(ApplicationStateException.class);
     }
 

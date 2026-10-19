@@ -100,6 +100,25 @@ public class CvService {
         return cvs.findByPublicId(candidateUserId, cvId).orElseThrow(CandidateCvNotFoundException::new);
     }
 
+    public record CvDownload(String originalFilename, long sizeBytes, InputStream content) { }
+
+    @Transactional(readOnly = true)
+    public CvDownload downloadMine(UUID candidateUserId, UUID cvId, UUID cvVersionId) {
+        CandidateCv cv = getMine(candidateUserId, cvId);
+        CvVersion version = cv.activeVersion();
+        if (cv.status() != CvStatus.ACTIVE || !version.publicId().equals(cvVersionId)
+                || version.processingStatus() == CvProcessingStatus.DELETED
+                || version.processingStatus() == CvProcessingStatus.SUPERSEDED) {
+            throw new CandidateCvNotFoundException();
+        }
+        try {
+            return new CvDownload(version.originalFilename(), version.sizeBytes(),
+                    storage.openDownload(version.objectBucket(), version.objectKey()));
+        } catch (RuntimeException failure) {
+            throw new CvStorageException(failure);
+        }
+    }
+
     @Transactional
     public CandidateCv retry(UUID candidateUserId, UUID cvId, UUID cvVersionId,
                              long expectedVersion, UUID correlationId) {

@@ -9,4 +9,5 @@ public interface OutboxEventRepository {
 
     default void append(ApplicationSubmittedEvent event) { }
     default void append(JobVersionSubmittedEvent event) { }
+    default void append(com.smartrecruitment.core.cv.application.PrivacyEvent event) { }
 }

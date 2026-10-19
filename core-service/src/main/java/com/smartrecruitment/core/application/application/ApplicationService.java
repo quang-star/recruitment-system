@@ -5,18 +5,19 @@ import com.smartrecruitment.core.application.domain.Application;
 import com.smartrecruitment.core.application.domain.ApplicationStatus;
 import com.smartrecruitment.core.application.domain.ApplicationStatusChange;
 import com.smartrecruitment.core.cv.application.port.OutboxEventRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.transaction.annotation.Transactional;
 import com.smartrecruitment.core.notification.application.NotificationService;
 
-import java.util.List;
-import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
+import java.util.List;
+import java.util.UUID;
 
 @Service
 public class ApplicationService {
@@ -114,14 +115,24 @@ public class ApplicationService {
     public Application withdraw(UUID candidateUserId, UUID applicationId, String reason, long expectedVersion) {
         Application current = getMine(candidateUserId, applicationId);
         if (current.status() != ApplicationStatus.SUBMITTED
-                && current.status() != ApplicationStatus.UNDER_REVIEW) {
-            throw new ApplicationStateException("Only a submitted or under-review application can be withdrawn");
+                && current.status() != ApplicationStatus.UNDER_REVIEW
+                && current.status() != ApplicationStatus.SHORTLISTED) {
+            throw new ApplicationStateException("Only a submitted, under-review or shortlisted application can be withdrawn");
         }
         if (reason == null || reason.isBlank()) {
             throw new ApplicationStateException("A reason is required to withdraw an application");
         }
-        return applications.withdraw(candidateUserId, applicationId, reason, expectedVersion)
+        Application withdrawn = applications.withdraw(candidateUserId, applicationId, reason, expectedVersion)
                 .orElseThrow(ApplicationConflictException::new);
+        outbox.append(com.smartrecruitment.core.cv.application.PrivacyEvent.revoked(applicationId));
+        return withdrawn;
+    }
+
+    @Transactional
+    public void revokeCvAccess(UUID candidateUserId, UUID applicationId, long expectedVersion) {
+        getMine(candidateUserId, applicationId);
+        if (!applications.revokeCvAccess(candidateUserId, applicationId, expectedVersion)) throw new ApplicationConflictException();
+        outbox.append(com.smartrecruitment.core.cv.application.PrivacyEvent.revoked(applicationId));
     }
 
     @Transactional

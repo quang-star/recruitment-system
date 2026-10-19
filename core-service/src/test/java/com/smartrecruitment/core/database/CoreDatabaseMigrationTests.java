@@ -14,6 +14,12 @@ import java.sql.Statement;
 import java.util.Arrays;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import com.smartrecruitment.core.notification.infrastructure.persistence.JooqNotificationRepository;
+import org.jooq.impl.DSL;
+import org.jooq.SQLDialect;
+import org.postgresql.ds.PGSimpleDataSource;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 
 import com.smartrecruitment.core.recruiter.domain.Company;
@@ -28,6 +34,7 @@ import org.postgresql.ds.PGSimpleDataSource;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class CoreDatabaseMigrationTests {
+    private static final java.util.UUID LEGACY_NOTIFICATION_OWNER = java.util.UUID.randomUUID();
 
     private static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(
             DockerImageName.parse("postgres:17.10-alpine"))
@@ -41,8 +48,18 @@ class CoreDatabaseMigrationTests {
         Flyway.configure()
                 .dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())
                 .locations("classpath:db/migration")
+                .target(org.flywaydb.core.api.MigrationVersion.fromVersion("19"))
                 .load()
                 .migrate();
+        var source = new PGSimpleDataSource();
+        source.setURL(POSTGRES.getJdbcUrl()); source.setUser(POSTGRES.getUsername()); source.setPassword(POSTGRES.getPassword());
+        var notifications = new JooqNotificationRepository(DSL.using(source, SQLDialect.POSTGRES));
+        notifications.insert(LEGACY_NOTIFICATION_OWNER, "MATCHING_COMPLETED", "Legacy match", "87.4/100", "/",
+                "synthetic-legacy-match", OffsetDateTime.now(ZoneOffset.UTC));
+        notifications.insert(LEGACY_NOTIFICATION_OWNER, "TEST", "Other history", "Keep this unrelated message", "/",
+                "synthetic-other", OffsetDateTime.now(ZoneOffset.UTC));
+        Flyway.configure().dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())
+                .locations("classpath:db/migration").load().migrate();
     }
 
     @AfterAll
@@ -61,7 +78,17 @@ class CoreDatabaseMigrationTests {
 
         assertThat(Arrays.stream(applied).map(info -> info.getVersion().getVersion()))
                 .containsExactly(
-                        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18");
+                        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20");
+    }
+
+    @Test
+    void migrationRemovesHistoricalMatchingScoresButKeepsUnrelatedNotificationHistory() {
+        var source = new PGSimpleDataSource();
+        source.setURL(POSTGRES.getJdbcUrl()); source.setUser(POSTGRES.getUsername()); source.setPassword(POSTGRES.getPassword());
+        var feed = new JooqNotificationRepository(DSL.using(source, SQLDialect.POSTGRES)).findAll(LEGACY_NOTIFICATION_OWNER, 10);
+        assertThat(feed).hasSize(2);
+        assertThat(feed).noneMatch(item -> item.message().contains("87.4"));
+        assertThat(feed).anyMatch(item -> item.message().equals("Keep this unrelated message"));
     }
 
     @Test

@@ -1,14 +1,16 @@
 package com.smartrecruitment.core.application.infrastructure.persistence;
 
-import com.smartrecruitment.core.application.application.port.ApplicationRepository;
 import com.smartrecruitment.core.application.application.ApplicationConflictException;
 import com.smartrecruitment.core.application.application.ApplicationSubmission;
+import com.smartrecruitment.core.application.application.port.ApplicationRepository;
 import com.smartrecruitment.core.application.domain.Application;
+import com.smartrecruitment.core.application.domain.ApplicationCvSnapshot;
 import com.smartrecruitment.core.application.domain.ApplicationSource;
 import com.smartrecruitment.core.application.domain.ApplicationStatus;
 import com.smartrecruitment.core.application.domain.ApplicationStatusChange;
-import com.smartrecruitment.core.application.domain.ApplicationCvSnapshot;
+
 import org.jooq.DSLContext;
+import org.jooq.impl.DSL;
 import org.springframework.stereotype.Repository;
 
 import java.time.OffsetDateTime;
@@ -17,16 +19,17 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.ApplicationCvAccessGrants.APPLICATION_CV_ACCESS_GRANTS;
+import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.ApplicationMatchingProjections.APPLICATION_MATCHING_PROJECTIONS;
+import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.ApplicationStatusHistory.APPLICATION_STATUS_HISTORY;
 import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.Applications.APPLICATIONS;
+import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.CandidateConsents.CANDIDATE_CONSENTS;
 import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.Companies.COMPANIES;
 import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.CompanyMembers.COMPANY_MEMBERS;
 import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.CvVersions.CV_VERSIONS;
 import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.Cvs.CVS;
 import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.JobVersions.JOB_VERSIONS;
 import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.Jobs.JOBS;
-import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.ApplicationStatusHistory.APPLICATION_STATUS_HISTORY;
-import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.CandidateConsents.CANDIDATE_CONSENTS;
-import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.ApplicationCvAccessGrants.APPLICATION_CV_ACCESS_GRANTS;
 
 @Repository
 public class JooqApplicationRepository implements ApplicationRepository {
@@ -55,6 +58,11 @@ public class JooqApplicationRepository implements ApplicationRepository {
         if (!consentAccepted) throw new IllegalArgumentException("CV sharing consent is required");
         var existingReplay = findReplay(candidateUserId, idempotencyKeyHash, requestHash);
         if (existingReplay.isPresent()) return existingReplay.get();
+        // Serialize new submissions with erasure before reading a usable CV snapshot.
+        var ownedCv = dsl.select(CVS.ID).from(CVS)
+                .where(CVS.PUBLIC_ID.eq(cvId)).and(CVS.CANDIDATE_USER_ID.eq(candidateUserId))
+                .and(CVS.STATUS.eq("ACTIVE")).forUpdate().fetchOptional();
+        if (ownedCv.isEmpty()) throw new IllegalArgumentException("Job must be published and CV must be confirmed");
         var snapshot = dsl.select(JOBS.ID, JOBS.COMPANY_ID, JOBS.ACTIVE_VERSION_ID,
                         JOB_VERSIONS.ID.as("selected_job_version_id"), CVS.ID.as("selected_cv_id"),
                         CV_VERSIONS.ID.as("selected_cv_version_id"))
@@ -163,13 +171,38 @@ public class JooqApplicationRepository implements ApplicationRepository {
                 .where(APPLICATIONS.PUBLIC_ID.eq(applicationId))
                 .and(APPLICATIONS.CANDIDATE_USER_ID.eq(candidateUserId))
                 .and(APPLICATIONS.STATUS.in(ApplicationStatus.SUBMITTED.name(),
-                        ApplicationStatus.UNDER_REVIEW.name()))
+                        ApplicationStatus.UNDER_REVIEW.name(), ApplicationStatus.SHORTLISTED.name()))
                 .and(APPLICATIONS.VERSION.eq(expectedVersion))
                 .execute();
         if (updated != 1) return Optional.empty();
         history(internalId(applicationId), current.get().status(), ApplicationStatus.WITHDRAWN,
                 candidateUserId, reason, now);
+        revokeGrant(applicationId, now);
         return findForCandidateById(candidateUserId, applicationId);
+    }
+
+    @Override
+    public boolean revokeCvAccess(UUID candidateUserId, UUID applicationId, long expectedVersion) {
+        var row = dsl.selectFrom(APPLICATIONS).where(APPLICATIONS.PUBLIC_ID.eq(applicationId))
+                .and(APPLICATIONS.CANDIDATE_USER_ID.eq(candidateUserId)).forUpdate().fetchOne();
+        if (row == null) return false;
+        var grant = dsl.selectFrom(APPLICATION_CV_ACCESS_GRANTS).where(APPLICATION_CV_ACCESS_GRANTS.APPLICATION_ID.eq(row.getId())).fetchOne();
+        if (grant != null && grant.getRevokedAt() != null) return true;
+        if (row.getVersion() != expectedVersion) return false;
+        var now = OffsetDateTime.now(ZoneOffset.UTC);
+        revokeGrant(applicationId, now);
+        dsl.update(APPLICATIONS).set(APPLICATIONS.VERSION, APPLICATIONS.VERSION.plus(1L))
+                .set(APPLICATIONS.UPDATED_AT, now).where(APPLICATIONS.ID.eq(row.getId())).execute();
+        return true;
+    }
+
+    private void revokeGrant(UUID applicationId, OffsetDateTime now) {
+        dsl.update(APPLICATION_CV_ACCESS_GRANTS).set(APPLICATION_CV_ACCESS_GRANTS.REVOKED_AT, now)
+                .where(APPLICATION_CV_ACCESS_GRANTS.APPLICATION_ID.eq(internalId(applicationId)))
+                .and(APPLICATION_CV_ACCESS_GRANTS.REVOKED_AT.isNull()).execute();
+        dsl.update(APPLICATIONS).set(APPLICATIONS.COVER_LETTER, (String) null)
+                .where(APPLICATIONS.PUBLIC_ID.eq(applicationId)).execute();
+        dsl.deleteFrom(APPLICATION_MATCHING_PROJECTIONS).where(APPLICATION_MATCHING_PROJECTIONS.APPLICATION_ID.eq(applicationId)).execute();
     }
 
     @Override
@@ -207,10 +240,14 @@ public class JooqApplicationRepository implements ApplicationRepository {
                             .and(CANDIDATE_CONSENTS.CANDIDATE_USER_ID.eq(APPLICATIONS.CANDIDATE_USER_ID)))
                 .join(CV_VERSIONS).on(CV_VERSIONS.ID.eq(APPLICATIONS.CV_VERSION_ID))
                 .join(COMPANY_MEMBERS).on(COMPANY_MEMBERS.COMPANY_ID.eq(APPLICATIONS.COMPANY_ID))
+                .join(CVS).on(CVS.ID.eq(APPLICATIONS.CV_ID))
                 .where(APPLICATIONS.PUBLIC_ID.eq(applicationId))
                 .and(COMPANY_MEMBERS.USER_ID.eq(recruiterUserId))
                 .and(COMPANY_MEMBERS.STATUS.eq("ACTIVE"))
                 .and(APPLICATION_CV_ACCESS_GRANTS.REVOKED_AT.isNull())
+                .and(APPLICATIONS.STATUS.ne("WITHDRAWN"))
+                .and(CVS.STATUS.ne("DELETED"))
+                .and(CV_VERSIONS.PROCESSING_STATUS.ne("DELETED"))
                 .and(CANDIDATE_CONSENTS.REVOKED_AT.isNull())
                 .fetchOptional(record -> new ApplicationCvSnapshot(record.get(CV_VERSIONS.PUBLIC_ID),
                         record.get(CV_VERSIONS.OBJECT_BUCKET), record.get(CV_VERSIONS.OBJECT_KEY),
@@ -219,7 +256,7 @@ public class JooqApplicationRepository implements ApplicationRepository {
 
     private org.jooq.SelectJoinStep<org.jooq.Record> applicationQuery() {
         return dsl.select(APPLICATIONS.fields()).select(COMPANIES.PUBLIC_ID, JOBS.PUBLIC_ID,
-                        JOB_VERSIONS.PUBLIC_ID, JOB_VERSIONS.MATCHING_DOMAIN, CVS.PUBLIC_ID, CV_VERSIONS.PUBLIC_ID)
+                        JOB_VERSIONS.PUBLIC_ID, JOB_VERSIONS.MATCHING_DOMAIN, cvAccessGranted().as("cv_access_granted"), CVS.PUBLIC_ID, CV_VERSIONS.PUBLIC_ID)
                 .from(APPLICATIONS).join(COMPANIES).on(COMPANIES.ID.eq(APPLICATIONS.COMPANY_ID))
                 .join(JOBS).on(JOBS.ID.eq(APPLICATIONS.JOB_ID))
                 .join(JOB_VERSIONS).on(JOB_VERSIONS.ID.eq(APPLICATIONS.JOB_VERSION_ID))
@@ -302,12 +339,20 @@ public class JooqApplicationRepository implements ApplicationRepository {
                 .set(APPLICATION_STATUS_HISTORY.OCCURRED_AT, now).execute();
     }
 
+    private org.jooq.Field<Boolean> cvAccessGranted() {
+        return DSL.field(DSL.exists(dsl.selectOne().from(APPLICATION_CV_ACCESS_GRANTS)
+                .join(CANDIDATE_CONSENTS).on(CANDIDATE_CONSENTS.ID.eq(APPLICATION_CV_ACCESS_GRANTS.CONSENT_ID))
+                .where(APPLICATION_CV_ACCESS_GRANTS.APPLICATION_ID.eq(APPLICATIONS.ID))
+                .and(APPLICATION_CV_ACCESS_GRANTS.REVOKED_AT.isNull()).and(CANDIDATE_CONSENTS.REVOKED_AT.isNull()))
+                .and(APPLICATIONS.STATUS.ne("WITHDRAWN")).and(CVS.STATUS.ne("DELETED")));
+    }
+
     private Application toDomain(org.jooq.Record record) {
         return new Application(record.get(APPLICATIONS.PUBLIC_ID), record.get(APPLICATIONS.CANDIDATE_USER_ID),
                 record.get(COMPANIES.PUBLIC_ID), record.get(CVS.PUBLIC_ID), record.get(CV_VERSIONS.PUBLIC_ID),
                 record.get(JOBS.PUBLIC_ID), record.get(JOB_VERSIONS.PUBLIC_ID), record.get(APPLICATIONS.COVER_LETTER),
                 ApplicationStatus.valueOf(record.get(APPLICATIONS.STATUS)),
                 ApplicationSource.valueOf(record.get(APPLICATIONS.SOURCE)), record.get(APPLICATIONS.APPLIED_AT),
-                record.get(APPLICATIONS.UPDATED_AT), record.get(APPLICATIONS.VERSION), "IT".equals(record.get(JOB_VERSIONS.MATCHING_DOMAIN)));
+                record.get(APPLICATIONS.UPDATED_AT), record.get(APPLICATIONS.VERSION), "IT".equals(record.get(JOB_VERSIONS.MATCHING_DOMAIN)), record.get("cv_access_granted", Boolean.class));
     }
 }

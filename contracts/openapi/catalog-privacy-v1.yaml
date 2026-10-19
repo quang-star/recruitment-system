@@ -29,6 +29,30 @@ paths:
       responses:
         '200': { description: Catalog version, taxonomyVersion and skill definitions }
         '403': { description: SYSTEM_ADMIN role required }
+  /api/v1/cvs/{cvId}:
+    delete:
+      security: [{ bearerAuth: [] }]
+      summary: Owner deletes a CV and all its versions
+      description: Immediately revoke related recruiter access and scores, retain minimal application history, and durably queue original PDF and AI analysis erasure. Late processing cannot restore erased data. Repeated deletion is idempotent. No automatic 90-day expiry.
+      parameters:
+        - { name: cvId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: version, in: query, required: true, schema: { type: integer, minimum: 0 } }
+      responses:
+        '202': { description: ERASURE_REQUESTED; asynchronous cleanup retries storage failures }
+        '404': { description: CV not owned by caller }
+        '409': { description: Stale CV version }
+  /api/v1/candidate/applications/{applicationId}/cv-access:
+    delete:
+      security: [{ bearerAuth: [] }]
+      summary: Revoke only this application's CV access and matching data
+      description: Application status and access granted through other applications remain unchanged. Withdrawal also revokes its own grant.
+      parameters:
+        - { name: applicationId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: version, in: query, required: true, schema: { type: integer, minimum: 0 } }
+      responses:
+        '204': { description: Access revoked or previously revoked }
+        '404': { description: Application not owned by caller }
+        '409': { description: Stale application version }
 components:
   securitySchemes:
     bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }

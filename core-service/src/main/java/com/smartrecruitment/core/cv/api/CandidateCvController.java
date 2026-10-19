@@ -11,6 +11,11 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -67,6 +72,20 @@ public class CandidateCvController {
     @GetMapping("/{cvId}")
     public CandidateCvResponse get(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID cvId) {
         return CandidateCvResponse.from(cvs.getMine(userId(jwt), cvId));
+    }
+
+    @GetMapping(value = "/{cvId}/file", produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<InputStreamResource> file(@AuthenticationPrincipal Jwt jwt,
+                                                      @PathVariable UUID cvId,
+                                                      @RequestParam UUID cvVersionId) {
+        var download = cvs.downloadMine(userId(jwt), cvId, cvVersionId);
+        // Avoid asynchronous header/commit races while retaining bounded-memory streaming.
+        var body = new InputStreamResource(download.content());
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_PDF).contentLength(download.sizeBytes())
+                .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
+                        .filename(download.originalFilename(), java.nio.charset.StandardCharsets.UTF_8).build().toString())
+                .body(body);
     }
 
     private static UUID userId(Jwt jwt) {

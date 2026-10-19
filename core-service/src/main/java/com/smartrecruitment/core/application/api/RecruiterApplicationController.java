@@ -8,7 +8,7 @@ import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
+import org.springframework.core.io.InputStreamResource;
 import jakarta.validation.Valid;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -39,14 +39,11 @@ public class RecruiterApplicationController {
     }
 
     @GetMapping(value = "/{applicationId}/cv", produces = MediaType.APPLICATION_PDF_VALUE)
-    public ResponseEntity<StreamingResponseBody> cv(@AuthenticationPrincipal Jwt jwt,
+    public ResponseEntity<InputStreamResource> cv(@AuthenticationPrincipal Jwt jwt,
                                                     @PathVariable UUID applicationId) {
         var download = cvAccess.download(userId(jwt), applicationId);
-        StreamingResponseBody body = output -> {
-            try (var input = download.content()) {
-                input.transferTo(output);
-            }
-        };
+        // The resource converter streams and closes the source on the request thread.
+        var body = new InputStreamResource(download.content());
         return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)
                 .contentLength(download.sizeBytes())
