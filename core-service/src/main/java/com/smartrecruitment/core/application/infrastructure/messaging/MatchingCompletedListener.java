@@ -5,6 +5,7 @@ import tools.jackson.databind.ObjectMapper;
 import com.smartrecruitment.core.application.infrastructure.persistence.JooqApplicationMatchingProjectionRepository;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 import com.smartrecruitment.core.notification.application.NotificationService;
@@ -24,6 +25,7 @@ public class MatchingCompletedListener {
 
     @KafkaListener(topics = "${core.kafka.matching-completed-topic:matching.completed.v1}",
             groupId = "core-matching-completed-v1")
+    @Transactional
     public void onMessage(String rawMessage) {
         try {
             JsonNode root = objectMapper.readTree(rawMessage);

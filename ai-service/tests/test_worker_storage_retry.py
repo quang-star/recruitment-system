@@ -20,6 +20,7 @@ from app.outbox import OutboxEvent
 from app.shared.processing_errors import ProcessingFailure, storage_failure
 from app.task.persistence import ProcessingTaskRecord
 from app.taxonomy.catalog import SkillCatalogRecord, seed_skills
+from app.shared.privacy import PrivacyTombstone
 
 
 def s3_error(code):
@@ -76,7 +77,7 @@ def processing(request, monkeypatch):
     if not db_url:
         metadata = MetaData()
         for record in (ProcessingTaskRecord, ParsedCvRevisionRecord, ParsedJdRevisionRecord,
-                       ParsedCvHeadRecord, ParsedJdHeadRecord, OutboxEvent, SkillCatalogRecord):
+                       ParsedCvHeadRecord, ParsedJdHeadRecord, OutboxEvent, SkillCatalogRecord, PrivacyTombstone):
             table = record.__table__.to_metadata(metadata)
             # SQLite needs INTEGER for autoincrement; production models remain BIGINT.
             if "id" in table.c and isinstance(table.c.id.type, Integer):

@@ -39,7 +39,12 @@ public class KafkaOutboxRelay {
     public void publishPending() {
         for (var event : outbox.claimPending(workerId, batchSize)) {
             try {
-                kafka.send(new ProducerRecord<>(event.eventType(), event.aggregateId().toString(), envelope(event)))
+                String topic = switch (event.eventType()) {
+                    case "cv.deleted.v1" -> "cv.uploaded.v1";
+                    case "application.cv-access.revoked.v1" -> "application.submitted.v1";
+                    default -> event.eventType();
+                };
+                kafka.send(new ProducerRecord<>(topic, event.aggregateId().toString(), envelope(event)))
                         .get(10, TimeUnit.SECONDS);
                 outbox.markPublished(event.id(), workerId);
             } catch (InterruptedException exception) {

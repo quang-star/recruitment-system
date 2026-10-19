@@ -49,5 +49,11 @@ public class CandidateApplicationController {
                 request.reason(), request.version()));
     }
 
+    @DeleteMapping("/{applicationId}/cv-access")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void revokeCvAccess(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID applicationId, @RequestParam long version) {
+        applications.revokeCvAccess(userId(jwt), applicationId, version);
+    }
+
     private UUID userId(Jwt jwt) { return UUID.fromString(jwt.getSubject()); }
 }

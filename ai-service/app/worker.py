@@ -25,6 +25,7 @@ from app.shared.config import get_settings
 from app.shared.extraction import get_extractor
 from app.shared.extraction_types import ExtractionContext
 from app.shared.processing_errors import ProcessingFailure, storage_failure
+from app.shared.privacy import lock_resource, erased, process_privacy_event
 from app.task.domain import TaskState
 from app.task.persistence import SqlAlchemyProcessingTaskRepository
 
@@ -205,6 +206,17 @@ async def _handle_message(message, consumer, factory, storage, producer, setting
             settings.kafka_dead_letter_topic, message.topic, message.partition, message.offset,
         )
         return
+    if envelope.get("eventType") in ("cv.deleted.v1", "application.cv-access.revoked.v1"):
+        # Privacy commands must survive transient DB errors; do not acknowledge or discard them to DLQ.
+        while True:
+            try:
+                await asyncio.to_thread(process_privacy_event, envelope, factory)
+            except Exception as exc:
+                LOGGER.error("Privacy event retry error_type=%s", type(exc).__name__)
+                await asyncio.sleep(min(30, settings.kafka_retry_backoff_seconds))
+            else:
+                await consumer.commit()
+                return
     for attempt in range(1, settings.kafka_max_processing_attempts + 1):
         final_attempt = attempt == settings.kafka_max_processing_attempts
         try:
@@ -261,6 +273,9 @@ async def _process_one(envelope: dict, factory, storage: Minio,
     generation = _cv_generation(envelope)
 
     with factory() as session:
+        lock_resource(session, "CV", cv_version_id)
+        if erased(session, "CV", cv_version_id):
+            return
         tasks = SqlAlchemyProcessingTaskRepository(session)
         revisions = ParsedCvRevisionRepository(session)
         retry_failure = None
@@ -290,9 +305,11 @@ async def _process_one(envelope: dict, factory, storage: Minio,
                         owner_user_id, cv_version_id, source_hash,
                         payload.get("externalAiConsent") is True, payload.get("externalAiPolicyVersion"),
                     )),
-
                 )
             except Exception as exc:
+                lock_resource(session, "CV", cv_version_id)
+                if erased(session, "CV", cv_version_id):
+                    return
                 LOGGER.error("CV processing failed stage=%s error_type=%s", stage, type(exc).__name__)
                 if isinstance(exc, ProcessingFailure) and exc.retryable and not final_attempt:
                     tasks.retry(task.public_id)
@@ -304,11 +321,13 @@ async def _process_one(envelope: dict, factory, storage: Minio,
                 if isinstance(exc, ProcessingFailure) and exc.retryable:
                     retry_failure = exc
             else:
+                lock_resource(session, "CV", cv_version_id)
+                if erased(session, "CV", cv_version_id):
+                    return
                 # Persistence errors must roll back and reach Kafka retries; they
                 # are not evidence that the uploaded PDF is invalid.
                 task = tasks.complete(task.public_id, parsed)
                 revisions.create(cv_version_id, owner_user_id, source_hash, parsed)
-
                 status, failure_code = "PARSED", None
         event = _processing_event(envelope, task.public_id, status, source_hash,
                                   cv_id, cv_version_id, failure_code)
@@ -433,6 +452,10 @@ async def _process_application(envelope: dict, factory,
     cv_version_id = UUID(payload["cvVersionId"])
     job_version_id = UUID(payload["jobVersionId"])
     with factory() as session:
+        lock_resource(session, "CV", cv_version_id)
+        lock_resource(session, "APPLICATION", application_id)
+        if erased(session, "CV", cv_version_id) or erased(session, "APPLICATION", application_id):
+            return
         results = MatchingResultRepository(session)
         existing = results.find_latest(application_id)
         if existing and not _input_unavailable(existing.status, existing.quality_flags) \
@@ -475,6 +498,10 @@ async def _retry_waiting_matches(envelope: dict, factory,
 
     for prior in waiting:
         with factory() as session:
+            lock_resource(session, "CV", prior.cv_version_id)
+            lock_resource(session, "APPLICATION", prior.application_id)
+            if erased(session, "CV", prior.cv_version_id) or erased(session, "APPLICATION", prior.application_id):
+                continue
             cv_revision = ParsedCvRevisionRepository(session).find_confirmed(prior.cv_version_id)
             jd_revision = ParsedJdRevisionRepository(session).find_confirmed(prior.job_version_id)
             if cv_revision is None or jd_revision is None:

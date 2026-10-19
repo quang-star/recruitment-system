@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://smart-recruitment.local/contracts/events/cv-deleted-v1.schema.json",
+  "title": "cv.deleted.v1 payload (transport: cv.uploaded.v1)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["cvId", "cvVersionId"],
+  "properties": {
+    "cvId": {"type": "string", "format": "uuid"},
+    "cvVersionId": {"type": "string", "format": "uuid"}
+  }
+}

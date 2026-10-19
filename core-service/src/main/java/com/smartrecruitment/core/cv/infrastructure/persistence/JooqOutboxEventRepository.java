@@ -54,6 +54,19 @@ public class JooqOutboxEventRepository implements OutboxEventRepository {
     }
 
     @Override
+    public void append(com.smartrecruitment.core.cv.application.PrivacyEvent event) {
+        String payload = objectMapper.writeValueAsString(event.payload());
+        dsl.insertInto(OUTBOX_EVENTS).set(OUTBOX_EVENTS.PUBLIC_ID, UUID.randomUUID())
+                .set(OUTBOX_EVENTS.AGGREGATE_TYPE, event.eventType().startsWith("cv.") ? "CV" : "APPLICATION")
+                .set(OUTBOX_EVENTS.AGGREGATE_ID, event.resourceId()).set(OUTBOX_EVENTS.AGGREGATE_VERSION, 1L)
+                .set(OUTBOX_EVENTS.EVENT_TYPE, event.eventType()).set(OUTBOX_EVENTS.SCHEMA_VERSION, (short) 1)
+                .set(OUTBOX_EVENTS.IDEMPOTENCY_KEY, event.eventType() + ":" + event.resourceId())
+                .set(OUTBOX_EVENTS.CORRELATION_ID, event.correlationId()).set(OUTBOX_EVENTS.PAYLOAD, JSON.json(payload))
+                .set(OUTBOX_EVENTS.OCCURRED_AT, event.occurredAt()).set(OUTBOX_EVENTS.AVAILABLE_AT, event.occurredAt())
+                .set(OUTBOX_EVENTS.ATTEMPT_COUNT, 0).onConflictDoNothing().execute();
+    }
+
+    @Override
     public void append(ApplicationSubmittedEvent event) {
         try {
             String payload = objectMapper.writeValueAsString(new Object() {
@@ -88,6 +101,7 @@ public class JooqOutboxEventRepository implements OutboxEventRepository {
                 public final UUID jobId = event.jobId();
                 public final UUID jobVersionId = event.jobVersionId();
                 public final UUID recruiterUserId = event.recruiterUserId();
+                public final String matchingDomain = event.matchingDomain();
                 public final boolean externalAiConsent = event.externalAiConsent().granted();
                 public final String externalAiPolicyVersion = event.externalAiConsent().policyVersion();
                 public final String sourceHash = event.sourceHash();

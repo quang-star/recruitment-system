@@ -20,6 +20,7 @@ from app.shared.security import AuthenticatedPrincipal, require_access_token
 from app.taxonomy.normalizer import normalize_skill
 from app.taxonomy.normalizer import use_taxonomy, taxonomy_version
 from app.taxonomy.catalog import snapshot
+from app.shared.privacy import require_live_cv
 from app.shared.revision_status import ParsedRevisionStatus, validate_revision_status
 from app.cv.parser import _title
 
@@ -75,6 +76,7 @@ class UpdateParsedCvRequest(BaseModel):
 @router.get("/{cv_version_id}", response_model=ParsedCvResponse)
 def get_parsed_cv(cv_version_id: UUID, principal: AuthenticatedPrincipal = Depends(require_candidate),
                   session: Session = Depends(get_session)) -> ParsedCvResponse:
+    require_live_cv(session, cv_version_id)
     revision = ParsedCvRevisionRepository(session).find_owned(cv_version_id, principal.subject)
     if revision is None:
         raise ApiContractError(404, "PARSED_CV_NOT_FOUND", "Parsed CV was not found")
@@ -90,6 +92,7 @@ async def update_parsed_cv(
     session: Session = Depends(get_session),
 ) -> ParsedCvResponse:
     repository = ParsedCvRevisionRepository(session)
+    require_live_cv(session, cv_version_id)
     latest = repository.find_owned(cv_version_id, principal.subject)
     if latest is None:
         raise ApiContractError(404, "PARSED_CV_NOT_FOUND", "Parsed CV was not found")
@@ -133,6 +136,7 @@ async def confirm_parsed_cv(
     principal: AuthenticatedPrincipal = Depends(require_candidate),
     session: Session = Depends(get_session),
 ) -> ParsedCvResponse:
+    require_live_cv(session, cv_version_id)
     repository = ParsedCvRevisionRepository(session)
     try:
         revision = repository.confirm(

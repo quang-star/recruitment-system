@@ -28,6 +28,9 @@ public interface ApplicationRepository {
     Optional<Application> updateStatus(UUID recruiterUserId, UUID applicationId, ApplicationStatus status,
                                        String reason, long expectedVersion);
     Optional<Application> withdraw(UUID candidateUserId, UUID applicationId, String reason, long expectedVersion);
+    default boolean revokeCvAccess(UUID candidateUserId, UUID applicationId, long expectedVersion) {
+        throw new UnsupportedOperationException("CV access revocation is unavailable");
+    }
     List<ApplicationStatusChange> findHistoryForViewer(UUID viewerUserId, UUID applicationId);
     default Optional<ApplicationCvSnapshot> findCvSnapshotForRecruiter(UUID recruiterUserId, UUID applicationId) {
         return Optional.empty();
