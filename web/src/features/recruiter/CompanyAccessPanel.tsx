@@ -50,7 +50,7 @@ export function CompanyAccessPanel({ session, companyId, members, canManage, onM
     let active = true;
     if (!canManage) { setInvitations([]); return () => { active = false; }; }
     setLoadingInvitations(true);
-    void apiRequest<CompanyInvitation[]>(`/api/v1/companies/${companyId}/invitations`, {
+    void apiRequest<CompanyInvitation[]>(`/api/v2/companies/${companyId}/invitations`, {
       accessToken: session.accessToken
     }).then((result) => { if (active) setInvitations(result); })
       .catch((requestError) => {
@@ -68,7 +68,7 @@ export function CompanyAccessPanel({ session, companyId, members, canManage, onM
     setInviting(true);
     clearFeedback();
     try {
-      const created = await apiRequest<CompanyInvitation>(`/api/v1/companies/${companyId}/invitations`, {
+      const created = await apiRequest<CompanyInvitation>(`/api/v2/companies/${companyId}/invitations`, {
         method: "POST", accessToken: session.accessToken,
         body: JSON.stringify({ email: inviteEmail, role: inviteRole })
       });
@@ -87,7 +87,7 @@ export function CompanyAccessPanel({ session, companyId, members, canManage, onM
     setBusyId(invitation.invitationId);
     clearFeedback();
     try {
-      await apiRequest<void>(`/api/v1/companies/${companyId}/invitations/${invitation.invitationId}?version=${invitation.version}`, {
+      await apiRequest<void>(`/api/v2/companies/${companyId}/invitations/${invitation.invitationId}?version=${invitation.version}`, {
         method: "DELETE", accessToken: session.accessToken
       });
       setInvitations((current) => current.map((value) => value.invitationId === invitation.invitationId
@@ -106,7 +106,7 @@ export function CompanyAccessPanel({ session, companyId, members, canManage, onM
     setBusyId(member.memberId);
     clearFeedback();
     try {
-      const updated = await apiRequest<CompanyMember>(`/api/v1/companies/${companyId}/members/${member.memberId}`, {
+      const updated = await apiRequest<CompanyMember>(`/api/v2/companies/${companyId}/members/${member.memberId}`, {
         method: "PATCH", accessToken: session.accessToken,
         body: JSON.stringify({ role, status, version: member.version })
       });
