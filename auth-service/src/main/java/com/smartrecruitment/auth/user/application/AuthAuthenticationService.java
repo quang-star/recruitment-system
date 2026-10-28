@@ -74,6 +74,15 @@ public class AuthAuthenticationService {
     }
 
     @Transactional
+    public AuthenticationResult loginVerifiedIdentity(Long userId, String userAgent, String ipAddress) {
+        Instant now = Instant.now(clock);
+        AuthUser user = users.updateLastLogin(userId, now)
+                .filter(value -> value.status() == UserStatus.ACTIVE && value.emailVerifiedAt() != null)
+                .orElseThrow(InvalidCredentialsException::new);
+        return issueSession(user, "WEB", "Google · Browser", userAgent, ipAddress, now);
+    }
+
+    @Transactional
     public AuthenticationResult refresh(String rawRefreshToken, String ipAddress) {
         if (rawRefreshToken == null || rawRefreshToken.isBlank()) throw new InvalidRefreshTokenException();
         Instant now = Instant.now(clock);
@@ -103,7 +112,7 @@ public class AuthAuthenticationService {
         sessions.touch(session.id(), ipAddress, now, nextIdleExpiry);
         List<String> roleCodes = roles.findActiveRoleCodes(user.id());
         AccessTokenIssuer.IssuedAccessToken accessToken = accessTokenIssuer.issue(user, roleCodes, now);
-        return new AuthenticationResult(user.publicId(), accessToken.value(), rawReplacement,
+        return new AuthenticationResult(user.id(), accessToken.value(), rawReplacement,
                 accessToken.expiresAt(), replacementExpiresAt, roleCodes);
     }
 
@@ -125,7 +134,7 @@ public class AuthAuthenticationService {
         refreshTokens.insert(session.id(), tokenGenerator.hash(rawRefreshToken), null, now, refreshExpiresAt);
         List<String> roleCodes = roles.findActiveRoleCodes(user.id());
         AccessTokenIssuer.IssuedAccessToken accessToken = accessTokenIssuer.issue(user, roleCodes, now);
-        return new AuthenticationResult(user.publicId(), accessToken.value(), rawRefreshToken,
+        return new AuthenticationResult(user.id(), accessToken.value(), rawRefreshToken,
                 accessToken.expiresAt(), refreshExpiresAt, roleCodes);
     }
 }

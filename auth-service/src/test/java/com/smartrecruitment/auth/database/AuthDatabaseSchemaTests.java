@@ -13,7 +13,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.util.UUID;
 
 import static com.smartrecruitment.auth.infrastructure.jooq.generated.tables.IdempotencyRecords.IDEMPOTENCY_RECORDS;
 import static com.smartrecruitment.auth.infrastructure.jooq.generated.tables.OneTimeTokens.ONE_TIME_TOKENS;
@@ -46,10 +45,10 @@ class AuthDatabaseSchemaTests {
         AuthUser user = users.insert(AuthUser.pending("one-time-token@example.com"));
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
 
-        insertOneTimeToken(UUID.randomUUID(), user.id(), tokenDigest((byte) 1), now);
+        insertOneTimeToken(user.id(), tokenDigest((byte) 1), now);
 
         assertThatThrownBy(() ->
-                insertOneTimeToken(UUID.randomUUID(), user.id(), tokenDigest((byte) 2), now))
+                insertOneTimeToken(user.id(), tokenDigest((byte) 2), now))
                 .isInstanceOf(DuplicateKeyException.class);
     }
 
@@ -58,10 +57,10 @@ class AuthDatabaseSchemaTests {
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
 
         insertIdempotencyRecord(
-                UUID.randomUUID(), "REGISTER", tokenDigest((byte) 5), digest((byte) 3), now);
+                "REGISTER", tokenDigest((byte) 5), digest((byte) 3), now);
 
         assertThatThrownBy(() -> insertIdempotencyRecord(
-                UUID.randomUUID(), "REGISTER", tokenDigest((byte) 5), digest((byte) 4), now))
+                "REGISTER", tokenDigest((byte) 5), digest((byte) 4), now))
                 .isInstanceOf(DuplicateKeyException.class);
     }
 
@@ -71,9 +70,9 @@ class AuthDatabaseSchemaTests {
         String keyHash = tokenDigest((byte) 6);
 
         insertIdempotencyRecord(
-                UUID.randomUUID(), "REGISTER", keyHash, digest((byte) 3), now);
+                "REGISTER", keyHash, digest((byte) 3), now);
         insertIdempotencyRecord(
-                UUID.randomUUID(), "RESEND_VERIFICATION", keyHash, digest((byte) 4), now);
+                "RESEND_VERIFICATION", keyHash, digest((byte) 4), now);
 
         assertThat(dsl.fetchCount(
                 IDEMPOTENCY_RECORDS,
@@ -82,13 +81,11 @@ class AuthDatabaseSchemaTests {
     }
 
     private void insertOneTimeToken(
-            UUID id,
             Long userId,
             String tokenHash,
             OffsetDateTime now
     ) {
         dsl.insertInto(ONE_TIME_TOKENS)
-                .set(ONE_TIME_TOKENS.PUBLIC_ID, id)
                 .set(ONE_TIME_TOKENS.USER_ID, userId)
                 .set(ONE_TIME_TOKENS.TOKEN_TYPE, "EMAIL_VERIFICATION")
                 .set(ONE_TIME_TOKENS.TOKEN_HASH, tokenHash)
@@ -98,14 +95,12 @@ class AuthDatabaseSchemaTests {
     }
 
     private void insertIdempotencyRecord(
-            UUID id,
             String operation,
             String keyHash,
             byte[] requestHash,
             OffsetDateTime now
     ) {
         dsl.insertInto(IDEMPOTENCY_RECORDS)
-                .set(IDEMPOTENCY_RECORDS.PUBLIC_ID, id)
                 .set(IDEMPOTENCY_RECORDS.KEY_HASH, keyHash)
                 .set(IDEMPOTENCY_RECORDS.OPERATION, operation)
                 .set(IDEMPOTENCY_RECORDS.REQUEST_HASH, requestHash)

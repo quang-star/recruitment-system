@@ -60,7 +60,7 @@ class AuthAccountRecoveryIntegrationTests {
                 .isInstanceOf(InvalidCredentialsException.class);
         assertThatThrownBy(() -> authentication.refresh(first.refreshToken(), "127.0.0.1"))
                 .isInstanceOf(InvalidRefreshTokenException.class);
-        assertThat(sessionManagement.list(user.publicId()))
+        assertThat(sessionManagement.list(user.id()))
                 .hasSize(2)
                 .allMatch(session -> !session.active() && "PASSWORD_RESET".equals(session.revokeReason()));
         assertThat(authentication.login(
@@ -78,22 +78,40 @@ class AuthAccountRecoveryIntegrationTests {
         AuthenticationResult login = authentication.login(
                 email, password, "WEB", "Demo browser", "JUnit", "127.0.0.1");
 
-        var session = sessionManagement.list(user.publicId()).getFirst();
+        var session = sessionManagement.list(user.id()).getFirst();
         assertThat(session.active()).isTrue();
         assertThat(session.deviceName()).isEqualTo("Demo browser");
 
-        sessionManagement.revoke(user.publicId(), session.sessionId());
+        sessionManagement.revoke(user.id(), Long.valueOf(session.sessionId()));
 
-        assertThat(sessionManagement.list(user.publicId()).getFirst().active()).isFalse();
+        assertThat(sessionManagement.list(user.id()).getFirst().active()).isFalse();
         assertThatThrownBy(() -> authentication.refresh(login.refreshToken(), "127.0.0.1"))
                 .isInstanceOf(InvalidRefreshTokenException.class);
-        assertThatThrownBy(() -> sessionManagement.revoke(user.publicId(), session.sessionId()))
+        assertThatThrownBy(() -> sessionManagement.revoke(user.id(), Long.valueOf(session.sessionId())))
                 .isInstanceOf(SessionNotFoundException.class);
     }
 
     private AuthUser activeUser(String email) {
         Instant now = Instant.now();
-        return users.insert(new AuthUser(null, UUID.randomUUID(), email, email, UserStatus.ACTIVE,
+        return users.insert(new AuthUser(null, email, email, UserStatus.ACTIVE,
                 now, null, now, now, 0));
+    }
+
+    @Test
+    void verifiedGoogleOnlyUserCanCreatePasswordViaEmailRecovery() {
+        String email = "google-password-" + UUID.randomUUID() + "@example.com";
+        AuthUser user = activeUser(email);
+        roles.assignCandidateRole(user.id(), Instant.now());
+        AuthenticationResult login = authentication.loginVerifiedIdentity(user.id(), "JUnit", null);
+        recovery.forgotPassword(email);
+        var token = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(emailSender).sendPasswordReset(eq(email), token.capture(), any());
+        recovery.resetPassword(token.getValue(), "NewGooglePassword!2026");
+        assertThat(authentication.login(email, "NewGooglePassword!2026", "WEB", null, null, null).accessToken())
+                .isNotBlank();
+        assertThatThrownBy(() -> authentication.refresh(login.refreshToken(), null))
+                .isInstanceOf(InvalidRefreshTokenException.class);
+        assertThatThrownBy(() -> recovery.resetPassword(token.getValue(), "AnotherPassword!2026"))
+                .isInstanceOf(InvalidPasswordResetTokenException.class);
     }
 }

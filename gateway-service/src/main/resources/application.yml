@@ -18,15 +18,15 @@ spring:
             - id: auth-service
               uri: ${AUTH_SERVICE_URL:http://auth-service:8081}
               predicates:
-                - Path=/api/v1/auth/**,/api/v1/users/**,/.well-known/jwks.json
+                - Path=/api/v2/auth/**,/api/v2/users/**,/.well-known/jwks.json
             - id: core-service
               uri: ${CORE_SERVICE_URL:http://core-service:8082}
               predicates:
-                - Path=/api/v1/companies/**,/api/v1/recruiter/**,/api/v1/candidates/**,/api/v1/candidate/**,/api/v1/cvs/**,/api/v1/jobs/**,/api/v1/applications/**,/api/v1/notifications/**,/api/v1/dashboard/**
+                - Path=/api/v2/companies/**,/api/v2/recruiter/**,/api/v2/candidates/**,/api/v2/candidate/**,/api/v2/cvs/**,/api/v2/jobs/**,/api/v2/applications/**,/api/v2/notifications/**,/api/v2/dashboard/**,/api/v2/public/**
             - id: ai-service
               uri: ${AI_SERVICE_URL:http://ai-service:8083}
               predicates:
-                - Path=/api/v1/parsed-cvs/**,/api/v1/parsed-jds/**,/api/v1/matching-requests/**,/api/v1/matching-results/**,/api/v1/rankings/**,/api/v1/taxonomy/**,/api/v1/ai-tasks/**
+                - Path=/api/v2/parsed-cvs/**,/api/v2/parsed-jds/**,/api/v2/matching-requests/**,/api/v2/matching-results/**,/api/v2/rankings/**,/api/v2/taxonomy/**,/api/v2/ai-tasks/**
           globalcors:
             cors-configurations:
               '[/**]':

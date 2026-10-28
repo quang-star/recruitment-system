@@ -9,7 +9,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
-import java.util.UUID;
 
 @Service
 public class AuthSessionManagementService {
@@ -24,8 +23,8 @@ public class AuthSessionManagementService {
     }
 
     @Transactional(readOnly = true)
-    public List<SessionResult> list(UUID publicUserId) {
-        var user = users.findByPublicId(publicUserId)
+    public List<SessionResult> list(Long userId) {
+        var user = users.findById(userId)
                 .filter(value -> value.status() == UserStatus.ACTIVE)
                 .orElseThrow(CurrentUserUnavailableException::new);
         Instant now = Instant.now(clock);
@@ -35,21 +34,21 @@ public class AuthSessionManagementService {
     }
 
     @Transactional
-    public void revoke(UUID publicUserId, UUID sessionId) {
-        var user = users.findByPublicId(publicUserId)
+    public void revoke(Long userId, Long sessionId) {
+        var user = users.findById(userId)
                 .filter(value -> value.status() == UserStatus.ACTIVE)
                 .orElseThrow(CurrentUserUnavailableException::new);
-        if (!sessions.revokeByPublicIdAndUserId(sessionId, user.id(), "USER_REVOKED", Instant.now(clock))) {
+        if (!sessions.revokeByIdAndUserId(sessionId, user.id(), "USER_REVOKED", Instant.now(clock))) {
             throw new SessionNotFoundException();
         }
     }
 
-    public record SessionResult(UUID sessionId, String clientType, String deviceName, String userAgent,
+    public record SessionResult(String sessionId, String clientType, String deviceName, String userAgent,
                                 String createdIp, String lastSeenIp, Instant authenticatedAt, Instant lastSeenAt,
                                 Instant idleExpiresAt, Instant absoluteExpiresAt, Instant revokedAt,
                                 String revokeReason, boolean active) {
         static SessionResult from(SessionRepository.SessionDetails value, Instant now) {
-            return new SessionResult(value.publicId(), value.clientType(), value.deviceName(), value.userAgent(),
+            return new SessionResult(value.id().toString(), value.clientType(), value.deviceName(), value.userAgent(),
                     value.createdIp(), value.lastSeenIp(), value.authenticatedAt(), value.lastSeenAt(),
                     value.idleExpiresAt(), value.absoluteExpiresAt(), value.revokedAt(), value.revokeReason(),
                     value.activeAt(now));

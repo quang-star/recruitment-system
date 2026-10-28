@@ -55,8 +55,8 @@ class GatewayServiceApplicationTests {
                 .flatMap(predicate -> predicate.getArgs().values().stream())
                 .toList();
         assertThat(routedPaths).contains(
-                "/api/v1/notifications/**",
-                "/api/v1/dashboard/**");
+                "/api/v2/notifications/**",
+                "/api/v2/dashboard/**");
     }
 
     @Test
@@ -65,15 +65,15 @@ class GatewayServiceApplicationTests {
                 .baseUrl("http://localhost:" + port)
                 .build();
 
-        assertForwardedInsteadOfRejected(client, "/api/v1/auth/resend-verification",
+        assertForwardedInsteadOfRejected(client, "/api/v2/auth/resend-verification",
                 "{\"email\":\"pending@example.com\"}");
-        assertForwardedInsteadOfRejected(client, "/api/v1/auth/forgot-password",
+        assertForwardedInsteadOfRejected(client, "/api/v2/auth/forgot-password",
                 "{\"email\":\"active@example.com\"}");
-        assertForwardedInsteadOfRejected(client, "/api/v1/auth/reset-password",
+        assertForwardedInsteadOfRejected(client, "/api/v2/auth/reset-password",
                 "{\"token\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\","
                         + "\"newPassword\":\"NewPassword!2026\"}");
 
-        client.post().uri("/api/v1/auth/change-password")
+        client.post().uri("/api/v2/auth/change-password")
                 .header("Content-Type", "application/json")
                 .bodyValue("{\"currentPassword\":\"Current!2026\",\"newPassword\":\"NewPassword!2026\"}")
                 .exchange()
@@ -86,5 +86,15 @@ class GatewayServiceApplicationTests {
                 .bodyValue(body)
                 .exchange()
                 .expectStatus().value(status -> assertThat(status).isNotIn(401, 403));
+    }
+
+    @Test
+    void googleLoginAndChallengesArePublicWhileLinkingRequiresAuthentication() {
+        WebTestClient client = WebTestClient.bindToServer().baseUrl("http://localhost:" + port).build();
+        client.get().uri("/api/v2/auth/google/config").exchange().expectStatus().isNoContent();
+        assertForwardedInsteadOfRejected(client, "/api/v2/auth/google/challenge", "{}");
+        assertForwardedInsteadOfRejected(client, "/api/v2/auth/google/login", "{}");
+        client.post().uri("/api/v2/auth/google/link").header("Content-Type", "application/json")
+                .bodyValue("{}").exchange().expectStatus().isUnauthorized();
     }
 }

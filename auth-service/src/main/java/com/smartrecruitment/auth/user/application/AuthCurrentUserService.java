@@ -7,7 +7,6 @@ import com.smartrecruitment.auth.user.domain.UserStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.UUID;
 
 @Service
 public class AuthCurrentUserService {
@@ -20,12 +19,12 @@ public class AuthCurrentUserService {
     }
 
     @Transactional(readOnly = true)
-    public CurrentUserResult get(UUID userId) {
-        AuthUser user = users.findByPublicId(userId)
+    public CurrentUserResult get(Long userId) {
+        AuthUser user = users.findById(userId)
                 .filter(value -> value.status() == UserStatus.ACTIVE)
                 .orElseThrow(CurrentUserUnavailableException::new);
         return new CurrentUserResult(
-                user.publicId(),
+                user.id(),
                 user.email(),
                 user.status().name(),
                 user.emailVerifiedAt() != null,

@@ -18,7 +18,6 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Locale;
-import java.util.UUID;
 
 @Service
 public class AuthAccountRecoveryService {
@@ -99,20 +98,21 @@ public class AuthAccountRecoveryService {
         AuthUser user = users.findById(token.userId())
                 .filter(value -> value.status() == UserStatus.ACTIVE)
                 .orElseThrow(InvalidPasswordResetTokenException::new);
-        PasswordCredentialRepository.PasswordCredential current = credentials.findByUserId(user.id())
-                .orElseThrow(InvalidPasswordResetTokenException::new);
-        rejectReusedPassword(newPassword, current);
+        PasswordCredentialRepository.PasswordCredential current = credentials.findByUserId(user.id()).orElse(null);
+        if (current != null) rejectReusedPassword(newPassword, current);
         if (!tokens.consume(token.id(), now)) throw new InvalidPasswordResetTokenException();
-        if (!credentials.updatePassword(user.id(), passwordEncoder.encode(newPassword), now)) {
+        String passwordHash = passwordEncoder.encode(newPassword);
+        if (current == null) credentials.insert(user.id(), passwordHash, now);
+        else if (!credentials.updatePassword(user.id(), passwordHash, now)) {
             throw new InvalidPasswordResetTokenException();
         }
         sessions.revokeAllByUserId(user.id(), "PASSWORD_RESET", now);
     }
 
     @Transactional
-    public void changePassword(UUID publicUserId, String currentPassword, String newPassword) {
+    public void changePassword(Long userId, String currentPassword, String newPassword) {
         Instant now = Instant.now(clock);
-        AuthUser user = users.findByPublicId(publicUserId)
+        AuthUser user = users.findById(userId)
                 .filter(value -> value.status() == UserStatus.ACTIVE)
                 .orElseThrow(CurrentUserUnavailableException::new);
         PasswordCredentialRepository.PasswordCredential current = credentials.findByUserId(user.id())

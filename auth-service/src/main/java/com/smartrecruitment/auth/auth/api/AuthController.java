@@ -9,6 +9,7 @@ import com.smartrecruitment.auth.user.application.AuthenticationResult;
 import com.smartrecruitment.auth.user.application.CurrentUserResult;
 import com.smartrecruitment.auth.user.application.EmailVerificationResult;
 import com.smartrecruitment.auth.user.application.RegistrationResult;
+import com.smartrecruitment.auth.shared.api.SubjectId;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
@@ -27,7 +28,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/auth")
+@RequestMapping("/api/v2/auth")
 public class AuthController {
     private final AuthRegistrationService registrationService;
     private final AuthAuthenticationService authenticationService;
@@ -74,17 +75,18 @@ public class AuthController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void changePassword(@AuthenticationPrincipal Jwt jwt,
                                @Valid @RequestBody ChangePasswordRequest request) {
-        accountRecoveryService.changePassword(java.util.UUID.fromString(jwt.getSubject()),
+        accountRecoveryService.changePassword(SubjectId.parse(jwt.getSubject()),
                 request.currentPassword(), request.newPassword());
     }
     @GetMapping("/sessions")
     public java.util.List<AuthSessionManagementService.SessionResult> sessions(@AuthenticationPrincipal Jwt jwt) {
-        return sessionManagementService.list(java.util.UUID.fromString(jwt.getSubject()));
+        return sessionManagementService.list(SubjectId.parse(jwt.getSubject()));
     }
     @DeleteMapping("/sessions/{sessionId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void revokeSession(@AuthenticationPrincipal Jwt jwt, @PathVariable java.util.UUID sessionId) {
-        sessionManagementService.revoke(java.util.UUID.fromString(jwt.getSubject()), sessionId);
+    public void revokeSession(@AuthenticationPrincipal Jwt jwt,
+                              @PathVariable @jakarta.validation.constraints.Positive Long sessionId) {
+        sessionManagementService.revoke(SubjectId.parse(jwt.getSubject()), sessionId);
     }
     @PostMapping("/login")
     public TokenResponse login(@Valid @RequestBody LoginRequest request, HttpServletRequest httpRequest) {
@@ -102,7 +104,7 @@ public class AuthController {
     }
     @GetMapping("/me")
     public CurrentUserResponse getCurrentUser(@AuthenticationPrincipal Jwt jwt) {
-        return CurrentUserResponse.from(currentUserService.get(java.util.UUID.fromString(jwt.getSubject())));
+        return CurrentUserResponse.from(currentUserService.get(SubjectId.parse(jwt.getSubject())));
     }
     public record RegisterRequest(@NotBlank @Email @Size(max = 320) String email,
                                   @NotBlank @Size(min = 8, max = 128) String password,
@@ -126,28 +128,28 @@ public class AuthController {
                     "If the account is eligible, an email will be sent with the next steps");
         }
     }
-    public record TokenResponse(java.util.UUID userId, String accessToken, String refreshToken,
+    public record TokenResponse(String userId, String accessToken, String refreshToken,
                                 java.time.Instant accessTokenExpiresAt, java.time.Instant refreshTokenExpiresAt,
                                 java.util.List<String> roles) {
         static TokenResponse from(AuthenticationResult result) {
-            return new TokenResponse(result.userId(), result.accessToken(), result.refreshToken(),
+            return new TokenResponse(result.userId().toString(), result.accessToken(), result.refreshToken(),
                     result.accessTokenExpiresAt(), result.refreshTokenExpiresAt(), result.roles());
         }
     }
-    public record RegistrationResponse(java.util.UUID userId, String email, String status, boolean verificationRequired) {
+    public record RegistrationResponse(String userId, String email, String status, boolean verificationRequired) {
         static RegistrationResponse from(RegistrationResult result) {
-            return new RegistrationResponse(result.userId(), result.email(), result.status(), result.verificationRequired());
+            return new RegistrationResponse(result.userId().toString(), result.email(), result.status(), result.verificationRequired());
         }
     }
-    public record EmailVerificationResponse(java.util.UUID userId, String email, String status) {
+    public record EmailVerificationResponse(String userId, String email, String status) {
         static EmailVerificationResponse from(EmailVerificationResult result) {
-            return new EmailVerificationResponse(result.userId(), result.email(), result.status());
+            return new EmailVerificationResponse(result.userId().toString(), result.email(), result.status());
         }
     }
-    public record CurrentUserResponse(java.util.UUID userId, String email, String status,
+    public record CurrentUserResponse(String userId, String email, String status,
                                       boolean emailVerified, java.util.List<String> roles) {
         static CurrentUserResponse from(CurrentUserResult result) {
-            return new CurrentUserResponse(result.userId(), result.email(), result.status(),
+            return new CurrentUserResponse(result.userId().toString(), result.email(), result.status(),
                     result.emailVerified(), result.roles());
         }
     }

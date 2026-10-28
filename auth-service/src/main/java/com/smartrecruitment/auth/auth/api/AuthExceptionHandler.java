@@ -11,6 +11,7 @@ import com.smartrecruitment.auth.user.application.VerificationEmailDeliveryExcep
 import com.smartrecruitment.auth.user.application.InvalidPasswordResetTokenException;
 import com.smartrecruitment.auth.user.application.PasswordPolicyException;
 import com.smartrecruitment.auth.user.application.SessionNotFoundException;
+import com.smartrecruitment.auth.user.application.GoogleSignInException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +24,16 @@ import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class AuthExceptionHandler {
+    @ExceptionHandler(GoogleSignInException.class)
+    ResponseEntity<ApiError> handleGoogleSignIn(GoogleSignInException exception, HttpServletRequest request) {
+        HttpStatus status = switch (exception.reason()) {
+            case INVALID_TOKEN -> HttpStatus.UNAUTHORIZED;
+            case NOT_CONFIGURED -> HttpStatus.SERVICE_UNAVAILABLE;
+            case LINK_REQUIRED, ACCOUNT_CONFLICT -> HttpStatus.CONFLICT;
+        };
+        return error(status, "GOOGLE_" + exception.reason().name(), exception.getMessage(), Map.of(), request);
+    }
+
     @ExceptionHandler(EmailAlreadyRegisteredException.class)
     ResponseEntity<ApiError> handleDuplicateEmail(EmailAlreadyRegisteredException exception,
                                                   HttpServletRequest request) {

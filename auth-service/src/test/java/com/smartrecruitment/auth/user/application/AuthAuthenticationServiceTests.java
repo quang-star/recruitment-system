@@ -20,7 +20,6 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -34,7 +33,7 @@ class AuthAuthenticationServiceTests {
         AuthenticationResult result = fixtures.service().login(
                 "Candidate@Example.com", "correct horse battery", "WEB", "Chrome", "test-agent", "127.0.0.1");
 
-        assertThat(result.userId()).isEqualTo(fixtures.user.publicId());
+        assertThat(result.userId()).isEqualTo(fixtures.user.id());
         assertThat(result.accessToken()).isEqualTo("access-token");
         assertThat(result.refreshToken()).isEqualTo("refresh-token-1");
         assertThat(result.roles()).containsExactly("CANDIDATE");
@@ -65,6 +64,25 @@ class AuthAuthenticationServiceTests {
                 .isInstanceOf(InvalidCredentialsException.class);
     }
 
+    @Test
+    void verifiedIdentityCannotBypassInactiveAccountStatus() {
+        for (UserStatus status : List.of(UserStatus.PENDING, UserStatus.SUSPENDED, UserStatus.DELETED)) {
+            Fixtures fixtures = new Fixtures(status);
+            assertThatThrownBy(() -> fixtures.service().loginVerifiedIdentity(fixtures.user.id(), null, null))
+                    .isInstanceOf(InvalidCredentialsException.class);
+            assertThat(fixtures.sessionCreated).isFalse();
+        }
+    }
+
+    @Test
+    void verifiedIdentityUsesTheSameRefreshTokenFamily() {
+        Fixtures fixtures = new Fixtures(UserStatus.ACTIVE);
+        var service = fixtures.service();
+        var result = service.loginVerifiedIdentity(fixtures.user.id(), "browser", "127.0.0.1");
+        assertThat(result.roles()).containsExactly("CANDIDATE");
+        assertThat(service.refresh(result.refreshToken(), null).refreshToken()).isEqualTo("refresh-token-2");
+    }
+
     private static final class Fixtures {
         private final PasswordEncoder encoder = new BCryptPasswordEncoder(4);
         private final AuthUser user;
@@ -75,7 +93,7 @@ class AuthAuthenticationServiceTests {
         private int nextToken = 1;
 
         private Fixtures(UserStatus status) {
-            this.user = new AuthUser(1L, UUID.randomUUID(), "candidate@example.com", "candidate@example.com",
+            this.user = new AuthUser(1L, "candidate@example.com", "candidate@example.com",
                     status, status == UserStatus.ACTIVE ? NOW : null, null, NOW, NOW, 0);
         }
 
@@ -83,7 +101,6 @@ class AuthAuthenticationServiceTests {
             AuthUserRepository users = new AuthUserRepository() {
                 public AuthUser insert(AuthUser value) { return value; }
                 public Optional<AuthUser> findByNormalizedEmail(String value) { return Optional.of(user); }
-                public Optional<AuthUser> findByPublicId(UUID value) { return Optional.of(user); }
                 public Optional<AuthUser> findById(Long value) { return Optional.of(user); }
                 public boolean existsByNormalizedEmail(String value) { return true; }
                 public Optional<AuthUser> activateById(Long id, Instant verifiedAt) { return Optional.of(user); }
@@ -100,10 +117,10 @@ class AuthAuthenticationServiceTests {
                 public Session insert(Long userId, String clientType, String deviceName, String userAgent,
                                       String createdIp, Instant authenticatedAt, Instant idleExpiresAt, Instant absoluteExpiresAt) {
                     sessionCreated = true;
-                    return new Session(10L, UUID.randomUUID(), userId, idleExpiresAt, absoluteExpiresAt, null);
+                    return new Session(10L, userId, idleExpiresAt, absoluteExpiresAt, null);
                 }
                 public Optional<Session> findById(Long id) {
-                    return Optional.of(new Session(10L, UUID.randomUUID(), user.id(), NOW.plus(Duration.ofDays(7)),
+                    return Optional.of(new Session(10L, user.id(), NOW.plus(Duration.ofDays(7)),
                             NOW.plus(Duration.ofDays(30)), revokedReason == null ? null : NOW));
                 }
                 public boolean touch(Long id, String ip, Instant seenAt, Instant idleExpiresAt) { return true; }
@@ -111,14 +128,14 @@ class AuthAuthenticationServiceTests {
             };
             RefreshTokenRepository refreshTokens = new RefreshTokenRepository() {
                 public RefreshToken insert(Long sessionId, String hash, Long parentId, Instant issuedAt, Instant expiresAt) {
-                    RefreshToken token = new RefreshToken((long) nextToken, UUID.randomUUID(), sessionId, user.id(), hash,
+                    RefreshToken token = new RefreshToken((long) nextToken, sessionId, user.id(), hash,
                             expiresAt, null, null, revokedReason == null ? null : NOW);
                     nextToken++;
                     insertedRefreshTokens.add(token);
                     return token;
                 }
                 public Optional<RefreshToken> findByHash(String hash) {
-                    return insertedRefreshTokens.stream().filter(value -> value.tokenHash().equals(hash)).findFirst().map(value -> oldTokenUsed && Long.valueOf(1L).equals(value.id()) ? new RefreshToken(value.id(), value.publicId(), value.sessionId(), value.userId(), value.tokenHash(), value.expiresAt(), NOW, value.revokedAt(), value.sessionRevokedAt()) : value);
+                    return insertedRefreshTokens.stream().filter(value -> value.tokenHash().equals(hash)).findFirst().map(value -> oldTokenUsed && Long.valueOf(1L).equals(value.id()) ? new RefreshToken(value.id(), value.sessionId(), value.userId(), value.tokenHash(), value.expiresAt(), NOW, value.revokedAt(), value.sessionRevokedAt()) : value);
                 }
                 public boolean markUsedAndReplaced(Long id, Instant usedAt, Long replacementId) {
                     oldTokenUsed = true;
