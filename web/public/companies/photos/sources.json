@@ -1,0 +1,69 @@
+{
+  "note": "Downloaded public company photography and brand assets for local recruitment demo. Copyright and trademarks remain with their respective owners. Sources are recorded per asset; this is not a claim of affiliation.",
+  "assets": [
+    {
+      "company": "fpt",
+      "page": "https://fptsoftware.com/about-us/global-presence",
+      "logo": "https://fptsoftware.com/-/media/project/fpt-software/fso/uplift/home/logo_fpt_text_black.png?modified=20240111094946",
+      "logoFile": "fpt.png",
+      "photo": "https://fptsoftware.com/-/media/project/fpt-software/fso/about-us/global-presence/f-town/f-town-1.jpg?modified=20230811072116"
+    },
+    {
+      "company": "momo",
+      "page": "https://momo.careers/",
+      "logo": "https://homepage.momocdn.net/fileuploads/svg/momo-file-240411162904.svg",
+      "logoFile": "momo.svg",
+      "photo": "https://homepage.momocdn.net/blogscontents/hn-office-cover-251223145952.png"
+    },
+    {
+      "company": "shopee",
+      "page": "https://careerviet.vn/vi/nha-tuyen-dung/cong-ty-tnhh-shopee.35A7868A.html",
+      "logoPage": "https://careers.shopee.vn/",
+      "logo": "https://deo.shopeemobile.com/shopee/shopee-careers-live-vn/assets/img/footer-shopee.62760462.svg",
+      "logoFile": "shopee.svg",
+      "photo": "https://images.careerviet.vn/employer_photo/171402/shopee-2_1551083156.jpg"
+    },
+    {
+      "company": "techcombank",
+      "page": "https://techcombank.com/ve-chung-toi/ve-techcombank",
+      "logo": "https://techcombank.com/content/dam/techcombank/public-site/seo/techcombank_logo_svg_86201e50d1.svg",
+      "logoFile": "techcombank.svg",
+      "photo": "https://techcombank.com/content/dam/techcombank/public-site/sites/ve-chung-toi/ho-hn-ve-techcombank.png.rendition/cq5dam.web.1280.1280.webp"
+    },
+    {
+      "company": "vnpt",
+      "page": "https://baodauthau.vn/vnpt-net-dau-tu-hon-720-ty-dong-nang-cap-mo-rong-mang-vo-tuyen-post114477.html",
+      "logoPage": "https://vnu-f.vnuhcm.edu.vn/doi-tac-nha-tai-tro",
+      "logo": "https://adminvnu-f.vnuhcm.edu.vn/uploads/VNPT_Logo_PNG_1_cf24ab74f1.png",
+      "logoFile": "vnpt.png",
+      "photo": "https://cdn.baodauthau.vn/images/eb68875604013237baaa21037e2492a9e489733f00c859a149e991d93db3fc66de88fb06d6fc1a47ba9f38ee7af35f2a/04-8847.jpg"
+    },
+    {
+      "company": "viettel",
+      "page": "https://dn.viettel.vn/vi/gioi-thieu-chung",
+      "logo": "https://solutions.viettel.vn/storage/logo3.png",
+      "logoFile": "viettel.png",
+      "photo": "https://solutions.viettel.vn/storage/pages/banner-page1-1841x404.jpg"
+    },
+    {
+      "company": "vng",
+      "page": "https://vng.com.vn/gallery-detail/vng-campus.1.html?lang=en",
+      "logoPage": "https://vng.com.vn/guidelines/brand/logo.html",
+      "logo": "https://corp.vcdn.vn/products/vng/skin-2021/dist/main/images/branding/be_logo_lockups_simplified.png",
+      "logoFile": "vng.png",
+      "photo": "https://corp.vcdn.vn/products/upload/vng/source/Gallery/V%C4%83n%20ph%C3%B2ng/1.jpg"
+    },
+    {
+      "company": "vpbank",
+      "page": "https://www.vpbank.com.vn/ve-chung-",
+      "logo": "https://www.vpbank.com.vn/-/media/website/background-trang-chu/VPBank-final.svg",
+      "logoFile": "vpbank.svg",
+      "photo": "https://www.vpbank.com.vn/-/media/website/ve-chung-toi/anh-ve-chung-toi-1.jpg"
+    }
+  ],
+  "generic": {
+    "page": "https://unsplash.com/license",
+    "photo": "https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=max&w=1200&q=82",
+    "file": "workplace.webp"
+  }
+}
