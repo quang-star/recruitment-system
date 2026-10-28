@@ -18,7 +18,8 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] }
+      // Full Chromium also exercises its PDF viewer in headless E2E.
+      use: { ...devices["Desktop Chrome"], channel: "chromium" }
     }
   ],
   outputDir: "test-results"

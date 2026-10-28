@@ -1,54 +1,74 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { CandidateProfilePage } from "./features/candidate/CandidateProfilePage";
-import { LoginPage } from "./features/auth/LoginPage";
 import { ResetPasswordPage } from "./features/auth/ResetPasswordPage";
 import { VerifyEmailPage } from "./features/auth/VerifyEmailPage";
 import { apiRequest } from "./shared/api/client";
-import { SystemOverview } from "./features/system/SystemOverview";
 import { RecruiterWorkspace } from "./features/recruiter/RecruiterWorkspace";
+import { AdminWorkspace } from "./features/admin/AdminWorkspace";
 import { AcceptCompanyInvitationPage } from "./features/recruiter/AcceptCompanyInvitationPage";
-import { clearSession, loadSession, saveSession, AuthSession } from "./shared/auth/session";
+import { clearSession, loadSession, updateSession, sessionGeneration, subscribeSession, AuthSession } from "./shared/auth/session";
+import { PublicHomePage } from "./features/public/PublicHomePage";
 
 type CurrentUser = { userId: string; status: string; emailVerified: boolean; roles: string[]; };
 
 export function App() {
   const [session, setSession] = useState<AuthSession | null>(() => loadSession());
   const [sessionVerified, setSessionVerified] = useState(() => loadSession() === null);
+  const [verificationError, setVerificationError] = useState<string | null>(null);
+  const [verificationAttempt, setVerificationAttempt] = useState(0);
+  const sessionEpoch = sessionGeneration();
+  const observedEpoch = useRef(sessionEpoch);
+
+  useEffect(() => subscribeSession(() => {
+    const current = loadSession();
+    if (observedEpoch.current !== sessionGeneration()) {
+      observedEpoch.current = sessionGeneration();
+      setSessionVerified(current === null);
+    }
+    setSession(current);
+    if (!current) { setSessionVerified(true); setVerificationError(null); }
+  }), []);
 
   useEffect(() => {
     if (!session) { setSessionVerified(true); return; }
     let active = true;
     setSessionVerified(false);
-    void apiRequest<CurrentUser>("/api/v1/auth/me", { accessToken: session.accessToken })
+    setVerificationError(null);
+    const generation = sessionGeneration();
+    void apiRequest<CurrentUser>("/api/v2/auth/me", { accessToken: session.accessToken })
       .then((currentUser) => {
         if (!active) return;
-        const verified = { ...session, userId: currentUser.userId, roles: currentUser.roles };
-        saveSession(verified);
-        setSession(verified);
+        const latest = loadSession();
+        if (!latest || generation !== sessionGeneration()) return;
+        if (currentUser.userId !== latest.userId) throw new Error("Unexpected current user");
+        const verified = { ...latest, roles: currentUser.roles };
+        if (!updateSession(verified, latest.refreshToken, generation)) return;
         setSessionVerified(true);
       })
       .catch(() => {
         if (!active) return;
-        clearSession(); setSession(null); setSessionVerified(true);
+        if (!loadSession()) { setSession(null); setSessionVerified(true); }
+        else setVerificationError("Chưa thể xác minh phiên đăng nhập. Phiên được giữ lại; vui lòng thử lại khi kết nối ổn định.");
       });
     return () => { active = false; };
-  }, [session?.accessToken]);
+  }, [session?.userId, sessionEpoch, verificationAttempt]);
+
   const logout = useCallback(async () => {
+    const current = loadSession();
+    clearSession();
+    setSession(null);
     try {
-      if (session?.refreshToken) {
-        await apiRequest<void>("/api/v1/auth/logout", {
+      if (current?.refreshToken) {
+        await apiRequest<void>("/api/v2/auth/logout", {
           method: "POST",
-          body: JSON.stringify({ refreshToken: session.refreshToken })
+          body: JSON.stringify({ refreshToken: current.refreshToken })
         });
       }
     } catch {
       // Always clear the local session even if the Gateway is unavailable.
-    } finally {
-      clearSession();
-      setSession(null);
     }
-  }, [session]);
+  }, []);
 
   if (window.location.pathname === "/verify-email") {
     return <VerifyEmailPage />;
@@ -63,23 +83,27 @@ export function App() {
   };
 
   return (
-    <main className={`shell ${session ? "authenticated-shell" : ""}`}>
-      {!session && <header className="landing-header">
-      <p className="eyebrow">DATN · recruitment workspace</p>
-        <h1>Explainable IT Recruitment</h1>
-        <p>Web chỉ gọi public Gateway; hồ sơ ứng viên được lưu bởi Core và bảo vệ bằng JWT.</p>
-      </header>}
-      {!sessionVerified ? <section className="auth-card"><p className="muted">Đang xác thực phiên đăng nhập…</p></section> : session ? (
-        session.roles.includes("RECRUITER")
-          ? window.location.pathname === "/accept-invitation"
-            ? <AcceptCompanyInvitationPage session={session} onLogout={logout} />
-            : <RecruiterWorkspace session={session} onLogout={logout} />
-          : <CandidateProfilePage session={session} onLogout={logout} />
+    <main className={`shell ${session ? "authenticated-shell" : "public-portal-shell"}`}>
+      {!sessionVerified ? (
+        <section className="auth-card loading-card">
+          {verificationError ? <>
+            <p className="error-message" role="alert">{verificationError}</p>
+            <button type="button" onClick={() => setVerificationAttempt((attempt) => attempt + 1)}>Thử xác minh lại</button>
+            <button type="button" className="secondary-button" onClick={() => { void logout(); }}>Đăng xuất</button>
+          </> : <p className="muted">Đang xác thực phiên đăng nhập…</p>}
+        </section>
+      ) : session ? (
+        session.roles.includes("SYSTEM_ADMIN") ? <AdminWorkspace session={session} onLogout={logout} /> : session.roles.includes("RECRUITER") ? (
+          window.location.pathname === "/accept-invitation" ? (
+            <AcceptCompanyInvitationPage session={session} onLogout={logout} />
+          ) : (
+            <RecruiterWorkspace session={session} onLogout={logout} />
+          )
+        ) : (
+          <CandidateProfilePage session={session} onLogout={logout} />
+        )
       ) : (
-        <>
-          <LoginPage onSuccess={loginSucceeded} />
-          <SystemOverview />
-        </>
+        <PublicHomePage onLoginSuccess={loginSucceeded} />
       )}
     </main>
   );
