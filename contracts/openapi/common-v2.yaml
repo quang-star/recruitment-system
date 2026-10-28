@@ -1,0 +1,96 @@
+openapi: 3.1.0
+info:
+  title: Smart Recruitment Common HTTP Contract
+  version: 2.0.0
+paths: {}
+components:
+  parameters:
+    Page:
+      name: page
+      in: query
+      description: Zero-based page; its presence selects the paged response instead
+        of the legacy array.
+      schema:
+        type: integer
+        minimum: 0
+        maximum: 100000
+    PageSize:
+      name: size
+      in: query
+      description: Defaults to 12 for jobs and 10 for applications; used with page.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+    SearchText:
+      name: q
+      in: query
+      schema:
+        type: string
+        maxLength: 200
+    CorrelationId:
+      name: X-Correlation-Id
+      in: header
+      required: false
+      schema:
+        type: string
+        format: uuid
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 200
+  schemas:
+    PageResponse:
+      $ref: ../schemas/page-response-v2.schema.json
+    ApiError:
+      type: object
+      additionalProperties: false
+      required:
+      - code
+      - message
+      - details
+      - correlationId
+      - timestamp
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+        correlationId:
+          type: string
+          format: uuid
+        timestamp:
+          type: string
+          format: date-time
+    AsyncCommandResponse:
+      type: object
+      additionalProperties: false
+      required:
+      - taskId
+      - resourceId
+      - status
+      - statusUrl
+      - submittedAt
+      properties:
+        taskId:
+          type: string
+          pattern: ^(?:[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$
+          maxLength: 19
+        resourceId:
+          type: string
+          pattern: ^(?:[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$
+          maxLength: 19
+        status:
+          const: QUEUED
+        statusUrl:
+          type: string
+          format: uri-reference
+        submittedAt:
+          type: string
+          format: date-time

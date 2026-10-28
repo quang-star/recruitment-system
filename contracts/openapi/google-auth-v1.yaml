@@ -1,0 +1,126 @@
+openapi: 3.1.0
+info:
+  title: Smart Recruitment Google Authentication
+  version: 1.0.0
+paths:
+  /api/v1/auth/google/config:
+    get:
+      summary: Public Google web client ID (empty string disables Google sign-in).
+      security: []
+      responses:
+        '200':
+          description: Public configuration; Cache-Control no-store.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [clientId]
+                properties:
+                  clientId: { type: string }
+  /api/v1/auth/google/challenge:
+    post:
+      summary: Issue a random one-use nonce valid for five minutes.
+      security: []
+      responses:
+        '200':
+          description: Pass nonce to GIS initialize and send it back with the signed ID token; Cache-Control no-store.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [nonce, expiresAt]
+                properties:
+                  nonce: { type: string, minLength: 64, maxLength: 128 }
+                  expiresAt: { type: string, format: date-time }
+        '503':
+          $ref: '#/components/responses/GoogleError'
+  /api/v1/auth/google/login:
+    post:
+      summary: Verify a Google ID token and issue the application's existing session token pair.
+      description: >-
+        Verify signature, issuer, audience, authorized party, expiry, verified email and nonce.
+        Google sub identifies returning accounts; requested accountType never changes their roles.
+        New users receive CANDIDATE by default, or RECRUITER when explicitly selected.
+        Email collision requires authenticated linking; no implicit linking or account activation.
+        Google credentials must never be logged, persisted or accepted as application bearer tokens.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/GoogleCredential'
+                - type: object
+                  properties:
+                    accountType: { type: string, enum: [CANDIDATE, RECRUITER], default: CANDIDATE }
+      responses:
+        '200':
+          description: Normal application JWT and rotating refresh token; Google tokens are not returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          $ref: '#/components/responses/GoogleError'
+        '401':
+          $ref: '#/components/responses/GoogleError'
+        '409':
+          $ref: '#/components/responses/GoogleError'
+        '503':
+          $ref: '#/components/responses/GoogleError'
+  /api/v1/auth/google/link:
+    post:
+      summary: Link Google to the authenticated active, email-verified account.
+      description: >-
+        Requires the same normalized email and a fresh challenge. A Google subject belongs to
+        at most one account and an account has at most one Google identity. Same-owner linking
+        is idempotent with a fresh nonce. Roles and local credentials are unchanged.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GoogleCredential'
+      responses:
+        '204': { description: Linked successfully. }
+        '400':
+          $ref: '#/components/responses/GoogleError'
+        '401':
+          $ref: '#/components/responses/GoogleError'
+        '409':
+          $ref: '#/components/responses/GoogleError'
+        '503':
+          $ref: '#/components/responses/GoogleError'
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  responses:
+    GoogleError:
+      description: >-
+        VALIDATION_FAILED (400), GOOGLE_INVALID_TOKEN or INVALID_CREDENTIALS (401),
+        GOOGLE_LINK_REQUIRED or GOOGLE_ACCOUNT_CONFLICT (409), GOOGLE_NOT_CONFIGURED (503).
+      content:
+        application/json:
+          schema:
+            $ref: common-v1.yaml#/components/schemas/ApiError
+  schemas:
+    GoogleCredential:
+      type: object
+      required: [credential, nonce]
+      properties:
+        credential: { type: string, minLength: 1, maxLength: 16384, writeOnly: true }
+        nonce: { type: string, minLength: 64, maxLength: 128, writeOnly: true }
+    TokenResponse:
+      type: object
+      required: [userId, accessToken, refreshToken, accessTokenExpiresAt, refreshTokenExpiresAt, roles]
+      properties:
+        userId: { type: string, format: uuid }
+        accessToken: { type: string }
+        refreshToken: { type: string }
+        accessTokenExpiresAt: { type: string, format: date-time }
+        refreshTokenExpiresAt: { type: string, format: date-time }
+        roles:
+          type: array
+          items: { type: string }

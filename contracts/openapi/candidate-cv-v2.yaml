@@ -1,0 +1,155 @@
+openapi: 3.1.0
+info:
+  title: Candidate CV upload and retry contract
+  version: 2.0.0
+paths:
+  /api/v2/cvs:
+    post:
+      summary: Upload an owned CV with optional external AI assistance
+      description: Candidate role required. External assistance is optional and defaults
+        to declined. Granting it requires externalAiPolicyVersion=external-ai/2.0.
+        The choice belongs to this CV version and is retained on a storage retry.
+        Existing versions and legacy requests default to declined. Local parsing and
+        manual review remain available when assistance is declined or unavailable.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: common-v2.yaml#/components/parameters/CorrelationId
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: PDF up to 10 MiB
+                title:
+                  type: string
+                  maxLength: 160
+                externalAiConsent:
+                  type: boolean
+                  default: false
+                externalAiPolicyVersion:
+                  type: string
+                  maxLength: 40
+                  description: external-ai/2.0 is required when consent is true; omit
+                    when false
+      responses:
+        '201':
+          description: CV uploaded and asynchronous processing queued
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/cv-response-v2.schema.json
+        '400':
+          description: Invalid document
+          request or missing/outdated consent notice: null
+        '401':
+          description: Valid bearer token required
+        '403':
+          description: Candidate role required
+  /api/v2/cvs/{cvId}/retry:
+    post:
+      summary: Retry an owned active CV after a transient storage failure
+      description: Reuses the same file and CV version. Only SOURCE_STORAGE_UNAVAILABLE
+        failures are eligible. expectedVersion is activeVersion.version from the latest
+        CV response. Concurrent clicks queue one logical retry; repeat requests while
+        that retry is queued return the queued CV. Permanent file failures require
+        a new upload.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: cvId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^(?:[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$
+          maxLength: 19
+      - $ref: common-v2.yaml#/components/parameters/CorrelationId
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - cvVersionId
+              - expectedVersion
+              properties:
+                cvVersionId:
+                  type: string
+                  pattern: ^(?:[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$
+                  maxLength: 19
+                expectedVersion:
+                  type: integer
+                  minimum: 0
+      responses:
+        '202':
+          description: Retry queued or this request already queued it
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/cv-response-v2.schema.json
+        '400':
+          description: Invalid request fields
+        '401':
+          description: Valid bearer token required
+        '403':
+          description: Candidate role required
+        '404':
+          description: Owned CV not found
+        '409':
+          description: CV_RETRY_CONFLICT - stale or ineligible version/state
+  /api/v2/cvs/{cvId}/file:
+    get:
+      summary: Download the exact active version of an owned CV for review
+      description: Candidate role and ownership required. Deleted, superseded, inactive
+        or mismatched versions return 404 before object storage is accessed. No storage
+        key or presigned URL is exposed. Response is not cacheable.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: cvId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^(?:[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$
+          maxLength: 19
+      - name: cvVersionId
+        in: query
+        required: true
+        schema:
+          type: string
+          pattern: ^(?:[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$
+          maxLength: 19
+      responses:
+        '200':
+          description: Original PDF, Cache-Control no-store
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Invalid identifiers
+        '401':
+          description: Valid bearer token required
+        '403':
+          description: Candidate role required
+        '404':
+          description: Owned active CV version not found
+        '503':
+          description: Source storage temporarily unavailable
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
