@@ -1,0 +1,361 @@
+{
+  "schemaVersion": "portal-seed/2.0",
+  "synthetic": true,
+  "description": "Demo fixtures only; company names are illustrative and job descriptions are synthetic.",
+  "companies": [
+    {
+      "company": {
+        "legalName": "Tổng Công ty Hạ tầng Mạng - Tập đoàn VNPT",
+        "displayName": "TỔNG CÔNG TY HẠ TẦNG MẠNG (VNPT-NET) (Demo)",
+        "slug": "demo-portal-vnpt-net",
+        "description": "[Dữ liệu demo tổng hợp, không phải thông tin tuyển dụng đã xác minh.] Đơn vị chủ lực quản lý, vận hành và khai thác toàn bộ hạ tầng viễn thông, mạng băng thông rộng và điện toán đám mây quốc gia của Tập đoàn Bưu chính Viễn thông Việt Nam.",
+        "websiteUrl": "https://vnpt.com.vn",
+        "countryCode": "VN",
+        "registrationNumber": "DEMO-PORTAL-VNPT-NET",
+        "sizeRange": "1000+"
+      },
+      "jobs": [
+        {
+          "title": "Kỹ sư Lập trình Fullstack (Java / Spring Boot & React)",
+          "description": "Tham gia phân tích, thiết kế chi tiết các chức năng hệ thống viễn thông và dịch vụ số. Xây dựng tài liệu kỹ thuật URD, HLD/LLD. Phối hợp kiểm thử tự động và triển khai microservices lên hạ tầng Cloud nội bộ.",
+          "requirementsText": "Yêu cầu: Tốt nghiệp Đại học CNTT/Toán tin. Ít nhất 2 năm kinh nghiệm thực chiến Java, Spring Boot, React hoặc Next.js. Am hiểu kiến trúc RESTful API, PostgreSQL/Oracle và Docker.",
+          "benefitsText": "Quyền lợi: Thu nhập 400 - 650 triệu/năm. Thưởng dự án, phụ cấp ăn ca 730k/tháng. Đầy đủ BHXH/BHYT theo luật. Gói bảo hiểm sức khỏe VIP, đào tạo chứng chỉ AWS/Oracle quốc tế.",
+          "locationText": "Hà Nội - TP. Hồ Chí Minh",
+          "countryCode": "VN",
+          "workMode": "HYBRID",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "Chuyên viên",
+          "openings": 3,
+          "salaryMin": 25000000,
+          "salaryMax": 45000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "category": {
+            "industryId": "1",
+            "positionName": "Kỹ sư Lập trình Fullstack (Java / Spring Boot & React)"
+          }
+        },
+        {
+          "title": "Chuyên viên Kiến trúc Điện toán Đám mây (Cloud Infrastructure Architect)",
+          "description": "Chủ trì thiết kế kiến trúc hệ thống VNPT Cloud Platform trên nền tảng OpenStack và Kubernetes quy mô hàng chục nghìn node. Tối ưu hiệu năng, bảo mật hạ tầng mạng SDN/NFV cho hạ tầng 5G.",
+          "requirementsText": "Yêu cầu: 5+ năm kinh nghiệm quản trị hạ tầng Cloud quy mô lớn. Nắm vững Kubernetes, Ceph, OpenStack, Linux Kernel, Terraform. Có chứng chỉ CKA/CKS, AWS Solutions Architect Pro là lợi thế lớn.",
+          "benefitsText": "Quyền lợi: Lương thỏa thuận xứng tầm 45 - 75 triệu/tháng. Thưởng kinh doanh cuối năm cực tốt. Cấp Macbook Pro M3 Max. Làm việc cùng các chuyên gia viễn thông đầu ngành.",
+          "locationText": "Hà Nội",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "Kiến trúc sư",
+          "openings": 1,
+          "salaryMin": 45000000,
+          "salaryMax": 75000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "category": {
+            "industryId": "1",
+            "positionName": "Chuyên viên Kiến trúc Điện toán Đám mây (Cloud Infrastructure Architect)"
+          }
+        }
+      ]
+    },
+    {
+      "company": {
+        "legalName": "Công ty TNHH Phần mềm FPT",
+        "displayName": "FPT SOFTWARE (Demo)",
+        "slug": "demo-portal-fpt-software",
+        "description": "[Dữ liệu demo tổng hợp, không phải thông tin tuyển dụng đã xác minh.] Công ty công nghệ và chuyển đổi số toàn cầu hàng đầu Việt Nam, hiện diện tại hơn 30 quốc gia trên thế giới với hơn 30,000 kỹ sư công nghệ.",
+        "websiteUrl": "https://fptsoftware.com",
+        "countryCode": "VN",
+        "registrationNumber": "DEMO-PORTAL-FPT-SOFTWARE",
+        "sizeRange": "1000+"
+      },
+      "jobs": [
+        {
+          "title": "Lead Frontend Engineer (React 19, TypeScript, Next.js)",
+          "description": "Chịu trách nhiệm kiến trúc Frontend và tối ưu hoá Web Core Vitals cho dự án khách hàng Fortune 500. Xây dựng Design System dùng chung, đào tạo và review code cho team 10 lập trình viên.",
+          "requirementsText": "Yêu cầu: 4+ năm kinh nghiệm phát triển Frontend với React, TypeScript, Next.js / Vite. Nắm vững CSS Architecture, Accessibility (a11y), State Management (Zustand/Redux) và Unit test với Vitest/Jest.",
+          "benefitsText": "Quyền lợi: Lương 30 - 52 triệu. Thưởng gia nhập (Sign-on bonus) lên tới 1 tháng lương. Làm việc tại Campus hiện đại FPT Complex. Xe đưa đón hàng ngày, phụ cấp tiếng Anh/tiếng Nhật.",
+          "locationText": "Đà Nẵng - Hà Nội",
+          "countryCode": "VN",
+          "workMode": "HYBRID",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "Trưởng nhóm",
+          "openings": 2,
+          "salaryMin": 30000000,
+          "salaryMax": 52000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "category": {
+            "industryId": "1",
+            "positionName": "Lead Frontend Engineer (React 19, TypeScript, Next.js)"
+          }
+        },
+        {
+          "title": "Senior Embedded C/C++ Developer (Automotive Software)",
+          "description": "Phát triển phần mềm nhúng điều khiển ô tô thông minh (AUTOSAR Classic/Adaptive). Tích hợp các module giao tiếp CAN, LIN, Ethernet và ADAS.",
+          "requirementsText": "Yêu cầu: 3+ năm lập trình C/C++ nhúng. Hiểu biết sâu về kiến trúc vi điều khiển ARM Cortex-M, tiêu chuẩn an toàn chức năng ISO 26262. Đọc hiểu tài liệu tiếng Anh tốt.",
+          "benefitsText": "Quyền lợi: Lương 28 - 48 triệu/tháng. Cơ hội onsite công tác tại Nhật Bản, Đức, Mỹ. Bảo hiểm FPT Care cho bản thân và gia đình.",
+          "locationText": "Hà Nội",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "Senior",
+          "openings": 3,
+          "salaryMin": 28000000,
+          "salaryMax": 48000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "category": {
+            "industryId": "1",
+            "positionName": "Senior Embedded C/C++ Developer (Automotive Software)"
+          }
+        }
+      ]
+    },
+    {
+      "company": {
+        "legalName": "Tổng Công ty Giải pháp Doanh nghiệp Viettel",
+        "displayName": "VIETTEL SOLUTIONS (Demo)",
+        "slug": "demo-portal-viettel-solutions",
+        "description": "[Dữ liệu demo tổng hợp, không phải thông tin tuyển dụng đã xác minh.] Đơn vị tiên phong của Tập đoàn Viettel cung cấp các giải pháp Chuyển đổi số, Trí tuệ nhân tạo, Điện toán đám mây và An toàn an ninh mạng cho chính phủ và doanh nghiệp.",
+        "websiteUrl": "https://viettelsolutions.vn",
+        "countryCode": "VN",
+        "registrationNumber": "DEMO-PORTAL-VIETTEL-SOLUTIONS",
+        "sizeRange": "1000+"
+      },
+      "jobs": [
+        {
+          "title": "Kỹ sư Nghiên cứu Trí tuệ Nhân tạo & LLMs (AI/NLP/Computer Vision)",
+          "description": "Nghiên cứu và phát triển các mô hình ngôn ngữ lớn (LLMs), OCR tiếng Việt và hệ thống trích xuất văn bản tài liệu thông minh. Triển khai mô hình RAG phục vụ trợ lý ảo cho khối hành chính công.",
+          "requirementsText": "Yêu cầu: Thành thạo Python, PyTorch / TensorFlow, Hugging Face, vLLM / Ollama. Có kinh nghiệm fine-tune mô hình mã nguồn mở (Llama, Mistral, Qwen). Có bài báo khoa học là điểm cộng lớn.",
+          "benefitsText": "Quyền lợi: Thu nhập 35 - 65 triệu/tháng. Thưởng nghiên cứu khoa học, tài trợ 100% dự hội thảo quốc tế. Môi trường R&D hiện đại trang bị cụm GPU NVIDIA H100.",
+          "locationText": "Hà Nội - TP. Hồ Chí Minh",
+          "countryCode": "VN",
+          "workMode": "HYBRID",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "Senior",
+          "openings": 2,
+          "salaryMin": 35000000,
+          "salaryMax": 65000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": true,
+          "externalAiConsent": false,
+          "category": {
+            "industryId": "1",
+            "positionName": "Kỹ sư Nghiên cứu Trí tuệ Nhân tạo & LLMs (AI/NLP/Computer Vision)"
+          }
+        },
+        {
+          "title": "Chuyên viên An toàn Thông tin & Tác chiến SOC (Security Engineer)",
+          "description": "Giám sát an ninh mạng 24/7, phân tích nguy cơ đe dọa (Threat Intelligence), điều tra sự cố (Incident Response) và đánh giá an toàn mã nguồn ứng dụng web/API.",
+          "requirementsText": "Yêu cầu: Có kinh nghiệm SOC Analyst hoặc Pentester từ 2 năm. Nắm vững SIEM (Splunk, Elastic), phân tích log mạng, tấn công phòng thủ Web/API. Có chứng chỉ CEH, OSCP, CompTIA Security+.",
+          "benefitsText": "Quyền lợi: Lương 26 - 50 triệu/tháng. Phụ cấp trực ca chu đáo. Môi trường tác chiến an ninh mạng số 1 khu vực Đông Nam Á.",
+          "locationText": "Hà Nội",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "Chuyên viên",
+          "openings": 2,
+          "salaryMin": 26000000,
+          "salaryMax": 50000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "category": {
+            "industryId": "1",
+            "positionName": "Chuyên viên An toàn Thông tin & Tác chiến SOC (Security Engineer)"
+          }
+        }
+      ]
+    },
+    {
+      "company": {
+        "legalName": "Công ty Cổ phần VNG",
+        "displayName": "VNG CORPORATION (Demo)",
+        "slug": "demo-portal-vng-corporation",
+        "description": "[Dữ liệu demo tổng hợp, không phải thông tin tuyển dụng đã xác minh.] Kỳ lân công nghệ đầu tiên của Việt Nam, xây dựng hệ sinh thái sản phẩm công nghệ phục vụ hàng trăm triệu người dùng: Zalo, ZaloPay, Zing, VNGGames và Cloud AI.",
+        "websiteUrl": "https://vng.com.vn",
+        "countryCode": "VN",
+        "registrationNumber": "DEMO-PORTAL-VNG-CORPORATION",
+        "sizeRange": "1000+"
+      },
+      "jobs": [
+        {
+          "title": "Senior Backend Engineer (Golang, High Concurrency, Redis, Kafka)",
+          "description": "Phát triển hệ thống xử lý hàng trăm triệu tin nhắn và giao dịch tức thời cho nền tảng Zalo / ZaloPay. Tối ưu hóa I/O, bộ nhớ đệm phân tán và đảm bảo độ sẵn sàng 99.999%.",
+          "requirementsText": "Yêu cầu: 3+ năm kinh nghiệm vững chắc với Golang hoặc C++. Nắm sâu về goroutines, memory allocation, gRPC, Protobuf, Kafka, Redis Cluster và cơ chế phân tán dữ liệu.",
+          "benefitsText": "Quyền lợi: Thu nhập 40 - 68 triệu/tháng. Thưởng cuối năm 3 - 5 tháng lương theo hiệu quả. Làm việc tại VNG Campus phong cách Silicon Valley, gym, hồ bơi, canteen miễn phí.",
+          "locationText": "TP. Hồ Chí Minh",
+          "countryCode": "VN",
+          "workMode": "HYBRID",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "Senior",
+          "openings": 2,
+          "salaryMin": 40000000,
+          "salaryMax": 68000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "category": {
+            "industryId": "1",
+            "positionName": "Senior Backend Engineer (Golang, High Concurrency, Redis, Kafka)"
+          }
+        }
+      ]
+    },
+    {
+      "company": {
+        "legalName": "Công ty Cổ phần Dịch vụ Di động Trực tuyến (M-Service)",
+        "displayName": "MOMO FINTECH (Demo)",
+        "slug": "demo-portal-momo-fintech",
+        "description": "[Dữ liệu demo tổng hợp, không phải thông tin tuyển dụng đã xác minh.] Siêu ứng dụng tài chính số hàng đầu Việt Nam với hơn 31 triệu người dùng, dẫn đầu công nghệ thanh toán, AI cá nhân hóa và dịch vụ tài chính toàn diện.",
+        "websiteUrl": "https://momo.vn",
+        "countryCode": "VN",
+        "registrationNumber": "DEMO-PORTAL-MOMO-FINTECH",
+        "sizeRange": "501-1000"
+      },
+      "jobs": [
+        {
+          "title": "Site Reliability Engineer / DevOps Lead (Kubernetes, Terraform, AWS)",
+          "description": "Chịu trách nhiệm kiến trúc độ tin cậy và khả năng mở rộng của hệ thống thanh toán MoMo. Xây dựng GitOps pipeline, thiết lập SLO/SLA, tự động hóa phản ứng sự cố và giám sát với Prometheus, Grafana, Datadog.",
+          "requirementsText": "Yêu cầu: 4+ năm kinh nghiệm quản trị hạ tầng Cloud (AWS/GCP), Kubernetes cụm lớn. Thành thạo Terraform, Helm, ArgoCD, Python/Go scripting. Có kinh nghiệm trong lĩnh vực Fintech/Banking.",
+          "benefitsText": "Quyền lợi: Lương 45 - 75 triệu/tháng. Gói cổ phiếu ESOP dành cho nhân sự nòng cốt. Làm việc linh hoạt 2 ngày WFH/tuần, gói bảo hiểm sức khỏe VIP cho cả gia đình.",
+          "locationText": "TP. Hồ Chí Minh",
+          "countryCode": "VN",
+          "workMode": "HYBRID",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "Trưởng nhóm",
+          "openings": 1,
+          "salaryMin": 45000000,
+          "salaryMax": 75000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "category": {
+            "industryId": "1",
+            "positionName": "Site Reliability Engineer / DevOps Lead (Kubernetes, Terraform, AWS)"
+          }
+        }
+      ]
+    },
+    {
+      "company": {
+        "legalName": "Công ty TNHH Shopee Việt Nam",
+        "displayName": "SHOPEE VIETNAM (Demo)",
+        "slug": "demo-portal-shopee-vietnam",
+        "description": "[Dữ liệu demo tổng hợp, không phải thông tin tuyển dụng đã xác minh.] Nền tảng thương mại điện tử số 1 Đông Nam Á, xử lý hàng triệu giao dịch mỗi ngày với nền tảng dữ liệu lớn và thuật toán gợi ý sản phẩm thông minh.",
+        "websiteUrl": "https://shopee.vn",
+        "countryCode": "VN",
+        "registrationNumber": "DEMO-PORTAL-SHOPEE-VIETNAM",
+        "sizeRange": "1000+"
+      },
+      "jobs": [
+        {
+          "title": "Staff Software Engineer - Search & Recommendation Engine",
+          "description": "Thiết kế và triển khai công cụ tìm kiếm và gợi ý cá nhân hóa cho hàng triệu khách hàng Shopee. Xử lý bài toán ranking thời gian thực độ trễ < 50ms.",
+          "requirementsText": "Yêu cầu: 5+ năm phát triển hệ thống phân tán với Go, C++ hoặc Java. Am hiểu thuật toán tìm kiếm, Elasticsearch, Milvus, Vector Database và Machine Learning Serving.",
+          "benefitsText": "Quyền lợi: Lương 50 - 85 triệu/tháng + thưởng doanh số cực khủng. Môi trường công nghệ toàn cầu, làm việc cùng các chuyên gia hàng đầu từ Singapore và Thung lũng Silicon.",
+          "locationText": "TP. Hồ Chí Minh",
+          "countryCode": "VN",
+          "workMode": "HYBRID",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "Kiến trúc sư",
+          "openings": 1,
+          "salaryMin": 50000000,
+          "salaryMax": 85000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "category": {
+            "industryId": "1",
+            "positionName": "Staff Software Engineer - Search & Recommendation Engine"
+          }
+        }
+      ]
+    },
+    {
+      "company": {
+        "legalName": "Ngân hàng TMCP Việt Nam Thịnh Vượng",
+        "displayName": "VPBANK DIGITAL (Demo)",
+        "slug": "demo-portal-vpbank-digital",
+        "description": "[Dữ liệu demo tổng hợp, không phải thông tin tuyển dụng đã xác minh.] Ngân hàng số tiên phong tại Việt Nam ứng dụng ngân hàng mở (Open Banking), Microservices và công nghệ AI phòng chống gian lận thời gian thực.",
+        "websiteUrl": "https://vpbank.com.vn",
+        "countryCode": "VN",
+        "registrationNumber": "DEMO-PORTAL-VPBANK-DIGITAL",
+        "sizeRange": "1000+"
+      },
+      "jobs": [
+        {
+          "title": "Technical Lead Backend (Microservices, Java, Event Sourcing, Kafka)",
+          "description": "Chỉ đạo kiến trúc kỹ thuật cho nền tảng Mobile Banking thế hệ mới. Đảm bảo chuẩn giao dịch PCI-DSS, Event Sourcing với Kafka và độ trễ giao dịch < 100ms.",
+          "requirementsText": "Yêu cầu: 6+ năm lập trình Java/Kotlin backend. Am hiểu sâu sắc về kiến trúc Microservices, Domain-Driven Design (DDD), Distributed Caching và tối ưu cơ sở dữ liệu quan hệ.",
+          "benefitsText": "Quyền lợi: Lương 45 - 75 triệu/tháng + gói thưởng kết quả kinh doanh ngân hàng cuối năm từ 3 - 6 tháng lương. Vay ưu đãi lãi suất cán bộ nhân viên.",
+          "locationText": "Hà Nội",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "Trưởng nhóm",
+          "openings": 2,
+          "salaryMin": 45000000,
+          "salaryMax": 75000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "category": {
+            "industryId": "1",
+            "positionName": "Technical Lead Backend (Microservices, Java, Event Sourcing, Kafka)"
+          }
+        }
+      ]
+    },
+    {
+      "company": {
+        "legalName": "Ngân hàng TMCP Kỹ Thương Việt Nam",
+        "displayName": "TECHCOMBANK (Demo)",
+        "slug": "demo-portal-techcombank-software",
+        "description": "[Dữ liệu demo tổng hợp, không phải thông tin tuyển dụng đã xác minh.] Trung tâm chuyển đổi công nghệ và dữ liệu tài chính với mô hình Agile quy mô lớn (Scale Agile Framework) và nền tảng dữ liệu đám mây AWS.",
+        "websiteUrl": "https://techcombank.com",
+        "countryCode": "VN",
+        "registrationNumber": "DEMO-PORTAL-TECHCOMBANK-SOFTWARE",
+        "sizeRange": "1000+"
+      },
+      "jobs": [
+        {
+          "title": "Senior QA Automation Engineer (Playwright, Cypress, CI/CD)",
+          "description": "Xây dựng framework kiểm thử tự động E2E và API cho hệ thống giao dịch ngân hàng điện tử. Tích hợp test suite tự động vào pipeline GitLab CI / Jenkins.",
+          "requirementsText": "Yêu cầu: 3+ năm kinh nghiệm kiểm thử tự động với Playwright, Selenium hoặc Cypress. Thành thạo TypeScript hoặc Java. Hiểu biết sâu về performance testing với k6/JMeter.",
+          "benefitsText": "Quyền lợi: Lương 25 - 42 triệu/tháng. Gói chăm sóc sức khỏe quốc tế PVI. Cơ hội thăng tiến rõ ràng theo lộ trình kỹ sư kiểm thử chuyên nghiệp.",
+          "locationText": "Hà Nội - Remote",
+          "countryCode": "VN",
+          "workMode": "HYBRID",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "Senior",
+          "openings": 2,
+          "salaryMin": 25000000,
+          "salaryMax": 42000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "category": {
+            "industryId": "1",
+            "positionName": "Senior QA Automation Engineer (Playwright, Cypress, CI/CD)"
+          }
+        }
+      ]
+    }
+  ]
+}
