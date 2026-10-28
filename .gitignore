@@ -5,14 +5,22 @@
 /local-reference/
 /.local/
 /.qa/
-# Only the two root project guides are public; keep all other documents local.
+# Only the two root project guides are public; keep other documents local.
 /docs/
 **/*.md
 !/README.md
 !/ARCHITECTURE.md
 *.partial
 
+# Codex harness stays local.
+/AGENTS.md
+/CODEX.md
+/.agents/PLANS.md
+/.agents/plans/
+/scripts/codex-check.ps1
+
 # Derived build and editor artifacts.
+**/build/
 **/target/
 **/node_modules/
 **/dist/
