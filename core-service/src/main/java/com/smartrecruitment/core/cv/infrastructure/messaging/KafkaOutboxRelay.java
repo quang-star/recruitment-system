@@ -40,8 +40,8 @@ public class KafkaOutboxRelay {
         for (var event : outbox.claimPending(workerId, batchSize)) {
             try {
                 String topic = switch (event.eventType()) {
-                    case "cv.deleted.v1" -> "cv.uploaded.v1";
-                    case "application.cv-access.revoked.v1" -> "application.submitted.v1";
+                    case "cv.deleted.v2" -> "cv.uploaded.v2";
+                    case "application.cv-access.revoked.v2" -> "application.submitted.v2";
                     default -> event.eventType();
                 };
                 kafka.send(new ProducerRecord<>(topic, event.aggregateId().toString(), envelope(event)))

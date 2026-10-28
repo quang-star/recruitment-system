@@ -10,5 +10,12 @@ public record PutCandidateProfileRequest(
         @Size(max = 200) String headline,
         @Size(max = 160) String locationText,
         @NotNull ProfileVisibility visibility,
-        Long version) {
+        Long version,
+        @Size(max = 30) String phoneNumber,
+        @Size(max = 255) String contactEmail,
+        @Size(max = 300) String linkedinUrl,
+        @Size(max = 300) String githubUrl,
+        @Size(max = 300) String portfolioUrl,
+        @Size(max = 500) String avatarUrl,
+        @Size(max = 2000) String bio) {
 }

@@ -10,10 +10,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/dashboard")
+@RequestMapping("/api/v2/dashboard")
 public class DashboardController {
     private final DashboardService dashboard;
 
@@ -21,12 +20,22 @@ public class DashboardController {
 
     @GetMapping
     public DashboardResponse get(@AuthenticationPrincipal Jwt jwt,
-                                 @RequestParam(required = false) UUID companyId) {
+                                 @RequestParam(required = false) Long companyId) {
         List<String> roles = jwt.getClaimAsStringList("roles");
-        var result = dashboard.get(UUID.fromString(jwt.getSubject()), roles == null ? List.of() : roles, companyId);
-        return new DashboardResponse(result.audience(), result.metrics());
+        var result = dashboard.get(com.smartrecruitment.core.shared.api.SubjectId.parse(jwt.getSubject()), roles == null ? List.of() : roles, companyId);
+        return new DashboardResponse(
+                result.audience(),
+                result.metrics(),
+                result.pendingJobId(),
+                result.pendingJobTitle()
+        );
     }
 
-    public record DashboardResponse(String audience, Map<String, Long> metrics) { }
+    public record DashboardResponse(
+            String audience,
+            Map<String, Long> metrics,
+            Long pendingJobId,
+            String pendingJobTitle
+    ) { }
 }
 

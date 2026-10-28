@@ -1,9 +1,8 @@
 package com.smartrecruitment.core.application.domain;
 
 import java.util.Objects;
-import java.util.UUID;
 
-public record ApplicationCvSnapshot(UUID cvVersionId, String objectBucket, String objectKey,
+public record ApplicationCvSnapshot(Long cvVersionId, String objectBucket, String objectKey,
                                     String originalFilename, long sizeBytes) {
     public ApplicationCvSnapshot {
         Objects.requireNonNull(cvVersionId, "cvVersionId");

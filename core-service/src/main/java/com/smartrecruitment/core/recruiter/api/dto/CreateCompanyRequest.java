@@ -13,5 +13,12 @@ public record CreateCompanyRequest(
         @NotBlank @Pattern(regexp = "^[A-Z]{2}$") String countryCode,
         @Size(max = 80) String registrationNumber,
         @Size(max = 30) String sizeRange,
+        @Size(max = 1000) String logoUrl,
+        @Size(max = 1000) String coverImageUrl,
         Long version) {
+    public CreateCompanyRequest(String legalName, String displayName, String slug, String description,
+                                String websiteUrl, String countryCode, String registrationNumber, String sizeRange,
+                                Long version) {
+        this(legalName, displayName, slug, description, websiteUrl, countryCode, registrationNumber, sizeRange, null, null, version);
+    }
 }

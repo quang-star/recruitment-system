@@ -13,13 +13,12 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 
 import java.util.Optional;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class CvRetryServiceTests {
-    private final UUID owner = UUID.randomUUID(), cvId = UUID.randomUUID(), versionId = UUID.randomUUID();
+    private final Long owner = com.smartrecruitment.core.support.TestIds.next(), cvId = com.smartrecruitment.core.support.TestIds.next(), versionId = com.smartrecruitment.core.support.TestIds.next();
     private final CandidateCvRepository cvs = mock(CandidateCvRepository.class);
     private final ObjectStorage storage = mock(ObjectStorage.class);
     private final OutboxEventRepository outbox = mock(OutboxEventRepository.class);
@@ -35,9 +34,9 @@ class CvRetryServiceTests {
     void queuesOwnedTransientFailureUsingSameFileAndNewGeneration() {
         var failed = cv(CvProcessingStatus.FAILED, "SOURCE_STORAGE_UNAVAILABLE", 4, 0);
         var queued = cv(CvProcessingStatus.QUEUED, null, 5, 5);
-        when(cvs.findByPublicId(owner, cvId)).thenReturn(Optional.of(failed));
+        when(cvs.findById(owner, cvId)).thenReturn(Optional.of(failed));
         when(cvs.queueRetry(owner, cvId, versionId, 4)).thenReturn(Optional.of(queued));
-        assertThat(service.retry(owner, cvId, versionId, 4, UUID.randomUUID())).isEqualTo(queued);
+        assertThat(service.retry(owner, cvId, versionId, 4, java.util.UUID.randomUUID())).isEqualTo(queued);
         var event = ArgumentCaptor.forClass(CvUploadedEvent.class);
         verify(outbox).append(event.capture());
         assertThat(event.getValue().processingGeneration()).isEqualTo(5);
@@ -50,8 +49,8 @@ class CvRetryServiceTests {
     @Test
     void repeatedClickReturnsAlreadyQueuedRetryWithoutAnotherEvent() {
         var queued = cv(CvProcessingStatus.QUEUED, null, 5, 5);
-        when(cvs.findByPublicId(owner, cvId)).thenReturn(Optional.of(queued));
-        assertThat(service.retry(owner, cvId, versionId, 4, UUID.randomUUID())).isEqualTo(queued);
+        when(cvs.findById(owner, cvId)).thenReturn(Optional.of(queued));
+        assertThat(service.retry(owner, cvId, versionId, 4, java.util.UUID.randomUUID())).isEqualTo(queued);
         verifyNoInteractions(outbox, storage);
         verify(cvs, never()).queueRetry(any(), any(), any(), anyLong());
     }
@@ -60,9 +59,9 @@ class CvRetryServiceTests {
     void concurrentClickReturnsWinningQueuedRetryWithoutDuplicateOutbox() {
         var failed = cv(CvProcessingStatus.FAILED, "SOURCE_STORAGE_UNAVAILABLE", 4, 0);
         var queued = cv(CvProcessingStatus.QUEUED, null, 5, 5);
-        when(cvs.findByPublicId(owner, cvId)).thenReturn(Optional.of(failed), Optional.of(queued));
+        when(cvs.findById(owner, cvId)).thenReturn(Optional.of(failed), Optional.of(queued));
         when(cvs.queueRetry(owner, cvId, versionId, 4)).thenReturn(Optional.empty());
-        assertThat(service.retry(owner, cvId, versionId, 4, UUID.randomUUID())).isEqualTo(queued);
+        assertThat(service.retry(owner, cvId, versionId, 4, java.util.UUID.randomUUID())).isEqualTo(queued);
         verifyNoInteractions(outbox, storage);
     }
 
@@ -70,8 +69,8 @@ class CvRetryServiceTests {
     @ValueSource(strings = {"CV_PDF_PARSE_FAILED", "SOURCE_OBJECT_NOT_FOUND", "CV_SOURCE_HASH_MISMATCH",
             "SOURCE_STORAGE_ACCESS_DENIED", "SOURCE_STORAGE_READ_FAILED", "SOURCE_OBJECT_REF_INVALID"})
     void rejectsPermanentFailuresWithoutEnqueue(String code) {
-        when(cvs.findByPublicId(owner, cvId)).thenReturn(Optional.of(cv(CvProcessingStatus.FAILED, code, 4, 0)));
-        assertThatThrownBy(() -> service.retry(owner, cvId, versionId, 4, UUID.randomUUID()))
+        when(cvs.findById(owner, cvId)).thenReturn(Optional.of(cv(CvProcessingStatus.FAILED, code, 4, 0)));
+        assertThatThrownBy(() -> service.retry(owner, cvId, versionId, 4, java.util.UUID.randomUUID()))
                 .isInstanceOf(CvRetryConflictException.class);
         verifyNoInteractions(outbox, storage);
         verify(cvs, never()).queueRetry(any(), any(), any(), anyLong());
@@ -79,21 +78,21 @@ class CvRetryServiceTests {
 
     @Test
     void rejectsStaleSnapshotAndDifferentCvVersion() {
-        when(cvs.findByPublicId(owner, cvId)).thenReturn(Optional.of(
+        when(cvs.findById(owner, cvId)).thenReturn(Optional.of(
                 cv(CvProcessingStatus.FAILED, "SOURCE_STORAGE_UNAVAILABLE", 4, 0)));
-        assertThatThrownBy(() -> service.retry(owner, cvId, versionId, 3, UUID.randomUUID()))
+        assertThatThrownBy(() -> service.retry(owner, cvId, versionId, 3, java.util.UUID.randomUUID()))
                 .isInstanceOf(CvRetryConflictException.class);
-        assertThatThrownBy(() -> service.retry(owner, cvId, UUID.randomUUID(), 4, UUID.randomUUID()))
+        assertThatThrownBy(() -> service.retry(owner, cvId, com.smartrecruitment.core.support.TestIds.next(), 4, java.util.UUID.randomUUID()))
                 .isInstanceOf(CvRetryConflictException.class);
         verifyNoInteractions(outbox, storage);
     }
 
     @Test
     void cannotRetryCompletedOrProcessingCv() {
-        when(cvs.findByPublicId(owner, cvId)).thenReturn(Optional.of(cv(CvProcessingStatus.PARSED, null, 4, 0)),
+        when(cvs.findById(owner, cvId)).thenReturn(Optional.of(cv(CvProcessingStatus.PARSED, null, 4, 0)),
                 Optional.of(cv(CvProcessingStatus.PROCESSING, null, 4, 0)));
         for (int i = 0; i < 2; i++) {
-            assertThatThrownBy(() -> service.retry(owner, cvId, versionId, 4, UUID.randomUUID()))
+            assertThatThrownBy(() -> service.retry(owner, cvId, versionId, 4, java.util.UUID.randomUUID()))
                     .isInstanceOf(CvRetryConflictException.class);
         }
         verifyNoInteractions(outbox, storage);
@@ -101,9 +100,9 @@ class CvRetryServiceTests {
 
     @Test
     void otherOwnerGetsNotFoundWithoutAnyWork() {
-        var other = UUID.randomUUID();
-        when(cvs.findByPublicId(other, cvId)).thenReturn(Optional.empty());
-        assertThatThrownBy(() -> service.retry(other, cvId, versionId, 4, UUID.randomUUID()))
+        var other = com.smartrecruitment.core.support.TestIds.next();
+        when(cvs.findById(other, cvId)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.retry(other, cvId, versionId, 4, java.util.UUID.randomUUID()))
                 .isInstanceOf(CandidateCvNotFoundException.class);
         verifyNoInteractions(outbox, storage);
     }

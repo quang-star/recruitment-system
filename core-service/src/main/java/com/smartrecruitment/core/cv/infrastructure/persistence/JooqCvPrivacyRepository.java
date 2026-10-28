@@ -9,7 +9,6 @@ import org.springframework.stereotype.Repository;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.ApplicationCvAccessGrants.APPLICATION_CV_ACCESS_GRANTS;
 import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.ApplicationMatchingProjections.APPLICATION_MATCHING_PROJECTIONS;
@@ -28,26 +27,26 @@ public class JooqCvPrivacyRepository implements CvPrivacyRepository {
     }
 
     @Override
-    public Optional<DeletionState> lockOwned(UUID candidateUserId, UUID cvId) {
+    public Optional<DeletionState> lockOwned(Long candidateUserId, Long cvId) {
         return dsl.selectFrom(CVS)
-                .where(CVS.PUBLIC_ID.eq(cvId))
+                .where(CVS.ID.eq(cvId))
                 .and(CVS.CANDIDATE_USER_ID.eq(candidateUserId))
                 .forUpdate()
                 .fetchOptional(record -> new DeletionState(CvStatus.valueOf(record.getStatus()), record.getVersion()));
     }
 
     @Override
-    public List<UUID> eraseLocked(UUID cvId, OffsetDateTime erasedAt) {
+    public List<Long> eraseLocked(Long cvId, OffsetDateTime erasedAt) {
         long internalCvId = dsl.select(CVS.ID).from(CVS)
-                .where(CVS.PUBLIC_ID.eq(cvId)).fetchOptional(CVS.ID)
+                .where(CVS.ID.eq(cvId)).fetchOptional(CVS.ID)
                 .orElseThrow(() -> new IllegalStateException("CV must exist before erasure"));
         var versions = dsl.selectFrom(CV_VERSIONS)
                 .where(CV_VERSIONS.CV_ID.eq(internalCvId)).forUpdate().fetch();
 
         // Late matching messages take the same application locks before writing results.
-        var applicationIds = dsl.select(APPLICATIONS.PUBLIC_ID).from(APPLICATIONS)
+        var applicationIds = dsl.select(APPLICATIONS.ID).from(APPLICATIONS)
                 .where(APPLICATIONS.CV_ID.eq(internalCvId))
-                .orderBy(APPLICATIONS.ID).forUpdate().fetch(APPLICATIONS.PUBLIC_ID);
+                .orderBy(APPLICATIONS.ID).forUpdate().fetch(APPLICATIONS.ID);
         var internalApplicationIds = dsl.select(APPLICATIONS.ID).from(APPLICATIONS)
                 .where(APPLICATIONS.CV_ID.eq(internalCvId));
         dsl.update(APPLICATION_CV_ACCESS_GRANTS)
@@ -72,14 +71,14 @@ public class JooqCvPrivacyRepository implements CvPrivacyRepository {
 
         for (var version : versions) {
             dsl.insertInto(CV_ERASURE_QUEUE)
-                    .set(CV_ERASURE_QUEUE.CV_VERSION_ID, version.getPublicId())
+                    .set(CV_ERASURE_QUEUE.CV_VERSION_ID, version.getId())
                     .set(CV_ERASURE_QUEUE.OBJECT_KEY, version.getObjectKey())
                     .onConflictDoNothing().execute();
         }
         // Database and application clocks can differ; erasure must never move time backwards.
         dsl.update(CV_VERSIONS).set(CV_VERSIONS.PROCESSING_STATUS, "DELETED")
                 .set(CV_VERSIONS.ORIGINAL_FILENAME, "deleted.pdf")
-                .set(CV_VERSIONS.OBJECT_KEY, DSL.concat(DSL.val("deleted/"), CV_VERSIONS.PUBLIC_ID.cast(String.class)))
+                .set(CV_VERSIONS.OBJECT_KEY, DSL.concat(DSL.val("deleted/"), CV_VERSIONS.ID.cast(String.class)))
                 .set(CV_VERSIONS.SHA256, "0".repeat(64)).set(CV_VERSIONS.SIZE_BYTES, 1L)
                 .set(CV_VERSIONS.LANGUAGE_HINT, (String) null).set(CV_VERSIONS.FAILURE_CODE, (String) null)
                 .set(CV_VERSIONS.CONFIRMED_AT, (OffsetDateTime) null)
@@ -94,6 +93,6 @@ public class JooqCvPrivacyRepository implements CvPrivacyRepository {
                 .set(CVS.DELETED_AT, cvErasedAt).set(CVS.UPDATED_AT, cvErasedAt)
                 .set(CVS.VERSION, CVS.VERSION.plus(1L))
                 .where(CVS.ID.eq(internalCvId)).execute();
-        return versions.map(version -> version.getPublicId());
+        return versions.map(version -> version.getId());
     }
 }

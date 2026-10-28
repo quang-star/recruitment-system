@@ -9,7 +9,6 @@ import com.smartrecruitment.core.cv.application.port.ObjectStorage;
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
-import java.util.UUID;
 import java.util.List;
 import java.io.InputStream;
 import java.io.ByteArrayInputStream;
@@ -20,9 +19,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class ApplicationCvAccessServiceTests {
     @Test
     void createsShortLivedDownloadForAuthorizedSnapshot() {
-        UUID recruiterId = UUID.randomUUID();
-        UUID applicationId = UUID.randomUUID();
-        UUID cvVersionId = UUID.randomUUID();
+        Long recruiterId = com.smartrecruitment.core.support.TestIds.next();
+        Long applicationId = com.smartrecruitment.core.support.TestIds.next();
+        Long cvVersionId = com.smartrecruitment.core.support.TestIds.next();
         ApplicationRepository applications = new FakeApplications(Optional.of(
                 new ApplicationCvSnapshot(cvVersionId, "private-cv", "candidate/version.pdf", "backend-cv.pdf", 8)));
         RecordingStorage storage = new RecordingStorage();
@@ -40,8 +39,8 @@ class ApplicationCvAccessServiceTests {
     void hidesSnapshotWhenRecruiterHasNoActiveGrant() {
         ApplicationRepository applications = new FakeApplications(Optional.empty());
         ObjectStorage storage = new RecordingStorage();
-        UUID recruiterId = UUID.randomUUID();
-        UUID applicationId = UUID.randomUUID();
+        Long recruiterId = com.smartrecruitment.core.support.TestIds.next();
+        Long applicationId = com.smartrecruitment.core.support.TestIds.next();
         assertThatThrownBy(() -> new ApplicationCvAccessService(applications, storage)
                 .download(recruiterId, applicationId))
                 .isInstanceOf(ApplicationNotFoundException.class);
@@ -58,29 +57,38 @@ class ApplicationCvAccessServiceTests {
     }
 
     private static final class FakeApplications implements ApplicationRepository {
+        public com.smartrecruitment.core.shared.application.PageResult<Application> searchForCandidate(Long userId,
+                com.smartrecruitment.core.application.application.ApplicationSearch search) {
+            throw new UnsupportedOperationException("Paging is covered by repository integration tests");
+        }
+        public com.smartrecruitment.core.shared.application.PageResult<Application> searchForRecruiter(Long userId, Long jobId,
+                com.smartrecruitment.core.application.application.ApplicationSearch search) {
+            throw new UnsupportedOperationException("Paging is covered by repository integration tests");
+        }
+
         private final Optional<ApplicationCvSnapshot> snapshot;
         private FakeApplications(Optional<ApplicationCvSnapshot> snapshot) { this.snapshot = snapshot; }
-        @Override public Application insert(UUID candidateUserId, UUID jobId, UUID cvId) {
+        @Override public Application insert(Long candidateUserId, Long jobId, Long cvId) {
             throw new UnsupportedOperationException();
         }
-        @Override public List<Application> findAllForCandidate(UUID candidateUserId) { return List.of(); }
-        @Override public Optional<Application> findForCandidate(UUID candidateUserId, UUID applicationId) {
+        @Override public List<Application> findAllForCandidate(Long candidateUserId) { return List.of(); }
+        @Override public Optional<Application> findForCandidate(Long candidateUserId, Long applicationId) {
             return Optional.empty();
         }
-        @Override public List<Application> findAllForRecruiter(UUID recruiterUserId, UUID jobId) { return List.of(); }
-        @Override public Optional<Application> findForRecruiter(UUID recruiterUserId, UUID applicationId) {
+        @Override public List<Application> findAllForRecruiter(Long recruiterUserId, Long jobId) { return List.of(); }
+        @Override public Optional<Application> findForRecruiter(Long recruiterUserId, Long applicationId) {
             return Optional.empty();
         }
-        @Override public Optional<Application> updateStatus(UUID recruiterUserId, UUID applicationId,
+        @Override public Optional<Application> updateStatus(Long recruiterUserId, Long applicationId,
                                                            ApplicationStatus status, String reason,
                                                            long expectedVersion) { return Optional.empty(); }
-        @Override public Optional<Application> withdraw(UUID candidateUserId, UUID applicationId, String reason,
+        @Override public Optional<Application> withdraw(Long candidateUserId, Long applicationId, String reason,
                                                        long expectedVersion) { return Optional.empty(); }
-        @Override public List<ApplicationStatusChange> findHistoryForViewer(UUID viewerUserId, UUID applicationId) {
+        @Override public List<ApplicationStatusChange> findHistoryForViewer(Long viewerUserId, Long applicationId) {
             return List.of();
         }
-        @Override public Optional<ApplicationCvSnapshot> findCvSnapshotForRecruiter(UUID recruiterUserId,
-                                                                                   UUID applicationId) {
+        @Override public Optional<ApplicationCvSnapshot> findCvSnapshotForRecruiter(Long recruiterUserId,
+                                                                                   Long applicationId) {
             return snapshot;
         }
     }

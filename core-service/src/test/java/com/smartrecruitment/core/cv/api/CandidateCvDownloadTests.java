@@ -12,7 +12,6 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -21,9 +20,9 @@ class CandidateCvDownloadTests {
     @Test
     void streamsTheOwnedVersionWithoutCachingAndClosesTheSource() throws IOException {
         var service = mock(CvService.class);
-        var owner = UUID.randomUUID();
-        var cv = UUID.randomUUID();
-        var version = UUID.randomUUID();
+        var owner = com.smartrecruitment.core.support.TestIds.next();
+        var cv = com.smartrecruitment.core.support.TestIds.next();
+        var version = com.smartrecruitment.core.support.TestIds.next();
         var bytes = "%PDF-1.4 synthetic".getBytes(StandardCharsets.UTF_8);
         var source = spy(new ByteArrayInputStream(bytes));
         when(service.downloadMine(owner, cv, version)).thenReturn(new CvService.CvDownload("CV mẫu.pdf", bytes.length, source));
@@ -47,8 +46,8 @@ class CandidateCvDownloadTests {
         var service = mock(CvService.class);
         var source = spy(new ByteArrayInputStream(new byte[]{1, 2, 3}));
         when(service.downloadMine(any(), any(), any())).thenReturn(new CvService.CvDownload("cv.pdf", 3, source));
-        var jwt = Jwt.withTokenValue("synthetic").header("alg", "none").subject(UUID.randomUUID().toString()).build();
-        var response = new CandidateCvController(service).file(jwt, UUID.randomUUID(), UUID.randomUUID());
+        var jwt = Jwt.withTokenValue("synthetic").header("alg", "none").subject(com.smartrecruitment.core.support.TestIds.next().toString()).build();
+        var response = new CandidateCvController(service).file(jwt, com.smartrecruitment.core.support.TestIds.next(), com.smartrecruitment.core.support.TestIds.next());
         var output = new MockHttpOutputMessage() {
             @Override public OutputStream getBody() {
                 return new OutputStream() {

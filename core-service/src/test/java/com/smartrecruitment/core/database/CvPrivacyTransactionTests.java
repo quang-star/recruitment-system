@@ -29,7 +29,6 @@ import tools.jackson.databind.ObjectMapper;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -68,10 +67,10 @@ class CvPrivacyTransactionTests {
     @Test
     void secondOutboxFailureRollsBackAllVersionsAndFirstEventThenReplayCommitsOnce() {
         var cv = cvWithTwoVersions();
-        var originalCv = dsl.selectFrom(CVS).where(CVS.PUBLIC_ID.eq(cv.publicId())).fetchOne();
+        var originalCv = dsl.selectFrom(CVS).where(CVS.ID.eq(cv.id())).fetchOne();
         var originalVersions = dsl.selectFrom(CV_VERSIONS).where(CV_VERSIONS.CV_ID.eq(originalCv.getId()))
                 .orderBy(CV_VERSIONS.VERSION_NUMBER).fetch();
-        var versionIds = originalVersions.map(version -> version.getPublicId());
+        var versionIds = originalVersions.map(version -> version.getId());
         var outbox = spy(new JooqOutboxEventRepository(dsl, new ObjectMapper()));
         var writes = new AtomicInteger();
         doAnswer(invocation -> {
@@ -83,29 +82,29 @@ class CvPrivacyTransactionTests {
         }).when(outbox).append(any(PrivacyEvent.class));
         var privacy = transactional(new CvPrivacyService(new JooqCvPrivacyRepository(dsl), outbox));
 
-        assertThatThrownBy(() -> privacy.delete(cv.candidateUserId(), cv.publicId(), cv.version()))
+        assertThatThrownBy(() -> privacy.delete(cv.candidateUserId(), cv.id(), cv.version()))
                 .isInstanceOf(IllegalStateException.class).hasMessage("Synthetic second outbox failure");
 
-        assertThat(dsl.selectFrom(CVS).where(CVS.PUBLIC_ID.eq(cv.publicId())).fetchOne().intoMap())
+        assertThat(dsl.selectFrom(CVS).where(CVS.ID.eq(cv.id())).fetchOne().intoMap())
                 .isEqualTo(originalCv.intoMap());
         assertThat(dsl.selectFrom(CV_VERSIONS).where(CV_VERSIONS.CV_ID.eq(originalCv.getId()))
                 .orderBy(CV_VERSIONS.VERSION_NUMBER).fetch().intoMaps()).isEqualTo(originalVersions.intoMaps());
         assertThat(dsl.fetchCount(CV_ERASURE_QUEUE, CV_ERASURE_QUEUE.CV_VERSION_ID.in(versionIds))).isZero();
         assertThat(dsl.fetchCount(OUTBOX_EVENTS, OUTBOX_EVENTS.AGGREGATE_ID.in(versionIds))).isZero();
 
-        privacy.delete(cv.candidateUserId(), cv.publicId(), cv.version());
-        privacy.delete(cv.candidateUserId(), cv.publicId(), cv.version());
+        privacy.delete(cv.candidateUserId(), cv.id(), cv.version());
+        privacy.delete(cv.candidateUserId(), cv.id(), cv.version());
 
-        var deletedCv = dsl.selectFrom(CVS).where(CVS.PUBLIC_ID.eq(cv.publicId())).fetchOne();
+        var deletedCv = dsl.selectFrom(CVS).where(CVS.ID.eq(cv.id())).fetchOne();
         assertThat(deletedCv.getStatus()).isEqualTo("DELETED");
         assertThat(deletedCv.getTitle()).isEqualTo("CV đã xóa");
         assertThat(deletedCv.getDeletedAt()).isNotNull();
         assertThat(deletedCv.getVersion()).isEqualTo(cv.version() + 1);
-        var deletedVersions = dsl.selectFrom(CV_VERSIONS).where(CV_VERSIONS.PUBLIC_ID.in(versionIds)).fetch();
+        var deletedVersions = dsl.selectFrom(CV_VERSIONS).where(CV_VERSIONS.ID.in(versionIds)).fetch();
         assertThat(deletedVersions).hasSize(2);
         for (var version : deletedVersions) {
             assertThat(version.getProcessingStatus()).isEqualTo("DELETED");
-            assertThat(version.getObjectKey()).isEqualTo("deleted/" + version.getPublicId());
+            assertThat(version.getObjectKey()).isEqualTo("deleted/" + version.getId());
             assertThat(version.getOriginalFilename()).isEqualTo("deleted.pdf");
             assertThat(version.getSha256()).isEqualTo("0".repeat(64));
             assertThat(version.getSizeBytes()).isEqualTo(1L);
@@ -123,7 +122,7 @@ class CvPrivacyTransactionTests {
         var events = dsl.selectFrom(OUTBOX_EVENTS).where(OUTBOX_EVENTS.AGGREGATE_ID.in(versionIds)).fetch();
         assertThat(events).hasSize(2);
         assertThat(events.map(event -> event.getIdempotencyKey())).doesNotHaveDuplicates();
-        assertThat(events).allMatch(event -> "cv.deleted.v1".equals(event.getEventType()));
+        assertThat(events).allMatch(event -> "cv.deleted.v2".equals(event.getEventType()));
         verify(outbox, times(4)).append(any(PrivacyEvent.class));
 
         // Complete this fixture's queue so other erasure tests only see their own pending entries.
@@ -135,7 +134,7 @@ class CvPrivacyTransactionTests {
     void deletionHandlesDatabaseTimestampsAheadOfJvmWithoutBreakingMonotonicUpdates() {
         var cv = cvWithTwoVersions();
         var future = OffsetDateTime.now(ZoneOffset.UTC).plusMinutes(5).truncatedTo(ChronoUnit.MICROS);
-        var cvRowId = dsl.select(CVS.ID).from(CVS).where(CVS.PUBLIC_ID.eq(cv.publicId())).fetchOne(CVS.ID);
+        var cvRowId = dsl.select(CVS.ID).from(CVS).where(CVS.ID.eq(cv.id())).fetchOne(CVS.ID);
         dsl.update(CVS).set(CVS.CREATED_AT, future).set(CVS.UPDATED_AT, future)
                 .where(CVS.ID.eq(cvRowId)).execute();
         dsl.update(CV_VERSIONS).set(CV_VERSIONS.CREATED_AT, future).set(CV_VERSIONS.UPDATED_AT, future)
@@ -143,7 +142,7 @@ class CvPrivacyTransactionTests {
         var privacy = transactional(new CvPrivacyService(new JooqCvPrivacyRepository(dsl),
                 new JooqOutboxEventRepository(dsl, new ObjectMapper())));
 
-        privacy.delete(cv.candidateUserId(), cv.publicId(), cv.version());
+        privacy.delete(cv.candidateUserId(), cv.id(), cv.version());
 
         var deletedCv = dsl.selectFrom(CVS).where(CVS.ID.eq(cvRowId)).fetchOne();
         assertThat(deletedCv.getStatus()).isEqualTo("DELETED");
@@ -155,10 +154,10 @@ class CvPrivacyTransactionTests {
             assertThat(version.getProcessingStatus()).isEqualTo("DELETED");
             assertThat(version.getCreatedAt()).isEqualTo(future);
             assertThat(version.getUpdatedAt()).isAfterOrEqualTo(future);
-            assertThat(version.getObjectKey()).isEqualTo("deleted/" + version.getPublicId());
+            assertThat(version.getObjectKey()).isEqualTo("deleted/" + version.getId());
             assertThat(version.getSha256()).isEqualTo("0".repeat(64));
         }
-        var versionIds = versions.map(version -> version.getPublicId());
+        var versionIds = versions.map(version -> version.getId());
         assertThat(dsl.fetchCount(CV_ERASURE_QUEUE, CV_ERASURE_QUEUE.CV_VERSION_ID.in(versionIds))).isEqualTo(2);
         assertThat(dsl.fetchCount(OUTBOX_EVENTS, OUTBOX_EVENTS.AGGREGATE_ID.in(versionIds))).isEqualTo(2);
 
@@ -168,7 +167,7 @@ class CvPrivacyTransactionTests {
 
     @Test
     void competingTransactionSkipsClaimedRowUntilCompletionCommitsAndScrubsKey() {
-        var versionId = UUID.randomUUID();
+        var versionId = com.smartrecruitment.core.support.TestIds.next();
         var now = OffsetDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS);
         dsl.insertInto(CV_ERASURE_QUEUE).set(CV_ERASURE_QUEUE.CV_VERSION_ID, versionId)
                 .set(CV_ERASURE_QUEUE.OBJECT_KEY, "synthetic/locked-cv.pdf")
@@ -196,15 +195,15 @@ class CvPrivacyTransactionTests {
     }
 
     private CandidateCv cvWithTwoVersions() {
-        var owner = UUID.randomUUID();
+        var owner = com.smartrecruitment.core.support.TestIds.next();
         var consent = ExternalAiConsent.fromChoice(true, ExternalAiConsent.POLICY_VERSION);
         var cv = new JooqCandidateCvRepository(dsl).insert(CandidateCv.uploaded(owner, "Synthetic private CV",
-                CvVersion.uploaded(UUID.randomUUID(), "fixture", UUID.randomUUID() + ".pdf", "first.pdf",
+                CvVersion.uploaded(com.smartrecruitment.core.support.TestIds.next(), "fixture", com.smartrecruitment.core.support.TestIds.next() + ".pdf", "first.pdf",
                         100, "a".repeat(64), owner, consent)));
-        var cvRowId = dsl.select(CVS.ID).from(CVS).where(CVS.PUBLIC_ID.eq(cv.publicId())).fetchOne(CVS.ID);
-        dsl.insertInto(CV_VERSIONS).set(CV_VERSIONS.PUBLIC_ID, UUID.randomUUID()).set(CV_VERSIONS.CV_ID, cvRowId)
+        var cvRowId = dsl.select(CVS.ID).from(CVS).where(CVS.ID.eq(cv.id())).fetchOne(CVS.ID);
+        dsl.insertInto(CV_VERSIONS).set(CV_VERSIONS.CV_ID, cvRowId)
                 .set(CV_VERSIONS.VERSION_NUMBER, 2).set(CV_VERSIONS.OBJECT_BUCKET, "fixture")
-                .set(CV_VERSIONS.OBJECT_KEY, UUID.randomUUID() + ".pdf").set(CV_VERSIONS.ORIGINAL_FILENAME, "second.pdf")
+                .set(CV_VERSIONS.OBJECT_KEY, com.smartrecruitment.core.support.TestIds.next() + ".pdf").set(CV_VERSIONS.ORIGINAL_FILENAME, "second.pdf")
                 .set(CV_VERSIONS.MIME_TYPE, "application/pdf").set(CV_VERSIONS.SIZE_BYTES, 200L)
                 .set(CV_VERSIONS.SHA256, "b".repeat(64)).set(CV_VERSIONS.PROCESSING_STATUS, "UPLOADED")
                 .set(CV_VERSIONS.CREATED_BY_USER_ID, owner).set(CV_VERSIONS.EXTERNAL_AI_CONSENT, true)

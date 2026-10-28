@@ -2,11 +2,10 @@ package com.smartrecruitment.core.job.domain;
 
 import com.smartrecruitment.core.catalog.domain.CategoryEntry;
 import java.util.Objects;
-import java.util.UUID;
 
 /** Labels/domain belong to this JD version, independently of subsequent catalog decisions. */
-public record JobCategorySnapshot(UUID industryId, String industryName, UUID specializationId,
-                                  String specializationName, UUID positionId, String positionName,
+public record JobCategorySnapshot(Long industryId, String industryName, Long specializationId,
+                                  String specializationName, Long positionId, String positionName,
                                   MatchingDomain matchingDomain) {
     public enum MatchingDomain { IT, OUTSIDE_IT }
     public JobCategorySnapshot {

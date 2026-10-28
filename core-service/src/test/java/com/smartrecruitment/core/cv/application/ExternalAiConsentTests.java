@@ -11,7 +11,6 @@ import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.mock.web.MockMultipartFile;
 
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -33,7 +32,7 @@ class ExternalAiConsentTests {
         var outbox = mock(OutboxEventRepository.class);
         var service = new CvService(repository, mock(ObjectStorage.class), outbox, "private");
         var consent = ExternalAiConsent.fromChoice(true, ExternalAiConsent.POLICY_VERSION);
-        var created = service.upload(UUID.randomUUID(), "Synthetic CV", pdf(), UUID.randomUUID(), consent);
+        var created = service.upload(com.smartrecruitment.core.support.TestIds.next(), "Synthetic CV", pdf(), java.util.UUID.randomUUID(), consent);
         assertThat(created.activeVersion().externalAiConsent()).isEqualTo(consent);
         verify(repository).insert(argThat(cv -> cv.activeVersion().externalAiConsent().equals(consent)));
         verify(outbox).append(argThat((CvUploadedEvent event) -> event.externalAiConsent().equals(consent)));
@@ -44,7 +43,7 @@ class ExternalAiConsentTests {
         var repository = mock(CandidateCvRepository.class);
         when(repository.insert(any())).thenAnswer(call -> call.getArgument(0));
         CandidateCv created = new CvService(repository, mock(ObjectStorage.class))
-                .upload(UUID.randomUUID(), "Synthetic CV", pdf());
+                .upload(com.smartrecruitment.core.support.TestIds.next(), "Synthetic CV", pdf());
         assertThat(created.activeVersion().externalAiConsent().granted()).isFalse();
         assertThat(created.activeVersion().externalAiConsent().policyVersion()).isNull();
     }

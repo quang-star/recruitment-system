@@ -4,13 +4,12 @@ import com.smartrecruitment.core.cv.domain.CandidateCv;
 import com.smartrecruitment.core.cv.domain.CvProcessingStatus;
 import com.smartrecruitment.core.cv.domain.CvStatus;
 
-import java.util.UUID;
 
-public record CandidateCvResponse(UUID cvId, UUID candidateUserId, String title, CvStatus status,
+public record CandidateCvResponse(Long cvId, Long candidateUserId, String title, CvStatus status,
                                   CvVersionResponse activeVersion, long version) {
     public static CandidateCvResponse from(CandidateCv cv) {
-        return new CandidateCvResponse(cv.publicId(), cv.candidateUserId(), cv.title(), cv.status(),
-                new CvVersionResponse(cv.activeVersion().publicId(), cv.activeVersion().versionNumber(),
+        return new CandidateCvResponse(cv.id(), cv.candidateUserId(), cv.title(), cv.status(),
+                new CvVersionResponse(cv.activeVersion().id(), cv.activeVersion().versionNumber(),
                         cv.activeVersion().originalFilename(), cv.activeVersion().mimeType(),
                         cv.activeVersion().sizeBytes(), cv.activeVersion().sha256(),
                         cv.activeVersion().processingStatus(), cv.activeVersion().failureCode(),
@@ -18,7 +17,7 @@ public record CandidateCvResponse(UUID cvId, UUID candidateUserId, String title,
                         cv.activeVersion().externalAiConsent().policyVersion()), cv.version());
     }
 
-    public record CvVersionResponse(UUID cvVersionId, int versionNumber, String originalFilename,
+    public record CvVersionResponse(Long cvVersionId, int versionNumber, String originalFilename,
                                     String mimeType, long sizeBytes, String sha256,
                                     CvProcessingStatus processingStatus, String failureCode, long version,
                                     boolean externalAiConsent, String externalAiPolicyVersion) {

@@ -23,16 +23,16 @@ public class CvPrivacyService {
     }
 
     @Transactional
-    public void delete(UUID owner, UUID cvId, long expectedVersion) {
+    public void delete(Long owner, Long cvId, long expectedVersion) {
         var cv = cvs.lockOwned(owner, cvId).orElseThrow(CandidateCvNotFoundException::new);
         if (cv.status() == CvStatus.DELETED) return;
         if (expectedVersion != cv.version()) {
             throw new ApplicationConflictException("CV changed; reload before deleting");
         }
         var now = OffsetDateTime.now(ZoneOffset.UTC);
-        for (UUID versionId : cvs.eraseLocked(cvId, now)) {
-            outbox.append(new PrivacyEvent("cv.deleted.v1", versionId,
-                    Map.of("cvId", cvId, "cvVersionId", versionId), UUID.randomUUID(), now));
+        for (Long versionId : cvs.eraseLocked(cvId, now)) {
+            outbox.append(new PrivacyEvent("cv.deleted.v2", versionId,
+                    Map.of("cvId", cvId.toString(), "cvVersionId", versionId.toString()), UUID.randomUUID(), now));
         }
     }
 }

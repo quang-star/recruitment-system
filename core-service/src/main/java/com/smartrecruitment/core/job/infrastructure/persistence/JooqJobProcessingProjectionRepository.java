@@ -6,7 +6,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.util.UUID;
 
 import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.JobProcessingProjections.JOB_PROCESSING_PROJECTIONS;
 import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.JobVersions.JOB_VERSIONS;
@@ -18,10 +17,10 @@ public class JooqJobProcessingProjectionRepository {
     public JooqJobProcessingProjectionRepository(DSLContext dsl) { this.dsl = dsl; }
 
     @Transactional
-    public void update(UUID jobId, UUID jobVersionId, UUID processingTaskId,
+    public void update(Long jobId, Long jobVersionId, Long processingTaskId,
                        String sourceHash, String status, String failureCode) {
         String expectedHash = dsl.select(JOB_VERSIONS.SOURCE_HASH).from(JOB_VERSIONS)
-                .where(JOB_VERSIONS.PUBLIC_ID.eq(jobVersionId)).fetchOne(JOB_VERSIONS.SOURCE_HASH);
+                .where(JOB_VERSIONS.ID.eq(jobVersionId)).fetchOne(JOB_VERSIONS.SOURCE_HASH);
         if (expectedHash == null || !expectedHash.trim().equals(sourceHash)) {
             return;
         }
@@ -48,7 +47,8 @@ public class JooqJobProcessingProjectionRepository {
             return;
         }
         dsl.update(JOB_PROCESSING_PROJECTIONS)
-                .set(JOB_PROCESSING_PROJECTIONS.PROCESSING_TASK_ID, processingTaskId)
+                .set(JOB_PROCESSING_PROJECTIONS.PROCESSING_TASK_ID,
+                        processingTaskId == null ? current.getProcessingTaskId() : processingTaskId)
                 .set(JOB_PROCESSING_PROJECTIONS.SOURCE_HASH, sourceHash)
                 .set(JOB_PROCESSING_PROJECTIONS.STATUS, status)
                 .set(JOB_PROCESSING_PROJECTIONS.FAILURE_CODE, failureCode)
@@ -58,7 +58,7 @@ public class JooqJobProcessingProjectionRepository {
                 .execute();
     }
 
-    public boolean isConfirmed(UUID jobVersionId) {
+    public boolean isConfirmed(Long jobVersionId) {
         return dsl.fetchExists(dsl.selectOne().from(JOB_PROCESSING_PROJECTIONS)
                 .where(JOB_PROCESSING_PROJECTIONS.JOB_VERSION_ID.eq(jobVersionId))
                 .and(JOB_PROCESSING_PROJECTIONS.STATUS.eq("CONFIRMED")));

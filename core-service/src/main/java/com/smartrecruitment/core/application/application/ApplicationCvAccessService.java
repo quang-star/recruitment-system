@@ -5,7 +5,6 @@ import com.smartrecruitment.core.cv.application.port.ObjectStorage;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.UUID;
 
 @Service
 public class ApplicationCvAccessService {
@@ -18,7 +17,7 @@ public class ApplicationCvAccessService {
     }
 
     @Transactional(readOnly = true)
-    public ApplicationCvDownload download(UUID recruiterUserId, UUID applicationId) {
+    public ApplicationCvDownload download(Long recruiterUserId, Long applicationId) {
         var snapshot = applications.findCvSnapshotForRecruiter(recruiterUserId, applicationId)
                 .orElseThrow(ApplicationNotFoundException::new);
         return new ApplicationCvDownload(snapshot.cvVersionId(), snapshot.originalFilename(), snapshot.sizeBytes(),

@@ -12,7 +12,6 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -24,7 +23,7 @@ class CvServiceTests {
         RecordingStorage storage = new RecordingStorage();
         CvService service = new CvService(new InMemoryCvs(), storage);
         byte[] content = (prefix + "%PDF-1.7\nbody").getBytes(java.nio.charset.StandardCharsets.US_ASCII);
-        CandidateCv created = service.upload(UUID.randomUUID(), "CV",
+        CandidateCv created = service.upload(com.smartrecruitment.core.support.TestIds.next(), "CV",
                 new MockMultipartFile("file", "cv.pdf", "application/pdf", content));
         assertThat(created.activeVersion().sha256()).isEqualTo(java.util.HexFormat.of().formatHex(
                 java.security.MessageDigest.getInstance("SHA-256").digest(content)));
@@ -36,7 +35,7 @@ class CvServiceTests {
     void rejectsDisguisedOrTruncatedPdfBeforeStorage(String content) {
         RecordingStorage storage = new RecordingStorage();
         CvService service = new CvService(new InMemoryCvs(), storage);
-        assertThatThrownBy(() -> service.upload(UUID.randomUUID(), null,
+        assertThatThrownBy(() -> service.upload(com.smartrecruitment.core.support.TestIds.next(), null,
                 new MockMultipartFile("file", "cv.pdf", "application/pdf", content.getBytes())))
                 .isInstanceOf(CvUploadException.class).hasMessage("CV file is not a valid PDF");
         assertThat(storage.keys).isEmpty();
@@ -46,7 +45,7 @@ class CvServiceTests {
     void boundsPdfHeaderSearch() {
         RecordingStorage storage = new RecordingStorage();
         CvService service = new CvService(new InMemoryCvs(), storage);
-        assertThatThrownBy(() -> service.upload(UUID.randomUUID(), null,
+        assertThatThrownBy(() -> service.upload(com.smartrecruitment.core.support.TestIds.next(), null,
                 new MockMultipartFile("file", "cv.pdf", "application/pdf", (" ".repeat(1024) + "%PDF-1.7").getBytes())))
                 .isInstanceOf(CvUploadException.class);
         assertThat(storage.keys).isEmpty();
@@ -58,7 +57,7 @@ class CvServiceTests {
         RecordingStorage storage = new RecordingStorage();
         CvService service = new CvService(cvs, storage);
 
-        CandidateCv created = service.upload(UUID.randomUUID(), "Backend CV", pdf("resume.pdf"));
+        CandidateCv created = service.upload(com.smartrecruitment.core.support.TestIds.next(), "Backend CV", pdf("resume.pdf"));
 
         assertThat(created.title()).isEqualTo("Backend CV");
         assertThat(created.activeVersion().processingStatus().name()).isEqualTo("UPLOADED");
@@ -73,7 +72,7 @@ class CvServiceTests {
         CvService service = new CvService(new InMemoryCvs(), storage);
         MockMultipartFile file = new MockMultipartFile("file", "resume.txt", "text/plain", "hello".getBytes());
 
-        assertThatThrownBy(() -> service.upload(UUID.randomUUID(), null, file))
+        assertThatThrownBy(() -> service.upload(com.smartrecruitment.core.support.TestIds.next(), null, file))
                 .isInstanceOf(CvUploadException.class)
                 .hasMessage("CV file must be a PDF");
         assertThat(storage.keys).isEmpty();
@@ -84,14 +83,14 @@ class CvServiceTests {
         var repository = new InMemoryCvs();
         var storage = new RecordingStorage();
         var service = new CvService(repository, storage);
-        UUID owner = UUID.randomUUID();
+        Long owner = com.smartrecruitment.core.support.TestIds.next();
         var cv = service.upload(owner, "CV", pdf("resume.pdf"));
-        assertThatThrownBy(() -> service.downloadMine(UUID.randomUUID(), cv.publicId(), cv.activeVersion().publicId()))
+        assertThatThrownBy(() -> service.downloadMine(com.smartrecruitment.core.support.TestIds.next(), cv.id(), cv.activeVersion().id()))
                 .isInstanceOf(CandidateCvNotFoundException.class);
-        assertThatThrownBy(() -> service.downloadMine(owner, cv.publicId(), UUID.randomUUID()))
+        assertThatThrownBy(() -> service.downloadMine(owner, cv.id(), com.smartrecruitment.core.support.TestIds.next()))
                 .isInstanceOf(CandidateCvNotFoundException.class);
         assertThat(storage.downloads).isZero();
-        var download = service.downloadMine(owner, cv.publicId(), cv.activeVersion().publicId());
+        var download = service.downloadMine(owner, cv.id(), cv.activeVersion().id());
         try (var content = download.content()) { assertThat(new String(content.readAllBytes())).startsWith("%PDF"); }
         assertThat(download.originalFilename()).isEqualTo("resume.pdf");
         assertThat(storage.downloads).isEqualTo(1);
@@ -102,13 +101,13 @@ class CvServiceTests {
         var repository = new InMemoryCvs();
         var storage = new RecordingStorage();
         var service = new CvService(repository, storage);
-        UUID owner = UUID.randomUUID();
+        Long owner = com.smartrecruitment.core.support.TestIds.next();
         var cv = service.upload(owner, "CV", pdf("resume.pdf"));
         for (var status : List.of(com.smartrecruitment.core.cv.domain.CvStatus.DELETED,
                 com.smartrecruitment.core.cv.domain.CvStatus.ARCHIVED)) {
             repository.values.clear();
-            repository.values.add(new CandidateCv(cv.publicId(), owner, cv.title(), status, cv.activeVersion(), 1));
-            assertThatThrownBy(() -> service.downloadMine(owner, cv.publicId(), cv.activeVersion().publicId()))
+            repository.values.add(new CandidateCv(cv.id(), owner, cv.title(), status, cv.activeVersion(), 1));
+            assertThatThrownBy(() -> service.downloadMine(owner, cv.id(), cv.activeVersion().id()))
                     .isInstanceOf(CandidateCvNotFoundException.class);
         }
         assertThat(storage.downloads).isZero();
@@ -149,21 +148,21 @@ class CvServiceTests {
         }
 
         @Override
-        public boolean updateProcessingStatus(UUID cvVersionId, String sourceHash,
+        public boolean updateProcessingStatus(Long cvVersionId, String sourceHash,
                                               com.smartrecruitment.core.cv.domain.CvProcessingStatus status,
                                               String failureCode) {
             return true;
         }
 
         @Override
-        public List<CandidateCv> findByCandidateUserId(UUID candidateUserId) {
+        public List<CandidateCv> findByCandidateUserId(Long candidateUserId) {
             return values.stream().filter(cv -> cv.candidateUserId().equals(candidateUserId)).toList();
         }
 
         @Override
-        public Optional<CandidateCv> findByPublicId(UUID candidateUserId, UUID cvId) {
+        public Optional<CandidateCv> findById(Long candidateUserId, Long cvId) {
             return values.stream().filter(cv -> cv.candidateUserId().equals(candidateUserId)
-                    && cv.publicId().equals(cvId)).findFirst();
+                    && cv.id().equals(cvId)).findFirst();
         }
     }
 }

@@ -71,7 +71,7 @@ class ConcurrentCvDeletionTests {
 
         try (var executor = Executors.newFixedThreadPool(2)) {
             var deletion = executor.submit(() -> transaction(context -> {
-                privacy(context).delete(fixture.candidate(), fixture.cv().publicId(), 0);
+                privacy(context).delete(fixture.candidate(), fixture.cv().id(), 0);
                 deleted.countDown();
                 await(commitDeletion);
                 return null;
@@ -98,7 +98,7 @@ class ConcurrentCvDeletionTests {
         assertThat(dsl.fetchCount(APPLICATIONS, APPLICATIONS.CANDIDATE_USER_ID.eq(fixture.candidate()))).isZero();
         assertThat(dsl.fetchCount(APPLICATION_CV_ACCESS_GRANTS, APPLICATION_CV_ACCESS_GRANTS.CV_VERSION_ID.in(
                 dsl.select(CV_VERSIONS.ID).from(CV_VERSIONS)
-                        .where(CV_VERSIONS.PUBLIC_ID.eq(fixture.cv().activeVersion().publicId()))))).isZero();
+                        .where(CV_VERSIONS.ID.eq(fixture.cv().activeVersion().id()))))).isZero();
         assertThat(dsl.fetchCount(CANDIDATE_CONSENTS, CANDIDATE_CONSENTS.CANDIDATE_USER_ID.eq(fixture.candidate()))).isZero();
         assertThat(dsl.fetchCount(OUTBOX_EVENTS, OUTBOX_EVENTS.CORRELATION_ID.eq(fixture.correlationId()))).isZero();
         assertErased(fixture);
@@ -124,7 +124,7 @@ class ConcurrentCvDeletionTests {
             var deletion = executor.submit(() -> transaction(context -> {
                 deletionPid.set(backendPid(context));
                 deletionStarted.countDown();
-                privacy(context).delete(fixture.candidate(), fixture.cv().publicId(), 0);
+                privacy(context).delete(fixture.candidate(), fixture.cv().id(), 0);
                 return null;
             }));
             try {
@@ -137,26 +137,27 @@ class ConcurrentCvDeletionTests {
             deletion.get(20, TimeUnit.SECONDS);
         }
 
-        var row = dsl.selectFrom(APPLICATIONS).where(APPLICATIONS.PUBLIC_ID.eq(application.publicId())).fetchOne();
+        var row = dsl.selectFrom(APPLICATIONS).where(APPLICATIONS.ID.eq(application.id())).fetchOne();
         assertThat(row).isNotNull();
         assertThat(row.getCoverLetter()).isNull();
         var grants = dsl.selectFrom(APPLICATION_CV_ACCESS_GRANTS)
                 .where(APPLICATION_CV_ACCESS_GRANTS.APPLICATION_ID.eq(row.getId())).fetch();
         assertThat(grants).hasSize(1).allMatch(grant -> grant.getRevokedAt() != null);
-        assertThat(new JooqApplicationRepository(dsl).findCvSnapshotForRecruiter(fixture.recruiter(), application.publicId()))
+        assertThat(new JooqApplicationRepository(dsl).findCvSnapshotForRecruiter(fixture.recruiter(), application.id()))
                 .isEmpty();
         assertThat(dsl.fetchCount(APPLICATIONS, APPLICATIONS.CANDIDATE_USER_ID.eq(fixture.candidate()))).isOne();
-        assertThat(dsl.fetchCount(OUTBOX_EVENTS, OUTBOX_EVENTS.AGGREGATE_ID.eq(application.publicId())
-                .and(OUTBOX_EVENTS.EVENT_TYPE.eq("application.submitted.v1")))).isOne();
+        assertThat(dsl.fetchCount(OUTBOX_EVENTS, OUTBOX_EVENTS.AGGREGATE_ID.eq(application.id())
+                .and(OUTBOX_EVENTS.EVENT_TYPE.eq("application.submitted.v2")))).isOne();
         assertErased(fixture);
 
         // Existing idempotent replays stay valid even after the CV has been erased.
         var replay = transaction(context -> apply(context, fixture));
-        assertThat(replay.publicId()).isEqualTo(application.publicId());
+        assertThat(replay.id()).isEqualTo(application.id());
         assertThat(replay.coverLetter()).isNull();
         assertThat(replay.cvAccessGranted()).isFalse();
         assertThat(dsl.fetchCount(APPLICATIONS, APPLICATIONS.CANDIDATE_USER_ID.eq(fixture.candidate()))).isOne();
-        assertThat(dsl.fetchCount(OUTBOX_EVENTS, OUTBOX_EVENTS.AGGREGATE_ID.eq(application.publicId()))).isOne();
+        assertThat(dsl.fetchCount(OUTBOX_EVENTS, OUTBOX_EVENTS.AGGREGATE_ID.eq(application.id())
+                .and(OUTBOX_EVENTS.EVENT_TYPE.eq("application.submitted.v2")))).isOne();
     }
 
     @Test
@@ -165,17 +166,17 @@ class ConcurrentCvDeletionTests {
         var application = transaction(context -> apply(context, fixture));
         var future = OffsetDateTime.now().plusDays(1);
         dsl.update(APPLICATIONS).set(APPLICATIONS.APPLIED_AT, future).set(APPLICATIONS.UPDATED_AT, future)
-                .where(APPLICATIONS.PUBLIC_ID.eq(application.publicId())).execute();
-        var before = dsl.selectFrom(APPLICATIONS).where(APPLICATIONS.PUBLIC_ID.eq(application.publicId())).fetchOne();
+                .where(APPLICATIONS.ID.eq(application.id())).execute();
+        var before = dsl.selectFrom(APPLICATIONS).where(APPLICATIONS.ID.eq(application.id())).fetchOne();
         dsl.update(APPLICATION_CV_ACCESS_GRANTS).set(APPLICATION_CV_ACCESS_GRANTS.GRANTED_AT, future)
                 .where(APPLICATION_CV_ACCESS_GRANTS.APPLICATION_ID.eq(before.getId())).execute();
 
         transaction(context -> {
-            privacy(context).delete(fixture.candidate(), fixture.cv().publicId(), 0);
+            privacy(context).delete(fixture.candidate(), fixture.cv().id(), 0);
             return null;
         });
 
-        var erased = dsl.selectFrom(APPLICATIONS).where(APPLICATIONS.PUBLIC_ID.eq(application.publicId())).fetchOne();
+        var erased = dsl.selectFrom(APPLICATIONS).where(APPLICATIONS.ID.eq(application.id())).fetchOne();
         assertThat(erased.getUpdatedAt()).isAfterOrEqualTo(before.getUpdatedAt());
         assertThat(erased.getUpdatedAt()).isAfterOrEqualTo(erased.getAppliedAt());
         assertThat(erased.getCoverLetter()).isNull();
@@ -187,7 +188,7 @@ class ConcurrentCvDeletionTests {
 
     private static Application apply(DSLContext context, Fixture fixture) {
         return new ApplicationService(new JooqApplicationRepository(context), outbox(context))
-                .apply(fixture.candidate(), fixture.jobId(), fixture.cv().publicId(), fixture.cv().activeVersion().publicId(),
+                .apply(fixture.candidate(), fixture.jobId(), fixture.cv().id(), fixture.cv().activeVersion().id(),
                         COVER_LETTER, true, "cv-sharing-v1", fixture.idempotencyKey(), fixture.correlationId());
     }
 
@@ -200,32 +201,32 @@ class ConcurrentCvDeletionTests {
     }
 
     private static void assertErased(Fixture fixture) {
-        assertThat(dsl.select(CVS.STATUS).from(CVS).where(CVS.PUBLIC_ID.eq(fixture.cv().publicId())).fetchOne(CVS.STATUS))
+        assertThat(dsl.select(CVS.STATUS).from(CVS).where(CVS.ID.eq(fixture.cv().id())).fetchOne(CVS.STATUS))
                 .isEqualTo("DELETED");
-        assertThat(dsl.fetchCount(CV_ERASURE_QUEUE, CV_ERASURE_QUEUE.CV_VERSION_ID.eq(fixture.cv().activeVersion().publicId())))
+        assertThat(dsl.fetchCount(CV_ERASURE_QUEUE, CV_ERASURE_QUEUE.CV_VERSION_ID.eq(fixture.cv().activeVersion().id())))
                 .isOne();
-        assertThat(dsl.fetchCount(OUTBOX_EVENTS, OUTBOX_EVENTS.AGGREGATE_ID.eq(fixture.cv().activeVersion().publicId())
-                .and(OUTBOX_EVENTS.EVENT_TYPE.eq("cv.deleted.v1")))).isOne();
+        assertThat(dsl.fetchCount(OUTBOX_EVENTS, OUTBOX_EVENTS.AGGREGATE_ID.eq(fixture.cv().activeVersion().id())
+                .and(OUTBOX_EVENTS.EVENT_TYPE.eq("cv.deleted.v2")))).isOne();
     }
 
     private static Fixture fixture() {
-        UUID recruiter = UUID.randomUUID(), candidate = UUID.randomUUID();
+        Long recruiter = com.smartrecruitment.core.support.TestIds.next(), candidate = com.smartrecruitment.core.support.TestIds.next();
         var company = new JooqCompanyRepository(dsl).insertWithOwner(Company.create(recruiter,
-                "Synthetic Legal", "Synthetic Company", "privacy-" + UUID.randomUUID(),
+                "Synthetic Legal", "Synthetic Company", "privacy-" + com.smartrecruitment.core.support.TestIds.next(),
                 null, null, "VN", null, null), recruiter);
         var jobs = new JooqJobRepository(dsl);
-        var version = new JobVersion(UUID.randomUUID(), 1, "Synthetic Java job", "Build services", "Java",
+        var version = new JobVersion(com.smartrecruitment.core.support.TestIds.next(), 1, "Synthetic Java job", "Build services", "Java",
                 null, null, "VN", null, null, null, 1, null, null, null, null, false, null, "a".repeat(64), recruiter);
-        var job = jobs.insert(Job.draft(company.publicId(), recruiter, version));
-        jobs.publish(job.publicId(), recruiter, 0, OffsetDateTime.now()).orElseThrow();
+        var job = jobs.insert(Job.draft(company.id(), recruiter, version));
+        jobs.publish(job.id(), recruiter, 0, OffsetDateTime.now()).orElseThrow();
         var cvs = new JooqCandidateCvRepository(dsl);
         var cv = cvs.insert(CandidateCv.uploaded(candidate, "Synthetic privacy CV",
-                CvVersion.uploaded(UUID.randomUUID(), "fixture", UUID.randomUUID() + ".pdf", "synthetic.pdf",
+                CvVersion.uploaded(com.smartrecruitment.core.support.TestIds.next(), "fixture", com.smartrecruitment.core.support.TestIds.next() + ".pdf", "synthetic.pdf",
                         100, "b".repeat(64), candidate)));
-        assertThat(cvs.updateProcessingStatus(cv.activeVersion().publicId(), "b".repeat(64),
+        assertThat(cvs.updateProcessingStatus(cv.activeVersion().id(), "b".repeat(64),
                 CvProcessingStatus.CONFIRMED, null)).isTrue();
-        return new Fixture(recruiter, candidate, job.publicId(), cvs.findByPublicId(candidate, cv.publicId()).orElseThrow(),
-                UUID.randomUUID().toString(), UUID.randomUUID());
+        return new Fixture(recruiter, candidate, job.id(), cvs.findById(candidate, cv.id()).orElseThrow(),
+                com.smartrecruitment.core.support.TestIds.next().toString(), java.util.UUID.randomUUID());
     }
 
     private static int backendPid(DSLContext context) {
@@ -264,6 +265,6 @@ class ConcurrentCvDeletionTests {
         T run(DSLContext context) throws Exception;
     }
 
-    private record Fixture(UUID recruiter, UUID candidate, UUID jobId, CandidateCv cv,
+    private record Fixture(Long recruiter, Long candidate, Long jobId, CandidateCv cv,
                            String idempotencyKey, UUID correlationId) {}
 }

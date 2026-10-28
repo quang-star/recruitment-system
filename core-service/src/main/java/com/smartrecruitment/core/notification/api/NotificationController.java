@@ -16,10 +16,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/notifications")
+@RequestMapping("/api/v2/notifications")
 public class NotificationController {
     private final NotificationService notifications;
 
@@ -35,7 +34,7 @@ public class NotificationController {
 
     @PatchMapping("/{notificationId}/read")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void markRead(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID notificationId,
+    public void markRead(@AuthenticationPrincipal Jwt jwt, @PathVariable Long notificationId,
                          @RequestParam long version) {
         notifications.markRead(userId(jwt), notificationId, version);
     }
@@ -44,14 +43,14 @@ public class NotificationController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void markAllRead(@AuthenticationPrincipal Jwt jwt) { notifications.markAllRead(userId(jwt)); }
 
-    private static UUID userId(Jwt jwt) { return UUID.fromString(jwt.getSubject()); }
+    private static Long userId(Jwt jwt) { return com.smartrecruitment.core.shared.api.SubjectId.parse(jwt.getSubject()); }
 
     public record NotificationFeedResponse(List<NotificationResponse> items, long unreadCount) { }
-    public record NotificationResponse(UUID notificationId, String type, String title, String message,
+    public record NotificationResponse(Long notificationId, String type, String title, String message,
                                        String linkUrl, OffsetDateTime readAt, OffsetDateTime createdAt,
                                        long version) {
         static NotificationResponse from(Notification value) {
-            return new NotificationResponse(value.publicId(), value.type(), value.title(), value.message(),
+            return new NotificationResponse(value.id(), value.type(), value.title(), value.message(),
                     value.linkUrl(), value.readAt(), value.createdAt(), value.version());
         }
     }

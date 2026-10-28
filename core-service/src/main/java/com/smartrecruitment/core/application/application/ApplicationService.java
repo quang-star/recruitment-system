@@ -6,10 +6,12 @@ import com.smartrecruitment.core.application.domain.ApplicationStatus;
 import com.smartrecruitment.core.application.domain.ApplicationStatusChange;
 import com.smartrecruitment.core.cv.application.port.OutboxEventRepository;
 import com.smartrecruitment.core.notification.application.NotificationService;
+import com.smartrecruitment.core.shared.application.PageResult;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
@@ -40,19 +42,19 @@ public class ApplicationService {
     }
 
     @Transactional
-    public Application apply(UUID candidateUserId, UUID jobId, UUID cvId) {
+    public Application apply(Long candidateUserId, Long jobId, Long cvId) {
         return apply(candidateUserId, jobId, cvId, true, "cv-sharing-v1");
     }
 
     @Transactional
-    public Application apply(UUID candidateUserId, UUID jobId, UUID cvId,
+    public Application apply(Long candidateUserId, Long jobId, Long cvId,
                              boolean consentAccepted, String policyVersion) {
         return apply(candidateUserId, jobId, cvId, null, null, consentAccepted, policyVersion,
                 UUID.randomUUID().toString(), UUID.randomUUID());
     }
 
     @Transactional
-    public Application apply(UUID candidateUserId, UUID jobId, UUID cvId, UUID cvVersionId,
+    public Application apply(Long candidateUserId, Long jobId, Long cvId, Long cvVersionId,
                              String coverLetter, boolean consentAccepted, String policyVersion,
                              String idempotencyKey, UUID correlationId) {
         if (!consentAccepted) throw new ApplicationStateException("CV sharing consent is required");
@@ -85,34 +87,45 @@ public class ApplicationService {
     }
 
     @Transactional(readOnly = true)
-    public List<Application> findMine(UUID candidateUserId) { return applications.findAllForCandidate(candidateUserId); }
+    public List<Application> findMine(Long candidateUserId) { return applications.findAllForCandidate(candidateUserId); }
+
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+    public PageResult<Application> searchMine(Long userId, ApplicationSearch search) {
+        return applications.searchForCandidate(userId, search);
+    }
+
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+    public PageResult<Application> searchForRecruiter(Long userId, Long jobId,
+                                                                                                ApplicationSearch search) {
+        return applications.searchForRecruiter(userId, jobId, search);
+    }
 
     @Transactional(readOnly = true)
-    public Application getMine(UUID candidateUserId, UUID applicationId) {
+    public Application getMine(Long candidateUserId, Long applicationId) {
         return applications.findForCandidate(candidateUserId, applicationId)
                 .orElseThrow(ApplicationNotFoundException::new);
     }
 
     @Transactional(readOnly = true)
-    public List<Application> findForRecruiter(UUID recruiterUserId, UUID jobId) {
+    public List<Application> findForRecruiter(Long recruiterUserId, Long jobId) {
         return applications.findAllForRecruiter(recruiterUserId, jobId);
     }
 
     @Transactional(readOnly = true)
-    public Application getForRecruiter(UUID recruiterUserId, UUID applicationId) {
+    public Application getForRecruiter(Long recruiterUserId, Long applicationId) {
         return applications.findForRecruiter(recruiterUserId, applicationId)
                 .orElseThrow(ApplicationNotFoundException::new);
     }
 
     @Transactional(readOnly = true)
-    public List<ApplicationStatusChange> history(UUID viewerUserId, UUID applicationId) {
+    public List<ApplicationStatusChange> history(Long viewerUserId, Long applicationId) {
         List<ApplicationStatusChange> history = applications.findHistoryForViewer(viewerUserId, applicationId);
         if (history.isEmpty()) throw new ApplicationNotFoundException();
         return history;
     }
 
     @Transactional
-    public Application withdraw(UUID candidateUserId, UUID applicationId, String reason, long expectedVersion) {
+    public Application withdraw(Long candidateUserId, Long applicationId, String reason, long expectedVersion) {
         Application current = getMine(candidateUserId, applicationId);
         if (current.status() != ApplicationStatus.SUBMITTED
                 && current.status() != ApplicationStatus.UNDER_REVIEW
@@ -129,14 +142,14 @@ public class ApplicationService {
     }
 
     @Transactional
-    public void revokeCvAccess(UUID candidateUserId, UUID applicationId, long expectedVersion) {
+    public void revokeCvAccess(Long candidateUserId, Long applicationId, long expectedVersion) {
         getMine(candidateUserId, applicationId);
         if (!applications.revokeCvAccess(candidateUserId, applicationId, expectedVersion)) throw new ApplicationConflictException();
         outbox.append(com.smartrecruitment.core.cv.application.PrivacyEvent.revoked(applicationId));
     }
 
     @Transactional
-    public Application updateStatus(UUID recruiterUserId, UUID applicationId, ApplicationStatus target,
+    public Application updateStatus(Long recruiterUserId, Long applicationId, ApplicationStatus target,
                                     String reason, long expectedVersion) {
         Application current = applications.findForRecruiter(recruiterUserId, applicationId)
                 .orElseThrow(ApplicationNotFoundException::new);

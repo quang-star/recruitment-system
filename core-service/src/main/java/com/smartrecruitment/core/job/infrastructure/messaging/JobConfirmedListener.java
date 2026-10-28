@@ -6,8 +6,6 @@ import com.smartrecruitment.core.job.infrastructure.persistence.JooqJobProcessin
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
-import java.nio.charset.StandardCharsets;
-import java.util.UUID;
 
 @Component
 public class JobConfirmedListener {
@@ -19,20 +17,20 @@ public class JobConfirmedListener {
         this.objectMapper = objectMapper;
     }
 
-    @KafkaListener(topics = "${core.kafka.job-confirmed-topic:job.confirmed.v1}",
-            groupId = "core-job-confirmed-v1")
+    @KafkaListener(topics = "${core.kafka.job-confirmed-topic:job.confirmed.v2}",
+            groupId = "core-job-confirmed-v2")
     public void onMessage(String rawMessage) {
         try {
             JsonNode root = objectMapper.readTree(rawMessage);
-            if (!"job.confirmed.v1".equals(root.path("eventType").asText())) {
+            if (!"job.confirmed.v2".equals(root.path("eventType").asText())) {
                 throw new IllegalArgumentException("Unexpected job confirmation event type");
             }
             JsonNode payload = root.path("payload");
-            UUID jobId = UUID.fromString(payload.path("jobId").asText());
-            UUID jobVersionId = UUID.fromString(payload.path("jobVersionId").asText());
-            UUID revisionId = UUID.fromString(payload.path("parsedRevisionId").asText());
-            UUID taskId = UUID.nameUUIDFromBytes((jobVersionId + ":" + revisionId).getBytes(StandardCharsets.UTF_8));
-            projections.update(jobId, jobVersionId, taskId, payload.path("sourceHash").asText(), "CONFIRMED", null);
+            Long jobId = com.smartrecruitment.core.shared.domain.BusinessIds.parse(payload.path("jobId").asText());
+            Long jobVersionId = com.smartrecruitment.core.shared.domain.BusinessIds.parse(payload.path("jobVersionId").asText());
+            com.smartrecruitment.core.shared.domain.BusinessIds.parse(payload.path("parsedRevisionId").asText());
+            // Confirmation refers to the persisted revision, not a synthetic task identity.
+            projections.update(jobId, jobVersionId, null, payload.path("sourceHash").asText(), "CONFIRMED", null);
         } catch (Exception exception) {
             throw new IllegalArgumentException("Invalid job confirmation event", exception);
         }

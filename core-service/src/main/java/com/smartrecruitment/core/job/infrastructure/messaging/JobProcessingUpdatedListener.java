@@ -8,7 +8,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
-import java.util.UUID;
 
 @Component
 public class JobProcessingUpdatedListener {
@@ -21,18 +20,20 @@ public class JobProcessingUpdatedListener {
         this.objectMapper = objectMapper;
     }
 
-    @KafkaListener(topics = "${core.kafka.job-processing-updated-topic:job.processing.updated.v1}",
-            groupId = "core-job-processing-v1")
+    @KafkaListener(topics = "${core.kafka.job-processing-updated-topic:job.processing.updated.v2}",
+            groupId = "core-job-processing-v2")
     public void onMessage(String rawMessage) {
         try {
             JsonNode root = objectMapper.readTree(rawMessage);
-            if (!"job.processing.updated.v1".equals(root.path("eventType").asText())) {
+            if (!"job.processing.updated.v2".equals(root.path("eventType").asText())) {
                 throw new IllegalArgumentException("Unexpected job processing event type");
             }
             JsonNode payload = root.path("payload");
-            UUID jobId = UUID.fromString(payload.path("jobId").asText());
-            UUID jobVersionId = UUID.fromString(payload.path("jobVersionId").asText());
-            UUID taskId = UUID.fromString(payload.path("processingTaskId").asText());
+            Long jobId = com.smartrecruitment.core.shared.domain.BusinessIds.parse(payload.path("jobId").asText());
+            Long jobVersionId = com.smartrecruitment.core.shared.domain.BusinessIds.parse(payload.path("jobVersionId").asText());
+            var taskNode = payload.get("processingTaskId");
+            Long taskId = taskNode == null || taskNode.isNull() ? null
+                    : com.smartrecruitment.core.shared.domain.BusinessIds.parse(taskNode.asText());
             String sourceHash = payload.path("sourceHash").asText();
             String status = payload.path("status").asText();
             String failureCode = payload.path("failureCode").isNull()

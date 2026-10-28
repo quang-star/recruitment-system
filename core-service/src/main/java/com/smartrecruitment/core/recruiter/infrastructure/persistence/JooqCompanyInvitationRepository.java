@@ -10,7 +10,6 @@ import org.springframework.stereotype.Repository;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.Companies.COMPANIES;
 import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.CompanyInvitations.COMPANY_INVITATIONS;
@@ -29,7 +28,7 @@ public class JooqCompanyInvitationRepository implements CompanyInvitationReposit
         Long companyId = internalCompanyId(invitation.companyId());
         if (companyId == null) throw new IllegalStateException("Company disappeared while creating invitation");
         var record = dsl.insertInto(COMPANY_INVITATIONS)
-                .set(COMPANY_INVITATIONS.PUBLIC_ID, invitation.publicId())
+
                 .set(COMPANY_INVITATIONS.COMPANY_ID, companyId)
                 .set(COMPANY_INVITATIONS.EMAIL, invitation.email())
                 .set(COMPANY_INVITATIONS.NORMALIZED_EMAIL, invitation.normalizedEmail())
@@ -47,7 +46,7 @@ public class JooqCompanyInvitationRepository implements CompanyInvitationReposit
     }
 
     @Override
-    public List<CompanyInvitation> findAll(UUID companyId) {
+    public List<CompanyInvitation> findAll(Long companyId) {
         Long internalCompanyId = internalCompanyId(companyId);
         if (internalCompanyId == null) return List.of();
         return dsl.selectFrom(COMPANY_INVITATIONS)
@@ -57,7 +56,7 @@ public class JooqCompanyInvitationRepository implements CompanyInvitationReposit
     }
 
     @Override
-    public Optional<CompanyInvitation> findActive(UUID companyId, String normalizedEmail, OffsetDateTime now) {
+    public Optional<CompanyInvitation> findActive(Long companyId, String normalizedEmail, OffsetDateTime now) {
         Long internalCompanyId = internalCompanyId(companyId);
         if (internalCompanyId == null) return Optional.empty();
         return dsl.selectFrom(COMPANY_INVITATIONS)
@@ -72,7 +71,7 @@ public class JooqCompanyInvitationRepository implements CompanyInvitationReposit
     @Override
     public Optional<CompanyInvitation> findActiveByTokenHash(String tokenHash, OffsetDateTime now) {
         return dsl.select(COMPANY_INVITATIONS.fields())
-                .select(COMPANIES.PUBLIC_ID)
+                .select(COMPANIES.ID)
                 .from(COMPANY_INVITATIONS)
                 .join(COMPANIES).on(COMPANIES.ID.eq(COMPANY_INVITATIONS.COMPANY_ID))
                 .where(COMPANY_INVITATIONS.TOKEN_HASH.eq(tokenHash))
@@ -83,7 +82,7 @@ public class JooqCompanyInvitationRepository implements CompanyInvitationReposit
     }
 
     @Override
-    public int revokeExpired(UUID companyId, String normalizedEmail, OffsetDateTime now) {
+    public int revokeExpired(Long companyId, String normalizedEmail, OffsetDateTime now) {
         Long internalCompanyId = internalCompanyId(companyId);
         if (internalCompanyId == null) return 0;
         return dsl.update(COMPANY_INVITATIONS)
@@ -99,7 +98,7 @@ public class JooqCompanyInvitationRepository implements CompanyInvitationReposit
     }
 
     @Override
-    public boolean revoke(UUID companyId, UUID invitationId, long expectedVersion, OffsetDateTime now) {
+    public boolean revoke(Long companyId, Long invitationId, long expectedVersion, OffsetDateTime now) {
         Long internalCompanyId = internalCompanyId(companyId);
         if (internalCompanyId == null) return false;
         return dsl.update(COMPANY_INVITATIONS)
@@ -107,7 +106,7 @@ public class JooqCompanyInvitationRepository implements CompanyInvitationReposit
                 .set(COMPANY_INVITATIONS.UPDATED_AT, now)
                 .set(COMPANY_INVITATIONS.VERSION, COMPANY_INVITATIONS.VERSION.plus(1L))
                 .where(COMPANY_INVITATIONS.COMPANY_ID.eq(internalCompanyId))
-                .and(COMPANY_INVITATIONS.PUBLIC_ID.eq(invitationId))
+                .and(COMPANY_INVITATIONS.ID.eq(invitationId))
                 .and(COMPANY_INVITATIONS.VERSION.eq(expectedVersion))
                 .and(COMPANY_INVITATIONS.ACCEPTED_AT.isNull())
                 .and(COMPANY_INVITATIONS.REVOKED_AT.isNull())
@@ -116,7 +115,7 @@ public class JooqCompanyInvitationRepository implements CompanyInvitationReposit
     }
 
     @Override
-    public Optional<CompanyMember> accept(CompanyInvitation invitation, UUID userId, OffsetDateTime now) {
+    public Optional<CompanyMember> accept(CompanyInvitation invitation, Long userId, OffsetDateTime now) {
         Long internalCompanyId = internalCompanyId(invitation.companyId());
         if (internalCompanyId == null) return Optional.empty();
         var existingMember = dsl.selectFrom(COMPANY_MEMBERS)
@@ -132,7 +131,7 @@ public class JooqCompanyInvitationRepository implements CompanyInvitationReposit
                 .set(COMPANY_INVITATIONS.UPDATED_AT, now)
                 .set(COMPANY_INVITATIONS.VERSION, COMPANY_INVITATIONS.VERSION.plus(1L))
                 .where(COMPANY_INVITATIONS.COMPANY_ID.eq(internalCompanyId))
-                .and(COMPANY_INVITATIONS.PUBLIC_ID.eq(invitation.publicId()))
+                .and(COMPANY_INVITATIONS.ID.eq(invitation.id()))
                 .and(COMPANY_INVITATIONS.VERSION.eq(invitation.version()))
                 .and(COMPANY_INVITATIONS.ACCEPTED_AT.isNull())
                 .and(COMPANY_INVITATIONS.REVOKED_AT.isNull())
@@ -143,7 +142,7 @@ public class JooqCompanyInvitationRepository implements CompanyInvitationReposit
 
         if (existingMember == null) {
             var inserted = dsl.insertInto(COMPANY_MEMBERS)
-                    .set(COMPANY_MEMBERS.PUBLIC_ID, UUID.randomUUID())
+
                     .set(COMPANY_MEMBERS.COMPANY_ID, internalCompanyId)
                     .set(COMPANY_MEMBERS.USER_ID, userId)
                     .set(COMPANY_MEMBERS.ROLE, invitation.role())
@@ -172,17 +171,17 @@ public class JooqCompanyInvitationRepository implements CompanyInvitationReposit
         return reactivated == null ? Optional.empty() : Optional.of(toMember(reactivated, invitation.companyId()));
     }
 
-    private Long internalCompanyId(UUID companyId) {
+    private Long internalCompanyId(Long companyId) {
         return dsl.select(COMPANIES.ID).from(COMPANIES)
-                .where(COMPANIES.PUBLIC_ID.eq(companyId)).fetchOne(COMPANIES.ID);
+                .where(COMPANIES.ID.eq(companyId)).fetchOne(COMPANIES.ID);
     }
 
     private CompanyInvitation toInvitationWithCompany(Record record) {
-        return toInvitation(record, record.get(COMPANIES.PUBLIC_ID));
+        return toInvitation(record, record.get(COMPANIES.ID));
     }
 
-    private CompanyInvitation toInvitation(Record record, UUID companyId) {
-        return new CompanyInvitation(record.get(COMPANY_INVITATIONS.PUBLIC_ID), companyId,
+    private CompanyInvitation toInvitation(Record record, Long companyId) {
+        return new CompanyInvitation(record.get(COMPANY_INVITATIONS.ID), companyId,
                 record.get(COMPANY_INVITATIONS.EMAIL), record.get(COMPANY_INVITATIONS.NORMALIZED_EMAIL),
                 record.get(COMPANY_INVITATIONS.ROLE), record.get(COMPANY_INVITATIONS.TOKEN_HASH),
                 record.get(COMPANY_INVITATIONS.INVITED_BY_USER_ID), record.get(COMPANY_INVITATIONS.EXPIRES_AT),
@@ -191,8 +190,8 @@ public class JooqCompanyInvitationRepository implements CompanyInvitationReposit
                 record.get(COMPANY_INVITATIONS.VERSION));
     }
 
-    private CompanyMember toMember(Record record, UUID companyId) {
-        return new CompanyMember(record.get(COMPANY_MEMBERS.PUBLIC_ID), companyId,
+    private CompanyMember toMember(Record record, Long companyId) {
+        return new CompanyMember(record.get(COMPANY_MEMBERS.ID), companyId,
                 record.get(COMPANY_MEMBERS.USER_ID), record.get(COMPANY_MEMBERS.ROLE),
                 record.get(COMPANY_MEMBERS.STATUS), record.get(COMPANY_MEMBERS.JOINED_AT),
                 record.get(COMPANY_MEMBERS.VERSION));

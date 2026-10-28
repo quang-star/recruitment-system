@@ -3,17 +3,16 @@ package com.smartrecruitment.core.recruiter.domain;
 import java.time.OffsetDateTime;
 import java.util.Objects;
 import java.util.Set;
-import java.util.UUID;
 
-public record CompanyInvitation(UUID publicId, UUID companyId, String email, String normalizedEmail,
-                                String role, String tokenHash, UUID invitedByUserId,
-                                OffsetDateTime expiresAt, UUID acceptedByUserId,
+public record CompanyInvitation(Long id, Long companyId, String email, String normalizedEmail,
+                                String role, String tokenHash, Long invitedByUserId,
+                                OffsetDateTime expiresAt, Long acceptedByUserId,
                                 OffsetDateTime acceptedAt, OffsetDateTime revokedAt,
                                 OffsetDateTime createdAt, long version) {
     private static final Set<String> INVITABLE_ROLES = Set.of("COMPANY_ADMIN", "RECRUITER", "VIEWER");
 
     public CompanyInvitation {
-        Objects.requireNonNull(publicId, "publicId");
+        Objects.requireNonNull(id, "id");
         Objects.requireNonNull(companyId, "companyId");
         Objects.requireNonNull(email, "email");
         Objects.requireNonNull(normalizedEmail, "normalizedEmail");
@@ -32,10 +31,10 @@ public record CompanyInvitation(UUID publicId, UUID companyId, String email, Str
         if (version < 0) throw new IllegalArgumentException("Invitation version must not be negative");
     }
 
-    public static CompanyInvitation create(UUID companyId, String email, String normalizedEmail, String role,
-                                           String tokenHash, UUID invitedByUserId,
+    public static CompanyInvitation create(Long companyId, String email, String normalizedEmail, String role,
+                                           String tokenHash, Long invitedByUserId,
                                            OffsetDateTime createdAt, OffsetDateTime expiresAt) {
-        return new CompanyInvitation(UUID.randomUUID(), companyId, email, normalizedEmail, role, tokenHash,
+        return new CompanyInvitation(0L, companyId, email, normalizedEmail, role, tokenHash,
                 invitedByUserId, expiresAt, null, null, null, createdAt, 0);
     }
 

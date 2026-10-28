@@ -2,12 +2,11 @@ package com.smartrecruitment.core.recruiter.domain;
 
 import java.time.OffsetDateTime;
 import java.util.Objects;
-import java.util.UUID;
 
-public record CompanyMember(UUID publicId, UUID companyId, UUID userId, String role, String status,
+public record CompanyMember(Long id, Long companyId, Long userId, String role, String status,
                             OffsetDateTime joinedAt, long version) {
     public CompanyMember {
-        Objects.requireNonNull(publicId, "publicId");
+        Objects.requireNonNull(id, "id");
         Objects.requireNonNull(companyId, "companyId");
         Objects.requireNonNull(userId, "userId");
         if (!java.util.Set.of("OWNER", "COMPANY_ADMIN", "RECRUITER", "VIEWER").contains(role)) {

@@ -2,13 +2,14 @@ package com.smartrecruitment.core.application.infrastructure.persistence;
 
 import org.jooq.DSLContext;
 import org.jooq.JSON;
+import org.jooq.JSONB;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Optional;
-import java.util.UUID;
+import java.util.Objects;
 
 import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.ApplicationMatchingProjections.APPLICATION_MATCHING_PROJECTIONS;
 import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.Applications.APPLICATIONS;
@@ -29,20 +30,32 @@ public class JooqApplicationMatchingProjectionRepository {
     public JooqApplicationMatchingProjectionRepository(DSLContext dsl) { this.dsl = dsl; }
 
     @Transactional
-    public boolean update(UUID applicationId, UUID cvVersionId, UUID jobVersionId,
-                       UUID matchingResultId, String status, double finalScore,
+    public boolean update(Long applicationId, Long cvVersionId, Long jobVersionId,
+                       Long matchingResultId, String status, double finalScore,
                        String qualityFlagsJson, String explanationJson,
                        String algorithmVersion, String taxonomyVersion) {
+        return update(applicationId, cvVersionId, jobVersionId, matchingResultId, status, finalScore,
+                qualityFlagsJson, explanationJson, algorithmVersion, taxonomyVersion, null, null);
+    }
+
+    @Transactional
+    public boolean update(Long applicationId, Long cvVersionId, Long jobVersionId,
+                          Long matchingResultId, String status, double finalScore,
+                          String qualityFlagsJson, String explanationJson,
+                          String algorithmVersion, String taxonomyVersion,
+                          Long resultGeneration, Long supersedesMatchingResultId) {
+        if (resultGeneration != null && resultGeneration < 1) throw new IllegalArgumentException("Invalid matching result generation");
+        if (matchingResultId.equals(supersedesMatchingResultId)) throw new IllegalArgumentException("A matching result cannot supersede itself");
         // Serialize with withdrawal/erasure; a late result cannot restore a revoked projection.
         var application = dsl.select(APPLICATIONS.ID).from(APPLICATIONS)
-                .where(APPLICATIONS.PUBLIC_ID.eq(applicationId)).forUpdate().fetchOne();
+                .where(APPLICATIONS.ID.eq(applicationId)).forUpdate().fetchOne();
         if (application == null) return false;
         boolean eligible = dsl.fetchExists(dsl.selectOne().from(APPLICATIONS)
                 .join(JOB_VERSIONS).on(JOB_VERSIONS.ID.eq(APPLICATIONS.JOB_VERSION_ID))
                 .join(CV_VERSIONS).on(CV_VERSIONS.ID.eq(APPLICATIONS.CV_VERSION_ID))
                 .join(CVS).on(CVS.ID.eq(APPLICATIONS.CV_ID))
-                .where(APPLICATIONS.PUBLIC_ID.eq(applicationId)).and(JOB_VERSIONS.PUBLIC_ID.eq(jobVersionId))
-                .and(CV_VERSIONS.PUBLIC_ID.eq(cvVersionId)).and(JOB_VERSIONS.MATCHING_DOMAIN.eq("IT"))
+                .where(APPLICATIONS.ID.eq(applicationId)).and(JOB_VERSIONS.ID.eq(jobVersionId))
+                .and(CV_VERSIONS.ID.eq(cvVersionId)).and(JOB_VERSIONS.MATCHING_DOMAIN.eq("IT"))
                 .and(CVS.STATUS.ne("DELETED")).and(CV_VERSIONS.PROCESSING_STATUS.ne("DELETED"))
                 .and(CVS.CANDIDATE_USER_ID.eq(APPLICATIONS.CANDIDATE_USER_ID))
                 .and(APPLICATIONS.CONSENT_ACCEPTED.eq(true)).and(APPLICATIONS.STATUS.ne("WITHDRAWN")).and(granted()));
@@ -55,6 +68,7 @@ public class JooqApplicationMatchingProjectionRepository {
                     .set(APPLICATION_MATCHING_PROJECTIONS.CV_VERSION_ID, cvVersionId)
                     .set(APPLICATION_MATCHING_PROJECTIONS.JOB_VERSION_ID, jobVersionId)
                     .set(APPLICATION_MATCHING_PROJECTIONS.MATCHING_RESULT_ID, matchingResultId)
+                    .set(APPLICATION_MATCHING_PROJECTIONS.RESULT_GENERATION, resultGeneration)
                     .set(APPLICATION_MATCHING_PROJECTIONS.STATUS, status)
                     .set(APPLICATION_MATCHING_PROJECTIONS.FINAL_SCORE, java.math.BigDecimal.valueOf(finalScore))
                     .set(APPLICATION_MATCHING_PROJECTIONS.QUALITY_FLAGS, JSON.json(qualityFlagsJson))
@@ -67,9 +81,22 @@ public class JooqApplicationMatchingProjectionRepository {
             return true;
         }
         if (!cvVersionId.equals(current.getCvVersionId()) || !jobVersionId.equals(current.getJobVersionId())) return false;
-        if (matchingResultId.equals(current.getMatchingResultId())) return false;
+        // A faithful replay may repair notification delivery without rewriting
+        // the result; inconsistent score or generation metadata cannot do so.
+        if (matchingResultId.equals(current.getMatchingResultId())) {
+            return Objects.equals(resultGeneration, current.getResultGeneration())
+                    && status.equals(current.getStatus())
+                    && java.math.BigDecimal.valueOf(finalScore).compareTo(current.getFinalScore()) == 0
+                    && JSONB.jsonb(qualityFlagsJson).equals(JSONB.jsonb(current.getQualityFlags().data()))
+                    && JSONB.jsonb(explanationJson).equals(JSONB.jsonb(current.getExplanation().data()))
+                    && algorithmVersion.equals(current.getAlgorithmVersion())
+                    && taxonomyVersion.equals(current.getTaxonomyVersion());
+        }
+        if (current.getResultGeneration() != null
+                && (resultGeneration == null || resultGeneration <= current.getResultGeneration())) return false;
         return dsl.update(APPLICATION_MATCHING_PROJECTIONS)
                 .set(APPLICATION_MATCHING_PROJECTIONS.MATCHING_RESULT_ID, matchingResultId)
+                .set(APPLICATION_MATCHING_PROJECTIONS.RESULT_GENERATION, resultGeneration)
                 .set(APPLICATION_MATCHING_PROJECTIONS.STATUS, status)
                 .set(APPLICATION_MATCHING_PROJECTIONS.FINAL_SCORE, java.math.BigDecimal.valueOf(finalScore))
                 .set(APPLICATION_MATCHING_PROJECTIONS.QUALITY_FLAGS, JSON.json(qualityFlagsJson))
@@ -81,11 +108,11 @@ public class JooqApplicationMatchingProjectionRepository {
                 .where(APPLICATION_MATCHING_PROJECTIONS.APPLICATION_ID.eq(applicationId)).execute() == 1;
     }
 
-    public Optional<Projection> findForViewer(UUID applicationId, UUID viewerId) {
+    public Optional<Projection> findForViewer(Long applicationId, Long viewerId) {
         return dsl.select(APPLICATION_MATCHING_PROJECTIONS.fields())
                 .from(APPLICATION_MATCHING_PROJECTIONS)
-                .join(APPLICATIONS).on(APPLICATIONS.PUBLIC_ID.eq(applicationId)
-                        .and(APPLICATIONS.PUBLIC_ID.eq(APPLICATION_MATCHING_PROJECTIONS.APPLICATION_ID)))
+                .join(APPLICATIONS).on(APPLICATIONS.ID.eq(applicationId)
+                        .and(APPLICATIONS.ID.eq(APPLICATION_MATCHING_PROJECTIONS.APPLICATION_ID)))
                 .join(JOBS).on(JOBS.ID.eq(APPLICATIONS.JOB_ID))
                 .join(JOB_VERSIONS).on(JOB_VERSIONS.ID.eq(APPLICATIONS.JOB_VERSION_ID))
                 .join(CVS).on(CVS.ID.eq(APPLICATIONS.CV_ID))
@@ -121,8 +148,8 @@ public class JooqApplicationMatchingProjectionRepository {
                 .and(APPLICATION_CV_ACCESS_GRANTS.REVOKED_AT.isNull()).and(CANDIDATE_CONSENTS.REVOKED_AT.isNull()));
     }
 
-    public record Projection(UUID applicationId, UUID cvVersionId, UUID jobVersionId,
-                             UUID matchingResultId, String status, double finalScore,
+    public record Projection(Long applicationId, Long cvVersionId, Long jobVersionId,
+                             Long matchingResultId, String status, double finalScore,
                              String qualityFlagsJson, String explanationJson,
                              String algorithmVersion, String taxonomyVersion, OffsetDateTime updatedAt) { }
 }

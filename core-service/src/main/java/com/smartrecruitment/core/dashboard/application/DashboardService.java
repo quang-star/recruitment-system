@@ -8,7 +8,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 @Service
 public class DashboardService {
@@ -21,16 +20,27 @@ public class DashboardService {
     }
 
     @Transactional(readOnly = true)
-    public DashboardResult get(UUID userId, List<String> roles, UUID companyId) {
+    public DashboardResult get(Long userId, List<String> roles, Long companyId) {
         if (roles.contains("RECRUITER")) {
             if (companyId == null || !companies.isActiveMember(companyId, userId)) {
                 throw new CompanyNotFoundException();
             }
-            return new DashboardResult("RECRUITER", dashboard.recruiterMetrics(userId, companyId));
+            var pendingJob = dashboard.findPendingActionJob(userId, companyId);
+            return new DashboardResult(
+                    "RECRUITER",
+                    dashboard.recruiterMetrics(userId, companyId),
+                    pendingJob != null ? pendingJob.jobId() : null,
+                    pendingJob != null ? pendingJob.jobTitle() : null
+            );
         }
-        return new DashboardResult("CANDIDATE", dashboard.candidateMetrics(userId));
+        return new DashboardResult("CANDIDATE", dashboard.candidateMetrics(userId), null, null);
     }
 
-    public record DashboardResult(String audience, Map<String, Long> metrics) { }
+    public record DashboardResult(
+            String audience,
+            Map<String, Long> metrics,
+            Long pendingJobId,
+            String pendingJobTitle
+    ) { }
 }
 

@@ -5,25 +5,26 @@ import com.smartrecruitment.core.recruiter.domain.CompanyMember;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 import java.time.OffsetDateTime;
 
 public interface CompanyRepository {
-    Company insertWithOwner(Company company, UUID ownerUserId);
-    Optional<Company> findByPublicIdForMember(UUID companyId, UUID userId);
-    List<Company> findAllForMember(UUID userId);
-    boolean isActiveMember(UUID companyId, UUID userId);
-    boolean canManage(UUID companyId, UUID userId);
-    default List<CompanyMember> findMembersForMember(UUID companyId, UUID viewerUserId) { return List.of(); }
-    default Optional<CompanyMember> findMember(UUID companyId, UUID userId) { return Optional.empty(); }
-    default Optional<CompanyMember> findMemberById(UUID companyId, UUID memberId) { return Optional.empty(); }
-    default Optional<CompanyMember> updateMember(UUID companyId, UUID memberId, String role, String status,
+    Company insertWithOwner(Company company, Long ownerUserId);
+    Optional<Company> findByIdForMember(Long companyId, Long userId);
+    List<Company> findAllForMember(Long userId);
+    boolean isActiveMember(Long companyId, Long userId);
+    boolean canManage(Long companyId, Long userId);
+    default List<CompanyMember> findMembersForMember(Long companyId, Long viewerUserId) { return List.of(); }
+    default Optional<CompanyMember> findMember(Long companyId, Long userId) { return Optional.empty(); }
+    default Optional<CompanyMember> findMemberById(Long companyId, Long memberId) { return Optional.empty(); }
+    default Optional<CompanyMember> updateMember(Long companyId, Long memberId, String role, String status,
                                                  long expectedVersion, OffsetDateTime now) {
         return Optional.empty();
     }
 
-    default boolean canRecruit(UUID companyId, UUID userId) {
+    default boolean canRecruit(Long companyId, Long userId) {
         return canManage(companyId, userId);
     }
+    default List<Company> findPublic() { return List.of(); }
+    default Optional<Company> findById(Long companyId) { return Optional.empty(); }
     Optional<Company> update(Company company, long expectedVersion);
 }
