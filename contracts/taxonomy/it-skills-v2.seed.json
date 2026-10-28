@@ -1,0 +1,439 @@
+{
+  "$schema": "https://smart-recruitment.local/contracts/schemas/skill-taxonomy-v2.schema.json",
+  "schemaVersion": "skill-taxonomy/2.0",
+  "semanticVersion": "1.0.0",
+  "status": "DRAFT",
+  "languageScope": [
+    "vi",
+    "en"
+  ],
+  "skills": [
+    {
+      "stableId": "1",
+      "canonicalName": "Java",
+      "normalizedName": "java",
+      "type": "language",
+      "category": "backend",
+      "aliases": [],
+      "relations": [],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "2",
+      "canonicalName": "Spring Boot",
+      "normalizedName": "spring-boot",
+      "type": "framework",
+      "category": "backend",
+      "aliases": [
+        {
+          "value": "SpringBoot",
+          "normalized": "springboot",
+          "language": "neutral"
+        }
+      ],
+      "relations": [
+        {
+          "type": "RELATED",
+          "targetSkillId": "1"
+        }
+      ],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "3",
+      "canonicalName": "Python",
+      "normalizedName": "python",
+      "type": "language",
+      "category": "backend",
+      "aliases": [],
+      "relations": [],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "4",
+      "canonicalName": "FastAPI",
+      "normalizedName": "fastapi",
+      "type": "framework",
+      "category": "backend",
+      "aliases": [],
+      "relations": [
+        {
+          "type": "RELATED",
+          "targetSkillId": "3"
+        }
+      ],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "5",
+      "canonicalName": "JavaScript",
+      "normalizedName": "javascript",
+      "type": "language",
+      "category": "frontend",
+      "aliases": [
+        {
+          "value": "JS",
+          "normalized": "js",
+          "language": "neutral"
+        },
+        {
+          "value": "ECMAScript",
+          "normalized": "ecmascript",
+          "language": "neutral"
+        }
+      ],
+      "relations": [],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "6",
+      "canonicalName": "TypeScript",
+      "normalizedName": "typescript",
+      "type": "language",
+      "category": "frontend",
+      "aliases": [
+        {
+          "value": "TS",
+          "normalized": "ts",
+          "language": "neutral"
+        }
+      ],
+      "relations": [
+        {
+          "type": "RELATED",
+          "targetSkillId": "5"
+        }
+      ],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "7",
+      "canonicalName": "React",
+      "normalizedName": "react",
+      "type": "library",
+      "category": "frontend",
+      "aliases": [
+        {
+          "value": "ReactJS",
+          "normalized": "reactjs",
+          "language": "neutral"
+        },
+        {
+          "value": "React.js",
+          "normalized": "react.js",
+          "language": "neutral"
+        }
+      ],
+      "relations": [
+        {
+          "type": "RELATED",
+          "targetSkillId": "5"
+        },
+        {
+          "type": "RELATED",
+          "targetSkillId": "6"
+        }
+      ],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "8",
+      "canonicalName": "Next.js",
+      "normalizedName": "next.js",
+      "type": "framework",
+      "category": "frontend",
+      "aliases": [
+        {
+          "value": "NextJS",
+          "normalized": "nextjs",
+          "language": "neutral"
+        }
+      ],
+      "relations": [
+        {
+          "type": "RELATED",
+          "targetSkillId": "7"
+        }
+      ],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "9",
+      "canonicalName": "Node.js",
+      "normalizedName": "node.js",
+      "type": "framework",
+      "category": "backend",
+      "aliases": [
+        {
+          "value": "NodeJS",
+          "normalized": "nodejs",
+          "language": "neutral"
+        }
+      ],
+      "relations": [
+        {
+          "type": "RELATED",
+          "targetSkillId": "5"
+        }
+      ],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "10",
+      "canonicalName": "PostgreSQL",
+      "normalizedName": "postgresql",
+      "type": "database",
+      "category": "backend",
+      "aliases": [
+        {
+          "value": "Postgres",
+          "normalized": "postgres",
+          "language": "neutral"
+        }
+      ],
+      "relations": [],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "11",
+      "canonicalName": "MySQL",
+      "normalizedName": "mysql",
+      "type": "database",
+      "category": "backend",
+      "aliases": [],
+      "relations": [],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "12",
+      "canonicalName": "MongoDB",
+      "normalizedName": "mongodb",
+      "type": "database",
+      "category": "backend",
+      "aliases": [
+        {
+          "value": "Mongo",
+          "normalized": "mongo",
+          "language": "neutral"
+        }
+      ],
+      "relations": [],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "13",
+      "canonicalName": "Redis",
+      "normalizedName": "redis",
+      "type": "database",
+      "category": "backend",
+      "aliases": [],
+      "relations": [],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "14",
+      "canonicalName": "Docker",
+      "normalizedName": "docker",
+      "type": "devops",
+      "category": "devops",
+      "aliases": [],
+      "relations": [],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "15",
+      "canonicalName": "Kubernetes",
+      "normalizedName": "kubernetes",
+      "type": "devops",
+      "category": "devops",
+      "aliases": [
+        {
+          "value": "K8s",
+          "normalized": "k8s",
+          "language": "neutral"
+        }
+      ],
+      "relations": [
+        {
+          "type": "RELATED",
+          "targetSkillId": "14"
+        }
+      ],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "16",
+      "canonicalName": "Amazon Web Services",
+      "normalizedName": "amazon-web-services",
+      "type": "cloud",
+      "category": "devops",
+      "aliases": [
+        {
+          "value": "AWS",
+          "normalized": "aws",
+          "language": "neutral"
+        }
+      ],
+      "relations": [],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "17",
+      "canonicalName": "Apache Kafka",
+      "normalizedName": "apache-kafka",
+      "type": "other",
+      "category": "backend",
+      "aliases": [
+        {
+          "value": "Kafka",
+          "normalized": "kafka",
+          "language": "neutral"
+        }
+      ],
+      "relations": [],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "18",
+      "canonicalName": "Git",
+      "normalizedName": "git",
+      "type": "devops",
+      "category": "cross_functional",
+      "aliases": [],
+      "relations": [],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "19",
+      "canonicalName": "REST API",
+      "normalizedName": "rest-api",
+      "type": "methodology",
+      "category": "backend",
+      "aliases": [
+        {
+          "value": "RESTful API",
+          "normalized": "restful-api",
+          "language": "neutral"
+        }
+      ],
+      "relations": [],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "20",
+      "canonicalName": "Microservices",
+      "normalizedName": "microservices",
+      "type": "methodology",
+      "category": "backend",
+      "aliases": [
+        {
+          "value": "Microservice Architecture",
+          "normalized": "microservice-architecture",
+          "language": "en"
+        }
+      ],
+      "relations": [],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "21",
+      "canonicalName": "CI/CD",
+      "normalizedName": "ci/cd",
+      "type": "devops",
+      "category": "devops",
+      "aliases": [
+        {
+          "value": "CICD",
+          "normalized": "cicd",
+          "language": "neutral"
+        },
+        {
+          "value": "Continuous Integration and Continuous Delivery",
+          "normalized": "continuous-integration-and-continuous-delivery",
+          "language": "en"
+        }
+      ],
+      "relations": [],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "22",
+      "canonicalName": "Machine Learning",
+      "normalizedName": "machine-learning",
+      "type": "data_ai",
+      "category": "data_ai",
+      "aliases": [
+        {
+          "value": "ML",
+          "normalized": "ml",
+          "language": "neutral"
+        },
+        {
+          "value": "Học máy",
+          "normalized": "hoc-may",
+          "language": "vi"
+        }
+      ],
+      "relations": [
+        {
+          "type": "RELATED",
+          "targetSkillId": "3"
+        }
+      ],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "23",
+      "canonicalName": "SQL",
+      "normalizedName": "sql",
+      "type": "language",
+      "category": "data_ai",
+      "aliases": [
+        {
+          "value": "Structured Query Language",
+          "normalized": "structured-query-language",
+          "language": "en"
+        }
+      ],
+      "relations": [],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "24",
+      "canonicalName": "Linux",
+      "normalizedName": "linux",
+      "type": "devops",
+      "category": "cross_functional",
+      "aliases": [
+        {
+          "value": "GNU/Linux",
+          "normalized": "gnu-linux",
+          "language": "neutral"
+        }
+      ],
+      "relations": [],
+      "status": "ACTIVE"
+    },
+    {
+      "stableId": "25",
+      "canonicalName": "Software Testing",
+      "normalizedName": "software-testing",
+      "type": "testing",
+      "category": "qa",
+      "aliases": [
+        {
+          "value": "Kiểm thử phần mềm",
+          "normalized": "kiem-thu-phan-mem",
+          "language": "vi"
+        },
+        {
+          "value": "QA Testing",
+          "normalized": "qa-testing",
+          "language": "en"
+        }
+      ],
+      "relations": [],
+      "status": "ACTIVE"
+    }
+  ]
+}

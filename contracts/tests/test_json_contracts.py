@@ -29,6 +29,30 @@ def event_validator(schema_name: str) -> Draft202012Validator:
     return Draft202012Validator(schema, format_checker=FormatChecker())
 
 
+def test_paged_lists_accept_empty_pages_but_reject_invalid_metadata() -> None:
+    valid = {"items": [], "total": 30, "page": 8, "size": 12}
+    validator("page-response-v1.schema.json").validate(valid)
+    for key, value in (("page", -1), ("size", 101), ("total", -1), ("items", "not-a-list")):
+        with pytest.raises(ValidationError):
+            validator("page-response-v1.schema.json").validate({**valid, key: value})
+
+
+def test_matching_result_generation_is_additive_and_bounded() -> None:
+    identifier = "779494ac-c858-4570-a884-6e88423b8e2b"
+    event = {"applicationId": identifier, "cvVersionId": identifier, "jobVersionId": identifier,
+             "matchingResultId": identifier, "status": "COMPLETED", "finalScore": 70,
+             "algorithmVersion": "baseline-v5", "taxonomyVersion": "1.0.0"}
+    schema = event_validator("matching-completed-v1.schema.json")
+    schema.validate(event)  # Legacy events truthfully carry no generation.
+    schema.validate({**event, "resultGeneration": None, "supersedesMatchingResultId": None})
+    schema.validate({**event, "resultGeneration": 2, "supersedesMatchingResultId": identifier})
+    for generation in (0, -1, 1.5, "2", True, 9223372036854775808):
+        with pytest.raises(ValidationError):
+            schema.validate({**event, "resultGeneration": generation})
+    with pytest.raises(ValidationError):
+        schema.validate({**event, "supersedesMatchingResultId": "not-a-uuid"})
+
+
 @pytest.mark.parametrize("schema_path", sorted(CONTRACTS_ROOT.rglob("*.schema.json")))
 def test_all_json_schemas_are_valid_draft_2020_12(schema_path: Path) -> None:
     schema = load_json(schema_path)
