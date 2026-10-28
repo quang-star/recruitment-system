@@ -22,7 +22,7 @@ export function VerifyEmailPage() {
     if (!token || state.type === "loading") return;
     setState({ type: "loading" });
     try {
-      const response = await apiRequest<VerificationResponse>("/api/v1/auth/verify-email", {
+      const response = await apiRequest<VerificationResponse>("/api/v2/auth/verify-email", {
         method: "POST",
         body: JSON.stringify({ token })
       });

@@ -26,7 +26,7 @@ describe("ResetPasswordPage", () => {
 
     expect(await screen.findByText(/Tất cả phiên đăng nhập cũ/)).toBeInTheDocument();
     const [path, init] = fetchMock.mock.calls[0];
-    expect(path).toBe("/api/v1/auth/reset-password");
+    expect(path).toBe("/api/v2/auth/reset-password");
     expect(JSON.parse(String(init?.body))).toEqual({ token, newPassword: "NewPassword!2026" });
   });
 });

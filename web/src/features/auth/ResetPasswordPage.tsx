@@ -21,7 +21,7 @@ export function ResetPasswordPage() {
     setState("submitting");
     setError(null);
     try {
-      await apiRequest<void>("/api/v1/auth/reset-password", {
+      await apiRequest<void>("/api/v2/auth/reset-password", {
         method: "POST",
         body: JSON.stringify({ token, newPassword: password })
       });
