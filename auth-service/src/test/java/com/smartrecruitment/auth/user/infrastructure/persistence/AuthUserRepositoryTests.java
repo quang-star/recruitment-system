@@ -12,7 +12,6 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -34,8 +33,7 @@ class AuthUserRepositoryTests {
         assertThat(repository.findByNormalizedEmail("candidate@example.com"))
                 .contains(saved);
         assertThat(saved.id()).isPositive();
-        assertThat(saved.publicId()).isNotNull();
-        assertThat(repository.findByPublicId(saved.publicId())).contains(saved);
+        assertThat(repository.findById(saved.id())).contains(saved);
         assertThat(saved.status()).isEqualTo(UserStatus.PENDING);
         assertThat(repository.existsByNormalizedEmail("candidate@example.com")).isTrue();
     }
@@ -55,7 +53,6 @@ class AuthUserRepositoryTests {
 
         assertThatThrownBy(() -> new AuthUser(
                 null,
-                UUID.randomUUID(),
                 "Candidate@Example.com",
                 "other@example.com",
                 UserStatus.PENDING,

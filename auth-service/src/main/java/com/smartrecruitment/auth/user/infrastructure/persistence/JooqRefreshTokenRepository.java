@@ -6,7 +6,6 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Optional;
-import java.util.UUID;
 import static com.smartrecruitment.auth.infrastructure.jooq.generated.tables.AuthSessions.AUTH_SESSIONS;
 import static com.smartrecruitment.auth.infrastructure.jooq.generated.tables.RefreshTokens.REFRESH_TOKENS;
 @Repository
@@ -15,12 +14,12 @@ public class JooqRefreshTokenRepository implements RefreshTokenRepository {
     public JooqRefreshTokenRepository(DSLContext dsl) { this.dsl = dsl; }
     @Override
     public RefreshToken insert(Long sessionId, String tokenHash, Long parentTokenId, Instant issuedAt, Instant expiresAt) {
-        var record = dsl.insertInto(REFRESH_TOKENS).set(REFRESH_TOKENS.PUBLIC_ID, UUID.randomUUID())
+        var record = dsl.insertInto(REFRESH_TOKENS)
                 .set(REFRESH_TOKENS.SESSION_ID, sessionId).set(REFRESH_TOKENS.TOKEN_HASH, tokenHash)
                 .set(REFRESH_TOKENS.PARENT_TOKEN_ID, parentTokenId).set(REFRESH_TOKENS.ISSUED_AT, utc(issuedAt))
                 .set(REFRESH_TOKENS.EXPIRES_AT, utc(expiresAt)).returning().fetchOne();
         if (record == null) throw new IllegalStateException("Insert refresh token returned no record");
-        return new RefreshToken(record.getId(), record.getPublicId(), record.getSessionId(), null, record.getTokenHash(),
+        return new RefreshToken(record.getId(), record.getSessionId(), null, record.getTokenHash(),
                 record.getExpiresAt().toInstant(), instant(record.getUsedAt()), instant(record.getRevokedAt()), null);
     }
     @Override
@@ -28,7 +27,7 @@ public class JooqRefreshTokenRepository implements RefreshTokenRepository {
         return dsl.select(REFRESH_TOKENS.fields()).select(AUTH_SESSIONS.USER_ID, AUTH_SESSIONS.REVOKED_AT)
                 .from(REFRESH_TOKENS).join(AUTH_SESSIONS).on(AUTH_SESSIONS.ID.eq(REFRESH_TOKENS.SESSION_ID))
                 .where(REFRESH_TOKENS.TOKEN_HASH.eq(tokenHash))
-                .fetchOptional(record -> new RefreshToken(record.get(REFRESH_TOKENS.ID), record.get(REFRESH_TOKENS.PUBLIC_ID),
+                .fetchOptional(record -> new RefreshToken(record.get(REFRESH_TOKENS.ID),
                         record.get(REFRESH_TOKENS.SESSION_ID), record.get(AUTH_SESSIONS.USER_ID), record.get(REFRESH_TOKENS.TOKEN_HASH),
                         record.get(REFRESH_TOKENS.EXPIRES_AT).toInstant(), instant(record.get(REFRESH_TOKENS.USED_AT)),
                         instant(record.get(REFRESH_TOKENS.REVOKED_AT)), instant(record.get(AUTH_SESSIONS.REVOKED_AT))));

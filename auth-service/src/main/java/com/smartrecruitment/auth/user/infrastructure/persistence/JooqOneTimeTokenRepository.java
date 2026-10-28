@@ -8,7 +8,6 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Optional;
-import java.util.UUID;
 
 import static com.smartrecruitment.auth.infrastructure.jooq.generated.tables.OneTimeTokens.ONE_TIME_TOKENS;
 
@@ -27,7 +26,6 @@ public class JooqOneTimeTokenRepository implements OneTimeTokenRepository {
     @Override
     public void insertEmailVerificationToken(Long userId, String tokenHash, Instant createdAt, Instant expiresAt) {
         dsl.insertInto(ONE_TIME_TOKENS)
-                .set(ONE_TIME_TOKENS.PUBLIC_ID, UUID.randomUUID())
                 .set(ONE_TIME_TOKENS.USER_ID, userId)
                 .set(ONE_TIME_TOKENS.TOKEN_TYPE, EMAIL_VERIFICATION)
                 .set(ONE_TIME_TOKENS.TOKEN_HASH, tokenHash)
@@ -91,7 +89,6 @@ public class JooqOneTimeTokenRepository implements OneTimeTokenRepository {
 
     private void insertToken(Long userId, String tokenType, String tokenHash, Instant createdAt, Instant expiresAt) {
         dsl.insertInto(ONE_TIME_TOKENS)
-                .set(ONE_TIME_TOKENS.PUBLIC_ID, UUID.randomUUID())
                 .set(ONE_TIME_TOKENS.USER_ID, userId)
                 .set(ONE_TIME_TOKENS.TOKEN_TYPE, tokenType)
                 .set(ONE_TIME_TOKENS.TOKEN_HASH, tokenHash)

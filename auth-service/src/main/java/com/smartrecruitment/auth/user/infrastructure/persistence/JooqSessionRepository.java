@@ -9,7 +9,6 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Optional;
 import java.util.List;
-import java.util.UUID;
 
 import static com.smartrecruitment.auth.infrastructure.jooq.generated.tables.AuthSessions.AUTH_SESSIONS;
 
@@ -22,7 +21,6 @@ public class JooqSessionRepository implements SessionRepository {
     public Session insert(Long userId, String clientType, String deviceName, String userAgent, String createdIp,
                           Instant authenticatedAt, Instant idleExpiresAt, Instant absoluteExpiresAt) {
         var record = dsl.insertInto(AUTH_SESSIONS)
-                .set(AUTH_SESSIONS.PUBLIC_ID, UUID.randomUUID())
                 .set(AUTH_SESSIONS.USER_ID, userId)
                 .set(AUTH_SESSIONS.CLIENT_TYPE, clientType)
                 .set(AUTH_SESSIONS.DEVICE_NAME, deviceName)
@@ -82,12 +80,12 @@ public class JooqSessionRepository implements SessionRepository {
     }
 
     @Override
-    public boolean revokeByPublicIdAndUserId(UUID publicId, Long userId, String reason, Instant revokedAt) {
+    public boolean revokeByIdAndUserId(Long id, Long userId, String reason, Instant revokedAt) {
         return dsl.update(AUTH_SESSIONS)
                 .set(AUTH_SESSIONS.REVOKED_AT, utc(revokedAt))
                 .set(AUTH_SESSIONS.REVOKE_REASON, reason)
                 .set(AUTH_SESSIONS.VERSION, AUTH_SESSIONS.VERSION.plus(1L))
-                .where(AUTH_SESSIONS.PUBLIC_ID.eq(publicId))
+                .where(AUTH_SESSIONS.ID.eq(id))
                 .and(AUTH_SESSIONS.USER_ID.eq(userId))
                 .and(AUTH_SESSIONS.REVOKED_AT.isNull())
                 .execute() == 1;
@@ -99,7 +97,7 @@ public class JooqSessionRepository implements SessionRepository {
                 .where(AUTH_SESSIONS.USER_ID.eq(userId))
                 .orderBy(AUTH_SESSIONS.LAST_SEEN_AT.desc())
                 .fetch(record -> new SessionDetails(
-                        record.getPublicId(), record.getClientType(), record.getDeviceName(), record.getUserAgent(),
+                        record.getId(), record.getClientType(), record.getDeviceName(), record.getUserAgent(),
                         record.getCreatedIp(), record.getLastSeenIp(), record.getAuthenticatedAt().toInstant(),
                         record.getLastSeenAt().toInstant(), record.getIdleExpiresAt().toInstant(),
                         record.getAbsoluteExpiresAt().toInstant(),
@@ -108,7 +106,7 @@ public class JooqSessionRepository implements SessionRepository {
     }
 
     private static Session toDomain(com.smartrecruitment.auth.infrastructure.jooq.generated.tables.records.AuthSessionsRecord record) {
-        return new Session(record.getId(), record.getPublicId(), record.getUserId(),
+        return new Session(record.getId(), record.getUserId(),
                 record.getIdleExpiresAt().toInstant(), record.getAbsoluteExpiresAt().toInstant(),
                 record.getRevokedAt() == null ? null : record.getRevokedAt().toInstant());
     }

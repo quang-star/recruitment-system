@@ -3,11 +3,9 @@ package com.smartrecruitment.auth.user.domain;
 import java.time.Instant;
 import java.util.Locale;
 import java.util.Objects;
-import java.util.UUID;
 
 public record AuthUser(
         Long id,
-        UUID publicId,
         String email,
         String normalizedEmail,
         UserStatus status,
@@ -22,7 +20,6 @@ public record AuthUser(
         if (id != null && id <= 0) {
             throw new IllegalArgumentException("id must be positive when present");
         }
-        Objects.requireNonNull(publicId, "publicId is required");
         String canonicalEmail = Objects.requireNonNull(email, "email is required").trim();
         if (canonicalEmail.isEmpty()) {
             throw new IllegalArgumentException("email must not be blank");
@@ -44,13 +41,18 @@ public record AuthUser(
         email = canonicalEmail;
     }
 
+    public static AuthUser verified(String email, Instant now) {
+        String canonicalEmail = Objects.requireNonNull(email, "email is required").trim();
+        return new AuthUser(null, canonicalEmail, canonicalEmail.toLowerCase(Locale.ROOT),
+                UserStatus.ACTIVE, now, null, now, now, 0);
+    }
+
     public static AuthUser pending(String email) {
         String canonicalEmail = Objects.requireNonNull(email, "email is required").trim();
         Instant now = Instant.now();
 
         return new AuthUser(
                 null,
-                UUID.randomUUID(),
                 canonicalEmail,
                 canonicalEmail.toLowerCase(Locale.ROOT),
                 UserStatus.PENDING,

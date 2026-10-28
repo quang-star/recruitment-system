@@ -40,7 +40,6 @@ class AuthRefreshTokenReuseIntegrationTests {
         String password = "correct horse battery staple";
         AuthUser user = users.insert(new AuthUser(
                 null,
-                UUID.randomUUID(),
                 email,
                 email,
                 UserStatus.ACTIVE,
