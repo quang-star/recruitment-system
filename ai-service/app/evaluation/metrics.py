@@ -35,8 +35,8 @@ def evaluate(rows: Iterable[EvaluationRow], k: int = 5) -> dict[str, object]:
     rated = [row for row in values if row.rater_1_label is not None and row.rater_2_label is not None]
     agreement: dict[str, object] | None = None
     if rated:
-        first = [int(row.rater_1_label) for row in rated]
-        second = [int(row.rater_2_label) for row in rated]
+        first = [int(row.rater_1_label) for row in rated if row.rater_1_label is not None]
+        second = [int(row.rater_2_label) for row in rated if row.rater_2_label is not None]
         agreement = {
             "pairCount": len(rated),
             "rawAgreement": round(sum(a == b for a, b in zip(first, second)) / len(rated), 6),

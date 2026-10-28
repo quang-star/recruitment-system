@@ -9,10 +9,33 @@ import subprocess
 from tempfile import TemporaryDirectory
 
 from jsonschema import Draft202012Validator, FormatChecker
+from pydantic import BaseModel
 from pypdf import PdfReader, PdfWriter
 from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject, NumberObject
 
 from app.cv.parser import parse_pdf
+
+
+class _SkillDiagnostic(BaseModel):
+    raw: str
+
+
+class _DocumentDiagnostic(BaseModel):
+    textExtractionMethod: str
+    parserVersion: str
+
+
+class _SummaryDiagnostic(BaseModel):
+    overallConfidence: float | int
+    qualityFlags: list[str]
+
+
+class _OcrSmokePayload(BaseModel):
+    """Validate only the parser fields used in the OCR smoke summary."""
+
+    skills: list[_SkillDiagnostic]
+    document: _DocumentDiagnostic
+    summary: _SummaryDiagnostic
 
 
 def main() -> None:
@@ -34,28 +57,29 @@ def main() -> None:
 
     digest = sha256(scanned).hexdigest()
     payload = parse_pdf("779494ac-c858-4570-a884-6e88423b8e2b", digest, scanned)
-    schema_path = Path("/app/contracts/schemas/parsed-cv-v1.schema.json")
+    schema_path = Path("/app/contracts/schemas/parsed-cv-v2.schema.json")
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
     Draft202012Validator(schema, format_checker=FormatChecker()).validate(payload)
+    diagnostics = _OcrSmokePayload.model_validate(payload, strict=True)
 
-    recovered = {str(skill["raw"]) for skill in payload["skills"]}
+    recovered = {skill.raw for skill in diagnostics.skills}
     missing = set(arguments.expect_skill) - recovered
     if missing:
         raise RuntimeError(
             f"OCR did not recover expected skills: {', '.join(sorted(missing))}; "
             f"recovered canonical skills: {', '.join(sorted(recovered)) or 'none'}"
         )
-    if payload["document"]["textExtractionMethod"] != "OCR":
+    if diagnostics.document.textExtractionMethod != "OCR":
         raise RuntimeError("Parser did not record OCR as the text extraction method")
 
     print(json.dumps({
         "fixture": "synthetic-image-only-pdf",
         "embeddedTextCharacters": 0,
-        "textExtractionMethod": payload["document"]["textExtractionMethod"],
-        "parserVersion": payload["document"]["parserVersion"],
+        "textExtractionMethod": diagnostics.document.textExtractionMethod,
+        "parserVersion": diagnostics.document.parserVersion,
         "recoveredSkills": sorted(recovered),
-        "overallConfidence": payload["summary"]["overallConfidence"],
-        "qualityFlags": payload["summary"]["qualityFlags"],
+        "overallConfidence": diagnostics.summary.overallConfidence,
+        "qualityFlags": diagnostics.summary.qualityFlags,
         "schemaValidated": True,
     }, indent=2, sort_keys=True))
 
