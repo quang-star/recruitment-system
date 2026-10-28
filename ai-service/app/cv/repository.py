@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+from app.shared.database import BUSINESS_ID
 from dataclasses import dataclass
 from datetime import datetime
-from uuid import UUID, uuid4
 
-from sqlalchemy import BigInteger, DateTime, Integer, JSON, String, Uuid, func, select, update
+from sqlalchemy import DateTime, Integer, JSON, String, func, select, update
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
 from app.shared.database import Base
@@ -13,48 +13,51 @@ from app.shared.database import Base
 class ParsedCvRevisionRecord(Base):
     __tablename__ = "parsed_cv_revisions"
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
-    public_id: Mapped[UUID] = mapped_column(Uuid, unique=True, nullable=False)
-    cv_version_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
-    owner_user_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
+    id: Mapped[int] = mapped_column(BUSINESS_ID, primary_key=True, autoincrement=True)
+    cv_version_id: Mapped[int] = mapped_column(BUSINESS_ID, nullable=False)
+    owner_user_id: Mapped[int] = mapped_column(BUSINESS_ID, nullable=False)
     revision_number: Mapped[int] = mapped_column(Integer, nullable=False)
     source_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     payload: Mapped[dict] = mapped_column(JSON, nullable=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="PARSED")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    version: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
+    version: Mapped[int] = mapped_column(BUSINESS_ID, nullable=False, default=0)
+    supersedes_revision_id: Mapped[int | None] = mapped_column(BUSINESS_ID)
+    reprocess_effect_key: Mapped[str | None] = mapped_column(String(64), unique=True)
 
 
 class ParsedCvHeadRecord(Base):
     __tablename__ = "parsed_cv_heads"
 
-    cv_version_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
-    revision_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
-    confirmed_by: Mapped[UUID] = mapped_column(Uuid, nullable=False)
+    cv_version_id: Mapped[int] = mapped_column(BUSINESS_ID, primary_key=True)
+    revision_id: Mapped[int] = mapped_column(BUSINESS_ID, nullable=False)
+    confirmed_by: Mapped[int] = mapped_column(BUSINESS_ID, nullable=False)
     confirmed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    version: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
+    version: Mapped[int] = mapped_column(BUSINESS_ID, nullable=False, default=0)
 
 
 @dataclass(frozen=True, slots=True)
 class ParsedCvRevision:
-    public_id: UUID
-    cv_version_id: UUID
-    owner_user_id: UUID
+    id: int
+    cv_version_id: int
+    owner_user_id: int
     revision_number: int
     source_hash: str
     payload: dict
     status: str
-    confirmed_by: UUID | None
+    confirmed_by: int | None
     confirmed_at: datetime | None
     version: int
+    supersedes_revision_id: int | None = None
+    reprocess_effect_key: str | None = None
 
 
 class ParsedCvRevisionRepository:
     def __init__(self, session: Session):
         self._session = session
 
-    def create(self, cv_version_id: UUID, owner_user_id: UUID, source_hash: str,
+    def create(self, cv_version_id: int, owner_user_id: int, source_hash: str,
                payload: dict) -> ParsedCvRevision:
         existing = self._session.scalar(
             select(ParsedCvRevisionRecord)
@@ -70,7 +73,7 @@ class ParsedCvRevisionRepository:
         ).scalar_one()
         now = datetime.now().astimezone()
         record = ParsedCvRevisionRecord(
-            public_id=uuid4(),
+
             cv_version_id=cv_version_id,
             owner_user_id=owner_user_id,
             revision_number=int(next_number),
@@ -85,9 +88,9 @@ class ParsedCvRevisionRepository:
         self._session.flush()
         return self._to_domain(record, None)
 
-    def create_revision(self, cv_version_id: UUID, owner_user_id: UUID,
+    def create_revision(self, cv_version_id: int, owner_user_id: int,
                        source_hash: str, payload: dict,
-                       expected_revision_id: UUID | None = None) -> ParsedCvRevision:
+                       expected_revision_id: int | None = None) -> ParsedCvRevision:
         """Create an immutable candidate-edited revision with optimistic locking."""
         latest = self._session.scalar(
             select(ParsedCvRevisionRecord)
@@ -97,14 +100,14 @@ class ParsedCvRevisionRepository:
             .with_for_update()
         )
         if expected_revision_id is not None and (
-            latest is None or latest.public_id != expected_revision_id
+            latest is None or latest.id != expected_revision_id
         ):
             raise ValueError("ParsedCV revision is stale; reload the latest revision")
 
         next_number = (latest.revision_number + 1) if latest else 1
         now = datetime.now().astimezone()
         record = ParsedCvRevisionRecord(
-            public_id=uuid4(),
+
             cv_version_id=cv_version_id,
             owner_user_id=owner_user_id,
             revision_number=next_number,
@@ -119,7 +122,24 @@ class ParsedCvRevisionRepository:
         self._session.flush()
         return self._to_domain(record, None)
 
-    def find_owned(self, cv_version_id: UUID, owner_user_id: UUID) -> ParsedCvRevision | None:
+    def create_reprocess_revision(self, cv_version_id: int, owner_user_id: int,
+                                  source_hash: str, payload: dict, expected_revision_id: int,
+                                  effect_key: str) -> ParsedCvRevision:
+        existing = self._session.scalar(select(ParsedCvRevisionRecord).where(
+            ParsedCvRevisionRecord.reprocess_effect_key == effect_key))
+        if existing is not None:
+            if existing.cv_version_id != cv_version_id or existing.owner_user_id != owner_user_id:
+                raise ValueError("Reprocessing effect belongs to another source")
+            return self._to_domain(existing, None)
+        revision = self.create_revision(cv_version_id, owner_user_id, source_hash, payload, expected_revision_id)
+        record = self._session.scalar(select(ParsedCvRevisionRecord).where(ParsedCvRevisionRecord.id == revision.id))
+        if record is None:
+            raise RuntimeError("Reprocessing revision was not persisted")
+        record.supersedes_revision_id, record.reprocess_effect_key = expected_revision_id, effect_key
+        self._session.flush()
+        return self._to_domain(record, None)
+
+    def find_owned(self, cv_version_id: int, owner_user_id: int) -> ParsedCvRevision | None:
         row = self._session.execute(
             select(ParsedCvRevisionRecord, ParsedCvHeadRecord)
             .outerjoin(ParsedCvHeadRecord,
@@ -130,7 +150,7 @@ class ParsedCvRevisionRepository:
         ).first()
         return self._to_domain(row[0], row[1]) if row else None
 
-    def find_confirmed(self, cv_version_id: UUID) -> ParsedCvRevision | None:
+    def find_confirmed(self, cv_version_id: int) -> ParsedCvRevision | None:
         row = self._session.execute(
             select(ParsedCvRevisionRecord, ParsedCvHeadRecord)
             .join(ParsedCvHeadRecord, ParsedCvHeadRecord.revision_id == ParsedCvRevisionRecord.id)
@@ -138,8 +158,8 @@ class ParsedCvRevisionRepository:
         ).first()
         return self._to_domain(row[0], row[1]) if row else None
 
-    def confirm(self, cv_version_id: UUID, owner_user_id: UUID,
-                expected_revision_id: UUID, confirmed_by: UUID) -> ParsedCvRevision:
+    def confirm(self, cv_version_id: int, owner_user_id: int,
+                expected_revision_id: int, confirmed_by: int) -> ParsedCvRevision:
         record = self._session.scalar(
             select(ParsedCvRevisionRecord)
             .where(ParsedCvRevisionRecord.cv_version_id == cv_version_id)
@@ -149,7 +169,7 @@ class ParsedCvRevisionRepository:
         )
         if record is None:
             raise LookupError("ParsedCV revision was not found")
-        if record.public_id != expected_revision_id:
+        if record.id != expected_revision_id:
             raise ValueError("ParsedCV revision is stale; reload the latest revision")
 
         head = self._session.scalar(
@@ -194,7 +214,7 @@ class ParsedCvRevisionRepository:
     def _to_domain(record: ParsedCvRevisionRecord,
                    head: ParsedCvHeadRecord | None) -> ParsedCvRevision:
         return ParsedCvRevision(
-            public_id=record.public_id,
+            id=record.id,
             cv_version_id=record.cv_version_id,
             owner_user_id=record.owner_user_id,
             revision_number=record.revision_number,
@@ -204,4 +224,6 @@ class ParsedCvRevisionRepository:
             confirmed_by=head.confirmed_by if head else None,
             confirmed_at=head.confirmed_at if head else None,
             version=record.version,
+            supersedes_revision_id=record.supersedes_revision_id,
+            reprocess_effect_key=record.reprocess_effect_key,
         )

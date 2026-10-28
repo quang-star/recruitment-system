@@ -1,7 +1,6 @@
 """Provider-independent contracts for document extraction."""
 from dataclasses import dataclass
 from typing import Literal, Protocol
-from uuid import UUID
 
 EXTERNAL_AI_POLICY_VERSION = "external-ai/1.0"
 DocumentKind = Literal["cv", "jd"]
@@ -18,8 +17,8 @@ class ExtractionProvider(Protocol):
 
 @dataclass(frozen=True)
 class ExtractionContext:
-    owner_user_id: UUID
-    resource_id: UUID
+    owner_user_id: int
+    resource_id: int
     source_hash: str
     consented: bool = False
     policy_version: str | None = None

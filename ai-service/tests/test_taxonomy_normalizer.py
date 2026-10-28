@@ -1,3 +1,4 @@
+from identity_fixtures import legacy_id
 from app.taxonomy.normalizer import extract_known_skills, normalize_skill, taxonomy_version
 
 
@@ -7,7 +8,7 @@ def test_aliases_resolve_to_stable_canonical_ids() -> None:
 
     assert react is not None
     assert react.canonical_name == "React"
-    assert react.stable_id == "d4f49f3b-a28e-5fd3-b558-94beba4054c0"
+    assert react.stable_id == str(legacy_id('d4f49f3b-a28e-5fd3-b558-94beba4054c0'))
     assert postgres is not None
     assert postgres.canonical_name == "PostgreSQL"
     assert taxonomy_version() == "1.0.0"

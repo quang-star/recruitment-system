@@ -1,3 +1,4 @@
+from identity_fixtures import legacy_id
 from copy import deepcopy
 from io import BytesIO
 import json
@@ -16,7 +17,7 @@ from app.shared.groq import GroqExtractor
 from app.shared import groq
 
 
-VERSION = "779494ac-c858-4570-a884-6e88423b8e2b"
+VERSION = str(legacy_id('779494ac-c858-4570-a884-6e88423b8e2b'))
 
 
 def test_default_runtime_routes_cv_and_jd_to_groq_when_both_providers_are_available():

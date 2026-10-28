@@ -1,5 +1,5 @@
+from identity_fixtures import new_id
 from datetime import UTC, datetime, timedelta, timezone
-from uuid import uuid4
 
 import pytest
 from sqlalchemy import Integer, MetaData, create_engine, select
@@ -23,7 +23,7 @@ def sessions():
 
 
 def test_new_task_retains_utc_instant_after_sqlite_reload(sessions):
-    resource, owner = uuid4(), uuid4()
+    resource, owner = new_id(), new_id()
     with sessions() as session:
         task = SqlAlchemyProcessingTaskRepository(session).start_cv(
             resource, owner, "synthetic/cv.pdf", "a" * 64,
@@ -32,13 +32,13 @@ def test_new_task_retains_utc_instant_after_sqlite_reload(sessions):
     assert task.submitted_at.tzinfo is UTC and task.updated_at.tzinfo is UTC
     with sessions() as session:
         repository = SqlAlchemyProcessingTaskRepository(session)
-        assert repository.find_by_public_id(task.public_id) == task
+        assert repository.find_by_id(task.id) == task
         record = session.scalar(select(ProcessingTaskRecord))
         assert record.submitted_at == task.submitted_at.astimezone().replace(tzinfo=None)
-        completed = repository.complete(task.public_id, {"synthetic": True})
+        completed = repository.complete(task.id, {"synthetic": True})
         session.commit()
     with sessions() as session:
-        reloaded = SqlAlchemyProcessingTaskRepository(session).find_by_public_id(task.public_id)
+        reloaded = SqlAlchemyProcessingTaskRepository(session).find_by_id(task.id)
         assert reloaded == completed
         assert reloaded.state is TaskState.COMPLETED
         assert reloaded.updated_at >= task.updated_at
@@ -49,12 +49,12 @@ def test_new_task_retains_utc_instant_after_sqlite_reload(sessions):
     ("retry", TaskState.RETRYING), ("restart", TaskState.PROCESSING),
 ])
 def test_legacy_local_sqlite_times_survive_transitions_and_clock_rollback(sessions, transition, state):
-    task_id, resource, owner = uuid4(), uuid4(), uuid4()
+    task_id, resource, owner = new_id(), new_id(), new_id()
     submitted = datetime(2100, 1, 2, 9)
     updated = submitted + timedelta(hours=1)
     with sessions() as session:
         session.add(ProcessingTaskRecord(
-            public_id=task_id, resource_id=resource, owner_user_id=owner,
+            id=task_id, resource_id=resource, owner_user_id=owner,
             task_type=TaskType.PARSE_CV.value, state=TaskState.PROCESSING.value,
             attempt_count=1, object_ref="synthetic/cv.pdf", source_hash="a" * 64,
             submitted_at=submitted, updated_at=updated,
@@ -76,7 +76,7 @@ def test_legacy_local_sqlite_times_survive_transitions_and_clock_rollback(sessio
     assert task.updated_at == updated.astimezone(UTC)
     assert task.updated_at.tzinfo is UTC
     with sessions() as session:
-        assert SqlAlchemyProcessingTaskRepository(session).find_by_public_id(task_id) == task
+        assert SqlAlchemyProcessingTaskRepository(session).find_by_id(task_id) == task
 
 
 def test_aware_database_timestamps_keep_their_utc_instant_and_monotonic_order():
@@ -84,7 +84,7 @@ def test_aware_database_timestamps_keep_their_utc_instant_and_monotonic_order():
     submitted = datetime(2100, 1, 2, 9, tzinfo=offset)
     updated = submitted + timedelta(hours=1)
     record = ProcessingTaskRecord(
-        public_id=uuid4(), task_type=TaskType.PARSE_CV.value,
+        id=new_id(), task_type=TaskType.PARSE_CV.value,
         state=TaskState.PROCESSING.value, attempt_count=1, processing_generation=0,
         submitted_at=submitted, updated_at=updated,
     )

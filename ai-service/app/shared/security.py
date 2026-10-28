@@ -1,7 +1,7 @@
+from app.shared.identities import parse_id
 from dataclasses import dataclass
 from functools import lru_cache
 from typing import Any
-from uuid import UUID
 
 import jwt
 from fastapi import Depends
@@ -17,7 +17,7 @@ _bearer = HTTPBearer(auto_error=False)
 
 @dataclass(frozen=True, slots=True)
 class AuthenticatedPrincipal:
-    subject: UUID
+    subject: int
     roles: tuple[str, ...]
 
 
@@ -49,7 +49,7 @@ class JwtVerifier:
                 issuer=self._issuer,
                 options={"require": ["exp", "iat", "iss", "aud", "sub"]},
             )
-            subject = UUID(claims["sub"])
+            subject = parse_id(claims["sub"])
             raw_roles = claims.get("roles", [])
             if not isinstance(raw_roles, list) or not all(isinstance(role, str) for role in raw_roles):
                 raise InvalidTokenError("roles claim must be a list of strings")

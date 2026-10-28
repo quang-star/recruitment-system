@@ -9,6 +9,21 @@ from pydantic import BaseModel, Field
 CORRELATION_HEADER = "X-Correlation-Id"
 
 
+def _business_id_strings(value: Any, field: str = "") -> Any:
+    if isinstance(value, dict):
+        return {key: _business_id_strings(item, key) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_business_id_strings(item, field) for item in value]
+    if type(value) is int and (field == "id" or field.endswith(("Id", "Ids", "_id", "_ids"))):
+        return str(value)
+    return value
+
+
+class BusinessIdentityResponse(JSONResponse):
+    def render(self, content: Any) -> bytes:
+        return super().render(_business_id_strings(content))
+
+
 class ApiError(BaseModel):
     code: str
     message: str
@@ -25,6 +40,7 @@ def _correlation_id(candidate: str | None) -> UUID:
 
 
 def install_api_conventions(app: FastAPI) -> None:
+    app.router.default_response_class = BusinessIdentityResponse
     @app.middleware("http")
     async def correlation_middleware(request: Request, call_next):
         correlation_id = _correlation_id(request.headers.get(CORRELATION_HEADER))

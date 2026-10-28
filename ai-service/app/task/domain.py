@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
-from uuid import UUID
 
 
 class TaskType(StrEnum):
@@ -21,16 +20,16 @@ class TaskState(StrEnum):
 
 @dataclass(frozen=True, slots=True)
 class ProcessingTask:
-    public_id: UUID
+    id: int
     task_type: TaskType
     state: TaskState
     attempt_count: int
     submitted_at: datetime
     updated_at: datetime
     safe_error_code: str | None = None
-    resource_id: UUID | None = None
+    resource_id: int | None = None
     result_payload: dict[str, object] | None = None
-    owner_user_id: UUID | None = None
+    owner_user_id: int | None = None
     processing_generation: int = 0
 
     def __post_init__(self) -> None:

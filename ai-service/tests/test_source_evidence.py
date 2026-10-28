@@ -1,3 +1,4 @@
+from identity_fixtures import legacy_id
 from types import SimpleNamespace
 
 from app.cv.parser import parse_pdf
@@ -5,7 +6,7 @@ from app.jd.parser import parse_jd
 from app.shared.evidence import attach_source_evidence
 
 
-VERSION = "779494ac-c858-4570-a884-6e88423b8e2b"
+VERSION = str(legacy_id('779494ac-c858-4570-a884-6e88423b8e2b'))
 
 
 def test_cv_sections_have_source_locations_on_the_correct_page(monkeypatch):

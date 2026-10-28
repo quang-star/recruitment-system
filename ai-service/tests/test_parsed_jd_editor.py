@@ -1,6 +1,6 @@
+from identity_fixtures import legacy_id, new_id
 from datetime import UTC, datetime
 from copy import deepcopy
-from uuid import UUID, uuid4
 
 import pytest
 
@@ -9,7 +9,7 @@ from app.jd.parser import parse_jd
 from app.jd.repository import ParsedJdRevisionRecord, ParsedJdRevisionRepository
 
 
-JOB_VERSION_ID = UUID("779494ac-c858-4570-a884-6e88423b8e2b")
+JOB_VERSION_ID = int(str(legacy_id('779494ac-c858-4570-a884-6e88423b8e2b')))
 SOURCE_HASH = "0cb83583181fc5bdb09aa37cf82ab5f89e7438e88925de3e6e1f0f0eddb76382"
 
 
@@ -61,7 +61,7 @@ def test_recruiter_edit_normalizes_known_and_preserves_unknown_skill() -> None:
 
     assert validated["requirements"]["preferredSkills"][0]["normalizationStatus"] == "KNOWN"
     assert validated["requirements"]["preferredSkills"][0]["canonicalSkillId"] == \
-        "d4f49f3b-a28e-5fd3-b558-94beba4054c0"
+        str(legacy_id('d4f49f3b-a28e-5fd3-b558-94beba4054c0'))
     assert validated["requirements"]["preferredSkills"][1]["normalizationStatus"] == "PENDING"
     assert validated["requirements"]["preferredSkills"][1]["canonicalSkillId"] is None
     assert validated["requirements"]["preferredSkills"][0]["confirmedByRecruiter"] is True
@@ -72,7 +72,7 @@ def test_public_parsed_jd_api_does_not_accept_raw_jd_upserts() -> None:
     methods = {
         method
         for route in router.routes
-        if route.path == "/api/v1/parsed-jds/{job_version_id}"
+        if route.path == "/api/v2/parsed-jds/{job_version_id}"
         for method in route.methods
     }
 
@@ -80,12 +80,11 @@ def test_public_parsed_jd_api_does_not_accept_raw_jd_upserts() -> None:
 
 
 def test_confirmation_rejects_a_stale_revision() -> None:
-    latest_id = uuid4()
-    owner_id = uuid4()
+    latest_id = new_id()
+    owner_id = new_id()
     latest = ParsedJdRevisionRecord(
-        id=9,
-        public_id=latest_id,
-        job_id=uuid4(),
+        id=latest_id,
+        job_id=new_id(),
         job_version_id=JOB_VERSION_ID,
         owner_user_id=owner_id,
         revision_number=2,
@@ -101,7 +100,7 @@ def test_confirmation_rejects_a_stale_revision() -> None:
     repository = ParsedJdRevisionRepository(_ScalarSession(latest))
 
     with pytest.raises(ValueError, match="stale"):
-        repository.confirm(JOB_VERSION_ID, owner_id, uuid4(), owner_id)
+        repository.confirm(JOB_VERSION_ID, owner_id, new_id(), owner_id)
 
 
 class _ScalarSession:
