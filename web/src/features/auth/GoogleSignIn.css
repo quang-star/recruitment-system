@@ -1,0 +1,11 @@
+.google-sign-in {
+  display: grid;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-subtle);
+  text-align: center;
+}
+
+.google-sign-in p { margin: 0; }
+.google-sign-in > div { justify-self: center; max-width: 100%; }

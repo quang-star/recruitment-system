@@ -2,6 +2,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { ApiClientError, apiRequest } from "../../shared/api/client";
 import { AuthSession } from "../../shared/auth/session";
+import { GoogleSignIn } from "./GoogleSignIn";
 
 type AccountSession = {
   sessionId: string;
@@ -31,11 +32,19 @@ export function AccountSecurityPanel({ session, onLogout }: Props) {
   const [changing, setChanging] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [googleLinked, setGoogleLinked] = useState(false);
+
+  async function linkGoogle(credential: string, nonce: string) {
+    await apiRequest<void>("/api/v2/auth/google/link", {
+      method: "POST", accessToken: session.accessToken, body: JSON.stringify({ credential, nonce })
+    });
+    setGoogleLinked(true);
+  }
 
   const loadSessions = useCallback(async () => {
     setLoadingSessions(true);
     try {
-      setSessions(await apiRequest<AccountSession[]>("/api/v1/auth/sessions", { accessToken: session.accessToken }));
+      setSessions(await apiRequest<AccountSession[]>("/api/v2/auth/sessions", { accessToken: session.accessToken }));
     } catch (requestError) {
       if (requestError instanceof ApiClientError && requestError.status === 401) onLogout();
       else setError(errorMessage(requestError));
@@ -52,7 +61,7 @@ export function AccountSecurityPanel({ session, onLogout }: Props) {
     setMessage(null);
     setError(null);
     try {
-      await apiRequest<void>(`/api/v1/auth/sessions/${sessionId}`, {
+      await apiRequest<void>(`/api/v2/auth/sessions/${sessionId}`, {
         method: "DELETE", accessToken: session.accessToken
       });
       setSessions((current) => current.map((item) => item.sessionId === sessionId
@@ -78,7 +87,7 @@ export function AccountSecurityPanel({ session, onLogout }: Props) {
     setMessage(null);
     setError(null);
     try {
-      await apiRequest<void>("/api/v1/auth/change-password", {
+      await apiRequest<void>("/api/v2/auth/change-password", {
         method: "POST",
         accessToken: session.accessToken,
         body: JSON.stringify({ currentPassword, newPassword })
@@ -104,6 +113,11 @@ export function AccountSecurityPanel({ session, onLogout }: Props) {
         value={confirmation} onChange={(event) => setConfirmation(event.target.value)} required /></label>
       <button type="submit" disabled={changing}>{changing ? "Đang đổi…" : "Đổi mật khẩu và đăng xuất mọi phiên"}</button>
     </form>
+    <div className="section-heading"><h3>Liên kết Google</h3></div>
+    <p className="muted">Chọn tài khoản Google có cùng email với tài khoản hiện tại để dùng cho những lần đăng nhập sau.
+      Nếu chỉ đăng nhập bằng Google, bạn có thể tạo mật khẩu qua “Quên mật khẩu” trên trang đăng nhập.</p>
+    {googleLinked ? <p className="success-message" role="status">Đã liên kết Google. Bạn có thể đăng nhập bằng Google từ lần sau.</p>
+      : <GoogleSignIn onCredential={linkGoogle} />}
     <div className="section-heading"><h3>Các phiên gần đây</h3><button className="text-button" type="button" disabled={loadingSessions} onClick={() => void loadSessions()}>Tải lại</button></div>
     {loadingSessions ? <p className="muted">Đang tải phiên đăng nhập…</p> : sessions.length === 0 ? <p className="muted">Không có phiên nào.</p> : <div className="session-list">
       {sessions.map((item) => <div className="session-row" key={item.sessionId}>

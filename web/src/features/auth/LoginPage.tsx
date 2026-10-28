@@ -2,21 +2,38 @@ import { FormEvent, useState } from "react";
 
 import { ApiClientError, apiRequest } from "../../shared/api/client";
 import { AuthSession, saveSession } from "../../shared/auth/session";
+import { GoogleSignIn } from "./GoogleSignIn";
 
 type LoginResponse = AuthSession;
 
 type LoginPageProps = {
   onSuccess: (session: AuthSession) => void;
+  initialEmail?: string;
+  initialMode?: "login" | "register";
 };
 
-export function LoginPage({ onSuccess }: LoginPageProps) {
-  const [mode, setMode] = useState<"login" | "register" | "forgot">("login");
+export function LoginPage({ onSuccess, initialEmail = "", initialMode = "login" }: LoginPageProps) {
+  const [mode, setMode] = useState<"login" | "register" | "forgot">(initialMode);
   const [accountType, setAccountType] = useState<"CANDIDATE" | "RECRUITER">("CANDIDATE");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [registrationMessage, setRegistrationMessage] = useState<string | null>(null);
+
+  async function googleLogin(credential: string, nonce: string) {
+    setSubmitting(true);
+    setError(null);
+    setRegistrationMessage(null);
+    try {
+      const session = await apiRequest<LoginResponse>("/api/v2/auth/google/login", {
+        method: "POST",
+        body: JSON.stringify({ credential, nonce, accountType: mode === "register" ? accountType : "CANDIDATE" })
+      });
+      saveSession(session);
+      onSuccess(session);
+    } finally { setSubmitting(false); }
+  }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -27,18 +44,18 @@ export function LoginPage({ onSuccess }: LoginPageProps) {
 
     try {
       if (mode === "forgot") {
-        await apiRequest<{ message: string }>("/api/v1/auth/forgot-password", {
+        await apiRequest<{ message: string }>("/api/v2/auth/forgot-password", {
           method: "POST", body: JSON.stringify({ email })
         });
         setRegistrationMessage("Nếu tài khoản hợp lệ, hướng dẫn đặt lại mật khẩu đã được gửi qua email.");
       } else if (mode === "register") {
-        await apiRequest<{ verificationRequired: boolean }>("/api/v1/auth/register", {
+        await apiRequest<{ verificationRequired: boolean }>("/api/v2/auth/register", {
           method: "POST", body: JSON.stringify({ email, password, accountType })
         });
-        setRegistrationMessage("Đăng ký thành công. Hãy xác minh email trong Mailpit rồi quay lại đăng nhập.");
+        setRegistrationMessage("Đăng ký thành công. Mở liên kết xác minh được gửi đến email của bạn, sau đó quay lại đăng nhập.");
         setMode("login");
       } else {
-        const session = await apiRequest<LoginResponse>("/api/v1/auth/login", {
+        const session = await apiRequest<LoginResponse>("/api/v2/auth/login", {
           method: "POST",
           body: JSON.stringify({ email, password, clientType: "WEB", deviceName: "Browser" })
         });
@@ -60,7 +77,7 @@ export function LoginPage({ onSuccess }: LoginPageProps) {
     setError(null);
     setRegistrationMessage(null);
     try {
-      await apiRequest<{ message: string }>("/api/v1/auth/resend-verification", {
+      await apiRequest<{ message: string }>("/api/v2/auth/resend-verification", {
         method: "POST", body: JSON.stringify({ email })
       });
       setRegistrationMessage("Nếu tài khoản đang chờ xác minh, hệ thống đã gửi một liên kết mới qua email.");
@@ -82,8 +99,8 @@ export function LoginPage({ onSuccess }: LoginPageProps) {
   return (
     <section className="auth-card" aria-labelledby="login-title">
       <div>
-        <p className="eyebrow">{mode === "login" ? "Account access" : mode === "register" ? "Create account" : "Account recovery"}</p>
-        <h2 id="login-title">{mode === "login" ? "Đăng nhập workspace" : mode === "register" ? "Tạo tài khoản" : "Quên mật khẩu"}</h2>
+        <p className="eyebrow">{mode === "login" ? "CHÀO MỪNG TRỞ LẠI" : mode === "register" ? "BẮT ĐẦU CÙNG SMARTHIRE" : "KHÔI PHỤC TÀI KHOẢN"}</p>
+        <h2 id="login-title">{mode === "login" ? "Đăng nhập SmartHire" : mode === "register" ? "Tạo tài khoản" : "Quên mật khẩu"}</h2>
         <p className="muted">{mode === "forgot"
           ? "Nhập email để nhận liên kết đặt lại mật khẩu có hiệu lực trong 30 phút."
           : "Tài khoản cần được xác minh email trước khi đăng nhập."}</p>
@@ -109,7 +126,7 @@ export function LoginPage({ onSuccess }: LoginPageProps) {
             type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            autoComplete="current-password"
+            autoComplete={mode === "register" ? "new-password" : "current-password"}
             minLength={8}
             required
           />
@@ -126,6 +143,7 @@ export function LoginPage({ onSuccess }: LoginPageProps) {
         </div>}
         {mode === "forgot" && <button className="text-button" type="button" onClick={() => switchMode("login")}>Quay lại đăng nhập</button>}
       </form>
+      {mode !== "forgot" && <GoogleSignIn onCredential={googleLogin} disabled={submitting} />}
     </section>
   );
 }
