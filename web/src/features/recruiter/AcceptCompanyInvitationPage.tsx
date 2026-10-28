@@ -15,7 +15,7 @@ export function AcceptCompanyInvitationPage({ session, onLogout }: Props) {
     if (!token || state.type === "submitting") return;
     setState({ type: "submitting" });
     try {
-      const member = await apiRequest<CompanyMember>("/api/v1/companies/invitations/accept", {
+      const member = await apiRequest<CompanyMember>("/api/v2/companies/invitations/accept", {
         method: "POST", accessToken: session.accessToken, body: JSON.stringify({ token })
       });
       setState({ type: "success", member });
