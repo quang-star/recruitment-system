@@ -34,13 +34,13 @@ public class JooqOutboxEventRepository implements OutboxEventRepository {
             String payload = objectMapper.writeValueAsString(eventPayload(event));
             OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
             dsl.insertInto(OUTBOX_EVENTS)
-                    .set(OUTBOX_EVENTS.PUBLIC_ID, UUID.randomUUID())
+                    .set(OUTBOX_EVENTS.EVENT_ID, UUID.randomUUID())
                     .set(OUTBOX_EVENTS.AGGREGATE_TYPE, "CV")
                     .set(OUTBOX_EVENTS.AGGREGATE_ID, event.cvId())
                     .set(OUTBOX_EVENTS.AGGREGATE_VERSION, Math.max(1L, event.processingGeneration()))
-                    .set(OUTBOX_EVENTS.EVENT_TYPE, "cv.uploaded.v1")
-                    .set(OUTBOX_EVENTS.SCHEMA_VERSION, (short) 1)
-                    .set(OUTBOX_EVENTS.IDEMPOTENCY_KEY, "cv.uploaded.v1:" + event.cvVersionId()
+                    .set(OUTBOX_EVENTS.EVENT_TYPE, "cv.uploaded.v2")
+                    .set(OUTBOX_EVENTS.SCHEMA_VERSION, (short) 2)
+                    .set(OUTBOX_EVENTS.IDEMPOTENCY_KEY, "cv.uploaded.v2:" + event.cvVersionId()
                             + (event.processingGeneration() == 0 ? "" : ":retry:" + event.processingGeneration()))
                     .set(OUTBOX_EVENTS.CORRELATION_ID, event.correlationId())
                     .set(OUTBOX_EVENTS.PAYLOAD, JSON.json(payload))
@@ -56,10 +56,10 @@ public class JooqOutboxEventRepository implements OutboxEventRepository {
     @Override
     public void append(com.smartrecruitment.core.cv.application.PrivacyEvent event) {
         String payload = objectMapper.writeValueAsString(event.payload());
-        dsl.insertInto(OUTBOX_EVENTS).set(OUTBOX_EVENTS.PUBLIC_ID, UUID.randomUUID())
+        dsl.insertInto(OUTBOX_EVENTS).set(OUTBOX_EVENTS.EVENT_ID, UUID.randomUUID())
                 .set(OUTBOX_EVENTS.AGGREGATE_TYPE, event.eventType().startsWith("cv.") ? "CV" : "APPLICATION")
                 .set(OUTBOX_EVENTS.AGGREGATE_ID, event.resourceId()).set(OUTBOX_EVENTS.AGGREGATE_VERSION, 1L)
-                .set(OUTBOX_EVENTS.EVENT_TYPE, event.eventType()).set(OUTBOX_EVENTS.SCHEMA_VERSION, (short) 1)
+                .set(OUTBOX_EVENTS.EVENT_TYPE, event.eventType()).set(OUTBOX_EVENTS.SCHEMA_VERSION, (short) 2)
                 .set(OUTBOX_EVENTS.IDEMPOTENCY_KEY, event.eventType() + ":" + event.resourceId())
                 .set(OUTBOX_EVENTS.CORRELATION_ID, event.correlationId()).set(OUTBOX_EVENTS.PAYLOAD, JSON.json(payload))
                 .set(OUTBOX_EVENTS.OCCURRED_AT, event.occurredAt()).set(OUTBOX_EVENTS.AVAILABLE_AT, event.occurredAt())
@@ -70,19 +70,19 @@ public class JooqOutboxEventRepository implements OutboxEventRepository {
     public void append(ApplicationSubmittedEvent event) {
         try {
             String payload = objectMapper.writeValueAsString(new Object() {
-                public final UUID applicationId = event.applicationId();
-                public final UUID cvVersionId = event.cvVersionId();
-                public final UUID jobVersionId = event.jobVersionId();
+                public final Long applicationId = event.applicationId();
+                public final Long cvVersionId = event.cvVersionId();
+                public final Long jobVersionId = event.jobVersionId();
             });
             OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
             dsl.insertInto(OUTBOX_EVENTS)
-                    .set(OUTBOX_EVENTS.PUBLIC_ID, UUID.randomUUID())
+                    .set(OUTBOX_EVENTS.EVENT_ID, UUID.randomUUID())
                     .set(OUTBOX_EVENTS.AGGREGATE_TYPE, "APPLICATION")
                     .set(OUTBOX_EVENTS.AGGREGATE_ID, event.applicationId())
                     .set(OUTBOX_EVENTS.AGGREGATE_VERSION, 0L)
-                    .set(OUTBOX_EVENTS.EVENT_TYPE, "application.submitted.v1")
-                    .set(OUTBOX_EVENTS.SCHEMA_VERSION, (short) 1)
-                    .set(OUTBOX_EVENTS.IDEMPOTENCY_KEY, "application.submitted.v1:" + event.applicationId())
+                    .set(OUTBOX_EVENTS.EVENT_TYPE, "application.submitted.v2")
+                    .set(OUTBOX_EVENTS.SCHEMA_VERSION, (short) 2)
+                    .set(OUTBOX_EVENTS.IDEMPOTENCY_KEY, "application.submitted.v2:" + event.applicationId())
                     .set(OUTBOX_EVENTS.CORRELATION_ID, event.correlationId())
                     .set(OUTBOX_EVENTS.PAYLOAD, JSON.json(payload))
                     .set(OUTBOX_EVENTS.OCCURRED_AT, event.occurredAt())
@@ -98,9 +98,9 @@ public class JooqOutboxEventRepository implements OutboxEventRepository {
     public void append(JobVersionSubmittedEvent event) {
         try {
             String payload = objectMapper.writeValueAsString(new Object() {
-                public final UUID jobId = event.jobId();
-                public final UUID jobVersionId = event.jobVersionId();
-                public final UUID recruiterUserId = event.recruiterUserId();
+                public final Long jobId = event.jobId();
+                public final Long jobVersionId = event.jobVersionId();
+                public final Long recruiterUserId = event.recruiterUserId();
                 public final String matchingDomain = event.matchingDomain();
                 public final boolean externalAiConsent = event.externalAiConsent().granted();
                 public final String externalAiPolicyVersion = event.externalAiConsent().policyVersion();
@@ -109,13 +109,13 @@ public class JooqOutboxEventRepository implements OutboxEventRepository {
             });
             OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
             dsl.insertInto(OUTBOX_EVENTS)
-                    .set(OUTBOX_EVENTS.PUBLIC_ID, UUID.randomUUID())
+                    .set(OUTBOX_EVENTS.EVENT_ID, UUID.randomUUID())
                     .set(OUTBOX_EVENTS.AGGREGATE_TYPE, "JOB")
                     .set(OUTBOX_EVENTS.AGGREGATE_ID, event.jobId())
                     .set(OUTBOX_EVENTS.AGGREGATE_VERSION, 0L)
-                    .set(OUTBOX_EVENTS.EVENT_TYPE, "job.version.submitted.v1")
-                    .set(OUTBOX_EVENTS.SCHEMA_VERSION, (short) 1)
-                    .set(OUTBOX_EVENTS.IDEMPOTENCY_KEY, "job.version.submitted.v1:" + event.jobVersionId())
+                    .set(OUTBOX_EVENTS.EVENT_TYPE, "job.version.submitted.v2")
+                    .set(OUTBOX_EVENTS.SCHEMA_VERSION, (short) 2)
+                    .set(OUTBOX_EVENTS.IDEMPOTENCY_KEY, "job.version.submitted.v2:" + event.jobVersionId())
                     .set(OUTBOX_EVENTS.CORRELATION_ID, event.correlationId())
                     .set(OUTBOX_EVENTS.PAYLOAD, JSON.json(payload))
                     .set(OUTBOX_EVENTS.OCCURRED_AT, event.occurredAt())
@@ -149,7 +149,7 @@ public class JooqOutboxEventRepository implements OutboxEventRepository {
                 .execute());
 
         return records.map(record -> new PendingOutboxEvent(
-                record.getId(), record.getPublicId(), record.getAggregateId(), record.getEventType(),
+                record.getId(), record.getEventId(), record.getAggregateId(), record.getEventType(),
                 record.getSchemaVersion(), record.getIdempotencyKey(), record.getCorrelationId(),
                 record.getOccurredAt(), record.getPayload().data()));
     }
@@ -185,9 +185,9 @@ public class JooqOutboxEventRepository implements OutboxEventRepository {
 
     private static Object eventPayload(CvUploadedEvent event) {
         return new Object() {
-            public final UUID cvId = event.cvId();
-            public final UUID cvVersionId = event.cvVersionId();
-            public final UUID candidateUserId = event.candidateUserId();
+            public final Long cvId = event.cvId();
+            public final Long cvVersionId = event.cvVersionId();
+            public final Long candidateUserId = event.candidateUserId();
             public final String objectRef = event.objectRef();
             public final String sourceHash = event.sourceHash();
             public final long processingGeneration = event.processingGeneration();
@@ -196,7 +196,7 @@ public class JooqOutboxEventRepository implements OutboxEventRepository {
         };
     }
 
-    public record PendingOutboxEvent(long id, UUID eventId, UUID aggregateId, String eventType,
+    public record PendingOutboxEvent(long id, UUID eventId, Long aggregateId, String eventType,
                                      short schemaVersion, String idempotencyKey, UUID correlationId,
                                      OffsetDateTime occurredAt, String payload) {
     }

@@ -33,7 +33,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/cvs")
+@RequestMapping("/api/v2/cvs")
 public class CandidateCvController {
     private final CvService cvs;
 
@@ -59,25 +59,25 @@ public class CandidateCvController {
         return cvs.listMine(userId(jwt)).stream().map(CandidateCvResponse::from).toList();
     }
 
-    public record RetryCvRequest(@NotNull UUID cvVersionId, @NotNull @Min(0) Long expectedVersion) { }
+    public record RetryCvRequest(@NotNull Long cvVersionId, @NotNull @Min(0) Long expectedVersion) { }
 
     @PostMapping("/{cvId}/retry")
     @ResponseStatus(HttpStatus.ACCEPTED)
     public CandidateCvResponse retry(@AuthenticationPrincipal Jwt jwt, HttpServletRequest request,
-                                      @PathVariable UUID cvId, @Valid @RequestBody RetryCvRequest body) {
+                                      @PathVariable Long cvId, @Valid @RequestBody RetryCvRequest body) {
         return CandidateCvResponse.from(cvs.retry(userId(jwt), cvId, body.cvVersionId(), body.expectedVersion(),
                 UUID.fromString(CorrelationIdFilter.current(request))));
     }
 
     @GetMapping("/{cvId}")
-    public CandidateCvResponse get(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID cvId) {
+    public CandidateCvResponse get(@AuthenticationPrincipal Jwt jwt, @PathVariable Long cvId) {
         return CandidateCvResponse.from(cvs.getMine(userId(jwt), cvId));
     }
 
     @GetMapping(value = "/{cvId}/file", produces = MediaType.APPLICATION_PDF_VALUE)
     public ResponseEntity<InputStreamResource> file(@AuthenticationPrincipal Jwt jwt,
-                                                      @PathVariable UUID cvId,
-                                                      @RequestParam UUID cvVersionId) {
+                                                      @PathVariable Long cvId,
+                                                      @RequestParam Long cvVersionId) {
         var download = cvs.downloadMine(userId(jwt), cvId, cvVersionId);
         // Avoid asynchronous header/commit races while retaining bounded-memory streaming.
         var body = new InputStreamResource(download.content());
@@ -88,7 +88,7 @@ public class CandidateCvController {
                 .body(body);
     }
 
-    private static UUID userId(Jwt jwt) {
-        return UUID.fromString(jwt.getSubject());
+    private static Long userId(Jwt jwt) {
+        return com.smartrecruitment.core.shared.api.SubjectId.parse(jwt.getSubject());
     }
 }

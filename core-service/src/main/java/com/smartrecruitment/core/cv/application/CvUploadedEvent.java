@@ -8,14 +8,14 @@ import java.time.OffsetDateTime;
 import java.util.Objects;
 import java.util.UUID;
 
-public record CvUploadedEvent(UUID cvId, UUID cvVersionId, UUID candidateUserId, String objectRef, String sourceHash,
+public record CvUploadedEvent(Long cvId, Long cvVersionId, Long candidateUserId, String objectRef, String sourceHash,
                               UUID correlationId, OffsetDateTime occurredAt, long processingGeneration, ExternalAiConsent externalAiConsent) {
-    public CvUploadedEvent(UUID cvId, UUID cvVersionId, UUID candidateUserId, String objectRef,
+    public CvUploadedEvent(Long cvId, Long cvVersionId, Long candidateUserId, String objectRef,
                            String sourceHash, UUID correlationId, OffsetDateTime occurredAt, long processingGeneration) {
         this(cvId, cvVersionId, candidateUserId, objectRef, sourceHash, correlationId, occurredAt,
                 processingGeneration, ExternalAiConsent.declined());
     }
-    public CvUploadedEvent(UUID cvId, UUID cvVersionId, UUID candidateUserId, String objectRef, String sourceHash,
+    public CvUploadedEvent(Long cvId, Long cvVersionId, Long candidateUserId, String objectRef, String sourceHash,
                            UUID correlationId, OffsetDateTime occurredAt) {
         this(cvId, cvVersionId, candidateUserId, objectRef, sourceHash, correlationId, occurredAt, 0);
     }
@@ -35,7 +35,7 @@ public record CvUploadedEvent(UUID cvId, UUID cvVersionId, UUID candidateUserId,
 
     public static CvUploadedEvent from(CandidateCv cv, UUID correlationId, OffsetDateTime occurredAt) {
         var version = cv.activeVersion();
-        return new CvUploadedEvent(cv.publicId(), version.publicId(), cv.candidateUserId(),
+        return new CvUploadedEvent(cv.id(), version.id(), cv.candidateUserId(),
                 version.objectBucket() + "/" + version.objectKey(), version.sha256(), correlationId,
                 occurredAt, version.processingGeneration(), version.externalAiConsent());
     }

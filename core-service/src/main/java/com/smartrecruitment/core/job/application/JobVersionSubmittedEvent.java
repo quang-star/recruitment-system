@@ -8,15 +8,15 @@ import java.time.OffsetDateTime;
 import java.util.Objects;
 import java.util.UUID;
 
-public record JobVersionSubmittedEvent(UUID jobId, UUID jobVersionId, UUID recruiterUserId,
+public record JobVersionSubmittedEvent(Long jobId, Long jobVersionId, Long recruiterUserId,
                                        String objectRef, String sourceHash, UUID correlationId,
                                        OffsetDateTime occurredAt, ExternalAiConsent externalAiConsent, String matchingDomain) {
-    public JobVersionSubmittedEvent(UUID jobId, UUID jobVersionId, UUID recruiterUserId,
+    public JobVersionSubmittedEvent(Long jobId, Long jobVersionId, Long recruiterUserId,
                                     String objectRef, String sourceHash, UUID correlationId, OffsetDateTime occurredAt) {
         this(jobId, jobVersionId, recruiterUserId, objectRef, sourceHash, correlationId, occurredAt,
                 ExternalAiConsent.declined());
     }
-    public JobVersionSubmittedEvent(UUID jobId, UUID jobVersionId, UUID recruiterUserId,
+    public JobVersionSubmittedEvent(Long jobId, Long jobVersionId, Long recruiterUserId,
                                     String objectRef, String sourceHash, UUID correlationId, OffsetDateTime occurredAt, ExternalAiConsent externalAiConsent) {
         this(jobId, jobVersionId, recruiterUserId, objectRef, sourceHash, correlationId, occurredAt,
                 externalAiConsent, "IT");
@@ -38,7 +38,7 @@ public record JobVersionSubmittedEvent(UUID jobId, UUID jobVersionId, UUID recru
     public static JobVersionSubmittedEvent from(Job job, String objectRef, UUID correlationId,
                                                 OffsetDateTime occurredAt) {
         var version = job.activeVersion();
-        return new JobVersionSubmittedEvent(job.publicId(), version.publicId(), version.createdByUserId(),
+        return new JobVersionSubmittedEvent(job.id(), version.id(), version.createdByUserId(),
                 objectRef, version.sourceHash(), correlationId, occurredAt, version.externalAiConsent(), version.category().matchingDomain().name());
     }
 }

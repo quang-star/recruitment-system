@@ -6,7 +6,6 @@ import org.springframework.stereotype.Repository;
 
 import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.UUID;
 
 import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.CvErasureQueue.CV_ERASURE_QUEUE;
 
@@ -31,7 +30,7 @@ public class JooqCvErasureRepository implements CvErasureRepository {
     }
 
     @Override
-    public void markCompleted(UUID cvVersionId, OffsetDateTime completedAt) {
+    public void markCompleted(Long cvVersionId, OffsetDateTime completedAt) {
         dsl.update(CV_ERASURE_QUEUE)
                 .set(CV_ERASURE_QUEUE.COMPLETED_AT, completedAt)
                 .set(CV_ERASURE_QUEUE.OBJECT_KEY, (String) null)
@@ -40,7 +39,7 @@ public class JooqCvErasureRepository implements CvErasureRepository {
     }
 
     @Override
-    public void scheduleRetry(UUID cvVersionId, int attempts, OffsetDateTime nextAttemptAt) {
+    public void scheduleRetry(Long cvVersionId, int attempts, OffsetDateTime nextAttemptAt) {
         dsl.update(CV_ERASURE_QUEUE)
                 .set(CV_ERASURE_QUEUE.ATTEMPTS, attempts)
                 .set(CV_ERASURE_QUEUE.NEXT_ATTEMPT_AT, nextAttemptAt)

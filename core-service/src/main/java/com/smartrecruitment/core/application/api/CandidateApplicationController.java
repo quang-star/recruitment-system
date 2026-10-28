@@ -3,20 +3,25 @@ package com.smartrecruitment.core.application.api;
 import com.smartrecruitment.core.application.api.dto.ApplicationResponse;
 import com.smartrecruitment.core.application.api.dto.ApplyRequest;
 import com.smartrecruitment.core.application.api.dto.WithdrawApplicationRequest;
+import com.smartrecruitment.core.application.application.ApplicationSearch;
 import com.smartrecruitment.core.application.application.ApplicationService;
-import jakarta.validation.Valid;
-import jakarta.servlet.http.HttpServletRequest;
+import com.smartrecruitment.core.application.domain.ApplicationStatus;
 import com.smartrecruitment.core.shared.api.CorrelationIdFilter;
+import com.smartrecruitment.core.shared.application.PageResult;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+
 import org.springframework.http.HttpStatus;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/candidate/applications")
+@RequestMapping("/api/v2/candidate/applications")
 public class CandidateApplicationController {
     private final ApplicationService applications;
 
@@ -32,28 +37,37 @@ public class CandidateApplicationController {
                 idempotencyKey, UUID.fromString(CorrelationIdFilter.current(servletRequest))));
     }
 
-    @GetMapping
+    @GetMapping(params = "!page")
     public List<ApplicationResponse> mine(@AuthenticationPrincipal Jwt jwt) {
         return applications.findMine(userId(jwt)).stream().map(ApplicationResponse::from).toList();
     }
 
+    @GetMapping(params = "page")
+    public PageResult<ApplicationResponse> search(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam int page, @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "") String q, @RequestParam(defaultValue = "newest") String sort,
+            @RequestParam(required = false) ApplicationStatus status) {
+        var search = new ApplicationSearch(page, size, q, sort, status);
+        return applications.searchMine(userId(jwt), search).map(ApplicationResponse::from);
+    }
+
     @GetMapping("/{applicationId}")
-    public ApplicationResponse get(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID applicationId) {
+    public ApplicationResponse get(@AuthenticationPrincipal Jwt jwt, @PathVariable Long applicationId) {
         return ApplicationResponse.from(applications.getMine(userId(jwt), applicationId));
     }
 
     @PostMapping("/{applicationId}/withdraw")
-    public ApplicationResponse withdraw(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID applicationId,
+    public ApplicationResponse withdraw(@AuthenticationPrincipal Jwt jwt, @PathVariable Long applicationId,
                                         @Valid @RequestBody WithdrawApplicationRequest request) {
         return ApplicationResponse.from(applications.withdraw(userId(jwt), applicationId,
                 request.reason(), request.version()));
     }
 
+    private Long userId(Jwt jwt) { return com.smartrecruitment.core.shared.api.SubjectId.parse(jwt.getSubject()); }
     @DeleteMapping("/{applicationId}/cv-access")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void revokeCvAccess(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID applicationId, @RequestParam long version) {
+    @ResponseStatus(org.springframework.http.HttpStatus.NO_CONTENT)
+    public void revokeCvAccess(@AuthenticationPrincipal Jwt jwt, @PathVariable Long applicationId, @RequestParam long version) {
         applications.revokeCvAccess(userId(jwt), applicationId, version);
     }
-
-    private UUID userId(Jwt jwt) { return UUID.fromString(jwt.getSubject()); }
 }

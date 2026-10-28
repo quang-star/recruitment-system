@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.UUID;
 
 @RestController
 public class ApplicationHistoryController {
@@ -19,10 +18,10 @@ public class ApplicationHistoryController {
         this.applications = applications;
     }
 
-    @GetMapping("/api/v1/applications/{applicationId}/history")
+    @GetMapping("/api/v2/applications/{applicationId}/history")
     public List<ApplicationStatusChangeResponse> history(@AuthenticationPrincipal Jwt jwt,
-                                                         @PathVariable UUID applicationId) {
-        UUID viewerId = UUID.fromString(jwt.getSubject());
+                                                         @PathVariable Long applicationId) {
+        Long viewerId = com.smartrecruitment.core.shared.api.SubjectId.parse(jwt.getSubject());
         return applications.history(viewerId, applicationId).stream()
                 .map(ApplicationStatusChangeResponse::from).toList();
     }

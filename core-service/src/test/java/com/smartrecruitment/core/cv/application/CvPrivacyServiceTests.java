@@ -13,14 +13,13 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
 
 class CvPrivacyServiceTests {
-    private final UUID owner = UUID.randomUUID(), cvId = UUID.randomUUID();
+    private final Long owner = com.smartrecruitment.core.support.TestIds.next(), cvId = com.smartrecruitment.core.support.TestIds.next();
     private final CvPrivacyRepository cvs = mock(CvPrivacyRepository.class);
     private final OutboxEventRepository outbox = mock(OutboxEventRepository.class);
     private final CvPrivacyService service = new CvPrivacyService(cvs, outbox);
@@ -59,7 +58,7 @@ class CvPrivacyServiceTests {
 
     @Test
     void publishesMetadataOnlyForEveryErasedVersionWithSameTimestamp() {
-        var versions = List.of(UUID.randomUUID(), UUID.randomUUID());
+        var versions = List.of(com.smartrecruitment.core.support.TestIds.next(), com.smartrecruitment.core.support.TestIds.next());
         when(cvs.lockOwned(owner, cvId)).thenReturn(Optional.of(new DeletionState(CvStatus.ACTIVE, 2)));
         when(cvs.eraseLocked(eq(cvId), any())).thenReturn(versions);
         var before = OffsetDateTime.now(ZoneOffset.UTC);
@@ -73,8 +72,8 @@ class CvPrivacyServiceTests {
         verify(outbox, times(2)).append(events.capture());
         assertThat(events.getAllValues()).extracting(PrivacyEvent::resourceId).containsExactlyElementsOf(versions);
         for (var event : events.getAllValues()) {
-            assertThat(event.eventType()).isEqualTo("cv.deleted.v1");
-            assertThat(event.payload()).isEqualTo(Map.of("cvId", cvId, "cvVersionId", event.resourceId()));
+            assertThat(event.eventType()).isEqualTo("cv.deleted.v2");
+            assertThat(event.payload()).isEqualTo(Map.of("cvId", cvId.toString(), "cvVersionId", event.resourceId().toString()));
             assertThat(event.occurredAt()).isEqualTo(timestamp.getValue());
         }
         assertThat(events.getAllValues()).extracting(PrivacyEvent::correlationId).doesNotHaveDuplicates();

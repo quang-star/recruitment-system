@@ -15,10 +15,12 @@ import com.smartrecruitment.core.job.domain.JobVersion;
 import com.smartrecruitment.core.job.domain.WorkMode;
 import com.smartrecruitment.core.recruiter.application.CompanyNotFoundException;
 import com.smartrecruitment.core.recruiter.application.port.CompanyRepository;
+import com.smartrecruitment.core.shared.application.PageResult;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import tools.jackson.core.JacksonException;
@@ -29,6 +31,7 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -65,7 +68,7 @@ public class JobService {
     }
 
     @Transactional
-    public Job create(UUID userId, UUID companyId, String title, String description, String requirementsText,
+    public Job create(Long userId, Long companyId, String title, String description, String requirementsText,
                       String benefitsText, String locationText, String countryCode, WorkMode workMode,
                       EmploymentType employmentType, String seniorityLevel, int openings,
                       BigDecimal salaryMin, BigDecimal salaryMax, String salaryCurrency, String salaryPeriod,
@@ -76,7 +79,7 @@ public class JobService {
     }
 
     @Transactional
-    public Job create(UUID userId, UUID companyId, String title, String description, String requirementsText,
+    public Job create(Long userId, Long companyId, String title, String description, String requirementsText,
                       String benefitsText, String locationText, String countryCode, WorkMode workMode,
                       EmploymentType employmentType, String seniorityLevel, int openings,
                       BigDecimal salaryMin, BigDecimal salaryMax, String salaryCurrency, String salaryPeriod,
@@ -88,7 +91,7 @@ public class JobService {
     }
 
     @Transactional
-    public Job create(UUID userId, UUID companyId, String title, String description, String requirementsText,
+    public Job create(Long userId, Long companyId, String title, String description, String requirementsText,
                       String benefitsText, String locationText, String countryCode, WorkMode workMode,
                       EmploymentType employmentType, String seniorityLevel, int openings,
                       BigDecimal salaryMin, BigDecimal salaryMax, String salaryCurrency, String salaryPeriod,
@@ -97,7 +100,7 @@ public class JobService {
     }
 
     @Transactional
-    public Job create(UUID userId, UUID companyId, String title, String description, String requirementsText,
+    public Job create(Long userId, Long companyId, String title, String description, String requirementsText,
                       String benefitsText, String locationText, String countryCode, WorkMode workMode,
                       EmploymentType employmentType, String seniorityLevel, int openings,
                       BigDecimal salaryMin, BigDecimal salaryMax, String salaryCurrency, String salaryPeriod,
@@ -112,16 +115,29 @@ public class JobService {
     }
 
     @Transactional(readOnly = true)
-    public List<Job> findMine(UUID userId, UUID companyId) { return jobs.findAllForMember(companyId, userId); }
+    public List<Job> findMine(Long userId, Long companyId) { return jobs.findAllForMember(companyId, userId); }
 
     @Transactional(readOnly = true)
     public List<Job> findPublished() { return jobs.findPublished(); }
 
     @Transactional(readOnly = true)
-    public Job getMine(UUID userId, UUID jobId) { return jobs.findByPublicIdForMember(jobId, userId).orElseThrow(JobNotFoundException::new); }
+    public Map<Long, Integer> publishedCountsByCompany() { return jobs.publishedCountsByCompany(); }
+
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+    public PageResult<Job> searchPublished(JobSearch search) {
+        return jobs.searchPublished(search);
+    }
+
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+    public PageResult<Job> searchMine(Long userId, Long companyId, JobSearch search) {
+        return jobs.searchForMember(companyId, userId, search);
+    }
+
+    @Transactional(readOnly = true)
+    public Job getMine(Long userId, Long jobId) { return jobs.findByIdForMember(jobId, userId).orElseThrow(JobNotFoundException::new); }
 
     @Transactional
-    public Job updateDraft(UUID userId, UUID jobId, long expectedVersion, String title, String description,
+    public Job updateDraft(Long userId, Long jobId, long expectedVersion, String title, String description,
                            String requirementsText, String benefitsText, String locationText, String countryCode,
                            WorkMode workMode, EmploymentType employmentType, String seniorityLevel, int openings,
                            BigDecimal salaryMin, BigDecimal salaryMax, String salaryCurrency, String salaryPeriod,
@@ -132,7 +148,7 @@ public class JobService {
     }
 
     @Transactional
-    public Job updateDraft(UUID userId, UUID jobId, long expectedVersion, String title, String description,
+    public Job updateDraft(Long userId, Long jobId, long expectedVersion, String title, String description,
                            String requirementsText, String benefitsText, String locationText, String countryCode,
                            WorkMode workMode, EmploymentType employmentType, String seniorityLevel, int openings,
                            BigDecimal salaryMin, BigDecimal salaryMax, String salaryCurrency, String salaryPeriod,
@@ -144,7 +160,7 @@ public class JobService {
     }
 
     @Transactional
-    public Job updateDraft(UUID userId, UUID jobId, long expectedVersion, String title, String description,
+    public Job updateDraft(Long userId, Long jobId, long expectedVersion, String title, String description,
                            String requirementsText, String benefitsText, String locationText, String countryCode,
                            WorkMode workMode, EmploymentType employmentType, String seniorityLevel, int openings,
                            BigDecimal salaryMin, BigDecimal salaryMax, String salaryCurrency, String salaryPeriod,
@@ -153,7 +169,7 @@ public class JobService {
     }
 
     @Transactional
-    public Job updateDraft(UUID userId, UUID jobId, long expectedVersion, String title, String description,
+    public Job updateDraft(Long userId, Long jobId, long expectedVersion, String title, String description,
                            String requirementsText, String benefitsText, String locationText, String countryCode,
                            WorkMode workMode, EmploymentType employmentType, String seniorityLevel, int openings,
                            BigDecimal salaryMin, BigDecimal salaryMax, String salaryCurrency, String salaryPeriod,
@@ -173,20 +189,20 @@ public class JobService {
     }
 
     @Transactional
-    public Job publish(UUID userId, UUID jobId, long expectedVersion) {
+    public Job publish(Long userId, Long jobId, long expectedVersion) {
         Job existing = getMine(userId, jobId);
         ensureCanRecruit(existing.companyId(), userId);
         if (existing.status() != JobStatus.DRAFT) {
             throw new JobStateException("Only draft jobs can be published");
         }
-        if (existing.activeVersion().category().supportsMatching() && !jobs.isParsedJdConfirmed(existing.activeVersion().publicId())) {
+        if (existing.activeVersion().category().supportsMatching() && !jobs.isParsedJdConfirmed(existing.activeVersion().id())) {
             throw new JobStateException("Parsed JD must be confirmed before publishing");
         }
         return jobs.publish(jobId, userId, expectedVersion, OffsetDateTime.now()).orElseThrow(JobConflictException::new);
     }
 
     @Transactional
-    public Job close(UUID userId, UUID jobId, long expectedVersion) {
+    public Job close(Long userId, Long jobId, long expectedVersion) {
         Job existing = getMine(userId, jobId);
         ensureCanRecruit(existing.companyId(), userId);
         if (existing.status() != JobStatus.PUBLISHED) {
@@ -195,19 +211,19 @@ public class JobService {
         return jobs.close(jobId, userId, expectedVersion, OffsetDateTime.now()).orElseThrow(JobConflictException::new);
     }
 
-    private JobVersion version(int number, UUID userId, String title, String description, String requirementsText,
+    private JobVersion version(int number, Long userId, String title, String description, String requirementsText,
                                String benefitsText, String locationText, String countryCode, WorkMode workMode,
                                EmploymentType employmentType, String seniorityLevel, int openings,
                                BigDecimal salaryMin, BigDecimal salaryMax, String salaryCurrency, String salaryPeriod,
                                boolean salaryNegotiable, OffsetDateTime deadline, ExternalAiConsent consent, JobCategorySnapshot category) {
-        return new JobVersion(UUID.randomUUID(), number, title, description, requirementsText, benefitsText,
+        return new JobVersion(0L, number, title, description, requirementsText, benefitsText,
                 locationText, countryCode, workMode, employmentType, seniorityLevel, openings, salaryMin, salaryMax,
                 salaryCurrency, salaryPeriod, salaryNegotiable, deadline, hash(title, description, requirementsText,
                 benefitsText, locationText, countryCode, workMode, employmentType, seniorityLevel, openings, salaryMin,
                 salaryMax, salaryCurrency, salaryPeriod, salaryNegotiable, deadline, category), userId, consent, category);
     }
 
-    private JobCategorySnapshot resolveCategory(UUID actor, CategoryChoice choice, String title) {
+    private JobCategorySnapshot resolveCategory(Long actor, CategoryChoice choice, String title) {
         if (categories == null) {
             if (choice != null) throw new IllegalStateException("Category service is unavailable");
             return JobCategorySnapshot.legacyIt(title);
@@ -215,7 +231,7 @@ public class JobService {
         return categories.resolve(actor, choice, title);
     }
 
-    private void ensureCanRecruit(UUID companyId, UUID userId) {
+    private void ensureCanRecruit(Long companyId, Long userId) {
         if (!companies.canRecruit(companyId, userId)) throw new CompanyNotFoundException();
     }
 
@@ -233,11 +249,11 @@ public class JobService {
         if (correlationId == null) throw new IllegalArgumentException("Correlation ID is required");
         var version = job.activeVersion();
         if (!version.category().supportsMatching()) {
-            outbox.append(JobVersionSubmittedEvent.from(job, "unsupported/" + version.publicId(), correlationId,
+            outbox.append(JobVersionSubmittedEvent.from(job, "unsupported/" + version.id(), correlationId,
                     OffsetDateTime.now(ZoneOffset.UTC)));
             return;
         }
-        String objectKey = "jobs/" + job.publicId() + "/" + version.publicId() + ".json";
+        String objectKey = "jobs/" + job.id() + "/" + version.id() + ".json";
         byte[] content;
         try {
             content = objectMapper.writeValueAsBytes(new Object() {

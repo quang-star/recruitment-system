@@ -26,10 +26,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/companies")
+@RequestMapping("/api/v2/companies")
 public class CompanyController {
     private final CompanyService companies;
     private final CompanyInvitationService invitations;
@@ -44,7 +43,7 @@ public class CompanyController {
                                   @Valid @RequestBody CreateCompanyRequest request) {
         return CompanyResponse.from(companies.create(userId(jwt), request.legalName(), request.displayName(),
                 request.slug(), request.description(), request.websiteUrl(), request.countryCode(),
-                request.registrationNumber(), request.sizeRange()));
+                request.registrationNumber(), request.sizeRange(), request.logoUrl(), request.coverImageUrl()));
     }
 
     @GetMapping
@@ -53,18 +52,18 @@ public class CompanyController {
     }
 
     @GetMapping("/{companyId}")
-    public CompanyResponse getMine(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID companyId) {
+    public CompanyResponse getMine(@AuthenticationPrincipal Jwt jwt, @PathVariable Long companyId) {
         return CompanyResponse.from(companies.getMine(userId(jwt), companyId));
     }
 
     @GetMapping("/{companyId}/members")
-    public List<CompanyMemberResponse> members(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID companyId) {
+    public List<CompanyMemberResponse> members(@AuthenticationPrincipal Jwt jwt, @PathVariable Long companyId) {
         return companies.members(userId(jwt), companyId).stream().map(CompanyMemberResponse::from).toList();
     }
 
     @PostMapping("/{companyId}/invitations")
     @ResponseStatus(HttpStatus.CREATED)
-    public CompanyInvitationResponse invite(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID companyId,
+    public CompanyInvitationResponse invite(@AuthenticationPrincipal Jwt jwt, @PathVariable Long companyId,
                                             @Valid @RequestBody InviteCompanyMemberRequest request) {
         return CompanyInvitationResponse.from(invitations.invite(userId(jwt), companyId,
                 request.email(), request.role()));
@@ -72,15 +71,15 @@ public class CompanyController {
 
     @GetMapping("/{companyId}/invitations")
     public List<CompanyInvitationResponse> invitations(@AuthenticationPrincipal Jwt jwt,
-                                                       @PathVariable UUID companyId) {
+                                                       @PathVariable Long companyId) {
         return invitations.list(userId(jwt), companyId).stream()
                 .map(CompanyInvitationResponse::from).toList();
     }
 
     @DeleteMapping("/{companyId}/invitations/{invitationId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void revokeInvitation(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID companyId,
-                                 @PathVariable UUID invitationId, @RequestParam long version) {
+    public void revokeInvitation(@AuthenticationPrincipal Jwt jwt, @PathVariable Long companyId,
+                                 @PathVariable Long invitationId, @RequestParam long version) {
         invitations.revoke(userId(jwt), companyId, invitationId, version);
     }
 
@@ -92,26 +91,27 @@ public class CompanyController {
     }
 
     @PatchMapping("/{companyId}/members/{memberId}")
-    public CompanyMemberResponse updateMember(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID companyId,
-                                              @PathVariable UUID memberId,
+    public CompanyMemberResponse updateMember(@AuthenticationPrincipal Jwt jwt, @PathVariable Long companyId,
+                                              @PathVariable Long memberId,
                                               @Valid @RequestBody UpdateCompanyMemberRequest request) {
         return CompanyMemberResponse.from(companies.updateMember(userId(jwt), companyId, memberId,
                 request.role(), request.status(), request.version()));
     }
 
     @PutMapping("/{companyId}")
-    public CompanyResponse update(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID companyId,
+    public CompanyResponse update(@AuthenticationPrincipal Jwt jwt, @PathVariable Long companyId,
                                   @Valid @RequestBody CreateCompanyRequest request) {
         return CompanyResponse.from(companies.updateMine(userId(jwt), companyId, request.legalName(),
                 request.displayName(), request.slug(), request.description(), request.websiteUrl(),
-                request.countryCode(), request.registrationNumber(), request.sizeRange(), requestVersion(request)));
+                request.countryCode(), request.registrationNumber(), request.sizeRange(),
+                request.logoUrl(), request.coverImageUrl(), requestVersion(request)));
     }
 
     private Long requestVersion(CreateCompanyRequest request) {
         return request.version();
     }
 
-    private UUID userId(Jwt jwt) {
-        return UUID.fromString(jwt.getSubject());
+    private Long userId(Jwt jwt) {
+        return com.smartrecruitment.core.shared.api.SubjectId.parse(jwt.getSubject());
     }
 }

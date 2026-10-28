@@ -12,7 +12,6 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.Companies.COMPANIES;
 import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.CompanyMembers.COMPANY_MEMBERS;
@@ -26,10 +25,10 @@ public class JooqCompanyRepository implements CompanyRepository {
     }
 
     @Override
-    public Company insertWithOwner(Company company, UUID ownerUserId) {
+    public Company insertWithOwner(Company company, Long ownerUserId) {
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         var companyRecord = dsl.insertInto(COMPANIES)
-                .set(COMPANIES.PUBLIC_ID, company.publicId())
+
                 .set(COMPANIES.LEGAL_NAME, company.legalName())
                 .set(COMPANIES.DISPLAY_NAME, company.displayName())
                 .set(COMPANIES.SLUG, company.slug())
@@ -38,6 +37,8 @@ public class JooqCompanyRepository implements CompanyRepository {
                 .set(COMPANIES.COUNTRY_CODE, company.countryCode())
                 .set(COMPANIES.REGISTRATION_NUMBER, company.registrationNumber())
                 .set(COMPANIES.SIZE_RANGE, company.sizeRange())
+                .set(COMPANIES.LOGO_URL, company.logoUrl())
+                .set(COMPANIES.COVER_IMAGE_URL, company.coverImageUrl())
                 .set(COMPANIES.STATUS, company.status().name())
                 .set(COMPANIES.VERIFICATION_STATUS, company.verificationStatus().name())
                 .set(COMPANIES.CREATED_BY_USER_ID, company.createdByUserId())
@@ -49,7 +50,7 @@ public class JooqCompanyRepository implements CompanyRepository {
         if (companyRecord == null) throw new IllegalStateException("Insert company returned no record");
 
         dsl.insertInto(COMPANY_MEMBERS)
-                .set(COMPANY_MEMBERS.PUBLIC_ID, UUID.randomUUID())
+
                 .set(COMPANY_MEMBERS.COMPANY_ID, companyRecord.getId())
                 .set(COMPANY_MEMBERS.USER_ID, ownerUserId)
                 .set(COMPANY_MEMBERS.ROLE, "OWNER")
@@ -63,11 +64,11 @@ public class JooqCompanyRepository implements CompanyRepository {
     }
 
     @Override
-    public Optional<Company> findByPublicIdForMember(UUID companyId, UUID userId) {
+    public Optional<Company> findByIdForMember(Long companyId, Long userId) {
         return dsl.select(COMPANIES.fields())
                 .from(COMPANIES)
                 .join(COMPANY_MEMBERS).on(COMPANY_MEMBERS.COMPANY_ID.eq(COMPANIES.ID))
-                .where(COMPANIES.PUBLIC_ID.eq(companyId))
+                .where(COMPANIES.ID.eq(companyId))
                 .and(COMPANY_MEMBERS.USER_ID.eq(userId))
                 .and(COMPANY_MEMBERS.STATUS.eq("ACTIVE"))
                 .and(COMPANIES.STATUS.ne(CompanyStatus.CLOSED.name()))
@@ -75,7 +76,7 @@ public class JooqCompanyRepository implements CompanyRepository {
     }
 
     @Override
-    public List<Company> findAllForMember(UUID userId) {
+    public List<Company> findAllForMember(Long userId) {
         return dsl.select(COMPANIES.fields())
                 .from(COMPANIES)
                 .join(COMPANY_MEMBERS).on(COMPANY_MEMBERS.COMPANY_ID.eq(COMPANIES.ID))
@@ -87,31 +88,31 @@ public class JooqCompanyRepository implements CompanyRepository {
     }
 
     @Override
-    public boolean isActiveMember(UUID companyId, UUID userId) {
+    public boolean isActiveMember(Long companyId, Long userId) {
         return dsl.fetchExists(dsl.selectOne()
                 .from(COMPANIES)
                 .join(COMPANY_MEMBERS).on(COMPANY_MEMBERS.COMPANY_ID.eq(COMPANIES.ID))
-                .where(COMPANIES.PUBLIC_ID.eq(companyId))
+                .where(COMPANIES.ID.eq(companyId))
                 .and(COMPANY_MEMBERS.USER_ID.eq(userId))
                 .and(COMPANY_MEMBERS.STATUS.eq("ACTIVE")));
     }
 
     @Override
-    public boolean canManage(UUID companyId, UUID userId) {
+    public boolean canManage(Long companyId, Long userId) {
         return dsl.fetchExists(dsl.selectOne()
                 .from(COMPANIES)
                 .join(COMPANY_MEMBERS).on(COMPANY_MEMBERS.COMPANY_ID.eq(COMPANIES.ID))
-                .where(COMPANIES.PUBLIC_ID.eq(companyId))
+                .where(COMPANIES.ID.eq(companyId))
                 .and(COMPANY_MEMBERS.USER_ID.eq(userId))
                 .and(COMPANY_MEMBERS.STATUS.eq("ACTIVE"))
                 .and(COMPANY_MEMBERS.ROLE.in("OWNER", "COMPANY_ADMIN")));
     }
 
     @Override
-    public List<CompanyMember> findMembersForMember(UUID companyId, UUID viewerUserId) {
+    public List<CompanyMember> findMembersForMember(Long companyId, Long viewerUserId) {
         if (!isActiveMember(companyId, viewerUserId)) return List.of();
         Long internalCompanyId = dsl.select(COMPANIES.ID).from(COMPANIES)
-                .where(COMPANIES.PUBLIC_ID.eq(companyId)).fetchOne(COMPANIES.ID);
+                .where(COMPANIES.ID.eq(companyId)).fetchOne(COMPANIES.ID);
         if (internalCompanyId == null) return List.of();
         return dsl.selectFrom(COMPANY_MEMBERS)
                 .where(COMPANY_MEMBERS.COMPANY_ID.eq(internalCompanyId))
@@ -120,7 +121,7 @@ public class JooqCompanyRepository implements CompanyRepository {
     }
 
     @Override
-    public Optional<CompanyMember> findMember(UUID companyId, UUID userId) {
+    public Optional<CompanyMember> findMember(Long companyId, Long userId) {
         Long internalCompanyId = internalCompanyId(companyId);
         if (internalCompanyId == null) return Optional.empty();
         return dsl.selectFrom(COMPANY_MEMBERS)
@@ -130,17 +131,17 @@ public class JooqCompanyRepository implements CompanyRepository {
     }
 
     @Override
-    public Optional<CompanyMember> findMemberById(UUID companyId, UUID memberId) {
+    public Optional<CompanyMember> findMemberById(Long companyId, Long memberId) {
         Long internalCompanyId = internalCompanyId(companyId);
         if (internalCompanyId == null) return Optional.empty();
         return dsl.selectFrom(COMPANY_MEMBERS)
                 .where(COMPANY_MEMBERS.COMPANY_ID.eq(internalCompanyId))
-                .and(COMPANY_MEMBERS.PUBLIC_ID.eq(memberId))
+                .and(COMPANY_MEMBERS.ID.eq(memberId))
                 .fetchOptional(record -> toMember(record, companyId));
     }
 
     @Override
-    public Optional<CompanyMember> updateMember(UUID companyId, UUID memberId, String role, String status,
+    public Optional<CompanyMember> updateMember(Long companyId, Long memberId, String role, String status,
                                                 long expectedVersion, OffsetDateTime now) {
         Long internalCompanyId = internalCompanyId(companyId);
         if (internalCompanyId == null) return Optional.empty();
@@ -151,7 +152,7 @@ public class JooqCompanyRepository implements CompanyRepository {
                 .set(COMPANY_MEMBERS.VERSION, COMPANY_MEMBERS.VERSION.plus(1L));
         if ("LEFT".equals(status)) update.set(COMPANY_MEMBERS.LEFT_AT, now);
         return update.where(COMPANY_MEMBERS.COMPANY_ID.eq(internalCompanyId))
-                .and(COMPANY_MEMBERS.PUBLIC_ID.eq(memberId))
+                .and(COMPANY_MEMBERS.ID.eq(memberId))
                 .and(COMPANY_MEMBERS.ROLE.ne("OWNER"))
                 .and(COMPANY_MEMBERS.STATUS.ne("LEFT"))
                 .and(COMPANY_MEMBERS.VERSION.eq(expectedVersion))
@@ -160,11 +161,11 @@ public class JooqCompanyRepository implements CompanyRepository {
     }
 
     @Override
-    public boolean canRecruit(UUID companyId, UUID userId) {
+    public boolean canRecruit(Long companyId, Long userId) {
         return dsl.fetchExists(dsl.selectOne()
                 .from(COMPANIES)
                 .join(COMPANY_MEMBERS).on(COMPANY_MEMBERS.COMPANY_ID.eq(COMPANIES.ID))
-                .where(COMPANIES.PUBLIC_ID.eq(companyId))
+                .where(COMPANIES.ID.eq(companyId))
                 .and(COMPANY_MEMBERS.USER_ID.eq(userId))
                 .and(COMPANY_MEMBERS.STATUS.eq("ACTIVE"))
                 .and(COMPANY_MEMBERS.ROLE.in("OWNER", "COMPANY_ADMIN", "RECRUITER")));
@@ -181,34 +182,56 @@ public class JooqCompanyRepository implements CompanyRepository {
                 .set(COMPANIES.COUNTRY_CODE, company.countryCode())
                 .set(COMPANIES.REGISTRATION_NUMBER, company.registrationNumber())
                 .set(COMPANIES.SIZE_RANGE, company.sizeRange())
+                .set(COMPANIES.LOGO_URL, company.logoUrl())
+                .set(COMPANIES.COVER_IMAGE_URL, company.coverImageUrl())
                 .set(COMPANIES.UPDATED_AT, OffsetDateTime.now(ZoneOffset.UTC))
                 .set(COMPANIES.VERSION, COMPANIES.VERSION.plus(1L))
-                .where(COMPANIES.PUBLIC_ID.eq(company.publicId()))
+                .where(COMPANIES.ID.eq(company.id()))
                 .and(COMPANIES.VERSION.eq(expectedVersion))
                 .returning()
                 .fetchOptional()
                 .map(this::toDomain);
     }
 
+    @Override
+    public List<Company> findPublic() {
+        return dsl.select(COMPANIES.fields())
+                .from(COMPANIES)
+                .where(COMPANIES.STATUS.eq(CompanyStatus.ACTIVE.name()))
+                .orderBy(COMPANIES.DISPLAY_NAME.asc())
+                .fetch(record -> toDomain(record.into(COMPANIES)));
+    }
+
+    @Override
+    public Optional<Company> findById(Long companyId) {
+        return dsl.select(COMPANIES.fields())
+                .from(COMPANIES)
+                .where(COMPANIES.ID.eq(companyId))
+                .and(COMPANIES.STATUS.eq(CompanyStatus.ACTIVE.name()))
+                .fetchOptional(record -> toDomain(record.into(COMPANIES)));
+    }
+
+
     private Company toDomain(
             com.smartrecruitment.core.infrastructure.jooq.generated.tables.records.CompaniesRecord record) {
-        return new Company(record.getPublicId(), record.getLegalName(), record.getDisplayName(), record.getSlug(),
+        return new Company(record.getId(), record.getLegalName(), record.getDisplayName(), record.getSlug(),
                 record.getDescription(), record.getWebsiteUrl(), record.getCountryCode(),
                 record.getRegistrationNumber(), record.getSizeRange(),
+                record.getLogoUrl(), record.getCoverImageUrl(),
                 CompanyStatus.valueOf(record.getStatus()),
                 CompanyVerificationStatus.valueOf(record.getVerificationStatus()),
                 record.getCreatedByUserId(), record.getVersion());
     }
 
-    private Long internalCompanyId(UUID companyId) {
+    private Long internalCompanyId(Long companyId) {
         return dsl.select(COMPANIES.ID).from(COMPANIES)
-                .where(COMPANIES.PUBLIC_ID.eq(companyId)).fetchOne(COMPANIES.ID);
+                .where(COMPANIES.ID.eq(companyId)).fetchOne(COMPANIES.ID);
     }
 
     private CompanyMember toMember(
             com.smartrecruitment.core.infrastructure.jooq.generated.tables.records.CompanyMembersRecord record,
-            UUID companyId) {
-        return new CompanyMember(record.getPublicId(), companyId, record.getUserId(), record.getRole(),
+            Long companyId) {
+        return new CompanyMember(record.getId(), companyId, record.getUserId(), record.getRole(),
                 record.getStatus(), record.getJoinedAt(), record.getVersion());
     }
 }

@@ -9,7 +9,6 @@ import org.springframework.stereotype.Repository;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Optional;
-import java.util.UUID;
 
 import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.CandidateProfiles.CANDIDATE_PROFILES;
 
@@ -22,7 +21,7 @@ public class JooqCandidateProfileRepository implements CandidateProfileRepositor
     }
 
     @Override
-    public Optional<CandidateProfile> findByUserId(UUID userId) {
+    public Optional<CandidateProfile> findByUserId(Long userId) {
         return dsl.selectFrom(CANDIDATE_PROFILES)
                 .where(CANDIDATE_PROFILES.USER_ID.eq(userId))
                 .fetchOptional(this::toDomain);
@@ -32,12 +31,19 @@ public class JooqCandidateProfileRepository implements CandidateProfileRepositor
     public CandidateProfile insert(CandidateProfile profile) {
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         var record = dsl.insertInto(CANDIDATE_PROFILES)
-                .set(CANDIDATE_PROFILES.PUBLIC_ID, profile.publicId())
+
                 .set(CANDIDATE_PROFILES.USER_ID, profile.userId())
                 .set(CANDIDATE_PROFILES.DISPLAY_NAME, profile.displayName())
                 .set(CANDIDATE_PROFILES.HEADLINE, profile.headline())
                 .set(CANDIDATE_PROFILES.LOCATION_TEXT, profile.locationText())
                 .set(CANDIDATE_PROFILES.VISIBILITY, profile.visibility().name())
+                .set(CANDIDATE_PROFILES.PHONE_NUMBER, profile.phoneNumber())
+                .set(CANDIDATE_PROFILES.CONTACT_EMAIL, profile.contactEmail())
+                .set(CANDIDATE_PROFILES.LINKEDIN_URL, profile.linkedinUrl())
+                .set(CANDIDATE_PROFILES.GITHUB_URL, profile.githubUrl())
+                .set(CANDIDATE_PROFILES.PORTFOLIO_URL, profile.portfolioUrl())
+                .set(CANDIDATE_PROFILES.AVATAR_URL, profile.avatarUrl())
+                .set(CANDIDATE_PROFILES.BIO, profile.bio())
                 .set(CANDIDATE_PROFILES.CREATED_AT, now)
                 .set(CANDIDATE_PROFILES.UPDATED_AT, now)
                 .set(CANDIDATE_PROFILES.VERSION, 0L)
@@ -54,6 +60,13 @@ public class JooqCandidateProfileRepository implements CandidateProfileRepositor
                 .set(CANDIDATE_PROFILES.HEADLINE, profile.headline())
                 .set(CANDIDATE_PROFILES.LOCATION_TEXT, profile.locationText())
                 .set(CANDIDATE_PROFILES.VISIBILITY, profile.visibility().name())
+                .set(CANDIDATE_PROFILES.PHONE_NUMBER, profile.phoneNumber())
+                .set(CANDIDATE_PROFILES.CONTACT_EMAIL, profile.contactEmail())
+                .set(CANDIDATE_PROFILES.LINKEDIN_URL, profile.linkedinUrl())
+                .set(CANDIDATE_PROFILES.GITHUB_URL, profile.githubUrl())
+                .set(CANDIDATE_PROFILES.PORTFOLIO_URL, profile.portfolioUrl())
+                .set(CANDIDATE_PROFILES.AVATAR_URL, profile.avatarUrl())
+                .set(CANDIDATE_PROFILES.BIO, profile.bio())
                 .set(CANDIDATE_PROFILES.UPDATED_AT, OffsetDateTime.now(ZoneOffset.UTC))
                 .set(CANDIDATE_PROFILES.VERSION, CANDIDATE_PROFILES.VERSION.plus(1L))
                 .where(CANDIDATE_PROFILES.USER_ID.eq(profile.userId()))
@@ -65,8 +78,10 @@ public class JooqCandidateProfileRepository implements CandidateProfileRepositor
 
     private CandidateProfile toDomain(
             com.smartrecruitment.core.infrastructure.jooq.generated.tables.records.CandidateProfilesRecord record) {
-        return new CandidateProfile(record.getPublicId(), record.getUserId(), record.getDisplayName(),
+        return new CandidateProfile(record.getId(), record.getUserId(), record.getDisplayName(),
                 record.getHeadline(), record.getLocationText(),
-                ProfileVisibility.valueOf(record.getVisibility()), record.getVersion());
+                ProfileVisibility.valueOf(record.getVisibility()), record.getVersion(),
+                record.getPhoneNumber(), record.getContactEmail(), record.getLinkedinUrl(),
+                record.getGithubUrl(), record.getPortfolioUrl(), record.getAvatarUrl(), record.getBio());
     }
 }

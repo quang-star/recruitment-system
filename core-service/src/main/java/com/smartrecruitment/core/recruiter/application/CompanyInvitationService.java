@@ -17,7 +17,6 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-import java.util.UUID;
 
 @Service
 public class CompanyInvitationService {
@@ -50,7 +49,7 @@ public class CompanyInvitationService {
     }
 
     @Transactional
-    public CompanyInvitation invite(UUID actorUserId, UUID companyId, String email, String role) {
+    public CompanyInvitation invite(Long actorUserId, Long companyId, String email, String role) {
         requireManager(actorUserId, companyId);
         String normalizedEmail = normalizeEmail(email);
         String normalizedRole = normalizeRole(role);
@@ -63,20 +62,20 @@ public class CompanyInvitationService {
         CompanyInvitation invitation = invitations.insert(CompanyInvitation.create(companyId, email.trim(),
                 normalizedEmail, normalizedRole, tokens.hash(rawToken), actorUserId,
                 now, now.plus(INVITATION_TTL)));
-        String companyName = companies.findByPublicIdForMember(companyId, actorUserId)
+        String companyName = companies.findByIdForMember(companyId, actorUserId)
                 .orElseThrow(CompanyNotFoundException::new).displayName();
         sender.send(invitation.email(), companyName, invitation.role(), rawToken, invitation.expiresAt());
         return invitation;
     }
 
     @Transactional(readOnly = true)
-    public List<CompanyInvitation> list(UUID actorUserId, UUID companyId) {
+    public List<CompanyInvitation> list(Long actorUserId, Long companyId) {
         requireManager(actorUserId, companyId);
         return invitations.findAll(companyId);
     }
 
     @Transactional
-    public void revoke(UUID actorUserId, UUID companyId, UUID invitationId, long expectedVersion) {
+    public void revoke(Long actorUserId, Long companyId, Long invitationId, long expectedVersion) {
         requireManager(actorUserId, companyId);
         if (!invitations.revoke(companyId, invitationId, expectedVersion, OffsetDateTime.now(clock))) {
             throw new CompanyInvitationNotFoundException();
@@ -84,7 +83,7 @@ public class CompanyInvitationService {
     }
 
     @Transactional
-    public CompanyMember accept(UUID userId, String jwtEmail, String rawToken) {
+    public CompanyMember accept(Long userId, String jwtEmail, String rawToken) {
         OffsetDateTime now = OffsetDateTime.now(clock);
         CompanyInvitation invitation = invitations.findActiveByTokenHash(tokens.hash(rawToken), now)
                 .orElseThrow(CompanyInvitationNotFoundException::new);
@@ -99,12 +98,12 @@ public class CompanyInvitationService {
         CompanyMember member = invitations.accept(invitation, userId, now)
                 .orElseThrow(() -> new CompanyInvitationConflictException("Invitation changed; reload and try again"));
         if (notifications != null) {
-            notifications.invitationAccepted(invitation.invitedByUserId(), invitation.publicId(), invitation.email());
+            notifications.invitationAccepted(invitation.invitedByUserId(), invitation.id(), invitation.email());
         }
         return member;
     }
 
-    private void requireManager(UUID actorUserId, UUID companyId) {
+    private void requireManager(Long actorUserId, Long companyId) {
         if (!companies.canManage(companyId, actorUserId)) throw new CompanyNotFoundException();
     }
 

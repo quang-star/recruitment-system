@@ -11,7 +11,6 @@ import org.mockito.ArgumentCaptor;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -25,7 +24,7 @@ class CvErasureWorkerTests {
 
     @Test
     void deletesObjectBeforeCompletingErasureUsingBatchTimestamp() {
-        var entry = new PendingErasure(UUID.randomUUID(), "synthetic/cv.pdf", 2);
+        var entry = new PendingErasure(com.smartrecruitment.core.support.TestIds.next(), "synthetic/cv.pdf", 2);
         when(erasures.claimPending(any(), eq(10))).thenReturn(List.of(entry));
         var before = OffsetDateTime.now(ZoneOffset.UTC);
 
@@ -45,7 +44,7 @@ class CvErasureWorkerTests {
     @CsvSource({"0, 1, 5", "58, 59, 295", "59, 60, 300", "60, 61, 300", "999999, 1000000, 300", "1000000, 1000000, 300"})
     void retriesTemporaryFailureWithCappedAttemptsAndBackoff(int attempts, int expectedAttempts,
                                                            long expectedDelaySeconds) {
-        var entry = new PendingErasure(UUID.randomUUID(), "synthetic/retry.pdf", attempts);
+        var entry = new PendingErasure(com.smartrecruitment.core.support.TestIds.next(), "synthetic/retry.pdf", attempts);
         when(erasures.claimPending(any(), eq(10))).thenReturn(List.of(entry));
         doThrow(new IllegalStateException("Temporary storage outage")).when(storage).delete(entry.objectKey());
 
@@ -59,8 +58,8 @@ class CvErasureWorkerTests {
 
     @Test
     void continuesToNextEntryAfterStorageFailure() {
-        var failed = new PendingErasure(UUID.randomUUID(), "synthetic/failed.pdf", 0);
-        var successful = new PendingErasure(UUID.randomUUID(), "synthetic/success.pdf", 0);
+        var failed = new PendingErasure(com.smartrecruitment.core.support.TestIds.next(), "synthetic/failed.pdf", 0);
+        var successful = new PendingErasure(com.smartrecruitment.core.support.TestIds.next(), "synthetic/success.pdf", 0);
         when(erasures.claimPending(any(), eq(10))).thenReturn(List.of(failed, successful));
         doThrow(new IllegalStateException("Temporary storage outage")).when(storage).delete(failed.objectKey());
 

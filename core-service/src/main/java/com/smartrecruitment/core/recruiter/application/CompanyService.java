@@ -7,7 +7,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.UUID;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Set;
@@ -23,46 +22,73 @@ public class CompanyService {
     }
 
     @Transactional
-    public Company create(UUID ownerUserId, String legalName, String displayName, String slug,
+    public Company create(Long ownerUserId, String legalName, String displayName, String slug,
+                          String description, String websiteUrl, String countryCode,
+                          String registrationNumber, String sizeRange, String logoUrl, String coverImageUrl) {
+        return companies.insertWithOwner(Company.create(ownerUserId, legalName, displayName, slug,
+                description, websiteUrl, countryCode, registrationNumber, sizeRange, logoUrl, coverImageUrl), ownerUserId);
+    }
+
+    @Transactional
+    public Company create(Long ownerUserId, String legalName, String displayName, String slug,
                           String description, String websiteUrl, String countryCode,
                           String registrationNumber, String sizeRange) {
-        return companies.insertWithOwner(Company.create(ownerUserId, legalName, displayName, slug,
-                description, websiteUrl, countryCode, registrationNumber, sizeRange), ownerUserId);
+        return create(ownerUserId, legalName, displayName, slug, description, websiteUrl, countryCode,
+                registrationNumber, sizeRange, null, null);
     }
 
     @Transactional(readOnly = true)
-    public List<Company> findMine(UUID userId) {
+    public List<Company> findMine(Long userId) {
         return companies.findAllForMember(userId);
     }
 
     @Transactional(readOnly = true)
-    public Company getMine(UUID userId, UUID companyId) {
-        return companies.findByPublicIdForMember(companyId, userId).orElseThrow(CompanyNotFoundException::new);
+    public Company getMine(Long userId, Long companyId) {
+        return companies.findByIdForMember(companyId, userId).orElseThrow(CompanyNotFoundException::new);
     }
 
     @Transactional(readOnly = true)
-    public List<CompanyMember> members(UUID userId, UUID companyId) {
+    public List<Company> findPublic() {
+        return companies.findPublic();
+    }
+
+    @Transactional(readOnly = true)
+    public Company getPublic(Long companyId) {
+        return companies.findById(companyId).orElseThrow(CompanyNotFoundException::new);
+    }
+
+    @Transactional(readOnly = true)
+    public List<CompanyMember> members(Long userId, Long companyId) {
         if (!companies.isActiveMember(companyId, userId)) throw new CompanyNotFoundException();
         return companies.findMembersForMember(companyId, userId);
     }
 
     @Transactional
-    public Company updateMine(UUID userId, UUID companyId, String legalName, String displayName, String slug,
+    public Company updateMine(Long userId, Long companyId, String legalName, String displayName, String slug,
                               String description, String websiteUrl, String countryCode,
-                              String registrationNumber, String sizeRange, Long expectedVersion) {
+                              String registrationNumber, String sizeRange, String logoUrl, String coverImageUrl,
+                              Long expectedVersion) {
         if (!companies.canManage(companyId, userId)) throw new CompanyNotFoundException();
-        Company existing = companies.findByPublicIdForMember(companyId, userId)
+        Company existing = companies.findByIdForMember(companyId, userId)
                 .orElseThrow(CompanyNotFoundException::new);
         if (expectedVersion == null || expectedVersion != existing.version()) {
             throw new CompanyConflictException();
         }
         Company updated = existing.update(legalName, displayName, slug, description, websiteUrl,
-                countryCode, registrationNumber, sizeRange);
+                countryCode, registrationNumber, sizeRange, logoUrl, coverImageUrl);
         return companies.update(updated, expectedVersion).orElseThrow(CompanyConflictException::new);
     }
 
     @Transactional
-    public CompanyMember updateMember(UUID actorUserId, UUID companyId, UUID memberId, String role,
+    public Company updateMine(Long userId, Long companyId, String legalName, String displayName, String slug,
+                              String description, String websiteUrl, String countryCode,
+                              String registrationNumber, String sizeRange, Long expectedVersion) {
+        return updateMine(userId, companyId, legalName, displayName, slug, description, websiteUrl,
+                countryCode, registrationNumber, sizeRange, null, null, expectedVersion);
+    }
+
+    @Transactional
+    public CompanyMember updateMember(Long actorUserId, Long companyId, Long memberId, String role,
                                       String status, Long expectedVersion) {
         if (!companies.canManage(companyId, actorUserId)) throw new CompanyNotFoundException();
         CompanyMember existing = companies.findMemberById(companyId, memberId)

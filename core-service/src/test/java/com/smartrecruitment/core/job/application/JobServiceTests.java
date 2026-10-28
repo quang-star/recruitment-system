@@ -36,22 +36,22 @@ class JobServiceTests {
         org.mockito.Mockito.when(categories.resolve(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyString()))
                 .thenReturn(classification);
         var service = new JobService(jobs, new AllowCompany(), storage, outbox, JsonMapper.builder().build(), "private-jd", categories);
-        var created = service.create(UUID.randomUUID(), UUID.randomUUID(), "Accountant", "Description", "Accounting", null,
-                null, "VN", null, null, null, 1, null, null, null, null, false, null, UUID.randomUUID(),
+        var created = service.create(com.smartrecruitment.core.support.TestIds.next(), com.smartrecruitment.core.support.TestIds.next(), "Accountant", "Description", "Accounting", null,
+                null, "VN", null, null, null, 1, null, null, null, null, false, null, java.util.UUID.randomUUID(),
                 com.smartrecruitment.core.shared.domain.ExternalAiConsent.declined(),
                 new com.smartrecruitment.core.catalog.domain.CategoryChoice(null, "Accounting", null, "Finance", null, "Accountant"));
         assertThat(created.activeVersion().category()).isEqualTo(classification);
         assertThat(storage.objectKey).isNull();
         assertThat(outbox.event.matchingDomain()).isEqualTo("OUTSIDE_IT");
-        service.publish(created.createdByUserId(), created.publicId(), 0);
+        service.publish(created.createdByUserId(), created.id(), 0);
     }
     @Test
     void createsDraftWithContentHash() {
         FakeJobs jobs = new FakeJobs();
-        UUID companyId = UUID.randomUUID();
+        Long companyId = com.smartrecruitment.core.support.TestIds.next();
         JobService service = new JobService(jobs, new AllowCompany());
 
-        Job created = service.create(UUID.randomUUID(), companyId, "Backend", "Description", "Java", null,
+        Job created = service.create(com.smartrecruitment.core.support.TestIds.next(), companyId, "Backend", "Description", "Java", null,
                 null, "VN", null, null, null, 1, null, null, null, null, false, null);
 
         assertThat(created.status()).isEqualTo(JobStatus.DRAFT);
@@ -61,13 +61,13 @@ class JobServiceTests {
     @Test
     void cannotEditPublishedJob() {
         FakeJobs jobs = new FakeJobs();
-        UUID userId = UUID.randomUUID();
+        Long userId = com.smartrecruitment.core.support.TestIds.next();
         jobs.job = draft(userId);
-        jobs.job = new Job(jobs.job.publicId(), jobs.job.companyId(), userId, JobStatus.PUBLISHED,
+        jobs.job = new Job(jobs.job.id(), jobs.job.companyId(), userId, JobStatus.PUBLISHED,
                 OffsetDateTime.now(), null, 1, jobs.job.activeVersion());
         JobService service = new JobService(jobs, new AllowCompany());
 
-        assertThatThrownBy(() -> service.updateDraft(userId, jobs.job.publicId(), 1, "x", "d", "r", null,
+        assertThatThrownBy(() -> service.updateDraft(userId, jobs.job.id(), 1, "x", "d", "r", null,
                 null, "VN", null, null, null, 1, null, null, null, null, false, null))
                 .isInstanceOf(JobStateException.class);
     }
@@ -78,8 +78,8 @@ class JobServiceTests {
         RecordingStorage storage = new RecordingStorage();
         RecordingOutbox outbox = new RecordingOutbox(false);
         ObjectMapper mapper = JsonMapper.builder().build();
-        UUID userId = UUID.randomUUID();
-        UUID companyId = UUID.randomUUID();
+        Long userId = com.smartrecruitment.core.support.TestIds.next();
+        Long companyId = com.smartrecruitment.core.support.TestIds.next();
         UUID correlationId = UUID.randomUUID();
         JobService service = new JobService(jobs, new AllowCompany(), storage, outbox, mapper, "private-jd");
 
@@ -89,16 +89,16 @@ class JobServiceTests {
                 com.smartrecruitment.core.shared.domain.ExternalAiConsent.fromChoice(true,
                         com.smartrecruitment.core.shared.domain.ExternalAiConsent.POLICY_VERSION));
 
-        assertThat(storage.objectKey).isEqualTo("jobs/" + created.publicId() + "/"
-                + created.activeVersion().publicId() + ".json");
+        assertThat(storage.objectKey).isEqualTo("jobs/" + created.id() + "/"
+                + created.activeVersion().id() + ".json");
         assertThat(storage.contentType).isEqualTo("application/json");
         var snapshot = mapper.readTree(storage.content);
         assertThat(snapshot.get("title").asText()).isEqualTo("Backend Engineer");
         assertThat(snapshot.get("description").asText()).isEqualTo("Build internal APIs");
         assertThat(snapshot.get("requirementsText").asText()).isEqualTo("Java and Kafka");
         assertThat(snapshot.get("sourceHash").asText()).isEqualTo(created.activeVersion().sourceHash());
-        assertThat(outbox.event.jobId()).isEqualTo(created.publicId());
-        assertThat(outbox.event.jobVersionId()).isEqualTo(created.activeVersion().publicId());
+        assertThat(outbox.event.jobId()).isEqualTo(created.id());
+        assertThat(outbox.event.jobVersionId()).isEqualTo(created.activeVersion().id());
         assertThat(outbox.event.recruiterUserId()).isEqualTo(userId);
         assertThat(outbox.event.objectRef()).isEqualTo("private-jd/" + storage.objectKey);
         assertThat(outbox.event.sourceHash()).isEqualTo(created.activeVersion().sourceHash());
@@ -115,42 +115,52 @@ class JobServiceTests {
         JobService service = new JobService(jobs, new AllowCompany(), storage, outbox,
                 JsonMapper.builder().build(), "private-jd");
 
-        assertThatThrownBy(() -> service.create(UUID.randomUUID(), UUID.randomUUID(), "Backend", "Description",
+        assertThatThrownBy(() -> service.create(com.smartrecruitment.core.support.TestIds.next(), com.smartrecruitment.core.support.TestIds.next(), "Backend", "Description",
                 "Java", null, null, "VN", null, null, null, 1,
-                null, null, null, null, false, null, UUID.randomUUID()))
+                null, null, null, null, false, null, java.util.UUID.randomUUID()))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessage("outbox unavailable");
         assertThat(storage.deletedKey).isEqualTo(storage.objectKey);
     }
 
-    private static Job draft(UUID userId) {
-        JobVersion version = new JobVersion(UUID.randomUUID(), 1, "Title", "Description", "Requirements", null,
+    private static Job draft(Long userId) {
+        JobVersion version = new JobVersion(com.smartrecruitment.core.support.TestIds.next(), 1, "Title", "Description", "Requirements", null,
                 null, "VN", null, null, null, 1, null, null, null, null, false, null, "a".repeat(64), userId);
-        return Job.draft(UUID.randomUUID(), userId, version);
+        return Job.draft(com.smartrecruitment.core.support.TestIds.next(), userId, version);
     }
 
     private static final class FakeJobs implements JobRepository {
+        public java.util.Map<Long, Integer> publishedCountsByCompany() { return java.util.Map.of(); }
+        public com.smartrecruitment.core.shared.application.PageResult<Job> searchPublished(
+                com.smartrecruitment.core.job.application.JobSearch search) {
+            throw new UnsupportedOperationException("Paging is covered by repository integration tests");
+        }
+        public com.smartrecruitment.core.shared.application.PageResult<Job> searchForMember(Long companyId, Long userId,
+                com.smartrecruitment.core.job.application.JobSearch search) {
+            throw new UnsupportedOperationException("Paging is covered by repository integration tests");
+        }
+
         private Job job;
         @Override public Job insert(Job value) { job = value; return value; }
-        @Override public Optional<Job> findByPublicIdForMember(UUID jobId, UUID userId) { return Optional.ofNullable(job).filter(value -> value.publicId().equals(jobId)); }
-        @Override public List<Job> findAllForMember(UUID companyId, UUID userId) { return job == null ? List.of() : List.of(job); }
+        @Override public Optional<Job> findByIdForMember(Long jobId, Long userId) { return Optional.ofNullable(job).filter(value -> value.id().equals(jobId)); }
+        @Override public List<Job> findAllForMember(Long companyId, Long userId) { return job == null ? List.of() : List.of(job); }
         @Override public List<Job> findPublished() { return job == null ? List.of() : List.of(job); }
-        @Override public Optional<Job> updateDraft(Job value, JobVersion newVersion, long expectedVersion, UUID userId) { return Optional.empty(); }
-        @Override public Optional<Job> publish(UUID jobId, UUID userId, long expectedVersion, OffsetDateTime publishedAt) {
+        @Override public Optional<Job> updateDraft(Job value, JobVersion newVersion, long expectedVersion, Long userId) { return Optional.empty(); }
+        @Override public Optional<Job> publish(Long jobId, Long userId, long expectedVersion, OffsetDateTime publishedAt) {
             if (job == null || expectedVersion != job.version()) return Optional.empty();
-            job = new Job(job.publicId(), job.companyId(), job.createdByUserId(), JobStatus.PUBLISHED,
+            job = new Job(job.id(), job.companyId(), job.createdByUserId(), JobStatus.PUBLISHED,
                     publishedAt, null, job.version() + 1, job.activeVersion());
             return Optional.of(job);
         }
-        @Override public Optional<Job> close(UUID jobId, UUID userId, long expectedVersion, OffsetDateTime closedAt) { return Optional.empty(); }
+        @Override public Optional<Job> close(Long jobId, Long userId, long expectedVersion, OffsetDateTime closedAt) { return Optional.empty(); }
     }
 
     private static final class AllowCompany implements CompanyRepository {
-        @Override public Company insertWithOwner(Company company, UUID ownerUserId) { return company; }
-        @Override public Optional<Company> findByPublicIdForMember(UUID companyId, UUID userId) { return Optional.empty(); }
-        @Override public List<Company> findAllForMember(UUID userId) { return List.of(); }
-        @Override public boolean isActiveMember(UUID companyId, UUID userId) { return true; }
-        @Override public boolean canManage(UUID companyId, UUID userId) { return true; }
+        @Override public Company insertWithOwner(Company company, Long ownerUserId) { return company; }
+        @Override public Optional<Company> findByIdForMember(Long companyId, Long userId) { return Optional.empty(); }
+        @Override public List<Company> findAllForMember(Long userId) { return List.of(); }
+        @Override public boolean isActiveMember(Long companyId, Long userId) { return true; }
+        @Override public boolean canManage(Long companyId, Long userId) { return true; }
         @Override public Optional<Company> update(Company company, long expectedVersion) { return Optional.empty(); }
     }
 

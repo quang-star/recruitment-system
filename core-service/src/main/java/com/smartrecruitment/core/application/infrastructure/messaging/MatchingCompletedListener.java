@@ -7,7 +7,6 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.UUID;
 import com.smartrecruitment.core.notification.application.NotificationService;
 
 @Component
@@ -23,30 +22,35 @@ public class MatchingCompletedListener {
         this.notifications = notifications;
     }
 
-    @KafkaListener(topics = "${core.kafka.matching-completed-topic:matching.completed.v1}",
-            groupId = "core-matching-completed-v1")
+    @KafkaListener(topics = "${core.kafka.matching-completed-topic:matching.completed.v2}",
+            groupId = "core-matching-completed-v2")
     @Transactional
     public void onMessage(String rawMessage) {
         try {
             JsonNode root = objectMapper.readTree(rawMessage);
-            if (!"matching.completed.v1".equals(root.path("eventType").asText())) {
+            if (!"matching.completed.v2".equals(root.path("eventType").asText())) {
                 throw new IllegalArgumentException("Unexpected matching event type");
             }
             JsonNode payload = root.path("payload");
-            UUID applicationId = UUID.fromString(payload.path("applicationId").asText());
-            UUID cvVersionId = UUID.fromString(payload.path("cvVersionId").asText());
-            UUID jobVersionId = UUID.fromString(payload.path("jobVersionId").asText());
-            UUID matchingResultId = UUID.fromString(payload.path("matchingResultId").asText());
+            Long applicationId = com.smartrecruitment.core.shared.domain.BusinessIds.parse(payload.path("applicationId").asText());
+            Long cvVersionId = com.smartrecruitment.core.shared.domain.BusinessIds.parse(payload.path("cvVersionId").asText());
+            Long jobVersionId = com.smartrecruitment.core.shared.domain.BusinessIds.parse(payload.path("jobVersionId").asText());
+            Long matchingResultId = com.smartrecruitment.core.shared.domain.BusinessIds.parse(payload.path("matchingResultId").asText());
+            Long resultGeneration = optionalGeneration(payload);
+            Long supersedesMatchingResultId = optionalId(payload, "supersedesMatchingResultId");
+            if (matchingResultId.equals(supersedesMatchingResultId)) throw new IllegalArgumentException("Matching result cannot supersede itself");
             String status = payload.path("status").asText();
             String algorithmVersion = requiredText(payload, "algorithmVersion");
             String taxonomyVersion = requiredText(payload, "taxonomyVersion");
             double score = payload.path("finalScore").asDouble();
             String flags = objectMapper.writeValueAsString(payload.path("qualityFlags"));
-            String explanation = objectMapper.writeValueAsString(objectMapper.createObjectNode()
-                    .set("components", payload.path("components"))
-                    .set("claims", payload.path("claims")));
+            var explanationNode = objectMapper.createObjectNode();
+            explanationNode.set("components", payload.path("components"));
+            explanationNode.set("claims", payload.path("claims"));
+            explanationNode.set("inputRevisions", payload.path("inputRevisions"));
+            String explanation = objectMapper.writeValueAsString(explanationNode);
             if (projections.update(applicationId, cvVersionId, jobVersionId, matchingResultId, status, score, flags,
-                    explanation, algorithmVersion, taxonomyVersion)) {
+                    explanation, algorithmVersion, taxonomyVersion, resultGeneration, supersedesMatchingResultId)) {
                 notifications.matchingCompleted(applicationId, matchingResultId, score);
             }
         } catch (Exception exception) {
@@ -58,5 +62,21 @@ public class MatchingCompletedListener {
         String value = payload.path(field).asText();
         if (value.isBlank()) throw new IllegalArgumentException(field + " is required");
         return value;
+    }
+
+    private static Long optionalGeneration(JsonNode payload) {
+        JsonNode value = payload.get("resultGeneration");
+        if (value == null || value.isNull()) return null;
+        if (!value.isIntegralNumber() || !value.canConvertToLong() || value.asLong() < 1) {
+            throw new IllegalArgumentException("Invalid matching result generation");
+        }
+        return value.asLong();
+    }
+
+    private static Long optionalId(JsonNode payload, String field) {
+        JsonNode value = payload.get(field);
+        if (value == null || value.isNull()) return null;
+        if (!value.isString()) throw new IllegalArgumentException("Invalid " + field);
+        return com.smartrecruitment.core.shared.domain.BusinessIds.parse(value.asText());
     }
 }

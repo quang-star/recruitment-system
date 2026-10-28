@@ -12,10 +12,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/recruiter/profile")
+@RequestMapping("/api/v2/recruiter/profile")
 public class RecruiterProfileController {
     private final RecruiterProfileService profiles;
 
@@ -35,7 +34,7 @@ public class RecruiterProfileController {
                 request.businessTitle(), request.businessPhone(), request.version()));
     }
 
-    private UUID userId(Jwt jwt) {
-        return UUID.fromString(jwt.getSubject());
+    private Long userId(Jwt jwt) {
+        return com.smartrecruitment.core.shared.api.SubjectId.parse(jwt.getSubject());
     }
 }

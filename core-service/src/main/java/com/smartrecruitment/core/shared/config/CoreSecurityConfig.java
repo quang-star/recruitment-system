@@ -31,12 +31,12 @@ public class CoreSecurityConfig {
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.csrf(csrf -> csrf.ignoringRequestMatchers("/api/v1/**"))
+        http.csrf(csrf -> csrf.ignoringRequestMatchers("/api/v2/**"))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/actuator/health").permitAll()
-                        .requestMatchers("/api/v1/candidates/**", "/api/v1/cvs/**", "/api/v1/candidate/**").hasRole("CANDIDATE")
-                .requestMatchers("/api/v1/recruiter/**", "/api/v1/companies/**", "/api/v1/jobs/**").hasRole("RECRUITER")
+                        .requestMatchers("/actuator/health", "/api/v2/public/**").permitAll()
+                        .requestMatchers("/api/v2/candidates/**", "/api/v2/cvs/**", "/api/v2/candidate/**").hasRole("CANDIDATE")
+                .requestMatchers("/api/v2/recruiter/**", "/api/v2/companies/**", "/api/v2/jobs/**").hasRole("RECRUITER")
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(resourceServer -> resourceServer.jwt(jwt ->
                         jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())));
@@ -53,7 +53,14 @@ public class CoreSecurityConfig {
                 : OAuth2TokenValidatorResult.failure(
                         new OAuth2Error("invalid_token", "JWT audience is not accepted", null));
         decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(
-                JwtValidators.createDefaultWithIssuer(issuer), audienceValidator));
+                JwtValidators.createDefaultWithIssuer(issuer), audienceValidator, jwt -> {
+                    try {
+                        com.smartrecruitment.core.shared.api.SubjectId.parse(jwt.getSubject());
+                        return OAuth2TokenValidatorResult.success();
+                    } catch (org.springframework.security.oauth2.server.resource.InvalidBearerTokenException exception) {
+                        return OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token", exception.getMessage(), null));
+                    }
+                }));
         return decoder;
     }
 }

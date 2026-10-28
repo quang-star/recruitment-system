@@ -21,7 +21,7 @@ class MatchingCompletedTransactionTests {
         var projections = mock(JooqApplicationMatchingProjectionRepository.class);
         var notifications = mock(NotificationService.class);
         when(projections.update(any(), any(), any(), any(), anyString(), anyDouble(),
-                anyString(), anyString(), anyString(), anyString())).thenReturn(true);
+                anyString(), anyString(), anyString(), anyString(), isNull(), isNull())).thenReturn(true);
         doThrow(new IllegalStateException("temporary failure")).doNothing()
                 .when(notifications).matchingCompleted(any(), any(), anyDouble());
         var manager = mock(PlatformTransactionManager.class);
@@ -34,9 +34,9 @@ class MatchingCompletedTransactionTests {
         var proxyFactory = new ProxyFactory(new MatchingCompletedListener(projections, new ObjectMapper(), notifications));
         proxyFactory.addAdvice(interceptor);
         var listener = (MatchingCompletedListener) proxyFactory.getProxy();
-        String id = "779494ac-c858-4570-a884-6e88423b8e2b";
+        String id = "9007199254740993";
         String event = """
-                {"eventType":"matching.completed.v1","payload":{
+                {"eventType":"matching.completed.v2","payload":{
                   "applicationId":"%s","cvVersionId":"%s","jobVersionId":"%s",
                   "matchingResultId":"%s","status":"COMPLETED","finalScore":80,
                   "algorithmVersion":"baseline-v3","taxonomyVersion":"1.0.0",
