@@ -1,0 +1,21 @@
+.match-rating {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  max-width: 100%;
+  vertical-align: middle;
+}
+.match-rating-stars { white-space: nowrap; font-size: 1.6rem; line-height: 1.2; letter-spacing: 2px; }
+.match-rating-filled { color: #946200; }
+.match-rating-empty { color: #64748b; }
+.match-rating-caption { display: inline-flex; flex-wrap: wrap; gap: 4px 8px; font-size: 0.85rem; color: #334155; }
+.match-rating-count { font-weight: 700; }
+.match-rating-compact .match-rating-stars { font-size: 1.1rem; letter-spacing: 1px; }
+.match-rating-compact .match-rating-caption { font-size: 0.75rem; }
+.match-summary-score { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.match-component.match-component-rating { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; }
+.pre-match-result-card .pre-match-score-row { flex-wrap: wrap; }
+.pre-match-rating { padding: 12px; border: 1px solid #bfdbfe; border-radius: 10px; background: #eff6ff; }
+.pre-match-rating-heading { display: block; margin-bottom: 6px; font-size: 0.8rem; color: #334155; }
+.match-rating-quality { display: block; margin-top: 4px; color: #7c4a03; font-size: 0.75rem; }
