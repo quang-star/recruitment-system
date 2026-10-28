@@ -6,7 +6,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-from pathlib import Path
 import re
 import sys
 import time
@@ -156,7 +155,7 @@ def wait_for(label: str, operation: Callable[[], Any], timeout: int = 120) -> An
 def login(client: HttpClient, email: str, password: str) -> dict[str, Any]:
     return client.json(
         "POST",
-        "/api/v1/auth/login",
+        "/api/v2/auth/login",
         payload={
             "email": email,
             "password": password,
@@ -190,7 +189,7 @@ def ensure_account(client: HttpClient, email: str, password: str, account_type: 
     try:
         client.json(
             "POST",
-            "/api/v1/auth/register",
+            "/api/v2/auth/register",
             payload={"email": email, "password": password, "accountType": account_type},
         )
         print(f"  account {email}: registered")
@@ -200,7 +199,7 @@ def ensure_account(client: HttpClient, email: str, password: str, account_type: 
 
     token = wait_for(f"verification email for {email}", lambda: verification_token(client, email), timeout=30)
     try:
-        client.json("POST", "/api/v1/auth/verify-email", payload={"token": token})
+        client.json("POST", "/api/v2/auth/verify-email", payload={"token": token})
         print(f"  account {email}: email verified")
     except ApiFailure as exception:
         if exception.status != 409:
@@ -218,11 +217,11 @@ def get_or_none(client: HttpClient, path: str, token: str) -> Any | None:
 
 
 def ensure_profiles(client: HttpClient, recruiter_token: str, candidate_token: str) -> None:
-    recruiter = get_or_none(client, "/api/v1/recruiter/profile", recruiter_token)
+    recruiter = get_or_none(client, "/api/v2/recruiter/profile", recruiter_token)
     if recruiter is None:
         recruiter = client.json(
             "PUT",
-            "/api/v1/recruiter/profile",
+            "/api/v2/recruiter/profile",
             token=recruiter_token,
             payload={
                 "displayName": "Demo Recruiter",
@@ -235,11 +234,11 @@ def ensure_profiles(client: HttpClient, recruiter_token: str, candidate_token: s
     else:
         print(f"  recruiter profile: existing {recruiter['recruiterProfileId']}")
 
-    candidate = get_or_none(client, "/api/v1/candidates/me", candidate_token)
+    candidate = get_or_none(client, "/api/v2/candidates/me", candidate_token)
     if candidate is None:
         candidate = client.json(
             "PUT",
-            "/api/v1/candidates/me",
+            "/api/v2/candidates/me",
             token=candidate_token,
             payload={
                 "displayName": "Demo Candidate",
@@ -255,14 +254,14 @@ def ensure_profiles(client: HttpClient, recruiter_token: str, candidate_token: s
 
 
 def ensure_company(client: HttpClient, token: str) -> dict[str, Any]:
-    companies = client.json("GET", "/api/v1/companies", token=token)
+    companies = client.json("GET", "/api/v2/companies", token=token)
     company = next((item for item in companies if item["slug"] == "smart-recruitment-demo"), None)
     if company is not None:
         print(f"  company: existing {company['companyId']}")
         return company
     company = client.json(
         "POST",
-        "/api/v1/companies",
+        "/api/v2/companies",
         token=token,
         payload={
             "legalName": "Smart Recruitment Demo Company Limited",
@@ -293,6 +292,7 @@ def job_specs() -> list[dict[str, Any]]:
         "salaryCurrency": "VND",
         "salaryPeriod": "MONTH",
         "salaryNegotiable": True,
+        "externalAiConsent": False,
         "applicationDeadline": "2030-12-31T23:59:59+07:00",
         "version": None,
     }
@@ -326,25 +326,25 @@ def ensure_job_published(client: HttpClient, token: str, job: dict[str, Any]) ->
 
     parsed = wait_for(
         f"ParsedJD {job['jobVersionId']}",
-        lambda: get_or_none(client, f"/api/v1/parsed-jds/{job['jobVersionId']}", token),
+        lambda: get_or_none(client, f"/api/v2/parsed-jds/{job['jobVersionId']}", token),
     )
     if parsed["status"] != "CONFIRMED":
         parsed = client.json(
             "POST",
-            f"/api/v1/parsed-jds/{job['jobVersionId']}/confirm",
+            f"/api/v2/parsed-jds/{job['jobVersionId']}/confirm",
             token=token,
             payload={"expectedRevisionId": parsed["revisionId"]},
         )
         print(f"    ParsedJD confirmed: {parsed['revisionId']}")
 
     def publish() -> dict[str, Any] | None:
-        current = client.json("GET", f"/api/v1/jobs/{job['jobId']}", token=token)
+        current = client.json("GET", f"/api/v2/jobs/{job['jobId']}", token=token)
         if current["status"] == "PUBLISHED":
             return current
         try:
             return client.json(
                 "POST",
-                f"/api/v1/jobs/{job['jobId']}/publish?version={current['version']}",
+                f"/api/v2/jobs/{job['jobId']}/publish?version={current['version']}",
                 token=token,
             )
         except ApiFailure as exception:
@@ -356,14 +356,14 @@ def ensure_job_published(client: HttpClient, token: str, job: dict[str, Any]) ->
 
 
 def ensure_jobs(client: HttpClient, token: str, company_id: str) -> list[dict[str, Any]]:
-    jobs = client.json("GET", f"/api/v1/companies/{company_id}/jobs", token=token)
+    jobs = client.json("GET", f"/api/v2/companies/{company_id}/jobs", token=token)
     seeded: list[dict[str, Any]] = []
     for spec in job_specs():
         job = next((item for item in jobs if item["title"] == spec["title"]), None)
         if job is None:
             job = client.json(
                 "POST",
-                f"/api/v1/companies/{company_id}/jobs",
+                f"/api/v2/companies/{company_id}/jobs",
                 token=token,
                 payload=spec,
             )
@@ -422,29 +422,29 @@ def demo_pdf() -> bytes:
 
 def ensure_cv(client: HttpClient, token: str) -> dict[str, Any]:
     title = "Demo Backend Engineer CV"
-    cvs = client.json("GET", "/api/v1/cvs", token=token)
+    cvs = client.json("GET", "/api/v2/cvs", token=token)
     cv = next((item for item in cvs if item["title"] == title), None)
     if cv is None:
-        cv = client.multipart_pdf("/api/v1/cvs", title, "demo-candidate-cv.pdf", demo_pdf(), token)
+        cv = client.multipart_pdf("/api/v2/cvs", title, "demo-candidate-cv.pdf", demo_pdf(), token)
         print(f"  CV: uploaded {cv['cvId']}")
     else:
         print(f"  CV: existing {cv['cvId']}")
     version_id = cv["activeVersion"]["cvVersionId"]
     parsed = wait_for(
         f"ParsedCV {version_id}",
-        lambda: get_or_none(client, f"/api/v1/parsed-cvs/{version_id}", token),
+        lambda: get_or_none(client, f"/api/v2/parsed-cvs/{version_id}", token),
     )
     if parsed["status"] != "CONFIRMED":
         parsed = client.json(
             "POST",
-            f"/api/v1/parsed-cvs/{version_id}/confirm",
+            f"/api/v2/parsed-cvs/{version_id}/confirm",
             token=token,
             payload={"expectedRevisionId": parsed["revisionId"]},
         )
         print(f"    ParsedCV confirmed: {parsed['revisionId']}")
 
     def confirmed() -> dict[str, Any] | None:
-        current = client.json("GET", f"/api/v1/cvs/{cv['cvId']}", token=token)
+        current = client.json("GET", f"/api/v2/cvs/{cv['cvId']}", token=token)
         return current if current["activeVersion"]["processingStatus"] == "CONFIRMED" else None
 
     return wait_for(f"Core CV confirmation {version_id}", confirmed)
@@ -457,7 +457,7 @@ def ensure_applications(
     cv: dict[str, Any],
     jobs: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    existing = client.json("GET", "/api/v1/candidate/applications", token=candidate_token)
+    existing = client.json("GET", "/api/v2/candidate/applications", token=candidate_token)
     applications: list[dict[str, Any]] = []
     for job in jobs:
         application = next((item for item in existing if item["jobId"] == job["jobId"]), None)
@@ -465,7 +465,7 @@ def ensure_applications(
             idempotency_key = f"demo-{uuid5(DEMO_NAMESPACE, job['jobId'])}"
             application = client.json(
                 "POST",
-                "/api/v1/candidate/applications",
+                "/api/v2/candidate/applications",
                 token=candidate_token,
                 headers={"Idempotency-Key": idempotency_key},
                 payload={
@@ -483,7 +483,7 @@ def ensure_applications(
             print(f"  application {job['title']}: existing {application['applicationId']}")
 
         def matching() -> dict[str, Any] | None:
-            return get_or_none(client, f"/api/v1/applications/{application['applicationId']}/match", recruiter_token)
+            return get_or_none(client, f"/api/v2/applications/{application['applicationId']}/match", recruiter_token)
 
         match = wait_for(f"matching result {application['applicationId']}", matching)
         print(
@@ -491,7 +491,7 @@ def ensure_applications(
             f"algorithm={match['algorithmVersion']} taxonomy={match['taxonomyVersion']}"
         )
         recruiter_items = client.json(
-            "GET", f"/api/v1/recruiter/applications?jobId={quote(job['jobId'])}", token=recruiter_token
+            "GET", f"/api/v2/recruiter/applications?jobId={quote(job['jobId'])}", token=recruiter_token
         )
         if not any(item["applicationId"] == application["applicationId"] for item in recruiter_items):
             raise RuntimeError("Recruiter pipeline did not expose the submitted application")
@@ -501,7 +501,7 @@ def ensure_applications(
     if first["status"] == "SUBMITTED":
         first = client.json(
             "PATCH",
-            f"/api/v1/recruiter/applications/{first['applicationId']}/status",
+            f"/api/v2/recruiter/applications/{first['applicationId']}/status",
             token=recruiter_token,
             payload={"status": "UNDER_REVIEW", "reason": "Demo review started", "version": first["version"]},
         )
@@ -509,16 +509,16 @@ def ensure_applications(
     if first["status"] == "UNDER_REVIEW":
         first = client.json(
             "PATCH",
-            f"/api/v1/recruiter/applications/{first['applicationId']}/status",
+            f"/api/v2/recruiter/applications/{first['applicationId']}/status",
             token=recruiter_token,
             payload={"status": "SHORTLISTED", "reason": "Strong demo match", "version": first["version"]},
         )
         applications[0] = first
         print(f"  application {first['applicationId']}: moved to SHORTLISTED")
-    history = client.json("GET", f"/api/v1/applications/{first['applicationId']}/history", token=candidate_token)
+    history = client.json("GET", f"/api/v2/applications/{first['applicationId']}/history", token=candidate_token)
     if not history:
         raise RuntimeError("Application history is unexpectedly empty")
-    content, headers = client.bytes(f"/api/v1/recruiter/applications/{first['applicationId']}/cv", recruiter_token)
+    content, headers = client.bytes(f"/api/v2/recruiter/applications/{first['applicationId']}/cv", recruiter_token)
     if not content.startswith(b"%PDF-") or headers.get("content-type", "").split(";", 1)[0] != "application/pdf":
         raise RuntimeError("Recruiter CV download did not return the immutable PDF snapshot")
     print(f"  recruiter CV download: verified {len(content)} bytes; history entries={len(history)}")

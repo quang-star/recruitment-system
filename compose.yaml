@@ -51,23 +51,23 @@ services:
     command:
       - >-
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists
-        --topic cv.uploaded.v1 --partitions 3 --replication-factor 1 &&
+        --topic cv.uploaded.v2 --partitions 3 --replication-factor 1 &&
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists
-        --topic cv.processing.updated.v1 --partitions 3 --replication-factor 1
+        --topic cv.processing.updated.v2 --partitions 3 --replication-factor 1
         && /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists
-        --topic cv.confirmed.v1 --partitions 3 --replication-factor 1
+        --topic cv.confirmed.v2 --partitions 3 --replication-factor 1
         && /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists
-        --topic job.processing.updated.v1 --partitions 3 --replication-factor 1
+        --topic job.processing.updated.v2 --partitions 3 --replication-factor 1
         && /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists
-        --topic job.confirmed.v1 --partitions 3 --replication-factor 1
+        --topic job.confirmed.v2 --partitions 3 --replication-factor 1
         && /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists
-        --topic job.version.submitted.v1 --partitions 3 --replication-factor 1
+        --topic job.version.submitted.v2 --partitions 3 --replication-factor 1
         && /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists
-        --topic application.submitted.v1 --partitions 3 --replication-factor 1
+        --topic application.submitted.v2 --partitions 3 --replication-factor 1
         && /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists
-        --topic matching.completed.v1 --partitions 3 --replication-factor 1
+        --topic matching.completed.v2 --partitions 3 --replication-factor 1
         && /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists
-        --topic ai.processing.dlq.v1 --partitions 3 --replication-factor 1
+        --topic ai.processing.dlq.v2 --partitions 3 --replication-factor 1
 
   minio:
     image: minio/minio:RELEASE.2025-07-23T15-54-02Z
@@ -145,10 +145,10 @@ services:
       CORE_STORAGE_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
       CORE_STORAGE_BUCKET: ${CORE_STORAGE_BUCKET:-smart-recruitment-cv}
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      CORE_CV_CONFIRMED_TOPIC: cv.confirmed.v1
-      CORE_JOB_PROCESSING_UPDATED_TOPIC: job.processing.updated.v1
-      CORE_JOB_CONFIRMED_TOPIC: job.confirmed.v1
-      CORE_MATCHING_COMPLETED_TOPIC: matching.completed.v1
+      CORE_CV_CONFIRMED_TOPIC: cv.confirmed.v2
+      CORE_JOB_PROCESSING_UPDATED_TOPIC: job.processing.updated.v2
+      CORE_JOB_CONFIRMED_TOPIC: job.confirmed.v2
+      CORE_MATCHING_COMPLETED_TOPIC: matching.completed.v2
     depends_on:
       postgres:
         condition: service_healthy
@@ -171,16 +171,16 @@ services:
       AI_AUTH_JWT_ISSUER: ${AUTH_JWT_ISSUER:-http://localhost:8080}
       AI_AUTH_JWT_AUDIENCE: smart-recruitment-api
       AI_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      AI_KAFKA_CONSUMER_GROUP: ai-cv-worker-v1
-      AI_KAFKA_CV_UPLOADED_TOPIC: cv.uploaded.v1
-      AI_KAFKA_CV_PROCESSING_UPDATED_TOPIC: cv.processing.updated.v1
-      AI_KAFKA_CV_CONFIRMED_TOPIC: cv.confirmed.v1
-      AI_KAFKA_JOB_SUBMITTED_TOPIC: job.version.submitted.v1
-      AI_KAFKA_JOB_PROCESSING_UPDATED_TOPIC: job.processing.updated.v1
-      AI_KAFKA_JOB_CONFIRMED_TOPIC: job.confirmed.v1
-      AI_KAFKA_APPLICATION_SUBMITTED_TOPIC: application.submitted.v1
-      AI_KAFKA_MATCHING_COMPLETED_TOPIC: matching.completed.v1
-      AI_KAFKA_DEAD_LETTER_TOPIC: ai.processing.dlq.v1
+      AI_KAFKA_CONSUMER_GROUP: ai-cv-worker-v2
+      AI_KAFKA_CV_UPLOADED_TOPIC: cv.uploaded.v2
+      AI_KAFKA_CV_PROCESSING_UPDATED_TOPIC: cv.processing.updated.v2
+      AI_KAFKA_CV_CONFIRMED_TOPIC: cv.confirmed.v2
+      AI_KAFKA_JOB_SUBMITTED_TOPIC: job.version.submitted.v2
+      AI_KAFKA_JOB_PROCESSING_UPDATED_TOPIC: job.processing.updated.v2
+      AI_KAFKA_JOB_CONFIRMED_TOPIC: job.confirmed.v2
+      AI_KAFKA_APPLICATION_SUBMITTED_TOPIC: application.submitted.v2
+      AI_KAFKA_MATCHING_COMPLETED_TOPIC: matching.completed.v2
+      AI_KAFKA_DEAD_LETTER_TOPIC: ai.processing.dlq.v2
       AI_KAFKA_MAX_PROCESSING_ATTEMPTS: 3
       AI_KAFKA_RETRY_BACKOFF_SECONDS: 1
       AI_STORAGE_ENDPOINT: http://minio:9000

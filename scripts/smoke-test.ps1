@@ -27,7 +27,7 @@ if ($health.status -ne 'UP') { throw "Gateway health is not UP." }
 $jwks = Wait-JsonEndpoint "$GatewayUrl/.well-known/jwks.json"
 if (-not $jwks.keys -or $jwks.keys.Count -lt 1) { throw 'JWKS endpoint returned no signing key.' }
 
-$web = Invoke-WebRequest -Method Get -Uri $WebUrl -TimeoutSec 10
+$web = Invoke-WebRequest -UseBasicParsing -Method Get -Uri $WebUrl -TimeoutSec 10
 if ($web.StatusCode -ne 200 -or $web.Content -notmatch '<div id="root">') {
     throw 'Web entry point is unavailable or malformed.'
 }
@@ -43,17 +43,17 @@ $loginBody = @{
     clientType = 'WEB'
     deviceName = 'Smoke script'
 } | ConvertTo-Json
-$session = Invoke-RestMethod -Method Post -Uri "$GatewayUrl/api/v1/auth/login" -ContentType 'application/json' -Body $loginBody -TimeoutSec 10
+$session = Invoke-RestMethod -Method Post -Uri "$GatewayUrl/api/v2/auth/login" -ContentType 'application/json' -Body $loginBody -TimeoutSec 10
 if ([string]::IsNullOrWhiteSpace($session.accessToken)) { throw 'Login returned no access token.' }
 
 $headers = @{
     Authorization = "Bearer $($session.accessToken)"
     'X-Correlation-Id' = [guid]::NewGuid().ToString()
 }
-$me = Invoke-RestMethod -Method Get -Uri "$GatewayUrl/api/v1/auth/me" -Headers $headers -TimeoutSec 10
+$me = Invoke-RestMethod -Method Get -Uri "$GatewayUrl/api/v2/auth/me" -Headers $headers -TimeoutSec 10
 if ($me.userId -ne $session.userId -or -not ($me.roles -contains 'CANDIDATE')) {
     throw 'Smoke credentials must belong to an active CANDIDATE account.'
 }
 
-$jobs = Invoke-RestMethod -Method Get -Uri "$GatewayUrl/api/v1/candidate/jobs" -Headers $headers -TimeoutSec 10
+$jobs = Invoke-RestMethod -Method Get -Uri "$GatewayUrl/api/v2/candidate/jobs" -Headers $headers -TimeoutSec 10
 Write-Host "Authenticated smoke passed for user $($me.userId); published Job count: $($jobs.Count)."

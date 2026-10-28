@@ -53,7 +53,7 @@ class Client:
 
 
 def login(client: Client, email: str, password: str, device: str) -> dict[str, Any]:
-    return client.request("POST", "/api/v1/auth/login", {
+    return client.request("POST", "/api/v2/auth/login", {
         "email": email,
         "password": password,
         "clientType": "WEB",
@@ -69,7 +69,7 @@ def reset_token_from_message(client: Client, message: dict[str, Any], email: str
     recipients = {recipient.get("Address", "").casefold() for recipient in message.get("To", [])}
     if email.casefold() not in recipients or "password" not in message.get("Subject", "").casefold():
         return None
-    detail = client.request("GET", f"/api/v1/message/{message['ID']}", mailpit=True)
+    detail = client.request("GET", f"/api/v2/message/{message['ID']}", mailpit=True)
     match = re.search(r"token=([0-9a-f]{64})", f"{detail.get('Text', '')}\n{detail.get('HTML', '')}")
     return match.group(1) if match else None
 
@@ -113,31 +113,31 @@ def main() -> int:
 
     client = Client(args.gateway_url, args.mailpit_url)
     original = login(client, args.email, args.password, "Recovery smoke original")
-    existing = client.request("GET", "/api/v1/auth/sessions", token=original["accessToken"])
+    existing = client.request("GET", "/api/v2/auth/sessions", token=original["accessToken"])
     assert any(session["active"] for session in existing), "Login did not create an active session"
     print(f"  login + session listing: {len(existing)} session(s)")
 
     before = message_ids(client)
-    client.request("POST", "/api/v1/auth/forgot-password", {"email": args.email})
+    client.request("POST", "/api/v2/auth/forgot-password", {"email": args.email})
     token = wait_for_reset_token(client, args.email, before, args.reuse_latest_reset)
     print("  password-reset email: delivered through Mailpit")
 
-    client.request("POST", "/api/v1/auth/reset-password", {
+    client.request("POST", "/api/v2/auth/reset-password", {
         "token": token,
         "newPassword": args.temporary_password,
     })
     expect_login_rejected(client, args.email, args.password)
     temporary = login(client, args.email, args.temporary_password, "Recovery smoke temporary")
-    sessions = client.request("GET", "/api/v1/auth/sessions", token=temporary["accessToken"])
+    sessions = client.request("GET", "/api/v2/auth/sessions", token=temporary["accessToken"])
     assert sum(1 for session in sessions if session["active"]) == 1, "Reset did not revoke every older session"
     print("  password reset: old password rejected and older sessions revoked")
 
-    client.request("POST", "/api/v1/auth/change-password", {
+    client.request("POST", "/api/v2/auth/change-password", {
         "currentPassword": args.temporary_password,
         "newPassword": args.password,
     }, token=temporary["accessToken"])
     restored = login(client, args.email, args.password, "Recovery smoke restored")
-    client.request("POST", "/api/v1/auth/logout", {"refreshToken": restored["refreshToken"]})
+    client.request("POST", "/api/v2/auth/logout", {"refreshToken": restored["refreshToken"]})
     print("  password change + logout: original demo credential restored")
     print("Auth recovery smoke passed.")
     return 0
