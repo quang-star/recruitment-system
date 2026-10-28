@@ -1,3 +1,4 @@
+from identity_fixtures import new_id
 import asyncio
 import hashlib
 import json
@@ -19,8 +20,11 @@ from app.jd.repository import ParsedJdHeadRecord, ParsedJdRevisionRecord
 from app.outbox import OutboxEvent
 from app.shared.processing_errors import ProcessingFailure, storage_failure
 from app.task.persistence import ProcessingTaskRecord
-from app.taxonomy.catalog import SkillCatalogRecord, seed_skills
+from app.taxonomy.catalog import SkillCatalogRecord, SkillCatalogHistory, TaxonomyVersionRecord, seed_skills
+from app.taxonomy.catalog import CATALOG_LIMIT
+from app.taxonomy.occurrences import SkillSourceOccurrence, SkillOccurrenceRevision
 from app.shared.privacy import PrivacyTombstone
+from app.matching.shadow import JobMatchingDomain
 
 
 def s3_error(code):
@@ -77,7 +81,9 @@ def processing(request, monkeypatch):
     if not db_url:
         metadata = MetaData()
         for record in (ProcessingTaskRecord, ParsedCvRevisionRecord, ParsedJdRevisionRecord,
-                       ParsedCvHeadRecord, ParsedJdHeadRecord, OutboxEvent, SkillCatalogRecord, PrivacyTombstone):
+                       ParsedCvHeadRecord, ParsedJdHeadRecord, OutboxEvent,
+                       SkillCatalogRecord, SkillCatalogHistory, TaxonomyVersionRecord, PrivacyTombstone, JobMatchingDomain,
+                       SkillSourceOccurrence, SkillOccurrenceRevision):
             table = record.__table__.to_metadata(metadata)
             # SQLite needs INTEGER for autoincrement; production models remain BIGINT.
             if "id" in table.c and isinstance(table.c.id.type, Integer):
@@ -96,7 +102,7 @@ def processing(request, monkeypatch):
             local_timezone = datetime.now().astimezone().tzinfo
             record.submitted_at = record.submitted_at.replace(tzinfo=local_timezone)
             record.updated_at = record.updated_at.replace(tzinfo=local_timezone)
-    resource_id, owner_id, aggregate_id = uuid4(), uuid4(), uuid4()
+    resource_id, owner_id, aggregate_id = new_id(), new_id(), new_id()
     source_hash = hashlib.sha256(b"synthetic PDF").hexdigest()
     snapshot = {"title": "Engineer", "description": "Develop software",
                 "requirementsText": "Java", "sourceHash": source_hash}
@@ -104,21 +110,21 @@ def processing(request, monkeypatch):
     payload = {"objectRef": "private-bucket/private-key", "sourceHash": source_hash}
     if request.param == "cv":
         payload.update(cvId=str(aggregate_id), cvVersionId=str(resource_id), candidateUserId=str(owner_id))
-        event_type = "cv.uploaded.v1"
+        event_type = "cv.uploaded.v2"
         parser_name, revision = "parse_pdf", ParsedCvRevisionRecord
         persist_class, persist_name = worker.ParsedCvRevisionRepository, "create"
     else:
         payload.update(jobId=str(aggregate_id), jobVersionId=str(resource_id), recruiterUserId=str(owner_id))
-        event_type = "job.version.submitted.v1"
+        event_type = "job.version.submitted.v2"
         parser_name, revision = "parse_jd", ParsedJdRevisionRecord
         persist_class, persist_name = worker.ParsedJdRevisionRepository, "upsert"
-    envelope = {"eventId": str(uuid4()), "eventType": event_type, "schemaVersion": 1,
+    envelope = {"eventId": str(uuid4()), "eventType": event_type, "schemaVersion": 2,
                 "correlationId": str(uuid4()), "payload": payload}
     message = SimpleNamespace(topic=event_type, partition=0, offset=1, value=json.dumps(envelope).encode())
     settings = SimpleNamespace(kafka_max_processing_attempts=3, kafka_retry_backoff_seconds=1,
-                               kafka_dead_letter_topic="ai.processing.dlq.v1",
-                               kafka_cv_processing_updated_topic="cv.processing.updated.v1",
-                               kafka_job_processing_updated_topic="job.processing.updated.v1",
+                               kafka_dead_letter_topic="ai.processing.dlq.v2",
+                               kafka_cv_processing_updated_topic="cv.processing.updated.v2",
+                               kafka_job_processing_updated_topic="job.processing.updated.v2",
                                ocr_enabled=False, ocr_max_pages=5, ocr_timeout_seconds=60)
     parser = Mock(return_value={"synthetic": True})
     monkeypatch.setattr(worker, parser_name, parser)
@@ -141,6 +147,27 @@ def processing(request, monkeypatch):
 def handle(case):
     asyncio.run(worker._handle_message(case.message, case.consumer, case.sessions,
                                       case.storage, case.producer, case.settings))
+
+
+@pytest.fixture
+def capacity_processing(processing):
+    case = processing
+    engine = case.sessions.kw["bind"]
+    if engine.dialect.name != "postgresql":
+        yield case
+        return
+    # Keep the artificial full catalog local to this QA test. Worker commits
+    # release savepoints; the enclosing transaction rolls synthetic fixtures back.
+    connection = engine.connect()
+    transaction = connection.begin()
+    original = case.sessions
+    case.sessions = sessionmaker(bind=connection, expire_on_commit=False, join_transaction_mode="create_savepoint")
+    try:
+        yield case
+    finally:
+        transaction.rollback()
+        connection.close()
+        case.sessions = original
 
 
 def saved(case):
@@ -176,6 +203,79 @@ def test_transient_storage_recovery_never_publishes_failed_and_redelivery_keeps_
     assert task.attempt_count == 2 and count == 1
     case.parser.assert_called_once()
     assert events[0]["idempotencyKey"] == events[1]["idempotencyKey"]
+
+
+def test_completed_processing_and_redelivery_record_one_source_occurrence_without_publishing(processing):
+    case = processing
+    term = "WorkerUnknown" + uuid4().hex
+    skill = {"raw": term, "canonicalSkillId": None, "normalizationStatus": "PENDING",
+             "evidenceIds": [], "confidence": None, "provenance": "USER_ASSERTED"}
+    parsed = {"document": {"taxonomyVersion": "1.0.0", "parserVersion": "synthetic-worker"}, "evidence": []}
+    if case.kind == "cv":
+        parsed["skills"] = [skill]
+    else:
+        parsed["requirements"] = {"requiredSkills": [skill], "preferredSkills": []}
+    case.parser.return_value = parsed
+    with case.sessions() as session:
+        published = session.get(SkillCatalogRecord, 1).published_version
+    handle(case)
+    handle(case)
+    with case.sessions() as session:
+        observations = session.scalars(select(SkillSourceOccurrence).where(
+            SkillSourceOccurrence.source_version_id == case.resource_id)).all()
+        assert len(observations) == 1
+        item = observations[0]
+        assert item.raw_term == term and item.active
+        assert item.source_kind == case.kind.upper()
+        assert item.first_revision_id == item.latest_revision_id
+        assert session.scalar(select(func.count()).select_from(SkillOccurrenceRevision).where(
+            SkillOccurrenceRevision.occurrence_id == item.id)) == 1
+        catalog = session.get(SkillCatalogRecord, 1)
+        definition = next(entry for entry in catalog.skills if entry["stableId"] == str(item.skill_id))
+        assert definition["status"] == "PENDING" and catalog.published_version == published
+    case.parser.assert_called_once()
+    assert saved(case)[0].state == "COMPLETED"
+
+
+def test_catalog_capacity_does_not_fail_cv_or_jd_processing_and_redelivery(capacity_processing, caplog):
+    case = capacity_processing
+    with case.sessions() as session:
+        catalog = session.get(SkillCatalogRecord, 1)
+        definitions = list(catalog.skills)
+        known = next(entry for entry in definitions if entry["status"] == "ACTIVE")
+        for index in range(len(definitions), CATALOG_LIMIT):
+            definitions.append({"stableId": str(new_id()), "canonicalName": f"WorkerCapacityReserved{index}",
+                                "normalizedName": f"worker-capacity-reserved-{index}", "status": "PENDING", "type": "other",
+                                "category": "cross_functional", "aliases": [], "relations": []})
+        catalog.skills = definitions
+        version, published = catalog.version, catalog.published_version
+        session.commit()
+    term = "WorkerCapacityUnknown" + uuid4().hex
+    skills = [{"raw": term, "canonicalSkillId": None, "normalizationStatus": "PENDING",
+               "evidenceIds": [], "confidence": None, "provenance": "USER_ASSERTED"},
+              {"raw": known["canonicalName"], "canonicalSkillId": known["stableId"], "normalizationStatus": "KNOWN",
+               "evidenceIds": [], "confidence": 1, "provenance": "USER_ASSERTED"}]
+    parsed = {"document": {"taxonomyVersion": f"1.0.{published}", "parserVersion": "synthetic-capacity"}, "evidence": []}
+    if case.kind == "cv":
+        parsed["skills"] = skills
+    else:
+        parsed["requirements"] = {"requiredSkills": skills, "preferredSkills": []}
+    case.parser.return_value = parsed
+    handle(case)
+    handle(case)
+    task, events, count = saved(case)
+    assert task.state == "COMPLETED" and task.attempt_count == 1 and task.result_payload == parsed
+    assert count == 1 and all(event["payload"]["status"] == "PARSED" for event in events)
+    with case.sessions() as session:
+        observations = session.scalars(select(SkillSourceOccurrence).where(
+            SkillSourceOccurrence.source_version_id == case.resource_id)).all()
+        assert len(observations) == 1 and observations[0].skill_id == int(known["stableId"])
+        catalog = session.get(SkillCatalogRecord, 1)
+        assert catalog.version == version and catalog.published_version == published
+        assert not any(entry["canonicalName"] == term for entry in catalog.skills)
+    assert "SKILL_CATALOG_LIMIT" in caplog.text and term not in caplog.text
+    case.parser.assert_called_once()
+    case.producer.send_and_wait.assert_not_awaited()
 
 
 def test_exhausted_storage_failure_is_persisted_before_dlq_and_ack(processing, caplog):
@@ -321,7 +421,7 @@ def test_user_retry_recovers_same_file_and_ignores_late_old_upload(processing):
     old_failure = saved(case)[1][0]
     case.storage.get_object.side_effect = None
     case.envelope["payload"]["processingGeneration"] = 2
-    case.envelope["eventId"] = str(uuid4())
+    case.envelope["eventId"] = str(new_id())
     case.message.value = json.dumps(case.envelope).encode()
     handle(case)
     task, events, count = saved(case)
@@ -345,7 +445,7 @@ def test_new_retry_failure_keeps_its_own_projection_key(processing):
     case.storage.get_object.side_effect = TimeoutError("private")
     handle(case)
     case.envelope["payload"]["processingGeneration"] = 2
-    case.envelope["eventId"] = str(uuid4())
+    case.envelope["eventId"] = str(new_id())
     case.message.value = json.dumps(case.envelope).encode()
     handle(case)
     task, events, count = saved(case)

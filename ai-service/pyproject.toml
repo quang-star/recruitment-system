@@ -21,6 +21,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+research = [
+  "sentence-transformers>=5.6,<6"
+]
 test = [
   "pytest>=8.4,<9",
   "httpx>=0.28,<1",
@@ -29,6 +32,7 @@ test = [
 
 [project.scripts]
 evaluate-matching = "app.evaluation.cli:main"
+reprocess-ai = "app.reprocessing.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["app*"]

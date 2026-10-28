@@ -1,3 +1,4 @@
+from identity_fixtures import new_id
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from uuid import uuid4
@@ -30,7 +31,7 @@ def test_health_is_public() -> None:
 
 def test_ai_task_endpoint_requires_bearer_token() -> None:
     route = next(route for route in task_router.routes
-                 if route.path == "/api/v1/ai-tasks/{task_id}")
+                 if route.path == "/api/v2/ai-tasks/{task_id}")
     assert route.dependencies
     with pytest.raises(ApiContractError) as captured:
         require_access_token(None)
@@ -41,7 +42,7 @@ def test_ai_task_endpoint_requires_bearer_token() -> None:
 
 def test_verifier_accepts_expected_issuer_and_audience() -> None:
     private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-    subject = uuid4()
+    subject = new_id()
     now = datetime.now(UTC)
     token = jwt.encode(
         {

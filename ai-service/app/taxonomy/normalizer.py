@@ -86,7 +86,7 @@ def use_taxonomy(snapshot: Taxonomy):
 
 @lru_cache(maxsize=1)
 def _seed_taxonomy() -> Taxonomy:
-    source = _taxonomy_path()
+    source = _taxonomy_path(2)
     payload = json.loads(source.read_text(encoding="utf-8"))
     return build_taxonomy(payload)
 
@@ -125,16 +125,16 @@ def _key(value: str) -> str:
     return re.sub(r"\s+", " ", normalized)
 
 
-def _taxonomy_path() -> Path:
+def _taxonomy_path(version: int = 1) -> Path:
     repository_path = (
         Path(__file__).resolve().parents[3]
         / "contracts"
         / "taxonomy"
-        / "it-skills-v1.seed.json"
+        / f"it-skills-v{version}.seed.json"
     )
     if repository_path.exists():
         return repository_path
-    container_path = Path("/app/contracts/taxonomy/it-skills-v1.seed.json")
+    container_path = Path(f"/app/contracts/taxonomy/it-skills-v{version}.seed.json")
     if container_path.exists():
         return container_path
     raise RuntimeError("The versioned IT skill taxonomy seed is unavailable")

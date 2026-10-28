@@ -1,8 +1,9 @@
+from app.shared.api_ids import BusinessId
 from datetime import UTC, datetime
 import json
 from pathlib import Path
 from typing import Any
-from uuid import UUID, uuid4, uuid5
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, Request
 from jsonschema import Draft202012Validator, FormatChecker
@@ -10,6 +11,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.jd.repository import ParsedJdRevision, ParsedJdRevisionRepository
+from app.task.persistence import SqlAlchemyProcessingTaskRepository
+from app.task.domain import TaskType
 from app.outbox import enqueue
 from app.shared.api import ApiContractError
 from app.shared.config import get_settings
@@ -21,9 +24,10 @@ from app.shared.security import AuthenticatedPrincipal, require_access_token
 from app.taxonomy.normalizer import normalize_skill
 from app.taxonomy.normalizer import use_taxonomy, taxonomy_version
 from app.taxonomy.catalog import snapshot
+from app.taxonomy.occurrences import record_jd_revision, require_live_jd
 
 router = APIRouter(
-    prefix="/api/v1/parsed-jds",
+    prefix="/api/v2/parsed-jds",
     tags=["parsed-jds"],
     dependencies=[Depends(require_access_token)],
 )
@@ -36,30 +40,30 @@ def require_recruiter(principal: AuthenticatedPrincipal = Depends(require_access
 
 
 class ConfirmParsedJdRequest(BaseModel):
-    expectedRevisionId: UUID = Field(description="Revision shown to the recruiter before confirmation")
+    expectedRevisionId: BusinessId = Field(description="Revision shown to the recruiter before confirmation")
 
 
 class UpdateParsedJdRequest(BaseModel):
-    expectedRevisionId: UUID
+    expectedRevisionId: BusinessId
     payload: dict[str, Any]
 
 
 class ParsedJdResponse(BaseModel):
-    revisionId: UUID
-    jobId: UUID
-    jobVersionId: UUID
+    revisionId: BusinessId
+    jobId: BusinessId
+    jobVersionId: BusinessId
     revisionNumber: int
     sourceHash: str
     status: ParsedRevisionStatus
     payload: dict[str, Any]
-    confirmedBy: UUID | None
+    confirmedBy: BusinessId | None
     confirmedAt: datetime | None
     version: int
 
     @classmethod
     def from_revision(cls, revision: ParsedJdRevision) -> "ParsedJdResponse":
         return cls(
-            revisionId=revision.public_id, jobId=revision.job_id,
+            revisionId=revision.id, jobId=revision.job_id,
             jobVersionId=revision.job_version_id, revisionNumber=revision.revision_number,
             sourceHash=revision.source_hash,
             status=validate_revision_status(revision.status), payload=revision.payload,
@@ -69,7 +73,7 @@ class ParsedJdResponse(BaseModel):
 
 
 @router.get("/{job_version_id}", response_model=ParsedJdResponse)
-def get_parsed_jd(job_version_id: UUID,
+def get_parsed_jd(job_version_id: BusinessId,
                   principal: AuthenticatedPrincipal = Depends(require_recruiter),
                   session: Session = Depends(get_session)) -> ParsedJdResponse:
     revision = ParsedJdRevisionRepository(session).find_owned(job_version_id, principal.subject)
@@ -80,12 +84,13 @@ def get_parsed_jd(job_version_id: UUID,
 
 @router.patch("/{job_version_id}", response_model=ParsedJdResponse)
 async def update_parsed_jd(
-    job_version_id: UUID,
+    job_version_id: BusinessId,
     request_body: UpdateParsedJdRequest,
     request: Request,
     principal: AuthenticatedPrincipal = Depends(require_recruiter),
     session: Session = Depends(get_session),
 ) -> ParsedJdResponse:
+    require_live_jd(session, job_version_id)
     repository = ParsedJdRevisionRepository(session)
     latest = repository.find_owned(job_version_id, principal.subject)
     if latest is None:
@@ -102,15 +107,16 @@ async def update_parsed_jd(
         )
     except ValueError as exception:
         raise ApiContractError(409, "PARSED_JD_REVISION_CONFLICT", str(exception)) from exception
+    record_jd_revision(session, revision, correlation_id=request.state.correlation_id)
     settings = get_settings()
-    task_id = uuid5(UUID("b73b8a62-d9ba-4d26-9a7e-96f1c84c3e75"), str(job_version_id))
+    task = SqlAlchemyProcessingTaskRepository(session).find_by_resource_id(job_version_id, TaskType.PARSE_JD)
     event = _event(
-        event_type="job.processing.updated.v1",
+        event_type="job.processing.updated.v2",
         correlation_id=request.state.correlation_id,
-        idempotency_key=f"job.processing.updated.v1:{job_version_id}:{revision.public_id}",
+        idempotency_key=f"job.processing.updated.v2:{job_version_id}:{revision.id}",
         payload={
             "jobId": str(revision.job_id), "jobVersionId": str(job_version_id),
-            "processingTaskId": str(task_id), "sourceHash": revision.source_hash,
+            "processingTaskId": str(task.id) if task else None, "sourceHash": revision.source_hash,
             "status": "PARSED", "failureCode": None,
         },
     )
@@ -121,12 +127,13 @@ async def update_parsed_jd(
 
 @router.post("/{job_version_id}/confirm", response_model=ParsedJdResponse)
 async def confirm_parsed_jd(
-    job_version_id: UUID,
+    job_version_id: BusinessId,
     request_body: ConfirmParsedJdRequest,
     request: Request,
     principal: AuthenticatedPrincipal = Depends(require_recruiter),
     session: Session = Depends(get_session),
 ) -> ParsedJdResponse:
+    require_live_jd(session, job_version_id)
     repository = ParsedJdRevisionRepository(session)
     try:
         revision = repository.confirm(
@@ -137,14 +144,15 @@ async def confirm_parsed_jd(
         raise ApiContractError(404, "PARSED_JD_REVISION_NOT_FOUND", str(exception)) from exception
     except ValueError as exception:
         raise ApiContractError(409, "PARSED_JD_REVISION_CONFLICT", str(exception)) from exception
+    record_jd_revision(session, revision, correlation_id=request.state.correlation_id)
     settings = get_settings()
     event = _event(
-        event_type="job.confirmed.v1",
+        event_type="job.confirmed.v2",
         correlation_id=request.state.correlation_id,
-        idempotency_key=f"job.confirmed.v1:{job_version_id}:{revision.public_id}",
+        idempotency_key=f"job.confirmed.v2:{job_version_id}:{revision.id}",
         payload={
             "jobId": str(revision.job_id), "jobVersionId": str(job_version_id),
-            "parsedRevisionId": str(revision.public_id), "sourceHash": revision.source_hash,
+            "parsedRevisionId": str(revision.id), "sourceHash": revision.source_hash,
             "confirmedBy": str(principal.subject),
         },
     )
@@ -153,7 +161,7 @@ async def confirm_parsed_jd(
     return ParsedJdResponse.from_revision(revision)
 
 
-def _validate_user_payload(job_version_id: UUID, source_hash: str,
+def _validate_user_payload(job_version_id: BusinessId, source_hash: str,
                            payload: dict[str, Any],
                            prior_payload: dict[str, Any] | None = None) -> dict[str, Any]:
     document = payload.get("document")
@@ -223,9 +231,9 @@ def _validate_user_payload(job_version_id: UUID, source_hash: str,
             responsibility["confirmedByRecruiter"] = True
             prior = prior_responsibilities.get(str(responsibility.get("raw", "")))
             responsibility["evidenceIds"] = list(prior.get("evidenceIds", [])) if prior else []
-    schema_path = Path(__file__).resolve().parents[3] / "contracts" / "schemas" / "parsed-jd-v1.schema.json"
+    schema_path = Path(__file__).resolve().parents[3] / "contracts" / "schemas" / "parsed-jd-v2.schema.json"
     if not schema_path.exists():
-        schema_path = Path("/app/contracts/schemas/parsed-jd-v1.schema.json")
+        schema_path = Path("/app/contracts/schemas/parsed-jd-v2.schema.json")
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
     errors = sorted(Draft202012Validator(schema, format_checker=FormatChecker()).iter_errors(payload),
                     key=lambda error: list(error.absolute_path))
@@ -248,7 +256,7 @@ def _skill_key(skill: dict[str, Any]) -> str:
 def _event(event_type: str, correlation_id: UUID, idempotency_key: str,
            payload: dict[str, object]) -> dict[str, object]:
     return {
-        "eventId": str(uuid4()), "eventType": event_type, "schemaVersion": 1,
+        "eventId": str(uuid4()), "eventType": event_type, "schemaVersion": 2,
         "correlationId": str(correlation_id), "idempotencyKey": idempotency_key,
         "occurredAt": datetime.now(UTC).isoformat(), "payload": payload,
     }

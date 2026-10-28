@@ -1,3 +1,4 @@
+from identity_fixtures import legacy_id
 from copy import deepcopy
 from io import BytesIO
 import json
@@ -15,7 +16,7 @@ from app.shared.config import Settings
 from app.shared.gemini import GeminiExtractor, _contract, redact_contacts
 
 
-VERSION = "779494ac-c858-4570-a884-6e88423b8e2b"
+VERSION = str(legacy_id('779494ac-c858-4570-a884-6e88423b8e2b'))
 DESCRIPTION = "Build Java services."
 REQUIREMENTS = "Java is essential. Kafka would be a bonus."
 SOURCE = f"Backend Developer\n{DESCRIPTION}\n{REQUIREMENTS}"

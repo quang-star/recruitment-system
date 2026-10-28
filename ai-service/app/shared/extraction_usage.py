@@ -1,9 +1,9 @@
 """Durable admission limits and safe metadata, shared by worker replicas."""
+from app.shared.database import BUSINESS_ID
 from datetime import UTC, date, datetime
 from hashlib import sha256
-from uuid import UUID
 
-from sqlalchemy import CheckConstraint, Date, DateTime, Integer, String, Uuid, update
+from sqlalchemy import CheckConstraint, Date, DateTime, Integer, String, text, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Mapped, mapped_column
@@ -27,8 +27,8 @@ class ExtractionUsage(Base):
         CheckConstraint("output_tokens IS NULL OR output_tokens >= 0", name="ck_extraction_output_tokens"),
     )
     request_key: Mapped[str] = mapped_column(String(64), primary_key=True)
-    owner_user_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
-    resource_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
+    owner_user_id: Mapped[int] = mapped_column(BUSINESS_ID, nullable=False)
+    resource_id: Mapped[int] = mapped_column(BUSINESS_ID, nullable=False)
     document_kind: Mapped[str] = mapped_column(String(2), nullable=False)
     provider: Mapped[str] = mapped_column(String(30), nullable=False)
     model: Mapped[str] = mapped_column(String(120), nullable=False)
@@ -69,7 +69,15 @@ class ExtractionUsageRepository:
                 # Updating the global counter serializes admissions across replicas.
                 # Rollback restores both counters when an admission is rejected.
                 self._increment(session, insert, now.date(), "global", self.daily_limit)
-                if session.get(ExtractionUsage, key) is not None:
+                keys = [key]
+                if dialect == "postgresql":
+                    # Existing admission hashes used the legacy resource UUID.
+                    # Reconstruct them from the identifier-only map so upgrading
+                    # cannot admit a second paid call for the same document.
+                    legacy_ids = session.execute(text("SELECT legacy_id FROM legacy_identity_map WHERE service='core' AND entity_type=:kind AND entity_id=:id"),
+                                                 {"kind": "cv_version" if kind == "cv" else "job_version", "id": context.resource_id}).scalars()
+                    keys.extend(sha256(f"{kind}:{legacy}:{context.source_hash}:{provider}:{model}".encode()).hexdigest() for legacy in legacy_ids)
+                if any(session.get(ExtractionUsage, candidate) is not None for candidate in keys):
                     raise _DuplicateRequest()
                 self._increment(session, insert, now.date(), str(context.owner_user_id), self.user_daily_limit)
                 session.add(ExtractionUsage(

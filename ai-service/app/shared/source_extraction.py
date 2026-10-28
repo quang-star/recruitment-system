@@ -62,7 +62,7 @@ def _contract(kind: str) -> Draft202012Validator:
     root = Path(__file__).resolve().parents[3] / "contracts" / "schemas"
     if not root.exists():
         root = Path("/app/contracts/schemas")
-    schema = json.loads((root / f"parsed-{kind}-v1.schema.json").read_text(encoding="utf-8"))
+    schema = json.loads((root / f"parsed-{kind}-v2.schema.json").read_text(encoding="utf-8"))
     return Draft202012Validator(schema, format_checker=FormatChecker())
 
 

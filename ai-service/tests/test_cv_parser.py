@@ -1,3 +1,4 @@
+from identity_fixtures import legacy_id
 import json
 import pytest
 from io import BytesIO
@@ -24,7 +25,7 @@ def test_inline_sections_and_future_dates(text, expected):
 
 
 def test_languages_on_same_line_have_independent_proficiency():
-    values = _languages("779494ac-c858-4570-a884-6e88423b8e2b",
+    values = _languages(str(legacy_id('779494ac-c858-4570-a884-6e88423b8e2b')),
                         "Languages: English B2, Japanese N3", "EMBEDDED_TEXT")
     assert [(v["languageCode"], v["proficiency"]) for v in values] == [("en", "B2"), ("ja", "N3")]
 
@@ -32,18 +33,18 @@ def test_languages_on_same_line_have_independent_proficiency():
 def test_text_pdf_extracts_canonical_skills_for_matching() -> None:
     fixture = Path(__file__).parent / "fixtures" / "minimal-cv.pdf"
     payload = parse_pdf(
-        "779494ac-c858-4570-a884-6e88423b8e2b",
+        str(legacy_id('779494ac-c858-4570-a884-6e88423b8e2b')),
         "0cb83583181fc5bdb09aa37cf82ab5f89e7438e88925de3e6e1f0f0eddb76382",
         fixture.read_bytes(),
         ocr_enabled=False,
     )
 
     schema = json.loads(
-        (Path(__file__).parents[2] / "contracts/schemas/parsed-cv-v1.schema.json")
+        (Path(__file__).parents[2] / "contracts/schemas/parsed-cv-v2.schema.json")
         .read_text(encoding="utf-8")
     )
     Draft202012Validator(schema, format_checker=FormatChecker()).validate(payload)
-    assert payload["document"]["parserVersion"] == "rules-v0.5.3+ocr-tesseract5+taxonomy-1.0.0"
+    assert payload["document"]["parserVersion"] == "rules-v0.5.4+ocr-tesseract5+taxonomy-1.0.0"
     assert payload["document"]["textExtractionMethod"] == "EMBEDDED_TEXT"
     assert {skill["raw"] for skill in payload["skills"]} == {"Java", "Kafka"}
     assert all(skill["normalizationStatus"] == "KNOWN" for skill in payload["skills"])
@@ -91,7 +92,7 @@ def test_multiple_experiences_keep_skills_and_responsibilities_in_their_own_job(
     )
 
     experiences = _experiences(
-        "779494ac-c858-4570-a884-6e88423b8e2b", _experience_text(text), "EMBEDDED_TEXT",
+        str(legacy_id('779494ac-c858-4570-a884-6e88423b8e2b')), _experience_text(text), "EMBEDDED_TEXT",
     )
 
     assert len(experiences) == 2
@@ -120,8 +121,8 @@ def test_cv_extracts_education_and_languages_from_explicit_sections() -> None:
         "NGÔN NGỮ\nTiếng Anh - B2\nTiếng Nhật - N3"
     )
 
-    education = _education("779494ac-c858-4570-a884-6e88423b8e2b", text, "EMBEDDED_TEXT")
-    languages = _languages("779494ac-c858-4570-a884-6e88423b8e2b", text, "EMBEDDED_TEXT")
+    education = _education(str(legacy_id('779494ac-c858-4570-a884-6e88423b8e2b')), text, "EMBEDDED_TEXT")
+    languages = _languages(str(legacy_id('779494ac-c858-4570-a884-6e88423b8e2b')), text, "EMBEDDED_TEXT")
 
     assert education[0]["degreeLevel"] == "BACHELOR"
     assert education[0]["fieldOfStudy"] == "Information Technology"
@@ -134,7 +135,7 @@ def test_cv_extracts_education_and_languages_from_explicit_sections() -> None:
 
 def test_cv_does_not_treat_ordinary_document_language_as_language_proficiency() -> None:
     assert _languages(
-        "779494ac-c858-4570-a884-6e88423b8e2b",
+        str(legacy_id('779494ac-c858-4570-a884-6e88423b8e2b')),
         "Backend developer with English documentation experience.",
         "EMBEDDED_TEXT",
     ) == []
@@ -247,7 +248,7 @@ def test_image_only_pdf_uses_bounded_ocr_with_lower_confidence() -> None:
         )
 
     payload = parse_pdf(
-        "779494ac-c858-4570-a884-6e88423b8e2b",
+        str(legacy_id('779494ac-c858-4570-a884-6e88423b8e2b')),
         "0cb83583181fc5bdb09aa37cf82ab5f89e7438e88925de3e6e1f0f0eddb76382",
         content.getvalue(),
         ocr_max_pages=3,
@@ -273,7 +274,7 @@ def test_ocr_unavailable_keeps_low_signal_cv_reviewable() -> None:
         raise OcrUnavailableError("not installed")
 
     payload = parse_pdf(
-        "779494ac-c858-4570-a884-6e88423b8e2b",
+        str(legacy_id('779494ac-c858-4570-a884-6e88423b8e2b')),
         "0cb83583181fc5bdb09aa37cf82ab5f89e7438e88925de3e6e1f0f0eddb76382",
         content.getvalue(),
         ocr_extractor=unavailable,

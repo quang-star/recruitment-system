@@ -1,4 +1,4 @@
-from uuid import uuid4
+from identity_fixtures import new_id
 
 import pytest
 from pydantic import ValidationError
@@ -12,12 +12,12 @@ from app.jd.repository import ParsedJdRevision
 def _response(document: str, status: str) -> ParsedCvResponse | ParsedJdResponse:
     if document == "cv":
         return ParsedCvResponse.from_revision(ParsedCvRevision(
-            public_id=uuid4(), cv_version_id=uuid4(), owner_user_id=uuid4(),
+            id=new_id(), cv_version_id=new_id(), owner_user_id=new_id(),
             revision_number=2, source_hash="a" * 64, payload={}, status=status,
             confirmed_by=None, confirmed_at=None, version=0,
         ))
     return ParsedJdResponse.from_revision(ParsedJdRevision(
-        public_id=uuid4(), job_id=uuid4(), job_version_id=uuid4(), owner_user_id=uuid4(),
+        id=new_id(), job_id=new_id(), job_version_id=new_id(), owner_user_id=new_id(),
         revision_number=2, source_hash="a" * 64, payload={}, status=status,
         confirmed_by=None, confirmed_at=None, version=0,
     ))

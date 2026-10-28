@@ -1,7 +1,7 @@
 from collections.abc import Generator
 from functools import lru_cache
 
-from sqlalchemy import create_engine
+from sqlalchemy import BigInteger, Integer, create_engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from app.shared.config import get_settings
@@ -9,6 +9,10 @@ from app.shared.config import get_settings
 
 class Base(DeclarativeBase):
     pass
+
+
+# SQLite requires the literal INTEGER type for generated row identities.
+BUSINESS_ID = BigInteger().with_variant(Integer, "sqlite")
 
 
 @lru_cache

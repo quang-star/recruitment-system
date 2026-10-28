@@ -1,7 +1,7 @@
+from identity_fixtures import legacy_id, new_id
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 import os
-from uuid import uuid4
 
 import pytest
 from sqlalchemy import create_engine, func, select
@@ -16,7 +16,7 @@ from app.shared.extraction_usage import ExtractionDailyBudget, ExtractionUsage, 
 from app.shared.groq import GroqExtractor
 
 
-VERSION = "779494ac-c858-4570-a884-6e88423b8e2b"
+VERSION = str(legacy_id('779494ac-c858-4570-a884-6e88423b8e2b'))
 SOURCE = "Backend Developer\nBuild Java services.\nJava is required."
 
 
@@ -30,7 +30,7 @@ def settings(**overrides):
 
 
 def context(owner=None, *, granted=True, policy=EXTERNAL_AI_POLICY_VERSION):
-    return ExtractionContext(owner or uuid4(), uuid4(), "a" * 64, granted, policy)
+    return ExtractionContext(owner or new_id(), new_id(), "a" * 64, granted, policy)
 
 
 @pytest.fixture(params=["sqlite"] + (["postgresql"] if os.getenv("EXTRACTION_TEST_DB_URL") else []))
@@ -44,7 +44,7 @@ def budget_case(request, tmp_path):
         ExtractionUsage.__table__.create(engine)
     factory = sessionmaker(engine, expire_on_commit=False)
     # A distinct day isolates the global quota without deleting retained QA data.
-    now = datetime(2100, 1, 1, tzinfo=UTC) + timedelta(days=uuid4().int % 1000000)
+    now = datetime(2100, 1, 1, tzinfo=UTC) + timedelta(days=new_id() % 1000000)
     repo = ExtractionUsageRepository(factory, daily_limit=3, user_daily_limit=2)
     yield repo, factory, now
     engine.dispose()
@@ -65,7 +65,7 @@ def test_global_limit_shared_by_concurrent_users_and_persisted(budget_case):
 
 def test_account_limit_rolls_back_global_counter(budget_case):
     repo, factory, now = budget_case
-    owner = uuid4()
+    owner = new_id()
     assert repo.reserve(context(owner), "jd", "groq", "m", now=now)[0]
     assert repo.reserve(context(owner), "cv", "gemini", "m", now=now)[0]
     assert repo.reserve(context(owner), "cv", "groq", "m", now=now)[1] == "EXTERNAL_AI_LIMIT_REACHED"

@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+from app.shared.identities import JOB_SKILL_ID_MIN, parse_id
 from dataclasses import dataclass
+from datetime import UTC, datetime
+import hashlib
+import re
 from typing import Any
 
+from app.shared.skill_proposals import skill_name_key
 
-ALGORITHM_VERSION = "baseline-v3"
+
+ALGORITHM_VERSION = "baseline-v5"
 
 
 _LANGUAGE_ALIASES = {
@@ -27,7 +33,9 @@ class MatchResult:
     claims: list[dict[str, Any]]
 
 
-def compute_match(cv_payload: dict[str, Any], jd_payload: dict[str, Any]) -> MatchResult:
+def compute_match(cv_payload: dict[str, Any], jd_payload: dict[str, Any], *,
+                  as_of_month: str | None = None) -> MatchResult:
+    as_of_month = as_of_month or datetime.now(UTC).strftime("%Y-%m")
     cv_items = {
         str(skill.get("canonicalSkillId")): skill
         for skill in cv_payload.get("skills", [])
@@ -38,8 +46,25 @@ def compute_match(cv_payload: dict[str, Any], jd_payload: dict[str, Any]) -> Mat
         if skill.get("provenance") == "USER_ASSERTED" and not skill.get("evidenceIds")
     }
     cv_skills = set(cv_items) - unverified_cv_skills
-    required_items = _skills(jd_payload.get("requirements", {}).get("requiredSkills", []))
-    preferred_items = _skills(jd_payload.get("requirements", {}).get("preferredSkills", []))
+    job_version = jd_payload.get("document", {}).get("jobVersionId")
+    required_items = _skills(jd_payload.get("requirements", {}).get("requiredSkills", []), job_version)
+    preferred_items = _skills(jd_payload.get("requirements", {}).get("preferredSkills", []), job_version)
+    preferred_items = {key: item for key, item in preferred_items.items() if key not in required_items}
+    job_items = {key: item for key, item in (required_items | preferred_items).items()
+                 if not item.get("canonicalSkillId")}
+    pending_cv = {skill_name_key(str(skill.get("raw", ""))): skill
+                  for skill in cv_payload.get("skills", []) if not skill.get("canonicalSkillId")}
+    for skill_id, requirement in job_items.items():
+        candidate = pending_cv.get(skill_name_key(requirement["raw"]))
+        if candidate is None:
+            continue
+        cv_items[skill_id] = candidate
+        ids = candidate.get("evidenceIds", [])
+        grounded = any(location.get("id") in ids for location in cv_payload.get("evidence", []))
+        if candidate.get("provenance") in {"EXTRACTED", "USER_CONFIRMED"} and ids and grounded:
+            cv_skills.add(skill_id)
+        else:
+            unverified_cv_skills.add(skill_id)
     required = set(required_items)
     preferred = set(preferred_items)
     required_hits = required & cv_skills
@@ -50,7 +75,8 @@ def compute_match(cv_payload: dict[str, Any], jd_payload: dict[str, Any]) -> Mat
     required_score = _ratio(required_hits, required)
     components.append(_component("REQUIRED_SKILLS", 45 if required else 0, required_score,
                                  {"matched": len(required_hits), "required": len(required),
-                                  "unverifiedAssertions": len(required & unverified_cv_skills)}))
+                                  "unverifiedAssertions": len(required & unverified_cv_skills),
+                                  "jobScoped": len(required & job_items.keys())}))
     for skill_id in sorted(required):
         jd_item = required_items[skill_id]
         if skill_id in cv_skills:
@@ -61,32 +87,36 @@ def compute_match(cv_payload: dict[str, Any], jd_payload: dict[str, Any]) -> Mat
             claim_type = "MISSING"
         claims.append({
             "type": claim_type,
-            "subject": "REQUIRED_SKILL",
+            "subject": "JOB_REQUIRED_SKILL" if skill_id in job_items else "REQUIRED_SKILL",
             "skillId": skill_id,
             "label": str(jd_item.get("raw") or skill_id),
             "cvEvidenceIds": sorted(set(cv_items.get(skill_id, {}).get("evidenceIds", []))),
             "jdEvidenceIds": sorted(set(jd_item.get("evidenceIds", []))),
             "jdConfirmedByRecruiter": bool(jd_item.get("confirmedByRecruiter")),
+            "cvLocations": [location for location in cv_payload.get("evidence", [])
+                            if location["id"] in cv_items.get(skill_id, {}).get("evidenceIds", [])],
+            "jdLocations": [location for location in jd_payload.get("evidence", [])
+                            if location["id"] in jd_item.get("evidenceIds", [])],
         })
 
     preferred_score = _ratio(preferred_hits, preferred)
     components.append(_component("PREFERRED_SKILLS", 15 if preferred else 0, preferred_score,
-                                 {"matched": len(preferred_hits), "preferred": len(preferred)}))
+                                 {"matched": len(preferred_hits), "preferred": len(preferred),
+                                  "jobScoped": len(preferred & job_items.keys())}))
     required_months = jd_payload.get("requirements", {}).get("minimumRelevantExperienceMonths")
-    actual_months = cv_payload.get("summary", {}).get("totalExperienceMonths", 0) or 0
+    family = str(jd_payload.get("title", {}).get("canonicalFamily") or "OTHER").upper()
+    experience_fact = _relevant_experience(cv_payload.get("experiences", []), family, required, as_of_month)
+    actual_months = experience_fact["actualMonths"]
     experience_applicable = required_months is not None
-    experience_score = 1.0 if not experience_applicable else min(1.0, actual_months / max(1, required_months))
+    experience_score = 1.0 if not required_months else min(1.0, actual_months / required_months)
     components.append(_component("EXPERIENCE", 15 if experience_applicable else 0, experience_score,
-                                 {"actualMonths": actual_months, "requiredMonths": required_months}))
+                                 {**experience_fact, "requiredMonths": required_months}))
 
     title = jd_payload.get("title", {})
-    cv_title = " ".join(str(item.get("titleCanonical") or item.get("titleRaw") or "")
-                        for item in cv_payload.get("experiences", []))
-    family = str(title.get("canonicalFamily") or "").casefold()
-    title_applicable = bool(family and family != "other")
-    title_score = 1.0 if family and family in cv_title.casefold() else (0.5 if cv_title else 0.0)
+    title_applicable = family != "OTHER"
+    title_score = float(any(_role_family(item) == family for item in cv_payload.get("experiences", [])))
     components.append(_component("TITLE_SENIORITY", 10 if title_applicable else 0,
-                                 title_score, {"family": family or None}))
+                                 title_score, {"family": family, "seniorityEvaluated": False}))
 
     education_fact = _education_fact(
         jd_payload.get("requirements", {}).get("education", []),
@@ -115,6 +145,19 @@ def compute_match(cv_payload: dict[str, Any], jd_payload: dict[str, Any]) -> Mat
     weight_total = sum(component["weight"] for component in applicable) or 1
     final_score = round(sum(component["contribution"] for component in applicable) / weight_total * 100, 2)
     flags: list[str] = []
+    if job_items:
+        flags.append("JOB_SCOPED_SKILLS")
+    unresolved = [item for field in ("requiredSkills", "preferredSkills")
+                  for item in jd_payload.get("requirements", {}).get(field, [])
+                  if not item.get("canonicalSkillId") and _job_skill_id(item, job_version) is None]
+    if unresolved:
+        flags.append("UNCONFIRMED_JOB_SKILLS")
+    if experience_applicable and experience_fact["undatedRelevantJobs"]:
+        flags.append("RELEVANT_EXPERIENCE_DATES_MISSING")
+    if title.get("level"):
+        flags.append("SENIORITY_NOT_EVALUATED")
+    if language_fact.get("unverifiedRequirements"):
+        flags.append("LANGUAGE_PROFICIENCY_UNVERIFIED")
     if not required:
         flags.append("NO_REQUIRED_SKILLS")
     if not cv_skills:
@@ -127,17 +170,74 @@ def compute_match(cv_payload: dict[str, Any], jd_payload: dict[str, Any]) -> Mat
         flags.append("NO_APPLICABLE_COMPONENTS")
     return MatchResult(
         status=("INSUFFICIENT_DATA" if not applicable
+                else "DEGRADED" if unresolved
                 else "COMPLETED" if cv_skills or not required else "DEGRADED"),
         final_score=max(0.0, min(100.0, final_score)),
         quality_flags=flags, components=components, claims=claims,
     )
 
 
-def _skills(items: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
-    return {
-        str(item["canonicalSkillId"]): item
-        for item in items if item.get("canonicalSkillId")
-    }
+def _job_skill_id(item: dict[str, Any], job_version: str | None) -> str | None:
+    raw = item.get("raw")
+    if not item.get("confirmedByRecruiter") or not isinstance(raw, str) or not raw.strip():
+        return None
+    try:
+        namespace = parse_id(str(job_version))
+    except ValueError:
+        return None
+    digest = hashlib.sha256(f"{namespace}:job-skill:{skill_name_key(raw)}".encode()).digest()
+    return str(JOB_SKILL_ID_MIN | (int.from_bytes(digest[:8], "big") & (JOB_SKILL_ID_MIN - 1)))
+
+
+def _skills(items: list[dict[str, Any]], job_version: str | None = None) -> dict[str, dict[str, Any]]:
+    result = {}
+    for item in items:
+        skill_id = item.get("canonicalSkillId") or _job_skill_id(item, job_version)
+        if skill_id:
+            result[str(skill_id)] = item
+    return result
+
+
+def _role_family(item: dict[str, Any]) -> str:
+    title = str(item.get("titleCanonical") or item.get("titleRaw") or "").casefold()
+    compact = re.sub(r"[-_\s]+", "", title)
+    for marker, family in (("fullstack", "FULLSTACK"), ("backend", "BACKEND"),
+                           ("frontend", "FRONTEND"), ("mobile", "MOBILE"),
+                           ("devops", "DEVOPS"), ("data", "DATA_AI"),
+                           ("machinelearning", "DATA_AI"), ("security", "SECURITY")):
+        if marker in compact:
+            return family
+    return "QA" if re.search(r"\b(?:qa|tester|quality assurance)\b", title) else "OTHER"
+
+
+def _month_index(value: Any) -> int | None:
+    if not isinstance(value, str) or not re.fullmatch(r"\d{4}-(?:0[1-9]|1[0-2])", value):
+        return None
+    year, month = map(int, value.split("-"))
+    return year * 12 + month - 1
+
+
+def _relevant_experience(jobs, family: str, required: set[str], as_of_month: str) -> dict[str, Any]:
+    cutoff = _month_index(as_of_month)
+    if cutoff is None:
+        raise ValueError("as_of_month must use YYYY-MM")
+    months: set[int] = set()
+    missing = 0
+    relevant = 0
+    for job in jobs:
+        if not ((family != "OTHER" and _role_family(job) == family)
+                or required.intersection(job.get("skillIds", []))):
+            continue
+        relevant += 1
+        start = _month_index(job.get("startMonth"))
+        end = cutoff if job.get("isCurrent") else _month_index(job.get("endMonth"))
+        if start is None or end is None or end < start or end - start > 600 or start > cutoff:
+            missing += 1
+            continue
+        months.update(range(start, min(end, cutoff) + 1))
+    return {"actualMonths": len(months), "relevantJobs": relevant,
+            "undatedRelevantJobs": missing, "asOfMonth": as_of_month,
+            "method": "UNION_OF_RELEVANT_JOB_INTERVALS"}
 
 
 def _ratio(hits: set[str], required: set[str]) -> float:
@@ -184,16 +284,45 @@ def _language_fact(requirements: list[dict[str, Any]], languages: list[dict[str,
     required_codes.discard("")
     actual_codes = {_language_code(item.get("languageCode")) for item in languages}
     actual_codes.discard("")
-    matched = sorted(required_codes & actual_codes)
+    matched = set()
+    satisfied = 0
+    unverified = 0
+    for requirement in requirements:
+        code = _language_code(_normalized_requirement(requirement))
+        minimum = _proficiency(str(requirement.get("raw", "")))
+        candidates = [item for item in languages if _language_code(item.get("languageCode")) == code]
+        levels = [_proficiency(str(item.get("proficiency") or "")) for item in candidates]
+        if candidates and (minimum is None or any(
+            level is not None and level[0] == minimum[0] and level[1] >= minimum[1]
+            for level in levels
+        )):
+            satisfied += 1
+            matched.add(code)
+        elif minimum is not None and not any(level and level[0] == minimum[0] for level in levels):
+            unverified += 1
     return {
         "applicable": bool(requirements),
-        "score": _ratio(set(matched), required_codes) if requirements else 0.0,
+        "score": satisfied / len(requirements) if requirements else 0.0,
         "requiredCodes": sorted(required_codes),
         "actualCodes": sorted(actual_codes),
-        "matchedCodes": matched,
+        "matchedCodes": sorted(matched),
         "dataAvailable": bool(actual_codes),
-        "proficiencyEvaluated": False,
+        "proficiencyEvaluated": True,
+        "unverifiedRequirements": unverified,
     }
+
+
+def _proficiency(value: str) -> tuple[str, float] | None:
+    for scale, pattern in (("IELTS", r"\bIELTS\s*(\d(?:\.\d)?)\b"),
+                           ("TOEIC", r"\bTOEIC\s*(\d{2,3})\b")):
+        match = re.search(pattern, value, re.I)
+        if match:
+            return scale, float(match.group(1))
+    match = re.search(r"\b(A1|A2|B1|B2|C1|C2)\b", value, re.I)
+    if match:
+        return "CEFR", float(("A1", "A2", "B1", "B2", "C1", "C2").index(match.group(1).upper()))
+    match = re.search(r"\bN([1-5])\b", value, re.I)
+    return ("JLPT", float(6 - int(match.group(1)))) if match else None
 
 
 def _normalized_requirement(item: dict[str, Any]) -> str:

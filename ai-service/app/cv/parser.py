@@ -14,7 +14,7 @@ from app.shared.evidence import attach_source_evidence, skill_locations
 from app.shared.skill_proposals import propose_skill, skill_name_key
 
 
-PARSER_VERSION = "rules-v0.5.3+ocr-tesseract5"
+PARSER_VERSION = "rules-v0.5.4+ocr-tesseract5"
 _EVIDENCE_NAMESPACE = UUID("1509be16-4759-473b-b4db-6d90a94f5d41")
 _TITLE_MARKERS: tuple[tuple[str, str], ...] = (
     ("backend", "BACKEND_DEVELOPER"),
@@ -38,12 +38,15 @@ _RESPONSIBILITY_MARKERS = (
     "phát triển", "xây dựng", "thiết kế", "triển khai", "bảo trì", "kiểm thử", "quản lý",
 )
 _EXPERIENCE_SECTION_HEADINGS = frozenset({
-    "experience", "work experience", "professional experience", "employment history",
-    "work history", "kinh nghiệm", "kinh nghiệm làm việc", "kinh nghiệm công việc",
-    "quá trình công tác", "qua trinh cong tac",
+    "experience", "work experience", "working experience", "work experiences",
+    "professional experience", "professional experiences", "employment experience",
+    "employment history", "career history", "work history", "kinh nghiệm",
+    "kinh nghiệm làm việc", "kinh nghiệm công việc", "kinh nghiem",
+    "kinh nghiem lam viec", "kinh nghiem cong viec", "quá trình công tác", "qua trinh cong tac",
 })
 _EDUCATION_SECTION_HEADINGS = frozenset({
-    "education", "academic background", "qualifications", "học vấn", "hoc van",
+    "education", "education and training", "educational background",
+    "academic background", "academic qualifications", "qualifications", "học vấn", "hoc van",
     "giáo dục", "giao duc",
 })
 _LANGUAGE_SECTION_HEADINGS = frozenset({
@@ -153,8 +156,8 @@ def parse_pdf(cv_version_id: str, source_hash: str, content: bytes, *,
     if text and not quality_flags:
         quality_flags.append("RULE_BASED_EXTRACTION")
     payload: dict[str, Any] = {
-        "$schema": "https://smart-recruitment.local/contracts/schemas/parsed-cv-v1.schema.json",
-        "schemaVersion": "parsed-cv/1.0",
+        "$schema": "https://smart-recruitment.local/contracts/schemas/parsed-cv-v2.schema.json",
+        "schemaVersion": "parsed-cv/2.0",
         "document": {
             "cvVersionId": cv_version_id,
             "language": _language(text),
@@ -211,6 +214,12 @@ def _language(text: str) -> str:
     # A common Latin-1 decoding artifact prefixes bullets/NBSP with U+00C2.
     # It must not be treated as Vietnamese text merely because it contains Â.
     lowered = re.sub("\u00c2(?=[\u00a0-\u00bf])", "", text).casefold()
+    # Technical acronyms in a Chinese resume do not establish English support.
+    # The contract has no Chinese document language; retain the review state.
+    cjk_count = len(re.findall(r"[\u4e00-\u9fff]", lowered))
+    latin_count = len(re.findall(r"[a-z]", lowered))
+    if cjk_count >= 20 and cjk_count > latin_count:
+        return "unknown"
     has_vi = bool(re.search(r"[ăâđêôơư\u1ea0-\u1ef9]", lowered))
     has_en = bool(re.search(r"\b(?:and|with|experience|developer|engineer|skills?)\b", lowered))
     if has_vi and has_en:
@@ -225,15 +234,24 @@ def _title(text: str) -> tuple[str | None, str | None]:
     for line in lines:
         line = _DATE_RANGE.sub("", line).strip(" -–—|,\t")
         lowered = line.casefold()
+        # A responsibility mentioning a role is not an employment title.
+        # Keep actual titles such as Lead Developer and Support Engineer.
+        if re.match(
+            r"(?:develop(?:s|ed|ing)?|build(?:s|ing)?|built|design(?:s|ed|ing)?(?!\s+engineer\b)|implement\w*|maintain\w*|"
+            r"deploy\w*|collaborat\w*|work\w*|assist\w*|provid\w*|responsible|served|"
+            r"phát triển|xây dựng|thiết kế|triển khai|bảo trì|tham gia|hỗ trợ)\s",
+            lowered,
+        ):
+            continue
         for marker, canonical in _TITLE_MARKERS:
-            if marker in lowered and len(line) <= 240:
+            if re.search(rf"(?<!\w){re.escape(marker)}(?!\w)", lowered) and len(line) <= 240:
                 return line, canonical
         # Preserve supported raw job titles even when there is no canonical
         # software role. Do not map IT support/analyst roles to software engineer.
         if len(line) <= 120 and len(line.split()) <= 12 and re.search(
-            r"\b(?:technician|administrator|analyst|specialist|manager|liaison|consultant|architect|coordinator|director)\b", lowered,
+            r"\b(?:technician|administrator|analyst|specialist|manager|liaison|consultant|architect|coordinator|director|tester|leader|engineering|president)\b", lowered,
         ) and not re.match(
-            r"(?:[-•·]|develop\w*|build\w*|design\w*|implement\w*|maintain\w*|"
+            r"(?:[-•·]|develop(?:s|ed|ing)?|build(?:s|ing)?|design(?:s|ed|ing)?|implement\w*|maintain\w*|"
             r"support\w*|manage\w*|collaborat\w*|work\w*|assist\w*|provid\w*|"
             r"responsible|served|\w+ing)\s", lowered,
         ):

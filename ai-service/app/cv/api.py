@@ -1,7 +1,8 @@
+from app.shared.api_ids import BusinessId
 from datetime import UTC, datetime
 import json
 from typing import Any
-from uuid import UUID, uuid4, uuid5
+from uuid import UUID, uuid4
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, Request
@@ -10,6 +11,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.cv.repository import ParsedCvRevision, ParsedCvRevisionRepository
+from app.task.persistence import SqlAlchemyProcessingTaskRepository
 from app.outbox import enqueue
 from app.shared.api import ApiContractError
 from app.shared.config import get_settings
@@ -20,12 +22,13 @@ from app.shared.security import AuthenticatedPrincipal, require_access_token
 from app.taxonomy.normalizer import normalize_skill
 from app.taxonomy.normalizer import use_taxonomy, taxonomy_version
 from app.taxonomy.catalog import snapshot
+from app.taxonomy.occurrences import record_cv_revision
 from app.shared.privacy import require_live_cv
 from app.shared.revision_status import ParsedRevisionStatus, validate_revision_status
 from app.cv.parser import _title
 
 router = APIRouter(
-    prefix="/api/v1/parsed-cvs",
+    prefix="/api/v2/parsed-cvs",
     tags=["parsed-cvs"],
     dependencies=[Depends(require_access_token)],
 )
@@ -38,20 +41,20 @@ def require_candidate(principal: AuthenticatedPrincipal = Depends(require_access
 
 
 class ParsedCvResponse(BaseModel):
-    revisionId: UUID
-    cvVersionId: UUID
+    revisionId: BusinessId
+    cvVersionId: BusinessId
     revisionNumber: int
     sourceHash: str
     status: ParsedRevisionStatus
     payload: dict[str, Any]
-    confirmedBy: UUID | None
+    confirmedBy: BusinessId | None
     confirmedAt: datetime | None
     version: int
 
     @classmethod
     def from_revision(cls, revision: ParsedCvRevision) -> "ParsedCvResponse":
         return cls(
-            revisionId=revision.public_id,
+            revisionId=revision.id,
             cvVersionId=revision.cv_version_id,
             revisionNumber=revision.revision_number,
             sourceHash=revision.source_hash,
@@ -64,17 +67,17 @@ class ParsedCvResponse(BaseModel):
 
 
 class ConfirmParsedCvRequest(BaseModel):
-    expectedRevisionId: UUID = Field(description="Revision shown to the candidate before confirmation")
+    expectedRevisionId: BusinessId = Field(description="Revision shown to the candidate before confirmation")
 
 
 class UpdateParsedCvRequest(BaseModel):
-    cvId: UUID
-    expectedRevisionId: UUID = Field(description="Latest owned revision used for optimistic locking")
+    cvId: BusinessId
+    expectedRevisionId: BusinessId = Field(description="Latest owned revision used for optimistic locking")
     payload: dict[str, Any]
 
 
 @router.get("/{cv_version_id}", response_model=ParsedCvResponse)
-def get_parsed_cv(cv_version_id: UUID, principal: AuthenticatedPrincipal = Depends(require_candidate),
+def get_parsed_cv(cv_version_id: BusinessId, principal: AuthenticatedPrincipal = Depends(require_candidate),
                   session: Session = Depends(get_session)) -> ParsedCvResponse:
     require_live_cv(session, cv_version_id)
     revision = ParsedCvRevisionRepository(session).find_owned(cv_version_id, principal.subject)
@@ -85,7 +88,7 @@ def get_parsed_cv(cv_version_id: UUID, principal: AuthenticatedPrincipal = Depen
 
 @router.put("/{cv_version_id}", response_model=ParsedCvResponse)
 async def update_parsed_cv(
-    cv_version_id: UUID,
+    cv_version_id: BusinessId,
     request_body: UpdateParsedCvRequest,
     request: Request,
     principal: AuthenticatedPrincipal = Depends(require_candidate),
@@ -111,15 +114,16 @@ async def update_parsed_cv(
         )
     except ValueError as exception:
         raise ApiContractError(409, "PARSED_CV_REVISION_CONFLICT", str(exception)) from exception
+    record_cv_revision(session, revision, correlation_id=request.state.correlation_id)
     settings = get_settings()
-    task_id = uuid5(UUID("f5c2b49a-9f40-4d7b-9b47-2aa83ea1a2e7"), str(cv_version_id))
+    task = SqlAlchemyProcessingTaskRepository(session).find_by_resource_id(cv_version_id)
     event = _event(
-        event_type="cv.processing.updated.v1",
+        event_type="cv.processing.updated.v2",
         correlation_id=request.state.correlation_id,
-        idempotency_key=f"cv.processing.updated.v1:{cv_version_id}:{revision.public_id}",
+        idempotency_key=f"cv.processing.updated.v2:{cv_version_id}:{revision.id}",
         payload={
             "cvId": str(request_body.cvId), "cvVersionId": str(cv_version_id),
-            "processingTaskId": str(task_id), "sourceHash": revision.source_hash,
+            "processingTaskId": str(task.id) if task else None, "sourceHash": revision.source_hash,
             "status": "PARSED", "failureCode": None,
         },
     )
@@ -130,7 +134,7 @@ async def update_parsed_cv(
 
 @router.post("/{cv_version_id}/confirm", response_model=ParsedCvResponse)
 async def confirm_parsed_cv(
-    cv_version_id: UUID,
+    cv_version_id: BusinessId,
     request_body: ConfirmParsedCvRequest,
     request: Request,
     principal: AuthenticatedPrincipal = Depends(require_candidate),
@@ -150,14 +154,15 @@ async def confirm_parsed_cv(
     except ValueError as exception:
         raise ApiContractError(409, "PARSED_CV_REVISION_CONFLICT", str(exception)) from exception
 
+    record_cv_revision(session, revision, correlation_id=request.state.correlation_id)
     settings = get_settings()
     event = _event(
-        event_type="cv.confirmed.v1",
+        event_type="cv.confirmed.v2",
         correlation_id=request.state.correlation_id,
-        idempotency_key=f"cv.confirmed.v1:{cv_version_id}:{revision.public_id}",
+        idempotency_key=f"cv.confirmed.v2:{cv_version_id}:{revision.id}",
         payload={
             "cvVersionId": str(cv_version_id),
-            "parsedRevisionId": str(revision.public_id),
+            "parsedRevisionId": str(revision.id),
             "sourceHash": revision.source_hash,
             "confirmedBy": str(principal.subject),
         },
@@ -167,10 +172,10 @@ async def confirm_parsed_cv(
     return ParsedCvResponse.from_revision(revision)
 
 
-def _validate_user_payload(cv_version_id: UUID, payload: dict[str, Any],
+def _validate_user_payload(cv_version_id: BusinessId, payload: dict[str, Any],
                            prior_payload: dict[str, Any] | None = None) -> dict[str, Any]:
-    if payload.get("schemaVersion") != "parsed-cv/1.0":
-        raise ApiContractError(422, "PARSED_CV_SCHEMA_INVALID", "payload.schemaVersion must be parsed-cv/1.0")
+    if payload.get("schemaVersion") != "parsed-cv/2.0":
+        raise ApiContractError(422, "PARSED_CV_SCHEMA_INVALID", "payload.schemaVersion must be parsed-cv/2.0")
     required_sections = ("document", "skills", "experiences", "projects",
                          "education", "certificates", "languages", "summary")
     missing = [section for section in required_sections if section not in payload]
@@ -222,9 +227,9 @@ def _validate_user_payload(cv_version_id: UUID, payload: dict[str, Any],
                     "USER_ASSERTED" if prior.get("provenance") == "USER_ASSERTED"
                     else "USER_CONFIRMED"
                 )
-    schema_path = Path(__file__).resolve().parents[3] / "contracts" / "schemas" / "parsed-cv-v1.schema.json"
+    schema_path = Path(__file__).resolve().parents[3] / "contracts" / "schemas" / "parsed-cv-v2.schema.json"
     if not schema_path.exists():
-        schema_path = Path("/app/contracts/schemas/parsed-cv-v1.schema.json")
+        schema_path = Path("/app/contracts/schemas/parsed-cv-v2.schema.json")
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
     errors = sorted(Draft202012Validator(schema, format_checker=FormatChecker()).iter_errors(payload),
                     key=lambda error: list(error.absolute_path))
@@ -256,7 +261,7 @@ def _skill_key(skill: dict[str, Any]) -> str:
 def _event(event_type: str, correlation_id: UUID, idempotency_key: str,
            payload: dict[str, object]) -> dict[str, object]:
     return {
-        "eventId": str(uuid4()), "eventType": event_type, "schemaVersion": 1,
+        "eventId": str(uuid4()), "eventType": event_type, "schemaVersion": 2,
         "correlationId": str(correlation_id), "idempotencyKey": idempotency_key,
         "occurredAt": datetime.now(UTC).isoformat(), "payload": payload,
     }

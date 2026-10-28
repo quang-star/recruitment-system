@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.shared.identities import parse_id
 import re
 from typing import Any
 from uuid import UUID, uuid5
@@ -20,7 +21,7 @@ def parse_jd(job_version_id: str, source_hash: str, title: str,
     The parser only emits a canonical skill when an exact taxonomy alias is found.
     Unknown terms are intentionally left out instead of inventing taxonomy IDs.
     """
-    UUID(job_version_id)
+    parse_id(job_version_id)
     combined = f"{title}\n{description}\n{requirements_text}"
     lowered = combined.casefold()
     language = "vi" if any(character in lowered for character in "ăâđêôơư") else "en"
@@ -48,8 +49,8 @@ def parse_jd(job_version_id: str, source_hash: str, title: str,
     if not responsibilities:
         quality_flags.append("NO_RESPONSIBILITIES")
     payload: dict[str, Any] = {
-        "$schema": "https://smart-recruitment.local/contracts/schemas/parsed-jd-v1.schema.json",
-        "schemaVersion": "parsed-jd/1.0",
+        "$schema": "https://smart-recruitment.local/contracts/schemas/parsed-jd-v2.schema.json",
+        "schemaVersion": "parsed-jd/2.0",
         "document": {
             "jobVersionId": job_version_id,
             "language": language,

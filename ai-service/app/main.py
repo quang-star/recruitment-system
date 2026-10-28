@@ -5,6 +5,9 @@ from app.cv.api import router as parsed_cv_router
 from app.jd.api import router as parsed_jd_router
 from app.task.api import router as task_router
 from app.taxonomy.api import router as taxonomy_router
+from app.career.api import router as career_router
+from app.reprocessing.api import router as reprocessing_router
+from app.matching.api import router as matching_router
 
 app = FastAPI(title="Smart Recruitment AI Service", version="0.0.1")
 install_api_conventions(app)
@@ -12,6 +15,9 @@ app.include_router(task_router)
 app.include_router(parsed_cv_router)
 app.include_router(parsed_jd_router)
 app.include_router(taxonomy_router)
+app.include_router(career_router)
+app.include_router(reprocessing_router)
+app.include_router(matching_router)
 
 
 @app.get("/actuator/health", tags=["system"])

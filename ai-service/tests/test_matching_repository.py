@@ -1,4 +1,4 @@
-from uuid import uuid4
+from identity_fixtures import new_id
 
 from itertools import count
 
@@ -25,7 +25,7 @@ def _sqlite_session(engine) -> Session:
 def test_input_unavailable_result_is_replaced_when_inputs_become_ready() -> None:
     engine = create_engine("sqlite+pysqlite:///:memory:")
     Base.metadata.create_all(engine)
-    application_id, cv_version_id, job_version_id = uuid4(), uuid4(), uuid4()
+    application_id, cv_version_id, job_version_id = new_id(), new_id(), new_id()
 
     with _sqlite_session(engine) as session:
         repository = MatchingResultRepository(session)
@@ -37,7 +37,7 @@ def test_input_unavailable_result_is_replaced_when_inputs_become_ready() -> None
 
         replay = repository.save(application_id, cv_version_id, job_version_id,
                                  "INSUFFICIENT_DATA", 0.0, ["INPUT_REVISION_UNAVAILABLE"], [], [])
-        assert replay.public_id == unavailable.public_id
+        assert replay.id == unavailable.id
 
         completed = repository.save(
             application_id, cv_version_id, job_version_id,
@@ -45,8 +45,8 @@ def test_input_unavailable_result_is_replaced_when_inputs_become_ready() -> None
         )
         session.commit()
 
-        assert completed.public_id != unavailable.public_id
-        assert repository.find_latest(application_id).public_id == completed.public_id
+        assert completed.id != unavailable.id
+        assert repository.find_latest(application_id).id == completed.id
         assert repository.find_input_unavailable(cv_version_id=cv_version_id) == []
         assert session.get(MatchingHeadRecord, application_id).result_id is not None
 
@@ -54,7 +54,7 @@ def test_input_unavailable_result_is_replaced_when_inputs_become_ready() -> None
 def test_non_retryable_insufficient_result_remains_idempotent() -> None:
     engine = create_engine("sqlite+pysqlite:///:memory:")
     Base.metadata.create_all(engine)
-    application_id, cv_version_id, job_version_id = uuid4(), uuid4(), uuid4()
+    application_id, cv_version_id, job_version_id = new_id(), new_id(), new_id()
 
     with _sqlite_session(engine) as session:
         repository = MatchingResultRepository(session)
@@ -68,13 +68,13 @@ def test_non_retryable_insufficient_result_remains_idempotent() -> None:
             "INSUFFICIENT_DATA", 0.0, ["NO_APPLICABLE_COMPONENTS"], [], [],
         )
 
-        assert replay.public_id == first.public_id
+        assert replay.id == first.id
 
 
 def test_matching_persists_exact_input_revisions_and_keeps_previous_results():
     engine = create_engine("sqlite+pysqlite:///:memory:")
     Base.metadata.create_all(engine)
-    application, cv, jd, cv_revision, jd_revision = [uuid4() for _ in range(5)]
+    application, cv, jd, cv_revision, jd_revision = [new_id() for _ in range(5)]
     with _sqlite_session(engine) as session:
         repo = MatchingResultRepository(session)
         first = repo.save(application, cv, jd, "COMPLETED", 70, [], [], [],
@@ -85,9 +85,9 @@ def test_matching_persists_exact_input_revisions_and_keeps_previous_results():
         assert first.as_of_month == "2026-09"
         replay = repo.save(application, cv, jd, "COMPLETED", 90, [], [], [],
                            cv_revision_id=cv_revision, jd_revision_id=jd_revision, as_of_month="2026-10")
-        assert replay.public_id == first.public_id
+        assert replay.id == first.id
         assert replay.as_of_month == "2026-09"
         changed = repo.save(application, cv, jd, "COMPLETED", 90, [], [], [],
-                            cv_revision_id=uuid4(), jd_revision_id=jd_revision, as_of_month="2026-10")
-        assert changed.public_id != first.public_id
-        assert repo.find_latest(application).public_id == changed.public_id
+                            cv_revision_id=new_id(), jd_revision_id=jd_revision, as_of_month="2026-10")
+        assert changed.id != first.id
+        assert repo.find_latest(application).id == changed.id

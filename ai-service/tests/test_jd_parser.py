@@ -1,3 +1,4 @@
+from identity_fixtures import legacy_id
 import json
 from pathlib import Path
 
@@ -8,14 +9,14 @@ from app.jd.parser import parse_jd
 
 def test_parser_returns_contract_compatible_canonical_skills() -> None:
     payload = parse_jd(
-        "779494ac-c858-4570-a884-6e88423b8e2b",
+        str(legacy_id('779494ac-c858-4570-a884-6e88423b8e2b')),
         "0cb83583181fc5bdb09aa37cf82ab5f89e7438e88925de3e6e1f0f0eddb76382",
         "Senior Backend Engineer",
         "Thiết kế và vận hành các dịch vụ backend.",
         "Java, Kafka và tối thiểu 3 năm kinh nghiệm.",
     )
 
-    schema = json.loads((Path(__file__).parents[2] / "contracts/schemas/parsed-jd-v1.schema.json").read_text())
+    schema = json.loads((Path(__file__).parents[2] / "contracts/schemas/parsed-jd-v2.schema.json").read_text())
     Draft202012Validator(schema, format_checker=FormatChecker()).validate(payload)
     assert payload["document"]["parserVersion"] == "rules-v0.4.1+taxonomy-1.0.0"
     assert {skill["raw"] for skill in payload["requirements"]["requiredSkills"]} == {"Java", "Kafka"}
@@ -25,7 +26,7 @@ def test_parser_returns_contract_compatible_canonical_skills() -> None:
 
 def test_parser_does_not_invent_unknown_skill_ids() -> None:
     payload = parse_jd(
-        "779494ac-c858-4570-a884-6e88423b8e2b",
+        str(legacy_id('779494ac-c858-4570-a884-6e88423b8e2b')),
         "0cb83583181fc5bdb09aa37cf82ab5f89e7438e88925de3e6e1f0f0eddb76382",
         "Platform Engineer",
         "Build reliable services.",
@@ -38,7 +39,7 @@ def test_parser_does_not_invent_unknown_skill_ids() -> None:
 
 def test_parser_normalizes_known_aliases_without_duplicate_skill_rows() -> None:
     payload = parse_jd(
-        "779494ac-c858-4570-a884-6e88423b8e2b",
+        str(legacy_id('779494ac-c858-4570-a884-6e88423b8e2b')),
         "0cb83583181fc5bdb09aa37cf82ab5f89e7438e88925de3e6e1f0f0eddb76382",
         "Backend Engineer", "Build APIs.", "SpringBoot, Postgres and React.js.",
     )
@@ -50,7 +51,7 @@ def test_parser_normalizes_known_aliases_without_duplicate_skill_rows() -> None:
 
 def test_parser_keeps_required_and_preferred_skills_separate() -> None:
     payload = parse_jd(
-        "779494ac-c858-4570-a884-6e88423b8e2b",
+        str(legacy_id('779494ac-c858-4570-a884-6e88423b8e2b')),
         "0cb83583181fc5bdb09aa37cf82ab5f89e7438e88925de3e6e1f0f0eddb76382",
         "Backend Engineer",
         "Build APIs for the platform.",
@@ -67,7 +68,7 @@ def test_parser_keeps_required_and_preferred_skills_separate() -> None:
 
 def test_parser_extracts_education_and_language_requirements() -> None:
     payload = parse_jd(
-        "779494ac-c858-4570-a884-6e88423b8e2b",
+        str(legacy_id('779494ac-c858-4570-a884-6e88423b8e2b')),
         "0cb83583181fc5bdb09aa37cf82ab5f89e7438e88925de3e6e1f0f0eddb76382",
         "Backend Engineer",
         "Xây dựng dịch vụ backend.",
@@ -82,7 +83,7 @@ def test_parser_extracts_education_and_language_requirements() -> None:
 
 def test_negated_degree_requirement_is_not_scored_and_languages_are_not_dropped():
     payload = parse_jd(
-        "779494ac-c858-4570-a884-6e88423b8e2b", "0" * 64,
+        str(legacy_id('779494ac-c858-4570-a884-6e88423b8e2b')), "0" * 64,
         "Backend Engineer", "Build services.",
         "Không yêu cầu bằng đại học. English B2 and Japanese N3 required.",
     )
