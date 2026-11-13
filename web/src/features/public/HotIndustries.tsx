@@ -1,44 +1,43 @@
+import { LayersIcon } from "../../shared/components/Icon";
+import { JobDiscoveryCategory } from "./types";
+
 type HotIndustriesProps = {
-  onSelectCategory?: (category: string) => void;
+  categories: JobDiscoveryCategory[];
+  onSelectCategory?: (category: JobDiscoveryCategory) => void;
 };
 
-export function HotIndustries({ onSelectCategory }: HotIndustriesProps) {
-  const industries = [
-    { title: "IT / Lập trình", query: "Developer", count: "Khám phá việc làm", icon: "< >", color: "#184dfb" },
-    { title: "AI & Data Science", query: "AI", count: "Khám phá việc làm", icon: "🧠", color: "#7c3aed" },
-    { title: "Cloud & DevOps", query: "Cloud", count: "Khám phá việc làm", icon: "☁️", color: "#0284c7" },
-    { title: "Quản trị dự án (PM/PO)", query: "Project", count: "Khám phá việc làm", icon: "📊", color: "#059669" },
-    { title: "Kiểm thử phần mềm (QA)", query: "QA", count: "Khám phá việc làm", icon: "🔍", color: "#d97706" },
-    { title: "Thiết kế UI/UX", query: "UI/UX", count: "Khám phá việc làm", icon: "🎨", color: "#e11d48" },
-  ];
+export function HotIndustries({ categories, onSelectCategory }: HotIndustriesProps) {
+  if (!categories.length) return null;
 
   return (
-    <section className="portal-section hot-industries-section">
-      <div className="portal-container">
-        <div className="hot-industries-box">
-          <div className="industries-header">
-            <h2 className="industries-title">Khám phá theo chuyên môn</h2>
-            <p className="industries-subtitle">
-              Tìm kiếm công việc phù hợp với chuyên môn công nghệ của bạn
-            </p>
-          </div>
+    <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-12">
+      <div className="rounded-2xl border border-border-subtle bg-white p-6 sm:p-8 shadow-card">
+        <div className="mb-5">
+          <h2 className="text-lg sm:text-xl font-bold tracking-tight text-ink-900 m-0">
+            Khám phá theo chuyên môn
+          </h2>
+          <p className="text-sm text-ink-500 mt-1 mb-0">
+            Nhóm ngành nghề đang có vị trí mở tuyển thực tế
+          </p>
+        </div>
 
-          <div className="industries-grid">
-            {industries.map((ind) => (
-              <button
-                key={ind.title}
-                type="button"
-                className="industry-item-card"
-                onClick={() => onSelectCategory?.(ind.query)}
-              >
-                <div className="industry-icon-circle" style={{ color: ind.color }}>
-                  {ind.icon}
-                </div>
-                <strong className="industry-name">{ind.title}</strong>
-                <span className="industry-count">{ind.count} ➔</span>
-              </button>
-            ))}
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          {categories.map((cat) => (
+            <button
+              key={`${cat.industryId}:${cat.specializationId ?? ""}`}
+              type="button"
+              onClick={() => onSelectCategory?.(cat)}
+              className="group flex items-center gap-3 rounded-xl border border-border-subtle bg-slate-50/70 p-3.5 text-left hover:border-brand-300 hover:bg-brand-50/50 transition-colors cursor-pointer"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white border border-border-subtle text-brand-700 group-hover:border-brand-200 group-hover:bg-brand-600 group-hover:text-white transition-colors">
+                <LayersIcon size={18} aria-hidden="true" />
+              </span>
+              <div className="min-w-0">
+                <strong className="block truncate text-sm font-bold text-ink-900">{cat.name}</strong>
+                <span className="block text-xs text-ink-500 mt-0.5">{cat.jobCount} việc làm</span>
+              </div>
+            </button>
+          ))}
         </div>
       </div>
     </section>

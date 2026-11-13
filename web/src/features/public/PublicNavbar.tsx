@@ -1,10 +1,10 @@
 import { FC, useState } from "react";
-import { ProfileIcon, CompanyIcon, SearchIcon, NotificationIcon } from "../../shared/components/Icon";
-import { ActiveNavTab } from "./types";
-import { BRAND_CONFIG } from "../../shared/config/brand";
-import { CandidateAccountMenu } from "./CandidateAccountMenu";
 import { CandidateView } from "../candidate/navigation";
-import "./candidatePortal.css";
+import { CloseIcon, MenuIcon, NotificationIcon, ProfileIcon, SparklesIcon } from "../../shared/components/Icon";
+import { BRAND_CONFIG } from "../../shared/config/brand";
+import { cn } from "../../shared/ui";
+import { CandidateAccountMenu } from "./CandidateAccountMenu";
+import { ActiveNavTab } from "./types";
 
 export type CandidateNavigation = {
   name: string;
@@ -26,125 +26,94 @@ export const PublicNavbar: FC<Props> = ({
   activeTab,
   onSelectTab,
   onOpenAuth,
-  onSearchSubmit,
-  onOpenSalaryTool,
-  candidate,
+  candidate
 }) => {
-  const [navSearch, setNavSearch] = useState("");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  function handleSearchKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Enter") {
-      onSelectTab("search");
-      onSearchSubmit?.(navSearch);
-    }
+  function selectTab(tab: ActiveNavTab) {
+    setMobileMenuOpen(false);
+    onSelectTab(tab);
   }
 
   return (
-    <header className="portal-navbar-root portal-navbar-single">
-      <div className="portal-container navbar-single-inner">
-        {/* Left: Brand Logo + Primary Nav Links */}
-        <div className="navbar-left-group">
+    <header className="portal-navbar-root sticky top-0 z-30 border-b border-border-subtle bg-white/95 backdrop-blur-md">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center gap-6 min-w-0">
           <button
             type="button"
-            className="portal-brand-logo"
-            onClick={() => onSelectTab("home")}
+            aria-label={BRAND_CONFIG.name || "Trang chủ cổng tuyển dụng"}
+            onClick={() => selectTab("home")}
+            className="flex items-center gap-2.5 text-left cursor-pointer group shrink-0 bg-transparent border-0 p-0"
           >
-            <span className="brand-logo-text">{BRAND_CONFIG.name || BRAND_CONFIG.defaultPortalLabel}</span>
-            {BRAND_CONFIG.tagline ? <span className="brand-tag-smart">{BRAND_CONFIG.tagline}</span> : null}
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600 text-white shadow-xs transition-colors group-hover:bg-brand-700">
+              <SparklesIcon size={18} aria-hidden="true" />
+            </span>
+            {BRAND_CONFIG.name && (
+              <strong className="text-base font-extrabold tracking-tight text-ink-900">
+                {BRAND_CONFIG.name}
+              </strong>
+            )}
           </button>
 
-          <nav className="navbar-main-nav" aria-label="Điều hướng chính">
+          <nav aria-label="Điều hướng chính" className="hidden md:flex items-center gap-1">
             <button
               type="button"
-              className={`nav-link-btn ${activeTab === "home" ? "active" : ""}`}
-              aria-current={activeTab === "home" ? "page" : undefined}
-              onClick={() => onSelectTab("home")}
-            >
-              Trang chủ
-            </button>
-            <button
-              type="button"
-              className={`nav-link-btn ${activeTab === "search" ? "active" : ""}`}
               aria-current={activeTab === "search" ? "page" : undefined}
-              onClick={() => onSelectTab("search")}
+              onClick={() => selectTab("search")}
+              className={cn(
+                "rounded-xl px-3.5 py-2 text-sm font-medium transition-colors cursor-pointer whitespace-nowrap",
+                activeTab === "search"
+                  ? "bg-brand-50 text-brand-700 font-semibold"
+                  : "text-ink-600 hover:bg-slate-100 hover:text-ink-900"
+              )}
             >
               Tìm việc làm
             </button>
             <button
               type="button"
-              className={`nav-link-btn ${activeTab === "companies" ? "active" : ""}`}
               aria-current={activeTab === "companies" ? "page" : undefined}
-              onClick={() => onSelectTab("companies")}
+              onClick={() => selectTab("companies")}
+              className={cn(
+                "rounded-xl px-3.5 py-2 text-sm font-medium transition-colors cursor-pointer whitespace-nowrap",
+                activeTab === "companies"
+                  ? "bg-brand-50 text-brand-700 font-semibold"
+                  : "text-ink-600 hover:bg-slate-100 hover:text-ink-900"
+              )}
             >
               Công ty
             </button>
-            {onOpenSalaryTool && (
-              <button
-                type="button"
-                className="nav-link-btn"
-                onClick={onOpenSalaryTool}
-              >
-                Tính lương Gross–Net
-              </button>
-            )}
             <button
               type="button"
-              className="nav-link-btn nav-link-ai"
-              onClick={() => {
-                const aiSec = document.getElementById("ai-matching-section");
-                if (aiSec) {
-                  aiSec.scrollIntoView({ behavior: "smooth" });
-                } else {
-                  onSelectTab("home");
-                  setTimeout(() => {
-                    document.getElementById("ai-matching-section")?.scrollIntoView({ behavior: "smooth" });
-                  }, 120);
-                }
-              }}
+              aria-current={activeTab === "ai_showcase" ? "page" : undefined}
+              onClick={() => selectTab("ai_showcase")}
+              className={cn(
+                "rounded-xl px-3.5 py-2 text-sm font-medium transition-colors cursor-pointer whitespace-nowrap",
+                activeTab === "ai_showcase"
+                  ? "bg-brand-50 text-brand-700 font-semibold"
+                  : "text-ink-600 hover:bg-slate-100 hover:text-ink-900"
+              )}
             >
-              <span className="ai-nav-sparkle" aria-hidden="true">✨</span> Công nghệ AI
+              Công nghệ AI
             </button>
           </nav>
         </div>
 
-        {/* Center Search Pill (when not on home/search or needed) */}
-        {activeTab !== "search" && activeTab !== "home" ? (
-          <div className="portal-nav-pill-search">
-            <input
-              type="text"
-              value={navSearch}
-              onChange={(e) => setNavSearch(e.target.value)}
-              onKeyDown={handleSearchKeyDown}
-              placeholder="Vị trí tuyển dụng, kỹ năng, công ty..."
-              aria-label="Tìm kiếm trên thanh điều hướng"
-            />
-            <button
-              type="button"
-              className="pill-search-icon-btn"
-              aria-label="Tìm kiếm"
-              onClick={() => {
-                onSelectTab("search");
-                onSearchSubmit?.(navSearch);
-              }}
-            >
-              <SearchIcon aria-hidden="true" />
-            </button>
-          </div>
-        ) : null}
-
-        {/* Right utility actions */}
-        <div className="portal-nav-right-actions">
+        <div className="flex items-center gap-2 shrink-0">
           {candidate ? (
             <>
               <button
                 type="button"
-                className={`portal-notification-button ${candidate.activeView === "notifications" ? "active" : ""}`}
                 aria-label="Thông báo"
-                title="Thông báo"
                 aria-current={candidate.activeView === "notifications" ? "page" : undefined}
                 onClick={() => candidate.onNavigate("notifications")}
+                className={cn(
+                  "inline-flex h-9 w-9 items-center justify-center rounded-xl border transition-colors cursor-pointer",
+                  candidate.activeView === "notifications"
+                    ? "border-brand-300 bg-brand-50 text-brand-700"
+                    : "border-border-subtle bg-white text-ink-600 hover:bg-slate-50 hover:text-ink-900"
+                )}
               >
-                <NotificationIcon size={21} aria-hidden="true" />
+                <NotificationIcon size={18} aria-hidden="true" />
               </button>
               <CandidateAccountMenu
                 name={candidate.name}
@@ -157,29 +126,71 @@ export const PublicNavbar: FC<Props> = ({
             <>
               <button
                 type="button"
-                className="portal-login-text-btn employer-entry"
-                onClick={() => onOpenAuth("login")}
-              >
-                <CompanyIcon size={17} aria-hidden="true" /> Nhà tuyển dụng
-              </button>
-              <button
-                type="button"
-                className="portal-register-btn"
                 onClick={() => onOpenAuth("register")}
+                className="hidden sm:inline-flex h-9 items-center rounded-xl border border-border-strong bg-white px-3.5 text-xs sm:text-sm font-semibold text-ink-800 hover:bg-slate-50 cursor-pointer"
               >
                 Tạo tài khoản
               </button>
               <button
                 type="button"
-                className="portal-login-text-btn"
                 onClick={() => onOpenAuth("login")}
+                className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-brand-600 px-3.5 sm:px-4 text-xs sm:text-sm font-semibold text-white shadow-xs hover:bg-brand-700 cursor-pointer"
               >
-                <ProfileIcon size={17} aria-hidden="true" /> Đăng nhập
+                <ProfileIcon size={16} aria-hidden="true" />
+                <span>Đăng nhập</span>
               </button>
             </>
           )}
+
+          <button
+            type="button"
+            aria-label={mobileMenuOpen ? "Đóng menu" : "Mở menu điều hướng"}
+            aria-expanded={mobileMenuOpen}
+            onClick={() => setMobileMenuOpen((v) => !v)}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border-subtle bg-white text-ink-700 md:hidden cursor-pointer"
+          >
+            {mobileMenuOpen ? <CloseIcon size={18} /> : <MenuIcon size={18} />}
+          </button>
         </div>
       </div>
+
+      {mobileMenuOpen && (
+        <div className="border-t border-border-subtle bg-white px-4 py-3 space-y-1.5 md:hidden">
+          <button
+            type="button"
+            onClick={() => selectTab("search")}
+            className="block w-full rounded-xl px-3.5 py-2.5 text-left text-sm font-semibold text-ink-800 hover:bg-slate-50 cursor-pointer"
+          >
+            Tìm việc làm
+          </button>
+          <button
+            type="button"
+            onClick={() => selectTab("companies")}
+            className="block w-full rounded-xl px-3.5 py-2.5 text-left text-sm font-semibold text-ink-800 hover:bg-slate-50 cursor-pointer"
+          >
+            Công ty
+          </button>
+          <button
+            type="button"
+            onClick={() => selectTab("ai_showcase")}
+            className="block w-full rounded-xl px-3.5 py-2.5 text-left text-sm font-semibold text-ink-800 hover:bg-slate-50 cursor-pointer"
+          >
+            Công nghệ AI
+          </button>
+          {!candidate && (
+            <button
+              type="button"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                onOpenAuth("register");
+              }}
+              className="block w-full rounded-xl border border-border-strong bg-white px-3.5 py-2 text-center text-sm font-semibold text-ink-800 cursor-pointer sm:hidden"
+            >
+              Tạo tài khoản
+            </button>
+          )}
+        </div>
+      )}
     </header>
   );
 };

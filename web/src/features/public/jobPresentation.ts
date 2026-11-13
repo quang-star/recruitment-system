@@ -38,7 +38,7 @@ export function extractSkillsFromJob(
   description?: string | null,
   title?: string | null
 ): string[] {
-  const text = `${requirements || ""} ${description || ""} ${title || ""}`;
+  const texts = [requirements ?? "", description ?? "", title ?? ""];
   const candidates = [
     "Java", "Spring Boot", "React", "Next.js", "TypeScript", "JavaScript",
     "PostgreSQL", "Docker", "Kubernetes", "OpenStack", "Terraform", "Ceph",
@@ -49,8 +49,8 @@ export function extractSkillsFromJob(
   ];
   const matched = candidates.filter((c) => {
     const escaped = c.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const regex = new RegExp(`(^|[^a-zA-Z0-9_#])${escaped}($|[^a-zA-Z0-9_#])`, "i");
-    return regex.test(text);
+    const regex = new RegExp(`(^|[^\\p{L}\\p{M}\\p{N}_#])${escaped}($|[^\\p{L}\\p{M}\\p{N}_#])`, "iu");
+    return texts.some((text) => regex.test(text));
   });
-  return matched.length > 0 ? matched.slice(0, 5) : ["Công nghệ thông tin", "Kỹ thuật phần mềm"];
+  return matched.slice(0, 5);
 }

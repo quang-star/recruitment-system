@@ -1,6 +1,8 @@
-import { formatSalary, employmentTypeLabel, seniorityLabel, publishedLabel } from "./jobPresentation";
-import { PublicJob } from "./types";
+import { MapPinIcon } from "../../shared/components/Icon";
+import { Badge, Card } from "../../shared/ui";
 import { resolveCompanyMeta } from "./companyData";
+import { formatSalary, workModeLabel } from "./jobPresentation";
+import { PublicJob } from "./types";
 
 type PopularJobsGridProps = {
   jobs: PublicJob[];
@@ -10,83 +12,66 @@ type PopularJobsGridProps = {
 
 export function PopularJobsGrid({ jobs, onSelectJob, onApplyJob }: PopularJobsGridProps) {
   if (!jobs.length) return null;
+
   return (
-    <section className="portal-section popular-jobs-section">
-      <div className="portal-container">
-        <div className="section-title-row">
-          <div>
-            <h2 className="portal-section-title">THÊM CƠ HỘI CHO BẠN</h2>
-            <span className="section-subtext">Các vị trí công nghệ đang được tuyển dụng hấp dẫn</span>
-          </div>
-          <span className="job-count-badge">{jobs.length} việc làm</span>
-        </div>
+    <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-10">
+      <div className="mb-5">
+        <h2 className="text-lg sm:text-xl font-bold tracking-tight text-ink-900 m-0">
+          Thêm cơ hội cho bạn
+        </h2>
+        <p className="text-sm text-ink-500 mt-1 mb-0">
+          Các vị trí đang mở tuyển bổ sung trên hệ thống
+        </p>
+      </div>
 
-        <div className="portal-jobs-3col-grid">
-          {jobs.map((job) => {
-            const meta = resolveCompanyMeta(job.companyId, job.companyName);
-            const logoSrc = job.companyLogo || meta.logo;
-
-            return (
-              <div
-                key={job.jobId}
-                className="portal-modern-job-card"
-                role="button"
-                tabIndex={0}
-                onClick={() => onSelectJob(job)}
-                onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); onSelectJob(job); } }}
-              >
-                <div className="card-header-flex">
-                  <div className="job-card-logo-wrap">
-                    <img src={logoSrc} alt={`${meta.shortName} logo`} loading="lazy" />
-                  </div>
-                  <div className="job-card-header-info">
-                    <span className="job-card-company-name" title={meta.name}>{meta.shortName}</span>
-                    <span className="card-time-ago">{publishedLabel(job)}</span>
-                  </div>
-                </div>
-
-                <h3 className="job-card-title" title={job.title}>{job.title}</h3>
-
-                <div className="job-card-salary-wrap">
-                  <span className="job-salary-highlight">{formatSalary(job)}</span>
-                </div>
-
-                <div className="job-card-meta-row">
-                  <span className="meta-item">📍 {job.locationText ?? "Linh hoạt"}</span>
-                  <span className="meta-dot">·</span>
-                  <span className="meta-item">{seniorityLabel(job.seniorityLevel)}</span>
-                </div>
-
-                {job.skills && job.skills.length > 0 ? (
-                  <div className="job-card-skills-row">
-                    {job.skills.slice(0, 3).map((s) => (
-                      <span key={s} className="skill-chip">{s}</span>
-                    ))}
-                    {job.skills.length > 3 && (
-                      <span className="skill-chip-more">+{job.skills.length - 3}</span>
-                    )}
-                  </div>
-                ) : (
-                  <div className="job-card-skills-placeholder" />
-                )}
-
-                <div className="job-card-footer-action">
-                  <span className="work-type-pill">{employmentTypeLabel(job.employmentType)}</span>
-                  <button
-                    type="button"
-                    className="job-card-apply-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onApplyJob(job);
-                    }}
-                  >
-                    Ứng tuyển
-                  </button>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {jobs.slice(0, 6).map((job) => {
+          const company = resolveCompanyMeta(job.companyId, job.companyName);
+          return (
+            <Card key={job.jobId} as="article" interactive padding="sm" className="flex flex-col justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <img
+                  src={job.companyLogo || company.logo}
+                  alt=""
+                  className="h-10 w-10 shrink-0 rounded-xl border border-border-subtle bg-white object-contain p-1"
+                  onError={(e) => { e.currentTarget.src = "/logos/smartrecruitment.svg"; }}
+                />
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-sm font-bold text-ink-900 m-0 leading-snug">
+                    <button
+                      type="button"
+                      onClick={() => onSelectJob(job)}
+                      className="text-left hover:text-brand-700 cursor-pointer bg-transparent border-0 p-0 font-bold text-ink-900 line-clamp-2"
+                    >
+                      {job.title}
+                    </button>
+                  </h3>
+                  <p className="text-xs text-ink-500 m-0 mt-0.5 truncate">
+                    {job.companyName || company.shortName}
+                  </p>
                 </div>
               </div>
-            );
-          })}
-        </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border-subtle/70 text-xs">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge tone="brand">{formatSalary(job)}</Badge>
+                  <span className="inline-flex items-center gap-1 text-ink-500">
+                    <MapPinIcon size={12} aria-hidden="true" />
+                    <span className="truncate max-w-[110px]">{job.locationText || workModeLabel(job.workMode)}</span>
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  aria-label={`${job.title} — Ứng tuyển`}
+                  onClick={() => onApplyJob(job)}
+                  className="text-xs font-semibold text-brand-700 hover:text-brand-800 cursor-pointer bg-transparent border-0 p-0"
+                >
+                  Ứng tuyển →
+                </button>
+              </div>
+            </Card>
+          );
+        })}
       </div>
     </section>
   );

@@ -1,5 +1,6 @@
-import { FEATURED_COMPANIES, CompanyInfo } from "./companyData";
-import { CompanyCover } from "./CompanyCover";
+import { ArrowRightIcon, MapPinIcon } from "../../shared/components/Icon";
+import { Badge, Card } from "../../shared/ui";
+import { CompanyInfo, FEATURED_COMPANIES } from "./companyData";
 
 type FeaturedEmployersProps = {
   companies?: CompanyInfo[];
@@ -8,52 +9,57 @@ type FeaturedEmployersProps = {
 
 export function FeaturedEmployers({ companies, onSelectCompany }: FeaturedEmployersProps) {
   const employers = companies ?? FEATURED_COMPANIES;
+  if (!employers.length) return null;
 
   return (
-    <section className="portal-section featured-employers-section">
-      <div className="portal-container">
-        <div className="section-title-row">
-          <div>
-            <h2 className="portal-section-title">KHÁM PHÁ NHÀ TUYỂN DỤNG</h2>
-            <span className="section-subtext">Doanh nghiệp và cơ hội tuyển dụng trên SmartHire</span>
-          </div>
-          <button
-            type="button"
-            className="section-link-action-btn"
-            onClick={() => onSelectCompany?.("")}
-          >
-            Xem tất cả doanh nghiệp ➔
-          </button>
-        </div>
+    <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-10">
+      <div className="mb-5">
+        <h2 className="text-lg sm:text-xl font-bold tracking-tight text-ink-900 m-0">
+          Khám phá nhà tuyển dụng
+        </h2>
+        <p className="text-sm text-ink-500 mt-1 mb-0">
+          Doanh nghiệp và cơ hội tuyển dụng đang mở
+        </p>
+      </div>
 
-        <div className="employers-cards-row">
-          {employers.map((emp) => (
-            <div
-              key={emp.id}
-              aria-label={`Xem việc làm tại ${emp.shortName}`} className="employer-spotlight-card"
-              role="button"
-              tabIndex={0}
-              onClick={() => onSelectCompany?.(emp.id)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelectCompany?.(emp.id); }
-              }}
-            >
-              <CompanyCover src={emp.coverImage} className="emp-cover-thumb">
-                <span className="emp-jobs-count-tag">{emp.openJobsCount === null ? "Xem việc làm" : `${emp.openJobsCount} việc làm`}</span>
-              </CompanyCover>
-
-              {/* Logo & Identity */}
-              <div className="emp-card-body">
-                <div className="emp-logo-badge">
-                  <img src={emp.logo} alt={`${emp.shortName} logo`} loading="lazy" />
-                </div>
-                <strong className="emp-name" title={emp.name}>{emp.shortName}</strong>
-                <span className="emp-tag">{emp.tag}</span>
-                <small className="emp-location">📍 {emp.location}</small>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {employers.slice(0, 6).map((company) => (
+          <Card key={company.id} as="article" interactive padding="md" className="flex flex-col justify-between gap-4">
+            <div className="flex items-start gap-3.5">
+              <img
+                src={company.logo}
+                alt=""
+                className="h-12 w-12 shrink-0 rounded-xl border border-border-subtle bg-white object-contain p-1.5"
+                onError={(e) => { e.currentTarget.src = "/logos/smartrecruitment.svg"; }}
+              />
+              <div className="min-w-0 flex-1">
+                <h3 className="text-base font-bold text-ink-900 m-0 truncate">{company.shortName || company.name}</h3>
+                <p className="text-xs text-ink-500 m-0 mt-1 flex items-center gap-1 truncate">
+                  <MapPinIcon size={12} aria-hidden="true" />
+                  <span className="truncate">{company.location}</span>
+                </p>
+                {company.openJobsCount != null && (
+                  <div className="mt-2">
+                    <Badge tone="neutral">{company.openJobsCount} vị trí đang mở</Badge>
+                  </div>
+                )}
               </div>
             </div>
-          ))}
-        </div>
+
+            {onSelectCompany && (
+              <div className="pt-3 border-t border-border-subtle/80">
+                <button
+                  type="button"
+                  onClick={() => onSelectCompany(company.id)}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-700 hover:text-brand-800 cursor-pointer bg-transparent border-0 p-0"
+                >
+                  <span>Xem việc làm tại {company.shortName || company.name}</span>
+                  <ArrowRightIcon size={14} aria-hidden="true" />
+                </button>
+              </div>
+            )}
+          </Card>
+        ))}
       </div>
     </section>
   );
