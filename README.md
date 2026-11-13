@@ -10,17 +10,39 @@ Hệ thống tuyển dụng hỗ trợ ứng viên quản lý CV, nhà tuyển d
 | --- | --- |
 | Ứng viên | Tìm việc, quản lý hồ sơ, tải CV PDF, kiểm tra và sửa thông tin trích xuất, ứng tuyển và theo dõi trạng thái. |
 | Nhà tuyển dụng | Quản lý công ty, tạo và xác nhận JD, đăng tin, xem hồ sơ ứng tuyển, kết quả đối chiếu và lịch sử xử lý. |
-| Quản trị viên | Duyệt danh mục ngành nghề và kỹ năng, quản lý tên gọi/alias, xem lịch sử thay đổi. |
+| Quản trị viên | Duyệt công ty hoạt động, duyệt danh mục ngành nghề và kỹ năng, quản lý tên gọi/alias, xem lịch sử thay đổi. |
+
+Giao diện khách tìm việc và ứng viên hỗ trợ mobile. Không gian nhà tuyển dụng và
+quản trị viên dành cho laptop/desktop, với bố cục tối thiểu 1024 px và thanh điều
+hướng cố định; màn hình hẹp sử dụng cuộn ngang thay vì menu/bố cục mobile riêng.
 
 Ứng viên có thể rút đơn, thu hồi quyền chia sẻ hoặc xóa CV. Quyền truy cập tài liệu được kiểm tra theo tài khoản và hồ sơ ứng tuyển.
 
+### Tạo CV theo mẫu (bản thử một template)
+
+Trong **CV của tôi**, chọn **Tạo CV theo mẫu** để soạn CV Classic một cột A4.
+Bạn có thể nhập tay, chọn lấy thông tin từ hồ sơ cá nhân hoặc nhập nội dung từ CV
+đã được phân tích và xác nhận trong thư viện. Thao tác import cần xác nhận trước
+khi thay thế nội dung; thông tin bị ẩn như tên công ty/trường học cần kiểm tra và
+bổ sung hoặc bỏ mục. Bố cục PDF cũ không được giữ lại.
+
+Chọn **Tạo bản xem trước PDF**, sau đó tải đúng file đang xem. Sau mỗi lần sửa,
+cần tạo lại bản xem trước. Font Noto Sans được phục vụ từ asset ứng dụng, không
+gửi dữ liệu CV tới dịch vụ tạo PDF bên ngoài.
+
+Bản thử chưa lưu nháp trên server. Dùng **Tải file nháp** để giữ file `.cv.json`
+và **Mở file nháp** để tiếp tục lần sau; file chứa thông tin cá nhân nên cần tự
+bảo quản. Nội dung không được ghi vào localStorage. Để ứng tuyển, tải PDF vừa tạo
+lên thư viện, kiểm tra và xác nhận bản phân tích mới theo luồng hiện có. Bản CV
+gốc và hồ sơ ứng tuyển đã nộp không bị sửa bởi trình tạo CV.
+
 ### Luồng tuyển dụng
 
-1. Nhà tuyển dụng tạo JD, kiểm tra dữ liệu phân tích và xác nhận trước khi đăng tin CNTT.
+1. Nhà tuyển dụng tạo công ty và chuẩn bị JD nháp. Admin mở `/admin/companies`, kiểm tra công ty rồi duyệt hoạt động kèm lý do. Chỉ công ty `ACTIVE` được đăng tin; tin CNTT còn cần xác nhận dữ liệu phân tích JD.
 2. Ứng viên tải CV; hệ thống trích xuất kỹ năng, kinh nghiệm, học vấn, ngoại ngữ, dự án và chứng chỉ. PDF scan có thể được xử lý bằng OCR Việt/Anh.
 3. Ứng viên sửa và xác nhận kết quả, sau đó chọn CV để ứng tuyển và đồng ý chia sẻ hồ sơ.
 4. Hệ thống đối chiếu CV với JD bất đồng bộ, trả điểm thành phần, giải thích và tham chiếu nguồn cho nhà tuyển dụng xem xét.
-5. Nhà tuyển dụng cập nhật trạng thái; ứng viên theo dõi tiến trình trong workspace.
+5. Nhà tuyển dụng cập nhật tiến trình: tiếp nhận → xem xét → shortlist → phỏng vấn → đề nghị tuyển dụng → đã tuyển dụng. Ứng viên theo dõi trong workspace; có thể rút đơn trước khi được tuyển.
 
 **Phạm vi AI:** đối chiếu và chấm điểm dành cho tuyển dụng CNTT. Công việc ngoài CNTT dùng quy trình xem xét hồ sơ thủ công. Điểm hỗ trợ sàng lọc; quyết định tuyển dụng thuộc người phụ trách.
 
@@ -49,6 +71,14 @@ flowchart LR
 
 Auth, Core và AI sở hữu database riêng. Web gọi API qua Gateway; Core và AI trao đổi sự kiện qua Kafka. AI API và worker chạy thành hai process trong cùng image. Các tác vụ phân tích dùng outbox, xử lý lặp an toàn và retry có giới hạn. CV/JD và hồ sơ ứng tuyển giữ snapshot theo phiên bản.
 
+AI hỗ trợ thử nghiệm 9Router bằng provider `router9`: cấu hình biến môi trường process
+`AI_EXTRACTION_PROVIDER=router9`, `AI_ROUTER9_ENABLED=true`, `AI_ROUTER9_BASE_URL`,
+`AI_ROUTER9_MODEL` (model hoặc combo ID) và `AI_ROUTER9_API_KEY` qua nơi quản lý secret.
+Provider này tắt mặc định; model phải hỗ trợ JSON schema. Lỗi hoặc kết quả không có
+bằng chứng nguồn sẽ quay về parser local. Consent và giới hạn ngân sách vẫn được áp dụng.
+Endpoint local mặc định là `http://localhost:20128/v1`; trong container truy cập router
+trên máy host dùng `http://host.docker.internal:20128/v1`, endpoint từ xa yêu cầu HTTPS.
+
 Xem ranh giới service và các nguyên tắc dữ liệu tại [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ### ID và nâng cấp dữ liệu cũ
@@ -60,7 +90,7 @@ Nâng cấp từ bản dùng UUID cần cửa sổ bảo trì đồng bộ, back
 1. Chạy Auth đến Flyway V7, Core **chỉ đến V25**, AI **chỉ đến Alembic 0019**. Các bước này lưu mapping UUID cũ → BIGINT hiện có; giữ nguyên migration lịch sử. Chưa khởi động API/worker mới.
 2. Dùng `scripts/business-identity-map.py --url-env <tên-biến-URL> --service <auth|core|ai> export <file.json>` cho từng database riêng. Script cần SQLAlchemy và driver PostgreSQL từ môi trường AI; không đọc file môi trường hay in URL. File xuất chỉ chứa định danh.
 3. Import file Auth và AI vào Core, file Auth và Core vào AI bằng cùng script với lệnh `import <file1.json> <file2.json>`. Mỗi lần chạy chỉ kết nối một database. Không có join hay khóa ngoại xuyên database.
-4. Chạy Core đến V29 và AI đến 0020. Migration dừng và rollback nếu thiếu mapping; không tự đoán ID. ID chính BIGINT hiện có được giữ; bảng chỉ có UUID nhận sequence mới. Giữ mapping để đối chiếu sau nâng cấp. Batch reprocessing đang chạy được chuyển sang PAUSED; tạo preview mới vì hash snapshot cũ thay đổi sau chuyển ID.
+4. Chạy Core đến V31 và AI đến 0020. Migration dừng và rollback nếu thiếu mapping; không tự đoán ID. ID chính BIGINT hiện có được giữ; bảng chỉ có UUID nhận sequence mới. Giữ mapping để đối chiếu sau nâng cấp. Batch reprocessing đang chạy được chuyển sang PAUSED; tạo preview mới vì hash snapshot cũ thay đổi sau chuyển ID.
 5. Đồng bộ cấu hình Kafka/topic v2, Gateway, backend và Web, rồi kiểm tra luồng bằng dữ liệu tổng hợp. Đường dẫn UUID cũ không còn được hỗ trợ. Chỉ mở lại lưu lượng sau khi đối chiếu số lượng bản ghi, ownership, snapshot và event chờ. Nếu cần quay lại bản cũ, khôi phục backup đồng bộ; không reset database hay chạy downgrade phá dữ liệu.
 
 Maven sinh jOOQ Core từ `db/codegen/core-schema.sql` vì bước chuyển dữ liệu dùng Java/Flyway. Sau khi đổi schema, cập nhật projection bằng `python scripts/generate-core-jooq-schema.py`; test database so sánh cột projection với schema PostgreSQL sau migration.
@@ -132,7 +162,31 @@ python scripts/seed-portal.py
 
 Script hỏi mật khẩu tài khoản recruiter demo; có thể dùng `--password-env <tên-biến>` cho môi trường tự động. Chỉ nhận địa chỉ Gateway/Mailpit loopback, không đọc file `.env`, không kết nối SQL hay gọi Docker. Các công ty có slug `demo-portal-*` và nhãn Demo. ID do backend/database cấp, giữ dạng chuỗi số; chạy lại sẽ tiếp tục các bản ghi đã tạo mà không ghi đè dữ liệu hiện có. `--draft-only` chỉ tạo bản nháp, không chờ AI worker. `run_seed_sql.py` được giữ làm lệnh tương thích và gọi cùng seed API mới; file SQL UUID cũ đã được thay bằng fixture JSON.
 
-Mặc định seed portal chờ phân tích và xác nhận JD trước khi đăng tin. Dữ liệu tổng hợp luôn tắt đồng ý gửi ra AI bên ngoài; không tự gán trạng thái công ty đã xác minh. Nếu kiểm tra độ phù hợp trước khi nộp báo `JD_NOT_FOUND`, cần hoàn tất luồng phân tích/xác nhận JD; chèn thẳng tin ở trạng thái `PUBLISHED` không tạo dữ liệu phân tích. Giao diện hiển thị mã lỗi và cho phép kiểm tra lại khi dữ liệu sẵn sàng.
+Với công ty demo mới, chạy `python scripts/seed-portal.py --draft-only` để tạo công ty và JD nháp, sau đó dùng tài khoản Admin duyệt tại `/admin/companies`. Chạy lại seed không có `--draft-only` để chờ phân tích, xác nhận JD và đăng tin. Nếu chưa duyệt công ty, yêu cầu đăng tin bị từ chối và dữ liệu đã tạo vẫn được giữ. Dữ liệu tổng hợp luôn tắt đồng ý gửi ra AI bên ngoài; seed không tự duyệt công ty hoặc gán nhãn đã xác minh. Nếu kiểm tra độ phù hợp trước khi nộp báo `JD_NOT_FOUND`, cần hoàn tất luồng phân tích/xác nhận JD; chèn thẳng tin ở trạng thái `PUBLISHED` không tạo dữ liệu phân tích.
+
+Bộ mở rộng `scripts/seed-portal-expanded.json` thêm **12 công ty và 24 tin CNTT demo**,
+tham khảo hồ sơ công khai trên ITviec, TopCV và Saramin (4 công ty mỗi nguồn).
+Mỗi công ty có logo và ảnh bìa WebP lưu tại `web/public/companies/seed-expanded/`.
+Nguồn ảnh, trang tham khảo, ngày đối chiếu và SHA-256 nằm trong
+`scripts/seed-portal-expanded.sources.json`. Mô tả JD và điều kiện tuyển dụng được
+viết mới cho demo; không xác nhận là tin tuyển dụng chính thức hay sao chép toàn văn.
+Các tin ẩn lương dùng lương thỏa thuận; trường website của hồ sơ demo liên kết
+đến trang tuyển dụng tham khảo. Logo/ảnh giữ quyền sở hữu của chủ thể nguồn.
+
+```bash
+python scripts/seed-portal.py --data scripts/seed-portal-expanded.json --dry-run
+python scripts/seed-portal.py --data scripts/seed-portal-expanded.json
+```
+
+Seed mở rộng dùng cùng Gateway API v2 và quy trình phân tích/xác nhận JD;
+chạy lại tiếp tục dữ liệu hiện có, không ghi đè công ty hay tạo trùng tin.
+Công ty mới tạo qua API ở trạng thái `PENDING`. Admin duyệt hoạt động qua
+`/admin/companies` (API `POST /api/v2/dashboard/companies/{companyId}/approve`),
+kèm phiên bản hiện tại và lý do; lịch sử lưu người duyệt và thời gian.
+Chỉ công ty `ACTIVE` và tin đang mở mới xuất hiện công khai hoặc nhận đơn mới.
+Tin đã đăng của công ty chưa ACTIVE được giữ nhưng tạm ẩn cho đến khi duyệt.
+Duyệt hoạt động không đổi trạng thái xác minh thành `VERIFIED`.
+Với bộ seed mở rộng, thêm `--draft-only` ở lượt đầu, duyệt các công ty rồi chạy lại cùng bộ dữ liệu để đăng tin.
 
 | Vai trò | Email demo | Mật khẩu demo |
 | --- | --- | --- |
@@ -140,6 +194,26 @@ Mặc định seed portal chờ phân tích và xác nhận JD trước khi đă
 | Nhà tuyển dụng | `recruiter.demo@smart.local` | `DemoRecruiter!2026` |
 
 Các tài khoản trên chỉ dành cho demo local. Có thể đổi bằng biến `DEMO_CANDIDATE_EMAIL`, `DEMO_CANDIDATE_PASSWORD`, `DEMO_RECRUITER_EMAIL` và `DEMO_RECRUITER_PASSWORD`. Seed không tạo tài khoản quản trị.
+
+## Dữ liệu hiển thị trên portal
+
+Portal đọc công ty và việc làm qua Gateway API v2. `GET /api/v2/public/jobs/discovery`
+tổng hợp địa điểm và nhóm nghề từ toàn bộ tin đã đăng, chưa hết hạn; không phụ thuộc
+12 tin mới nhất trên trang chủ. Chọn nhóm nghề lọc theo ID ngành/chuyên môn. Gợi ý
+kỹ năng được dò từ nội dung tin mới, không phải số liệu xu hướng hay kết quả AI đã xác nhận;
+tin không có từ khóa phù hợp không được tự gán kỹ năng. Logo/ảnh doanh nghiệp dùng
+URL đã lưu, thiếu ảnh hiển thị hình giữ chỗ. Dữ liệu do các script seed tạo vẫn là demo,
+kể cả khi đã lưu trong database; hệ thống không tự lấy tin tuyển dụng bên ngoài.
+
+Chọn một tin trên portal mở trang chi tiết riêng qua tham số `job` trên URL,
+gồm nội dung tuyển dụng, đối chiếu CV trong trang, thông tin công ty và các tin
+khác cùng công ty từ API. Link có thể chia sẻ/tải lại; nút quay lại giữ bộ lọc tìm kiếm.
+
+Hồ sơ công ty dùng URL `?view=companies&company=<id>`: ảnh bìa, logo, phần giới thiệu
+và thông tin do công ty cung cấp nằm trước danh sách tin đang mở có phân trang.
+Các link công ty cũ từ trang tìm kiếm vẫn mở được hồ sơ này. Trang tìm kiếm dùng
+thanh tìm kiếm/bộ lọc theo dữ liệu API và danh sách tin; chọn tin mở trang chi tiết,
+không tự mở khung xem trước. Bộ lọc và trang kết quả được giữ trong URL.
 
 ## Đăng nhập Google
 
@@ -183,6 +257,58 @@ Backend kiểm tra schema và đoạn trích với nguồn, sau đó chuẩn hó
 - Giao diện biểu diễn mức độ phù hợp CV–JD bằng 1–5 sao nguyên: điểm nội bộ dưới 20 → 1 sao, từ 20 đến dưới 40 → 2 sao, từ 40 đến dưới 60 → 3 sao, từ 60 đến dưới 80 → 4 sao, từ 80 đến 100 → 5 sao. Điểm gốc vẫn được giữ để tính toán, sắp xếp và nghiên cứu; từng tiêu chí áp dụng cùng quy đổi sau khi đưa về thang 100. Thiếu dữ liệu không hiển thị sao; kết quả cần kiểm tra thêm vẫn có cảnh báo. Các khoảng này là quy ước hiển thị, chưa phải ngưỡng được xác lập bằng nhãn đánh giá độc lập.
 
 Kết quả kiểm thử chức năng không xác lập độ chính xác tuyển dụng. Đánh giá chất lượng cần dữ liệu và nhãn độc lập; xem [biểu mẫu đánh giá](evaluation/matching-annotation-template.csv) và [công cụ evaluation](ai-service/app/evaluation/).
+
+Công cụ evaluation hỗ trợ nghiên cứu một người chấm bằng tùy chọn
+`prepare --annotation-provenance HUMAN_SINGLE_RATER`. Kit chỉ tạo `rater-1.csv`;
+`status`, `evaluate` và `comparison` dùng đúng file này, ghi rõ giới hạn single-rater
+và không tính độ đồng thuận giữa người chấm. Không sao chép một bộ nhãn thành hai
+người chấm hoặc adjudication giả. Các kit hai người chấm hiện có giữ quy trình cũ.
+
+Trước khi so baseline, semantic và hybrid trên dữ liệu đã được phép sử dụng,
+dùng `python -m app.evaluation.kit freeze --source-kit <kit> --output <kit-moi>`
+trong môi trường AI. Thêm `--ocr-enabled --ocr-max-pages 5 --ocr-timeout-seconds 60`
+khi cần OCR; kiểm tra phương thức trích xuất và quality flags thực tế vì bật OCR
+không bảo đảm runtime có đủ công cụ. Lệnh tạo kit mới, giữ nguyên nhãn nguồn và lưu
+payload riêng ở `model-only/inputs.json`. `score`, `semantic` và `comparison` dùng
+cùng snapshot và từ chối dữ liệu bị thay đổi; prediction/metric ghi hash đầu vào.
+Kit cũ vẫn chạy theo `LEGACY_TEXT_ONLY` và metric có cảnh báo `INPUTS_NOT_FROZEN`.
+Snapshot có thể chứa bằng chứng từ tài liệu, chưa được coi là ẩn danh; giữ local
+và không đưa thư mục `model-only` cho người chấm.
+
+Parsing có schema gold riêng tại [parsing-gold-v1.schema.json](contracts/schemas/parsing-gold-v1.schema.json).
+Trong môi trường AI, dùng `python -m app.evaluation.parsing prepare --kit <kit> --taxonomy ../contracts/taxonomy/it-skills-v2.seed.json --output <gold-moi.json>`
+để tạo template trống. `status --kit <kit> --gold <gold.json>` kiểm cấu trúc/tiến độ;
+`evaluate --kit <frozen-kit> --gold <gold.json> --split dev --output <metrics-moi.json>`
+chỉ chấm trên parsed snapshot đã khóa, không parse lại PDF hoặc gọi provider.
+Nguồn/taxonomy/split/phạm vi trang phải khớp; UNKNOWN/NOT_REVIEWED không tự trở thành nhãn đã chấm.
+Metric gồm skill extraction/normalization, distinct title và exact interval tháng/current;
+education/languages/projects/certificates chưa được chấm metric. UNREADABLE/PARTIAL và interval thiếu
+tháng có mẫu số/exclusions riêng, metric không xác định là null. Template giữ provenance UNKNOWN
+đến khi người chấm xác nhận nguồn nhãn; kết quả một người chấm ghi rõ giới hạn đó.
+Format JSON mới không tự nhập hay sửa file parsing-labels.csv cũ. Gold đã điền là dữ liệu riêng tư,
+không đưa vào Git hoặc dùng metric từ fixture tổng hợp làm kết quả thực nghiệm.
+
+Để phân tích sai số theo từng tiêu chí của baseline, sau `score` trên frozen kit dùng
+`python -m app.evaluation.components --kit <frozen-kit> --output <frozen-kit>/model-only/components-baseline.json`.
+Lệnh kiểm hash đầu vào/prediction và tính lại để đối chiếu đúng điểm đã lưu; không mở lại PDF,
+không gọi provider, không ghi đè file. JSON `matching-components/1.0` gồm từng cặp/split, điểm tổng,
+weight/score/contribution của từng tiêu chí, quality flags, mốc tính và hash nguồn/thuật toán.
+Không xuất raw text, details, claims hoặc lý do gán nhãn. Đây vẫn là output riêng tư có ID nghiên cứu,
+không đưa cho người chấm blind; không phải accuracy, dữ liệu ẩn danh được xác minh hay phân rã điểm semantic/hybrid.
+
+Thêm `--variant semantic` hoặc `--variant hybrid` để xuất phân rã phương pháp ở định dạng
+`matching-components/1.1`, sau một lượt semantic/comparison mới trên frozen kit. Export kiểm
+model/revision, hash mã baseline/semantic, input/prediction và cấu hình20%; không tải model hay tính
+lại embedding. Hybrid ghi đóng góp baseline80%/semantic20%; khi thiếu text dùng100% baseline,
+semantic là `null` trong breakdown và có cờ không khả dụng. Điểm0 của semantic CSV lúc thiếu text
+chỉ là placeholder của policy nghiên cứu, không được diễn giải là độ phù hợp0 đã đo được.
+`baselineComponents` trong hybrid là chẩn đoán baseline gốc, không phải điểm từng kỹ năng đã phân bổ
+cho hybrid; cosine chưa được phân rã theo kỹ năng. Experiment cũ thiếu hash mã cần chạy lại vào kit/run mới,
+không sửa metadata cũ để giả tạo lineage. Export không xác minh lại phép tính cosine từ model.
+
+Comparison với frozen inputs tự lưu `model-only/components-<variant>.json` và hash/schema trong
+`run.json.componentArtifacts`. Model local không khả dụng thì chỉ xuất baseline thật; kit legacy text-only
+giữ cách chạy cũ và không tự tạo component artifact. Nhãn người và metric chất lượng vẫn là bước riêng.
 
 ## Kiểm thử
 
@@ -228,7 +354,11 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-Một số ca cần tài khoản quản trị thử nghiệm qua `E2E_ADMIN_EMAIL` và `E2E_ADMIN_PASSWORD`. Kiểm tra kết quả skip khi chạy E2E.
+Suite E2E yêu cầu email/password tài khoản QA được truyền rõ qua
+`E2E_CANDIDATE_EMAIL`, `E2E_CANDIDATE_PASSWORD`, `E2E_RECRUITER_EMAIL` và `E2E_RECRUITER_PASSWORD`;
+test code không tự chọn credential demo mặc định. Chỉ trỏ `E2E_BASE_URL` đến stack QA đã được phép dùng.
+Một số ca cần tài khoản quản trị thử nghiệm qua `E2E_ADMIN_EMAIL` và `E2E_ADMIN_PASSWORD`,
+hoặc metadata fixture retry qua `E2E_RETRY_*`. Kiểm tra kết quả skip; thiếu fixture không được coi là ca đã đạt.
 
 ## Tài liệu
 

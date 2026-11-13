@@ -5,7 +5,7 @@ Material under the ignored `docs/` working directory may provide design context,
 but it must not override this file. In particular, Kafka supersedes older
 broker references that may still exist in local working notes.
 
-Thesis title confirmed by the author on 2026-09-07: **Nghiên cứu, thiết kế và phát triển hệ thống tuyển dụng thông minh dựa trên kiến trúc Microservices và AI**.
+Thesis title confirmed by the author on 2026-10-19: **Phát triển hệ thống hỗ trợ tuyển dụng thông minh sử dụng ReactJS, TypeScript và Spring Boot kết hợp Rule-based & AI trong phân tích CV và đối sánh ứng viên.** This supersedes the 2026-09-07 title; the service boundaries and implementation scope below remain the architecture baseline. The current five-chapter report outline is recorded in local docs/51.
 
 | Project | Runtime | Owns | Must not own |
 |---|---|---|---|
@@ -45,6 +45,16 @@ processing generation fencing old commands/results; the same file and source
 version are retained, and successful parsing still requires user confirmation.
 Core classification snapshots permit manual publication/application outside IT
 without ParsedJD or an AI score/ranking; backend guards enforce this boundary.
+Core V30 extends recruitment stages from SHORTLISTED through INTERVIEW, OFFERED
+and HIRED. Active stages permit candidate withdrawal with CV-access revocation;
+HIRED, REJECTED and WITHDRAWN are terminal. Application list projections use the
+submitted JobVersion title. Candidate profile summaries and name/email search
+require APPLICATION_ONLY visibility and a live CV access grant.
+Core V31 adds an audited SYSTEM_ADMIN company approval workflow with optimistic
+versions. Approval changes PENDING to ACTIVE without asserting legal verification.
+Publication, all public job projections and new applications require an ACTIVE
+company. Existing rows remain intact; previously published jobs of non-ACTIVE
+companies stay hidden until approval. Draft preparation remains available.
 Candidate erasure/revocation/withdrawal immediately blocks related PDF/score
 access; durable erasure queues and AI tombstones remove derived data and prevent
 late results from restoring it. Core owns job categories; AI owns skill taxonomy.
@@ -60,6 +70,19 @@ An offline research runner now compares baseline, pinned multilingual MiniLM emb
 and a fixed 80/20 hybrid; it does not replace production scoring or supply human labels.
 The rules below state architectural invariants;
 their presence in this document is not proof that every runtime path satisfies them.
+
+## Backend code map
+
+Use this layout guide when locating or adding backend code:
+
+| Service | Internal layout | Where to look |
+|---|---|---|
+| `gateway-service` | WebFlux edge (`filter/`, `security/`) | Routes in `gateway-service/src/main/resources/application.yml`; edge JWT checks in `security/GatewaySecurityConfig.java`; `X-Correlation-Id` in `filter/CorrelationIdFilter.java` |
+| `auth-service` | `auth/` (HTTP/security edge) + `user/` (`application/`, `domain/`, `infrastructure/`) + `shared/` | Controllers & JWT/RSA config in `auth/api/`, `auth/config/`; registration, login, recovery, sessions & Google sign-in in `user/`; `ApiError`, `CorrelationIdFilter`, `SubjectId`, `TimeConfig` in `shared/`; Flyway SQL in `auth-service/src/main/resources/db/migration/` |
+| `core-service` | Package-by-feature (`api/`, `application/`, `domain/`, `infrastructure/`) + `shared/` | Feature flows in `application/`, `candidate/`, `catalog/`, `cv/`, `dashboard/`, `job/`, `notification/`, `recruiter/`, `reprocessing/`; shared Outbox (`KafkaOutboxRelay`, `JooqOutboxEventRepository`, `OutboxEventRepository`, `PrivacyEvent`), ObjectStorage (`ObjectStorage`, `MinioObjectStorage`, `MinioStorageConfig`), security & time config in `shared/`; Flyway SQL in `core-service/src/main/resources/db/migration/` |
+| `ai-service` | Feature packages under `app/` + entrypoints at `app/` root | Production entrypoints: `app/main.py` (FastAPI), `app/worker.py` (Kafka consumer), `app/outbox.py` (relay); workflows in `app/{career,cv,jd,matching,reprocessing,task,taxonomy}/`; LLM transports, extraction policy, masking, usage, evidence & skill proposals in `app/extraction/`; cross-cutting API/config/DB/ID/privacy/JWT utilities in `app/shared/` (`security.py` path is pinned by architecture checks); offline evaluation & smoke CLIs in `app/evaluation/`; Alembic in `ai-service/migrations/` |
+
+Generated artifacts (`target/`, `build/`, `.pytest_cache/`) stay untracked; run AI pytest with `-p no:cacheprovider` on Windows to avoid leftover `pytest-cache-files-*` directories.
 
 ## Boundary rules
 
