@@ -206,7 +206,7 @@ components:
           - string
           - 'null'
           maxLength: 40
-          description: external-ai/2.0 required when consent is true; null when false
+          description: external-ai/1.0 required when consent is true; null when false
     Job:
       type: object
       required:

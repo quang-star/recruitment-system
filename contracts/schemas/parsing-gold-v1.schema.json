@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://smart-recruitment.local/contracts/schemas/parsing-gold-v1.schema.json",
+  "title": "Private single-rater parsing reference v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "rubricVersion", "datasetSha256", "sourceManifestSha256", "sourceIndexSha256", "asOfMonth", "annotationProvenance", "reviewerId", "reviewerRelationship", "taxonomySnapshot", "taxonomySha256", "taxonomySourceSha256", "documents"],
+  "properties": {
+    "schemaVersion": {"const": "parsing-gold/1.0"},
+    "rubricVersion": {"const": "parsing-rubric/1.0"},
+    "datasetSha256": {"$ref": "#/$defs/hash"},
+    "sourceManifestSha256": {"$ref": "#/$defs/hash"},
+    "sourceIndexSha256": {"$ref": "#/$defs/hash"},
+    "taxonomySha256": {"$ref": "#/$defs/hash"},
+    "taxonomySourceSha256": {"$ref": "#/$defs/hash"},
+    "asOfMonth": {"type": "string", "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$"},
+    "annotationProvenance": {"enum": ["HUMAN_SINGLE_RATER", "SYNTHETIC", "MODEL_GENERATED", "UNKNOWN"]},
+    "reviewerId": {"type": "string", "minLength": 1, "maxLength": 80, "pattern": "\\S"},
+    "reviewerRelationship": {"enum": ["AUTHOR_AND_SYSTEM_DEVELOPER", "OTHER", "NOT_STATED"]},
+    "taxonomySnapshot": {"type": "object"},
+    "documents": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/document"}}
+  },
+  "$defs": {
+    "hash": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "text": {"type": "string", "minLength": 1, "maxLength": 240, "pattern": "\\S"},
+    "page": {"type": "integer", "minimum": 1},
+    "month": {"type": ["string", "null"], "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$"},
+    "pages": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/page"}},
+    "skill": {
+      "type": "object", "additionalProperties": false,
+      "required": ["raw", "canonicalSkillId", "evidencePage"],
+      "properties": {
+        "raw": {"$ref": "#/$defs/text"},
+        "canonicalSkillId": {"type": ["string", "null"], "pattern": "^[1-9][0-9]{0,18}$"},
+        "evidencePage": {"$ref": "#/$defs/page"}
+      }
+    },
+    "experience": {
+      "type": "object", "additionalProperties": false,
+      "required": ["titleRaw", "startMonth", "endMonth", "startPrecision", "endPrecision", "isCurrent", "evidencePage"],
+      "properties": {
+        "titleRaw": {"$ref": "#/$defs/text"},
+        "startMonth": {"$ref": "#/$defs/month"},
+        "endMonth": {"$ref": "#/$defs/month"},
+        "startPrecision": {"enum": ["MONTH", "YEAR", "UNKNOWN"]},
+        "endPrecision": {"enum": ["MONTH", "YEAR", "UNKNOWN", "CURRENT"]},
+        "startRaw": {"type": ["string", "null"], "maxLength": 40},
+        "endRaw": {"type": ["string", "null"], "maxLength": 40},
+        "isCurrent": {"type": "boolean"},
+        "evidencePage": {"$ref": "#/$defs/page"}
+      }
+    },
+    "education": {
+      "type": "object", "additionalProperties": false,
+      "required": ["degreeLevel", "fieldOfStudy", "evidencePage"],
+      "properties": {
+        "degreeLevel": {"type": ["string", "null"], "maxLength": 80},
+        "fieldOfStudy": {"type": ["string", "null"], "maxLength": 240},
+        "evidencePage": {"$ref": "#/$defs/page"}
+      }
+    },
+    "language": {
+      "type": "object", "additionalProperties": false,
+      "required": ["languageCode", "proficiency", "evidencePage"],
+      "properties": {
+        "languageCode": {"$ref": "#/$defs/text"},
+        "proficiency": {"type": ["string", "null"], "maxLength": 80},
+        "evidencePage": {"$ref": "#/$defs/page"}
+      }
+    },
+    "project": {
+      "type": "object", "additionalProperties": false,
+      "required": ["name", "evidencePage"],
+      "properties": {"name": {"$ref": "#/$defs/text"}, "evidencePage": {"$ref": "#/$defs/page"}}
+    },
+    "certificate": {
+      "type": "object", "additionalProperties": false,
+      "required": ["name", "issuer", "issuedMonth", "evidencePage"],
+      "properties": {
+        "name": {"$ref": "#/$defs/text"},
+        "issuer": {"type": ["string", "null"], "maxLength": 240},
+        "issuedMonth": {"$ref": "#/$defs/month"},
+        "evidencePage": {"$ref": "#/$defs/page"}
+      }
+    },
+    "field": {
+      "type": "object", "additionalProperties": false, "required": ["status", "items"],
+      "properties": {"status": {"enum": ["NOT_REVIEWED", "PRESENT", "ABSENT", "UNREADABLE", "PARTIAL"]}, "items": {"type": "array"}},
+      "allOf": [
+        {"if": {"properties": {"status": {"const": "PRESENT"}}}, "then": {"properties": {"items": {"minItems": 1}}}},
+        {"if": {"properties": {"status": {"enum": ["NOT_REVIEWED", "ABSENT", "UNREADABLE"]}}}, "then": {"properties": {"items": {"maxItems": 0}}}}
+      ]
+    },
+    "document": {
+      "type": "object", "additionalProperties": false,
+      "required": ["cvId", "sourceHash", "split", "pageCount", "evaluationPages", "pagesReviewed", "readingMethod", "reviewComplete", "fields"],
+      "properties": {
+        "cvId": {"$ref": "#/$defs/text"},
+        "sourceHash": {"$ref": "#/$defs/hash"},
+        "split": {"enum": ["dev", "test"]},
+        "pageCount": {"$ref": "#/$defs/page"},
+        "evaluationPages": {"$ref": "#/$defs/pages"},
+        "pagesReviewed": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/page"}},
+        "readingMethod": {"enum": ["NOT_REVIEWED", "SOURCE_PDF", "SOURCE_PDF_WITH_OCR"]},
+        "reviewComplete": {"type": "boolean"},
+        "fields": {
+          "type": "object", "additionalProperties": false,
+          "required": ["skills", "experiences", "education", "languages", "projects", "certificates"],
+          "properties": {
+            "skills": {"allOf": [{"$ref": "#/$defs/field"}, {"properties": {"items": {"items": {"$ref": "#/$defs/skill"}}}}]},
+            "experiences": {"allOf": [{"$ref": "#/$defs/field"}, {"properties": {"items": {"items": {"$ref": "#/$defs/experience"}}}}]},
+            "education": {"allOf": [{"$ref": "#/$defs/field"}, {"properties": {"items": {"items": {"$ref": "#/$defs/education"}}}}]},
+            "languages": {"allOf": [{"$ref": "#/$defs/field"}, {"properties": {"items": {"items": {"$ref": "#/$defs/language"}}}}]},
+            "projects": {"allOf": [{"$ref": "#/$defs/field"}, {"properties": {"items": {"items": {"$ref": "#/$defs/project"}}}}]},
+            "certificates": {"allOf": [{"$ref": "#/$defs/field"}, {"properties": {"items": {"items": {"$ref": "#/$defs/certificate"}}}}]}
+          }
+        }
+      }
+    }
+  }
+}
