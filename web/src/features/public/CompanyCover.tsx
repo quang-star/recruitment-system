@@ -1,18 +1,19 @@
 import { ReactNode } from "react";
+import { cn } from "../../shared/ui";
 
 type Props = {
   src: string;
-  className: string;
+  className?: string;
   children?: ReactNode;
 };
 
 export function CompanyCover({ src, className, children }: Props) {
   return (
-    <div className={`company-artwork ${className}`}>
+    <div className={cn("relative overflow-hidden bg-slate-100", className)}>
       <img
         src={src}
         alt=""
-        className="company-cover-img"
+        className="h-full w-full object-cover"
         width={1536}
         height={1024}
         loading="lazy"
@@ -23,7 +24,11 @@ export function CompanyCover({ src, className, children }: Props) {
           }
         }}
       />
-      <span className="company-artwork-caption">Ảnh tham khảo</span>
+      {src === "/companies/company-placeholder.svg" && (
+        <span className="absolute bottom-2 right-2 rounded-lg bg-slate-900/65 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur-xs">
+          Chưa có ảnh doanh nghiệp
+        </span>
+      )}
       {children}
     </div>
   );

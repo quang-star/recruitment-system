@@ -30,36 +30,17 @@ export type CompanyInfo = {
   openJobsCount: number | null;
   description: string;
   website: string;
+  countryCode?: string;
 };
 
-// Downloaded public company media; exact aliases avoid unrelated brand matches.
-// Source pages are recorded in public/companies/photos/sources.json.
-const COMPANY_ARTWORK = [
-  { aliases: ["fpt-software", "fpt software"], logo: "fpt.png", cover: "fpt" },
-  { aliases: ["momo-fintech", "momo fintech"], logo: "momo.svg", cover: "momo" },
-  { aliases: ["shopee-vietnam", "shopee vietnam"], logo: "shopee.svg", cover: "shopee" },
-  { aliases: ["techcombank-software", "techcombank"], logo: "techcombank.svg", cover: "techcombank" },
-  { aliases: ["vnpt-net", "tổng công ty hạ tầng mạng (vnpt-net)"], logo: "vnpt.png", cover: "vnpt" },
-  { aliases: ["viettel-solutions", "viettel solutions"], logo: "viettel.png", cover: "viettel" },
-  { aliases: ["vng-corporation", "vng corporation"], logo: "vng.png", cover: "vng" },
-  { aliases: ["vpbank-digital", "vpbank digital"], logo: "vpbank.svg", cover: "vpbank" },
-];
-
-function findCompanyArtwork(slug?: string, name?: string) {
-  const keys = [slug, name].filter(Boolean).map((value) => value!.normalize("NFC").trim().toLowerCase());
-  return COMPANY_ARTWORK.find((artwork) => artwork.aliases.some((alias) => keys.includes(alias)));
-}
-
-export function getCompanyLogo(slug?: string, name?: string, customLogoUrl?: string | null): string {
+export function getCompanyLogo(_slug?: string, _name?: string, customLogoUrl?: string | null): string {
   if (customLogoUrl && customLogoUrl.trim()) return customLogoUrl.trim();
-  const artwork = findCompanyArtwork(slug, name);
-  return artwork ? `/logos/official/${artwork.logo}` : "/logos/smartrecruitment.svg";
+  return "/logos/smartrecruitment.svg";
 }
 
-export function getCompanyCover(slug?: string, name?: string, customCoverUrl?: string | null): string {
+export function getCompanyCover(_slug?: string, _name?: string, customCoverUrl?: string | null): string {
   if (customCoverUrl && customCoverUrl.trim()) return customCoverUrl.trim();
-  const artwork = findCompanyArtwork(slug, name);
-  return `/companies/photos/${artwork?.cover ?? "workplace"}.webp`;
+  return "/companies/company-placeholder.svg";
 }
 
 export function getCompanyTag(_slug?: string, _name?: string): string {
@@ -108,6 +89,7 @@ export function mapCompanyRecord(c: PublicCompany, allJobs: PublicJob[] = []): C
     openJobsCount: jobsForComp.length,
     description: c.description || "Doanh nghiệp chưa bổ sung phần giới thiệu.",
     website: c.websiteUrl || "",
+    countryCode: c.countryCode,
   };
 }
 

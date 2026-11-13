@@ -21,7 +21,21 @@ export type PublicJob = {
   isVip?: boolean;
   postedDaysAgo?: number;
   publishedAt?: string | null;
+  applicationDeadline?: string | null;
+  category?: { industryName: string; specializationName?: string | null; positionName?: string | null };
   skills?: string[];
 };
 
 export type ActiveNavTab = "home" | "search" | "companies" | "salary_tool" | "ai_showcase";
+
+export type JobDiscovery = {
+  locations: string[];
+  categories: JobDiscoveryCategory[];
+};
+
+export type JobDiscoveryCategory = {
+  industryId: string;
+  specializationId: string | null;
+  name: string;
+  jobCount: number;
+};

@@ -1,34 +1,26 @@
 import { FC, ReactNode, useEffect, useState } from "react";
-import { PublicJob, ActiveNavTab } from "./types";
-import { PublicNavbar, CandidateNavigation } from "./PublicNavbar";
-import { PortalHeroBanner } from "./PortalHeroBanner";
-import { FeaturedEmployers } from "./FeaturedEmployers";
-import { HotJobsVIP } from "./HotJobsVIP";
-import { PopularJobsGrid } from "./PopularJobsGrid";
-import { JobSearchSplitView } from "./JobSearchSplitView";
-import { HotIndustries } from "./HotIndustries";
-import { useUrlParams, useUrlView } from "../../shared/navigation";
-import { useModalFocus } from "../../shared/components/useModalFocus";
-import { AIMatchingShowcase } from "./AIMatchingShowcase";
-import { JobDetailDrawer } from "./JobDetailDrawer";
-import { CompanyDirectoryView } from "./CompanyDirectoryView";
-import { LoginPage } from "../auth/LoginPage";
-import { SystemOverview } from "../system/SystemOverview";
+import { useLocation } from "react-router-dom";
 import { apiRequest } from "../../shared/api/client";
-import { extractSkillsFromJob } from "./jobPresentation";
 import { PageResult } from "../../shared/api/pagination";
 import { AuthSession } from "../../shared/auth/session";
+import { useUrlParams } from "../../shared/navigation";
 import { getPendingJobId, setPendingJobId } from "../../shared/pendingApplication";
-import { BRAND_CONFIG } from "../../shared/config/brand";
+import { EnsureRouter, routes, useSafeNavigate } from "../../shared/router";
+import { Button, ErrorBanner } from "../../shared/ui";
 import { CandidateJobsPanel } from "../candidate/CandidateJobsPanel";
-
+import { PublicAuthModal } from "./PublicAuthModal";
+import { PublicFooter } from "./PublicFooter";
+import { PublicHomeViews } from "./PublicHomeViews";
+import { CandidateNavigation, PublicNavbar } from "./PublicNavbar";
 import {
-  resolveCompanyMeta,
-  PublicCompany,
   CompanyInfo,
+  PublicCompany,
   mapCompanyRecord,
-  setLoadedCompaniesCache,
+  resolveCompanyMeta,
+  setLoadedCompaniesCache
 } from "./companyData";
+import { extractSkillsFromJob } from "./jobPresentation";
+import { ActiveNavTab, JobDiscovery, PublicJob } from "./types";
 
 type Props = {
   onLoginSuccess: (session: AuthSession) => void;
@@ -37,64 +29,147 @@ type Props = {
   children?: ReactNode;
 };
 
-export const PublicHomePage: FC<Props> = ({ onLoginSuccess, session, candidate, children }) => {
-  const [activeTab, setActiveTab] = useUrlView<ActiveNavTab>("view", ["home", "search", "companies", "ai_showcase"], "home");
+const ALLOWED_TABS: readonly ActiveNavTab[] = ["home", "search", "companies", "ai_showcase"];
+const FILTER_QUERY_KEYS = [
+  "q",
+  "location",
+  "industry",
+  "specialization",
+  "categoryName",
+  "mode",
+  "level",
+  "type",
+  "salary",
+  "sort",
+  "page",
+  "company"
+] as const;
+
+function buildPreservedQuery(params: URLSearchParams): string {
+  const next = new URLSearchParams();
+  for (const key of FILTER_QUERY_KEYS) {
+    const value = params.get(key);
+    if (value) next.set(key, value);
+  }
+  const qs = next.toString();
+  return qs ? `?${qs}` : "";
+}
+
+function PublicHomePageInner({ onLoginSuccess, session, candidate, children }: Props) {
+  const location = useLocation();
+  const safeNavigate = useSafeNavigate();
+  const { params, navigate } = useUrlParams();
+
+  const jobPathMatch = location.pathname.match(/^\/jobs\/([^/]+)$/);
+  const companyPathMatch = location.pathname.match(/^\/companies\/([^/]+)$/);
+
+  const rawView = params.get("view") as ActiveNavTab;
+  const queryTab: ActiveNavTab = ALLOWED_TABS.includes(rawView) ? rawView : "home";
+  const activeTab: ActiveNavTab =
+    location.pathname === routes.jobs || Boolean(jobPathMatch)
+      ? "search"
+      : location.pathname === routes.companies || Boolean(companyPathMatch)
+        ? "companies"
+        : location.pathname === routes.aiShowcase
+          ? "ai_showcase"
+          : queryTab;
+
+  const requestedJobId = jobPathMatch ? decodeURIComponent(jobPathMatch[1]) : (params.get("job") ?? "");
+  const requestedCompanyId = companyPathMatch
+    ? decodeURIComponent(companyPathMatch[1])
+    : (params.get("company") ?? "");
+
   const [jobs, setJobs] = useState<PublicJob[]>([]);
   const [totalJobs, setTotalJobs] = useState(0);
+  const [discovery, setDiscovery] = useState<JobDiscovery>({ locations: [], categories: [] });
+  const [discoveryError, setDiscoveryError] = useState(false);
   const [companies, setCompanies] = useState<CompanyInfo[]>([]);
   const [loadingJobs, setLoadingJobs] = useState(true);
   const [jobsError, setJobsError] = useState(false);
   const [selectedJob, setSelectedJob] = useState<PublicJob | null>(null);
-  const { params, navigate } = useUrlParams();
-  const requestedJobId = params.get("job") ?? "";
+  const [restoreFocusJobId, setRestoreFocusJobId] = useState<string | null>(null);
+
+  const companyPageOpen = !!requestedCompanyId && (activeTab === "companies" || activeTab === "search");
+  const profileCompany = companies.find((company) => company.id === requestedCompanyId);
+  const detailJob = selectedJob?.jobId === requestedJobId ? selectedJob : null;
   const authMode = params.get("auth") === "register" ? "register" : "login";
-  const authOpen = !session && params.has("auth");
+  const authOpen = !session && (location.pathname === routes.login || location.pathname === routes.acceptInvitation || params.has("auth"));
   const accountOpen = !!candidate && candidate.activeView !== "jobs";
-  const authRef = useModalFocus<HTMLElement>(authOpen, () => navigate({ auth: null }));
+
+  function closeAuth() {
+    if (location.pathname === routes.login) {
+      safeNavigate(routes.home);
+      return;
+    }
+    navigate({ auth: null });
+  }
+
   const [companiesError, setCompaniesError] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [detailError, setDetailError] = useState(false);
   const [applyingJob, setApplyingJob] = useState<PublicJob | null>(null);
   const [demoAccount, setDemoAccount] = useState({ email: "", revision: 0 });
-  const [applicationJobId, setApplicationJobId] = useState<string | null>(() => session ? getPendingJobId() : null);
+  const [applicationJobId, setApplicationJobId] = useState<string | null>(() =>
+    session ? getPendingJobId() : null
+  );
   const [applicationMessage, setApplicationMessage] = useState<string | null>(null);
 
-  // Load real companies and published jobs directly from PostgreSQL via backend REST APIs
+  // Load real companies and published jobs from PostgreSQL via Gateway REST APIs
   useEffect(() => {
     let active = true;
-    setLoadingJobs(true); setJobsError(false); setCompaniesError(false);
+    setLoadingJobs(true);
+    setJobsError(false);
+    setCompaniesError(false);
+    setDiscoveryError(false);
+
     Promise.all([
-      apiRequest<PublicCompany[]>("/api/v2/public/companies").catch(() => { if (active) setCompaniesError(true); return [] as PublicCompany[]; }),
+      apiRequest<PublicCompany[]>("/api/v2/public/companies").catch(() => {
+        if (active) setCompaniesError(true);
+        return [] as PublicCompany[];
+      }),
       apiRequest<PageResult<PublicJob>>("/api/v2/public/jobs?page=0&size=12&sort=newest").catch(() => {
         if (active) setJobsError(true);
         return { items: [], total: 0, page: 0, size: 12 };
       }),
       apiRequest<Record<string, number>>("/api/v2/public/jobs?summary").catch(() => null),
+      apiRequest<JobDiscovery>("/api/v2/public/jobs/discovery")
+        .then((result) => {
+          if (!Array.isArray(result.locations) || !Array.isArray(result.categories)) {
+            throw new Error("Invalid discovery response");
+          }
+          return result;
+        })
+        .catch(() => {
+          if (active) setDiscoveryError(true);
+          return { locations: [], categories: [] };
+        })
     ])
-      .then(([compsData, jobsData, companyCounts]) => {
+      .then(([compsData, jobsData, companyCounts, discoveryData]) => {
         if (!active) return;
         const rawJobs = jobsData.items;
         setTotalJobs(jobsData.total);
+        setDiscovery(discoveryData);
         const rawComps = Array.isArray(compsData) ? compsData : [];
 
-        // 1. Process companies from database records
-        const mappedComps = rawComps.map((c) => ({ ...mapCompanyRecord(c, rawJobs),
-          openJobsCount: companyCounts ? companyCounts[c.companyId] ?? 0 : null }));
+        const mappedComps = rawComps.map((c) => ({
+          ...mapCompanyRecord(c, rawJobs),
+          openJobsCount: companyCounts ? (companyCounts[c.companyId] ?? 0) : null
+        }));
         setLoadedCompaniesCache(mappedComps);
         setCompanies(mappedComps);
 
-        // 2. Link jobs to real companies and extract technical skills dynamically
         const enrichedJobs: PublicJob[] = rawJobs.map((j) => {
           const meta = resolveCompanyMeta(j.companyId, j.companyName, mappedComps);
-          const skills = j.skills && j.skills.length > 0
-            ? j.skills
-            : extractSkillsFromJob(j.requirementsText, j.description, j.title);
+          const skills =
+            j.skills && j.skills.length > 0
+              ? j.skills
+              : extractSkillsFromJob(j.requirementsText, j.description, j.title);
 
           return {
             ...j,
             companyName: meta.shortName || j.companyName,
             companyLogo: j.companyLogo || meta.logo,
-            skills,
+            skills
           };
         });
 
@@ -110,276 +185,270 @@ export const PublicHomePage: FC<Props> = ({ onLoginSuccess, session, candidate, 
   }, [loadAttempt]);
 
   function selectDemoAccount(role: "CANDIDATE" | "RECRUITER") {
-    const email =
-      role === "CANDIDATE" ? "candidate.demo@smart.local" : "recruiter.demo@smart.local";
+    const email = role === "CANDIDATE" ? "candidate.demo@smart.local" : "recruiter.demo@smart.local";
     setDemoAccount((current) => ({ email, revision: current.revision + 1 }));
     handleOpenAuth();
   }
 
   function handleOpenAuth(mode: "login" | "register" = "login") {
-    if (candidate) { candidate.onNavigate("cv"); return; }
+    if (candidate) {
+      candidate.onNavigate("cv");
+      return;
+    }
     navigate({ auth: mode });
   }
 
   function handleSelectJob(job: PublicJob) {
+    setRestoreFocusJobId(null);
     setSelectedJob(job);
-    navigate({ job: job.jobId });
+    const nextParams = new URLSearchParams(buildPreservedQuery(params));
+    if (requestedCompanyId) nextParams.set("company", requestedCompanyId);
+    const qs = nextParams.toString();
+    safeNavigate(`${routes.jobDetail(job.jobId)}${qs ? `?${qs}` : ""}`);
+    window.scrollTo({ top: 0, behavior: "instant" });
   }
 
   function handleApplyJob(job: PublicJob) {
-    setSelectedJob(null);
+    setSelectedJob(job);
     setApplicationMessage(null);
     if (session) {
       setApplicationJobId(job.jobId);
-      navigate({ job: null, auth: null });
+      const qs = buildPreservedQuery(params);
+      safeNavigate(`${routes.jobDetail(job.jobId)}${qs}`);
       return;
     }
     setApplyingJob(job);
     setPendingJobId(job.jobId);
-    navigate({ job: null, auth: "login" });
+    const qs = new URLSearchParams(buildPreservedQuery(params));
+    qs.set("auth", "login");
+    safeNavigate(`${routes.jobDetail(job.jobId)}?${qs.toString()}`);
   }
 
-  function openSearch(keyword = "", companyId = "", location = "") {
+  function openSearch(
+    keyword = "",
+    companyId = "",
+    locationQuery = "",
+    category?: JobDiscovery["categories"][number]
+  ) {
     setSelectedJob(null);
-    navigate({ view: "search", candidate: null, auth: null, q: keyword, company: companyId, job: null,
-      location, mode: null, level: null, sort: null, page: null });
+    const next = new URLSearchParams();
+    if (keyword) next.set("q", keyword);
+    if (companyId) next.set("company", companyId);
+    if (locationQuery) next.set("location", locationQuery);
+    if (category?.industryId) next.set("industry", category.industryId);
+    if (category?.specializationId) next.set("specialization", category.specializationId);
+    if (category?.name) next.set("categoryName", category.name);
+    const qs = next.toString();
+    safeNavigate(qs ? `${routes.jobs}?${qs}` : routes.jobs);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function openCompany(companyId: string) {
+    setSelectedJob(null);
+    safeNavigate(companyId ? routes.companyProfile(companyId) : routes.companies);
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }
+
+  function handleSelectTab(tab: ActiveNavTab) {
+    setSelectedJob(null);
+    if (tab === "home") safeNavigate(routes.home);
+    else if (tab === "search") safeNavigate(routes.jobs);
+    else if (tab === "companies") safeNavigate(routes.companies);
+    else safeNavigate(routes.aiShowcase);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function handleBackFromJob(fromJobId?: string) {
+    const cameFromSearch = activeTab === "search" && !companyPageOpen;
+    if (fromJobId && cameFromSearch) {
+      setRestoreFocusJobId(fromJobId);
+    } else {
+      setRestoreFocusJobId(null);
+    }
+
+    if (companyPageOpen && requestedCompanyId) {
+      safeNavigate(routes.companyProfile(requestedCompanyId));
+    } else if (cameFromSearch) {
+      const qs = buildPreservedQuery(params);
+      safeNavigate(`${routes.jobs}${qs}`);
+    } else {
+      safeNavigate(routes.home);
+    }
+    window.scrollTo({ top: 0, behavior: "instant" });
   }
 
   useEffect(() => {
     let active = true;
     setDetailError(false);
-    if (!requestedJobId) { setSelectedJob(null); return; }
+    if (!requestedJobId) {
+      setSelectedJob(null);
+      return;
+    }
     const cached = jobs.find((job) => job.jobId === requestedJobId);
-    if (cached) { setSelectedJob(cached); return; }
-    void apiRequest<PageResult<PublicJob>>(`/api/v2/public/jobs?page=0&size=1&jobId=${encodeURIComponent(requestedJobId)}`)
-      .then((result) => { if (active) { setSelectedJob(result.items[0] ?? null); setDetailError(!result.items.length); } })
-      .catch(() => { if (active) { setSelectedJob(null); setDetailError(true); } });
-    return () => { active = false; };
+    if (cached) {
+      setSelectedJob(cached);
+      return;
+    }
+    void apiRequest<PageResult<PublicJob>>(
+      `/api/v2/public/jobs?page=0&size=1&jobId=${encodeURIComponent(requestedJobId)}`
+    )
+      .then((result) => {
+        if (active) {
+          setSelectedJob(result.items[0] ?? null);
+          setDetailError(!result.items.length);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setSelectedJob(null);
+          setDetailError(true);
+        }
+      });
+    return () => {
+      active = false;
+    };
   }, [requestedJobId, jobs]);
 
+  const portalErrors = [
+    companiesError ? "Chưa tải được thông tin doanh nghiệp." : null,
+    discoveryError ? "Chưa tải được địa điểm và nhóm nghề đang tuyển." : null,
+    jobsError ? "Chưa thể tải danh sách việc làm." : null
+  ].filter((msg): msg is string => msg !== null);
+
   return (
-    <div className={`portal-page ${session ? "candidate-portal-page" : ""}`}>
-      {/* 1. 2-Tier Sticky Navbar */}
+    <div className="min-h-screen flex flex-col bg-canvas text-ink-900">
       <PublicNavbar
-        activeTab={accountOpen ? undefined : activeTab}
+        activeTab={accountOpen ? undefined : companyPageOpen ? "companies" : activeTab}
         candidate={candidate}
-        onSelectTab={(tab) => {
-          navigate({ view: tab, candidate: null, job: null, auth: null });
-          setSelectedJob(null);
-          window.scrollTo({ top: 0, behavior: "smooth" });
-        }}
+        onSelectTab={handleSelectTab}
         onOpenAuth={handleOpenAuth}
         onSearchSubmit={(query) => openSearch(query)}
       />
 
-      {/* 2. Main Content Views based on active tab */}
-      <main className="portal-main">
-        {applicationMessage && <p className="portal-data-message success-message" role="status">{applicationMessage}
-          <button type="button" onClick={() => candidate?.onNavigate("applications")}>Xem việc làm đã ứng tuyển</button>
-          <button type="button" aria-label="Đóng thông báo ứng tuyển" onClick={() => setApplicationMessage(null)}>×</button></p>}
+      <div className="flex-1">
+        {applicationMessage && (
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-4">
+            <div
+              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900"
+              role="status"
+            >
+              <span>{applicationMessage}</span>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => candidate?.onNavigate("applications")}
+                >
+                  Xem việc làm đã ứng tuyển
+                </Button>
+                <button
+                  type="button"
+                  aria-label="Đóng thông báo ứng tuyển"
+                  onClick={() => setApplicationMessage(null)}
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-emerald-800 hover:bg-emerald-100 cursor-pointer bg-transparent border-0"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {accountOpen ? (
-          <div className="portal-container portal-account-content candidate-portal-layout">
-            <div className="candidate-account-bar">
-              <button
-                type="button"
-                className="candidate-back-home-btn"
-                onClick={() => candidate?.onNavigate("jobs")}
-              >
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 space-y-5">
+            <div>
+              <Button type="button" variant="secondary" size="sm" onClick={() => candidate?.onNavigate("jobs")}>
                 <span aria-hidden="true">←</span> Quay lại trang chủ việc làm
-              </button>
+              </Button>
             </div>
             {children}
           </div>
-        ) : <>
-        {companiesError && <p className="portal-data-message" role="alert">Chưa tải được thông tin doanh nghiệp. <button type="button" onClick={() => setLoadAttempt((value) => value + 1)}>Thử lại</button></p>}
-        {detailError && <p className="portal-data-message" role="alert">Không mở được vị trí này hoặc tin đã ngừng tuyển. <button type="button" onClick={() => navigate({ job: null })}>Đóng thông báo</button></p>}
-        {jobsError && <p className="portal-data-message" role="alert">Chưa thể tải danh sách việc làm. <button type="button" onClick={() => setLoadAttempt((value) => value + 1)}>Thử lại</button></p>}
-        {loadingJobs && activeTab === "home" && <p className="portal-data-message" aria-live="polite">Đang cập nhật cơ hội việc làm…</p>}
-        {!loadingJobs && !jobsError && jobs.length === 0 && activeTab === "home" && <p className="portal-data-message" aria-live="polite">Hiện chưa có vị trí đang tuyển. Bạn có thể tạo hồ sơ để chuẩn bị cho cơ hội tiếp theo.</p>}
-        {activeTab === "home" && (
+        ) : (
           <>
-            {/* Hero Banner */}
-            <PortalHeroBanner
-              jobCount={totalJobs}
-              signedIn={!!session}
-              onExploreClick={() => openSearch()}
-              onSearch={(keyword, location) => openSearch(keyword, "", location)}
-              onUploadCv={() => handleOpenAuth("register")}
-            />
+            {portalErrors.length > 0 && (
+              <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-4 space-y-2">
+                {portalErrors.map((msg) => (
+                  <ErrorBanner
+                    key={msg}
+                    tone="error"
+                    message={msg}
+                    action={
+                      <Button type="button" size="sm" variant="secondary" onClick={() => setLoadAttempt((v) => v + 1)}>
+                        Thử lại
+                      </Button>
+                    }
+                  />
+                ))}
+              </div>
+            )}
 
-            <HotJobsVIP jobs={jobs} onSelectJob={handleSelectJob} onApplyJob={handleApplyJob} />
-            <PopularJobsGrid jobs={jobs.slice(4)} onSelectJob={handleSelectJob} onApplyJob={handleApplyJob} />
-
-            {/* Featured Employers Spotlight Row */}
-            <FeaturedEmployers
+            <PublicHomeViews
+              session={session}
+              activeTab={activeTab}
+              requestedJobId={requestedJobId}
+              detailError={detailError}
+              detailJob={detailJob}
+              companyPageOpen={companyPageOpen}
+              profileCompany={profileCompany}
+              loadingJobs={loadingJobs}
+              jobsError={jobsError}
+              jobs={jobs}
+              totalJobs={totalJobs}
+              discovery={discovery}
               companies={companies}
-              onSelectCompany={(companyId) => {
-                if (companyId) openSearch("", companyId);
-                else { setActiveTab("companies"); window.scrollTo({ top: 0, behavior: "smooth" }); }
-              }}
+              restoreFocusJobId={restoreFocusJobId}
+              onClearRestoreFocus={() => setRestoreFocusJobId(null)}
+              onBackFromJob={handleBackFromJob}
+              onApplyJob={handleApplyJob}
+              onSelectJob={handleSelectJob}
+              onOpenCompany={openCompany}
+              onOpenSearch={openSearch}
+              onOpenAuth={handleOpenAuth}
+              onOpenCvLibrary={() => candidate?.onNavigate("cv")}
             />
 
-            {/* Hot Industries Section with Circular Icons */}
-            <HotIndustries
-              onSelectCategory={(keyword) => openSearch(keyword)}
+            <PublicAuthModal
+              open={authOpen}
+              authMode={authMode}
+              demoAccount={demoAccount}
+              applyingJob={applyingJob}
+              onClose={closeAuth}
+              onSelectDemoAccount={selectDemoAccount}
+              onCancelApplyingJob={() => setApplyingJob(null)}
+              onLoginSuccess={onLoginSuccess}
             />
           </>
         )}
+      </div>
 
-        {activeTab === "search" && (
-          <JobSearchSplitView
-            key={`${params.get("q") ?? ""}|${params.get("company") ?? ""}`}
-            initialKeyword={params.get("q") ?? ""}
-            initialCompanyId={params.get("company") ?? ""}
-            selectedJobId={requestedJobId || undefined}
-            selectedJob={selectedJob}
-            session={session}
-            onSelectJob={handleSelectJob}
-            onApplyJob={handleApplyJob}
-            onRequireLogin={() => handleOpenAuth("login")}
-            onOpenCvLibrary={() => candidate?.onNavigate("cv")}
-          />
-        )}
-
-        {activeTab === "companies" && (
-          <CompanyDirectoryView
-            companies={companies}
-            onSelectCompany={(companyId) => openSearch("", companyId)}
-          />
-        )}
-
-        {activeTab === "ai_showcase" && (
-          <div className="portal-ai-view">
-            <AIMatchingShowcase />
-            <SystemOverview />
-          </div>
-        )}
-
-        {/* 3. Accessible Auth Section (Guarantees Playwright E2E & Vitest Compatibility) */}
-        {authOpen && <div className="modal-backdrop public-auth-backdrop" role="presentation">
-        <section ref={authRef} tabIndex={-1} role="dialog" aria-modal="true" id="auth-section" className="portal-auth-section public-auth-dialog" aria-labelledby="auth-title">
-          <button type="button" className="auth-close secondary-button" aria-label="Đóng đăng nhập" onClick={() => navigate({ auth: null })}>×</button>
-          <div className="portal-container auth-inner-grid">
-            <div className="auth-left-info">
-              <span className="auth-eyebrow">HỒ SƠ & CƠ HỘI NGHỀ NGHIỆP</span>
-              <h2 id="auth-title" className="auth-title-text">
-                Bước tiếp theo cho sự nghiệp của bạn
-              </h2>
-              <p className="auth-desc-text">
-                Đăng nhập để quản lý hồ sơ ứng viên, tải lên CV để hệ thống AI tự động trích xuất thông tin, hoặc quản lý quy trình tuyển dụng thông minh dành cho doanh nghiệp.
-              </p>
-
-              <details className="thesis-demo-panel">
-                <summary>Trải nghiệm bằng tài khoản demo</summary>
-                <div className="demo-panel-header">
-                  <span className="sparkle-icon">✨</span>
-                  <strong>Chọn tài khoản trình diễn</strong>
-                </div>
-                <p className="demo-panel-hint">
-                  Chọn tài khoản để điền email, sau đó nhập mật khẩu đã thiết lập khi tạo dữ liệu demo.
-                </p>
-                <div className="demo-panel-buttons">
-                  <button
-                    type="button"
-                    className="portal-demo-card-btn candidate"
-                    onClick={() => selectDemoAccount("CANDIDATE")}
-                  >
-                    <span>👤 Chọn tài khoản ứng viên</span>
-                    <small>candidate.demo@smart.local</small>
-                  </button>
-                  <button
-                    type="button"
-                    className="portal-demo-card-btn recruiter"
-                    onClick={() => selectDemoAccount("RECRUITER")}
-                  >
-                    <span>🏢 Chọn tài khoản recruiter</span>
-                    <small>recruiter.demo@smart.local</small>
-                  </button>
-                </div>
-              </details>
-            </div>
-
-            <div className="auth-right-form-card">
-              {applyingJob && <div className="pending-application" role="status">
-                <strong>Bạn đang ứng tuyển: {applyingJob.title}</strong>
-                <p>Đăng nhập tài khoản ứng viên để chọn CV và xác nhận gửi hồ sơ.</p>
-                <button type="button" className="secondary-button" onClick={() => {
-                  setApplyingJob(null); setPendingJobId(null);
-                }}>Hủy lựa chọn</button>
-              </div>}
-              <LoginPage key={`${demoAccount.revision}-${authMode}`} initialMode={authMode} initialEmail={demoAccount.email} onSuccess={onLoginSuccess} />
-            </div>
-          </div>
-        </section></div>}
-        </>}
-      </main>
-
-      {session && applicationJobId && <CandidateJobsPanel key={applicationJobId} session={session}
-        initialJobId={applicationJobId} dialogOnly onClose={() => setApplicationJobId(null)}
-        onApplied={(message) => { setApplicationJobId(null); setApplicationMessage(message); }} />}
-
-      {/* 5. Job Detail Drawer when selected */}
-      {selectedJob && activeTab !== "search" && (
-        <JobDetailDrawer
-          job={selectedJob}
+      {session && applicationJobId && (
+        <CandidateJobsPanel
+          key={applicationJobId}
           session={session}
-          onClose={() => { setSelectedJob(null); navigate({ job: null }); }}
-          onApply={() => handleApplyJob(selectedJob)}
-          onRequireLogin={() => handleOpenAuth("login")}
-          onOpenCvLibrary={() => candidate?.onNavigate("cv")}
+          initialJobId={applicationJobId}
+          dialogOnly
+          onClose={() => setApplicationJobId(null)}
+          onApplied={(message) => {
+            setApplicationJobId(null);
+            setApplicationMessage(message);
+          }}
         />
       )}
 
-      {/* 6. Professional Footer */}
-      <footer className="portal-footer-root">
-        <div className="portal-container footer-content-grid">
-          <div className="footer-col brand-col">
-            <h3 className="footer-logo">{BRAND_CONFIG.name || BRAND_CONFIG.defaultPortalLabel}</h3>
-            <p className="footer-address">
-              Hệ thống Tuyển dụng Thông minh với Công nghệ Bóc tách CV (OCR/NLP) và So khớp Giải trình được.
-            </p>
-            <p className="footer-meta">
-              Kết nối ứng viên và nhà tuyển dụng bằng thông tin rõ ràng.
-            </p>
-            <div className="footer-copyright">
-              © 2026 Smart Recruitment. Tất cả quyền được bảo lưu.
-            </div>
-          </div>
-
-          <div className="footer-col">
-            <h4>DÀNH CHO ỨNG VIÊN</h4>
-            <ul>
-              <li><button type="button" onClick={() => openSearch()}>Tìm việc làm IT</button></li>
-              <li><button type="button" onClick={() => navigate({ view: "companies", candidate: null, job: null })}>Danh sách doanh nghiệp</button></li>
-              <li><button type="button" onClick={() => handleOpenAuth()}>Tải lên CV ứng tuyển</button></li>
-              <li><button type="button" onClick={() => handleOpenAuth()}>Tạo hồ sơ chuyên nghiệp</button></li>
-            </ul>
-          </div>
-
-          <div className="footer-col">
-            <h4>DÀNH CHO NHÀ TUYỂN DỤNG</h4>
-            <ul>
-              <li><button type="button" onClick={() => handleOpenAuth()}>Đăng tin tuyển dụng</button></li>
-              <li><button type="button" onClick={() => handleOpenAuth()}>Quản lý ứng viên</button></li>
-              <li><button type="button" onClick={() => setActiveTab("companies")}>Hồ sơ doanh nghiệp</button></li>
-            </ul>
-          </div>
-
-          <div className="footer-col">
-            <h4>QUẢN LÝ TÀI KHOẢN</h4>
-            <ul>
-              {candidate ? <>
-                <li><button type="button" onClick={() => candidate.onNavigate("profile")}>Hồ sơ cá nhân</button></li>
-                <li><button type="button" onClick={() => candidate.onNavigate("security")}>Bảo mật tài khoản</button></li>
-              </> : <>
-                <li><button type="button" onClick={() => handleOpenAuth("register")}>Tạo tài khoản</button></li>
-                <li><button type="button" onClick={() => handleOpenAuth()}>Đăng nhập & khôi phục tài khoản</button></li>
-              </>}
-            </ul>
-          </div>
-        </div>
-      </footer>
+      <PublicFooter
+        candidate={candidate}
+        onOpenSearch={() => openSearch()}
+        onOpenCompanies={() => openCompany("")}
+        onOpenAuth={handleOpenAuth}
+      />
     </div>
   );
-};
+}
+
+/** Public portal homepage, job discovery, company profiles, and authentication modal shell. */
+export const PublicHomePage: FC<Props> = (props) => (
+  <EnsureRouter>
+    <PublicHomePageInner {...props} />
+  </EnsureRouter>
+);

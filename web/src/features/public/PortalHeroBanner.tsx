@@ -1,5 +1,5 @@
-import { JobsIcon, SparklesIcon, CvIcon, CheckCircleIcon } from "../../shared/components/Icon";
 import { useState } from "react";
+import { CheckCircleIcon, MapPinIcon, SearchIcon, SparklesIcon } from "../../shared/components/Icon";
 
 type PortalHeroBannerProps = {
   jobCount: number;
@@ -7,128 +7,123 @@ type PortalHeroBannerProps = {
   onUploadCv: () => void;
   onSearch?: (keyword: string, location?: string) => void;
   signedIn?: boolean;
+  locations: string[];
+  suggestedKeywords: string[];
 };
 
-export function PortalHeroBanner({ jobCount, onExploreClick, onUploadCv, onSearch, signedIn = false }: PortalHeroBannerProps) {
+export function PortalHeroBanner({
+  jobCount,
+  onExploreClick,
+  onUploadCv,
+  onSearch,
+  signedIn = false,
+  locations,
+  suggestedKeywords
+}: PortalHeroBannerProps) {
   const [keyword, setKeyword] = useState("");
   const [location, setLocation] = useState("");
 
-  const hotKeywords = ["Java", "React", "Python", "Golang", "Tester", "DevOps"];
+  function submitSearch(e: React.FormEvent) {
+    e.preventDefault();
+    if (onSearch) onSearch(keyword.trim(), location);
+    else onExploreClick();
+  }
 
   return (
-    <section className="portal-hero-banner-section job-first-hero">
-      <div className="portal-container">
-        {/* Main Hero Search Card */}
-        <div className="portal-hero-card modern-hero-card">
-          <div className="hero-banner-content">
-            <div className="hero-badge-pill">
-              <span className="hero-badge-dot" />
-              <span>VIỆC LÀM IT · CƠ HỘI NGHỀ NGHIỆP HÀNG ĐẦU</span>
-            </div>
-            <h1 className="hero-banner-title">
-              Tìm công việc IT<br />tiếp theo của bạn.
-            </h1>
-            <p className="hero-banner-desc">
-              Khám phá hàng trăm vị trí tuyển dụng công nghệ chất lượng cao, phân tích độ phù hợp CV bằng AI thông minh và giải trình minh bạch.
-            </p>
-
-            <form
-              className="hero-job-search-box"
-              aria-label="Tìm cơ hội nghề nghiệp"
-              onSubmit={(event) => {
-                event.preventDefault();
-                onSearch?.(keyword.trim(), location);
-              }}
-            >
-              <div className="search-box-input-group">
-                <span className="search-input-icon" aria-hidden="true">🔍</span>
-                <input
-                  aria-label="Vị trí hoặc kỹ năng"
-                  value={keyword}
-                  maxLength={200}
-                  onChange={(event) => setKeyword(event.target.value)}
-                  placeholder="Vị trí, kỹ năng (ví dụ: Java, React, DevOps) hoặc công ty..."
-                />
-              </div>
-
-              <div className="search-box-select-group">
-                <span className="search-select-icon" aria-hidden="true">📍</span>
-                <select
-                  aria-label="Địa điểm làm việc"
-                  value={location}
-                  onChange={(event) => setLocation(event.target.value)}
-                >
-                  <option value="">Tất cả địa điểm</option>
-                  <option value="Hà Nội">Hà Nội</option>
-                  <option value="Hồ Chí Minh">TP. Hồ Chí Minh</option>
-                  <option value="Đà Nẵng">Đà Nẵng</option>
-                </select>
-              </div>
-
-              <button type="submit" className="hero-search-submit-btn">
-                Tìm việc ngay
-              </button>
-            </form>
-
-            <div className="hero-popular-searches">
-              <span className="popular-label">Gợi ý từ khóa:</span>
-              {hotKeywords.map((skill) => (
-                <button
-                  type="button"
-                  key={skill}
-                  className="popular-skill-tag"
-                  onClick={() => onSearch?.(skill, location)}
-                >
-                  {skill}
-                </button>
-              ))}
-            </div>
-
-            <div className="hero-cta-row">
-              <span className="campaign-job-count">
-                <JobsIcon size={17} aria-hidden="true" />
-                {jobCount > 0 ? `${jobCount} vị trí đang tuyển` : "Tìm cơ hội dành cho bạn"}
-              </span>
-              <button type="button" className="hero-view-all" onClick={onExploreClick}>
-                Xem tất cả việc làm <span aria-hidden="true">→</span>
-              </button>
-            </div>
-          </div>
+    <section className="relative overflow-hidden border-b border-border-subtle bg-gradient-to-b from-brand-50/75 via-white to-canvas py-10 sm:py-14">
+      <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 text-center space-y-6">
+        <div className="inline-flex flex-wrap items-center justify-center gap-2 rounded-full border border-brand-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-brand-700 shadow-xs">
+          <SparklesIcon size={14} aria-hidden="true" />
+          <span>{jobCount} vị trí đang tuyển</span>
         </div>
 
-        {/* AI Matching Spotlight Feature Card */}
-        <div className="portal-ai-spotlight-card">
-          <div className="ai-spotlight-header">
-            <div className="ai-spotlight-badge">
-              <SparklesIcon size={16} aria-hidden="true" />
-              <span>SMART MATCH ENGINE</span>
-            </div>
-            <h2 className="ai-spotlight-title">Hiểu rõ sự phù hợp của bạn</h2>
-            <p className="ai-spotlight-subtitle">
-              Tải CV để phân tích kỹ năng và đối chiếu với yêu cầu tuyển dụng.
-            </p>
+        <div className="space-y-3">
+          <h1 className="text-3xl sm:text-4xl lg:text-[42px] font-extrabold tracking-tight text-ink-900 leading-[1.15] m-0">
+            Tìm việc làm chuẩn xác với{" "}
+            <span className="text-brand-600">phân tích CV bằng chứng AI</span>
+          </h1>
+          <p className="text-sm sm:text-base text-ink-600 max-w-2xl mx-auto m-0 leading-relaxed">
+            Khám phá cơ hội tuyển dụng minh bạch, tải CV PDF để đối chiếu kỹ năng trực tiếp với yêu cầu công việc trước khi ứng tuyển.
+          </p>
+        </div>
+
+        <form
+          role="form"
+          aria-label="Tìm cơ hội nghề nghiệp"
+          onSubmit={submitSearch}
+          className="mx-auto max-w-4xl rounded-2xl border border-border-subtle bg-white p-2 shadow-card-hover flex flex-col md:flex-row items-stretch gap-2 text-left"
+        >
+          <div className="flex flex-1 items-center gap-2.5 rounded-xl px-3.5 py-2 focus-within:bg-slate-50">
+            <SearchIcon size={18} className="text-ink-400 shrink-0" aria-hidden="true" />
+            <input
+              type="text"
+              aria-label="Vị trí hoặc kỹ năng"
+              placeholder="Chức danh, kỹ năng hoặc tên công ty…"
+              value={keyword}
+              maxLength={200}
+              onChange={(e) => setKeyword(e.target.value)}
+              className="w-full border-0 bg-transparent text-sm text-ink-900 placeholder:text-ink-400 focus:outline-none"
+            />
           </div>
 
-          <div className="ai-spotlight-features">
-            <div className="ai-feature-pill">
-              <CvIcon size={18} aria-hidden="true" />
-              <span>Bóc tách CV tự động (OCR & NLP)</span>
-            </div>
-            <div className="ai-feature-pill">
-              <SparklesIcon size={18} aria-hidden="true" />
-              <span>Đối soát IT Taxonomy chuẩn xác</span>
-            </div>
-            <div className="ai-feature-pill">
-              <CheckCircleIcon size={18} aria-hidden="true" />
-              <span>Giải trình minh chứng có căn cứ</span>
-            </div>
+          <div className="hidden md:block w-px bg-border-subtle my-1.5" aria-hidden="true" />
+
+          <div className="flex md:w-56 items-center gap-2 rounded-xl px-3.5 py-2 border-t md:border-t-0 border-border-subtle focus-within:bg-slate-50">
+            <MapPinIcon size={18} className="text-ink-400 shrink-0" aria-hidden="true" />
+            <select
+              aria-label="Địa điểm làm việc"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              className="w-full border-0 bg-transparent text-sm text-ink-800 focus:outline-none cursor-pointer"
+            >
+              <option value="">Tất cả địa điểm</option>
+              {locations.map((item) => (
+                <option key={item} value={item}>{item}</option>
+              ))}
+            </select>
           </div>
 
-          <div className="ai-spotlight-action">
-            <button type="button" className="ai-spotlight-btn" onClick={onUploadCv}>
-              {signedIn ? "Quản lý CV của tôi" : "Tạo hồ sơ của tôi"} <span aria-hidden="true">→</span>
-            </button>
+          <button
+            type="submit"
+            className="inline-flex h-11 items-center justify-center rounded-xl bg-brand-600 px-6 text-sm font-semibold text-white shadow-xs hover:bg-brand-700 transition-colors cursor-pointer shrink-0"
+          >
+            Tìm ngay
+          </button>
+        </form>
+
+        {suggestedKeywords.length > 0 && (
+          <div className="flex flex-wrap items-center justify-center gap-2 text-xs">
+            <span className="font-medium text-ink-500">Gợi ý tìm nhanh:</span>
+            {suggestedKeywords.map((term) => (
+              <button
+                key={term}
+                type="button"
+                onClick={() => (onSearch ? onSearch(term, location) : onExploreClick())}
+                className="rounded-full border border-border-subtle bg-white px-3 py-1 font-medium text-ink-700 hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700 transition-colors cursor-pointer"
+              >
+                {term}
+              </button>
+            ))}
           </div>
+        )}
+
+        <div className="flex flex-wrap items-center justify-center gap-4 pt-1 text-xs sm:text-sm text-ink-600">
+          <span className="inline-flex items-center gap-1.5">
+            <CheckCircleIcon size={16} className="text-brand-600" aria-hidden="true" />
+            <span>Kiểm tra độ khớp CV với JD trước khi nộp</span>
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <CheckCircleIcon size={16} className="text-brand-600" aria-hidden="true" />
+            <span>Trích dẫn minh chứng từng dòng</span>
+          </span>
+          <button
+            type="button"
+            onClick={onUploadCv}
+            className="inline-flex items-center gap-1 font-semibold text-brand-700 hover:text-brand-800 underline underline-offset-4 cursor-pointer bg-transparent border-0 p-0"
+          >
+            <span>{signedIn ? "Quản lý CV của tôi" : "Tạo hồ sơ của tôi"}</span>
+            <span aria-hidden="true">→</span>
+          </button>
         </div>
       </div>
     </section>

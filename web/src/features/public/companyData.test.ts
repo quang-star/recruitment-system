@@ -10,11 +10,11 @@ it.each([
   ["viettel-solutions", "VIETTEL SOLUTIONS", "viettel.png", "viettel"],
   ["vng-corporation", "VNG CORPORATION", "vng.png", "vng"],
   ["vpbank-digital", "VPBANK DIGITAL", "vpbank.svg", "vpbank"],
-])("resolves downloaded media consistently for %s", (slug, name, logo, cover) => {
-  expect(getCompanyLogo(slug)).toBe(`/logos/official/${logo}`);
-  expect(getCompanyLogo(undefined, ` ${name.toLowerCase()} `)).toBe(`/logos/official/${logo}`);
-  expect(getCompanyCover(slug)).toBe(`/companies/photos/${cover}.webp`);
-  expect(getCompanyCover(undefined, name)).toBe(getCompanyCover(slug));
+])("does not infer company media from the brand name %s", (slug, name) => {
+  expect(getCompanyLogo(slug, name)).toBe("/logos/smartrecruitment.svg");
+  expect(getCompanyCover(slug, name)).toBe("/companies/company-placeholder.svg");
+  expect(getCompanyLogo(slug, name, "/saved-logo.png")).toBe("/saved-logo.png");
+  expect(getCompanyCover(slug, name, "/saved-cover.webp")).toBe("/saved-cover.webp");
 });
 
 it("does not invent size, city, website, office image or a VIP affiliation", () => {
@@ -23,7 +23,7 @@ it("does not invent size, city, website, office image or a VIP affiliation", () 
   expect(company.size).toBe("Chưa công bố quy mô");
   expect(company.location).toBe("Chưa có thông tin địa điểm");
   expect(company.website).toBe("");
-  expect(company.coverImage).toBe("/companies/photos/workplace.webp");
+  expect(company.coverImage).toBe("/companies/company-placeholder.svg");
   expect(company.logo).toBe("/logos/smartrecruitment.svg");
 });
 
