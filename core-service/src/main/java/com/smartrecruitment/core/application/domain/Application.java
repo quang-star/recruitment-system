@@ -5,7 +5,15 @@ import java.time.OffsetDateTime;
 public record Application(Long id, Long candidateUserId, Long companyId, Long cvId, Long cvVersionId,
                           Long jobId, Long jobVersionId, String coverLetter,
                           ApplicationStatus status, ApplicationSource source,
-                          OffsetDateTime appliedAt, OffsetDateTime updatedAt, long version, boolean matchingSupported, boolean cvAccessGranted) {
+                          OffsetDateTime appliedAt, OffsetDateTime updatedAt, long version, boolean matchingSupported, boolean cvAccessGranted,
+                          String jobTitle, String companyName, String candidateName, String candidateHeadline,
+                          String candidateEmail, String candidatePhone) {
+    public Application(Long id, Long candidateUserId, Long companyId, Long cvId, Long cvVersionId,
+                       Long jobId, Long jobVersionId, String coverLetter, ApplicationStatus status, ApplicationSource source,
+                       OffsetDateTime appliedAt, OffsetDateTime updatedAt, long version, boolean matchingSupported, boolean cvAccessGranted) {
+        this(id, candidateUserId, companyId, cvId, cvVersionId, jobId, jobVersionId, coverLetter, status, source,
+                appliedAt, updatedAt, version, matchingSupported, cvAccessGranted, null, null, null, null, null, null);
+    }
     public Application(Long id, Long candidateUserId, Long companyId, Long cvId, Long cvVersionId,
                           Long jobId, Long jobVersionId, String coverLetter,
                           ApplicationStatus status, ApplicationSource source,

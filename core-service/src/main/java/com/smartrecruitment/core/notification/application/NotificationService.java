@@ -41,7 +41,17 @@ public class NotificationService {
     public void applicationSubmitted(Application application) {
         notifications.insertForActiveCompanyRecruiters(application.companyId(), "APPLICATION_SUBMITTED",
                 "Có hồ sơ ứng tuyển mới", "Một ứng viên vừa nộp hồ sơ vào tin tuyển dụng của công ty.",
-                "/", "application-submitted:" + application.id(), OffsetDateTime.now(clock));
+                recruiterApplicationLink(application), "application-submitted:" + application.id(), OffsetDateTime.now(clock));
+    }
+
+    public void applicationWithdrawn(Application application) {
+        notifications.insertForActiveCompanyRecruiters(application.companyId(), "APPLICATION_WITHDRAWN",
+                "Ứng viên đã rút hồ sơ", "Một hồ sơ ứng tuyển đã được rút; quyền xem CV đã kết thúc.",
+                recruiterApplicationLink(application), "application-withdrawn:" + application.id(), OffsetDateTime.now(clock));
+    }
+
+    private String recruiterApplicationLink(Application application) {
+        return "/recruiter/jobs/" + application.jobId() + "?application=" + application.id();
     }
 
     public void applicationStatusChanged(Application application) {
@@ -49,24 +59,27 @@ public class NotificationService {
             case SUBMITTED -> "Đã nộp hồ sơ";
             case UNDER_REVIEW -> "Đang xem xét";
             case SHORTLISTED -> "Được chọn vào vòng phỏng vấn";
+            case INTERVIEW -> "Đang phỏng vấn";
+            case OFFERED -> "Đã gửi đề nghị tuyển dụng";
+            case HIRED -> "Đã tuyển dụng";
             case REJECTED -> "Chưa phù hợp";
             case WITHDRAWN -> "Đã rút hồ sơ";
         };
         notifications.insert(application.candidateUserId(), "APPLICATION_STATUS_CHANGED",
                 "Trạng thái ứng tuyển đã thay đổi", "Hồ sơ của bạn hiện ở trạng thái: " + label + ".",
-                "/", "application-status:" + application.id() + ":" + application.version(),
+                "/candidate/applications?application=" + application.id(), "application-status:" + application.id() + ":" + application.version(),
                 OffsetDateTime.now(clock));
     }
 
     public void matchingCompleted(Long applicationId, Long matchingResultId, double score) {
         notifications.insertForApplicationParticipants(applicationId, "MATCHING_COMPLETED",
                 "Đã có kết quả đối sánh", "Mở hồ sơ ứng tuyển để xem kết quả khi quyền chia sẻ còn hiệu lực.",
-                "/", "matching-completed:" + matchingResultId, OffsetDateTime.now(clock));
+                "/candidate/applications?application=" + applicationId, "matching-completed:" + matchingResultId, OffsetDateTime.now(clock));
     }
 
     public void invitationAccepted(Long inviterUserId, Long invitationId, String email) {
         notifications.insert(inviterUserId, "COMPANY_INVITATION_ACCEPTED", "Lời mời công ty đã được chấp nhận",
-                email + " đã tham gia công ty.", "/", "company-invitation-accepted:" + invitationId,
+                email + " đã tham gia công ty.", "/recruiter/company", "company-invitation-accepted:" + invitationId,
                 OffsetDateTime.now(clock));
     }
 

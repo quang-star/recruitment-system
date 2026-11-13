@@ -46,7 +46,7 @@ class RecruitmentSearchTests {
                 .set(CV_VERSIONS.CONFIRMED_AT, OffsetDateTime.now(ZoneOffset.UTC))
                 .set(CV_VERSIONS.CREATED_BY_USER_ID, candidate).execute();
         var privacy = new com.smartrecruitment.core.cv.application.CvPrivacyService(new JooqCvPrivacyRepository(dsl),
-                new com.smartrecruitment.core.cv.infrastructure.persistence.JooqOutboxEventRepository(dsl, new tools.jackson.databind.ObjectMapper()));
+                new com.smartrecruitment.core.shared.infrastructure.persistence.JooqOutboxEventRepository(dsl, new tools.jackson.databind.ObjectMapper()));
         privacy.delete(candidate, first, 0);
         privacy.delete(candidate, second, 0);
         var versions = dsl.selectFrom(CV_VERSIONS).where(CV_VERSIONS.CREATED_BY_USER_ID.eq(candidate)).fetch();
@@ -114,7 +114,7 @@ class RecruitmentSearchTests {
         assertThat(applications.findCvSnapshotForRecruiter(owner, second.id())).isPresent();
         applications.withdraw(candidate, second.id(), "Changed plans", 0).orElseThrow();
         assertThat(applications.findCvSnapshotForRecruiter(owner, second.id())).isEmpty();
-        var outbox = new com.smartrecruitment.core.cv.infrastructure.persistence.JooqOutboxEventRepository(dsl,
+        var outbox = new com.smartrecruitment.core.shared.infrastructure.persistence.JooqOutboxEventRepository(dsl,
                 new tools.jackson.databind.ObjectMapper());
         var privacy = new com.smartrecruitment.core.cv.application.CvPrivacyService(new JooqCvPrivacyRepository(dsl), outbox);
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> privacy.delete(com.smartrecruitment.core.support.TestIds.next(), cv, 0))
@@ -130,7 +130,7 @@ class RecruitmentSearchTests {
                 com.smartrecruitment.core.cv.domain.CvProcessingStatus.CONFIRMED, null)).isFalse();
         assertThat(applications.findForCandidate(candidate, first.id())).isPresent();
         var queue = com.smartrecruitment.core.infrastructure.jooq.generated.tables.CvErasureQueue.CV_ERASURE_QUEUE;
-        var storage = org.mockito.Mockito.mock(com.smartrecruitment.core.cv.application.port.ObjectStorage.class);
+        var storage = org.mockito.Mockito.mock(com.smartrecruitment.core.shared.application.port.ObjectStorage.class);
         // Make this resource due regardless of a small JVM/PostgreSQL clock skew.
         dsl.update(queue).set(queue.NEXT_ATTEMPT_AT, OffsetDateTime.now(ZoneOffset.UTC).minusMinutes(1))
                 .where(queue.CV_VERSION_ID.eq(first.cvVersionId())).execute();
@@ -162,7 +162,7 @@ class RecruitmentSearchTests {
         var saved = repository.insert(Job.draft(company.id(), owner, first));
         assertThat(repository.findByIdForMember(saved.id(), owner).orElseThrow()
                 .activeVersion().externalAiConsent()).isEqualTo(consent);
-        var outbox = new com.smartrecruitment.core.cv.infrastructure.persistence.JooqOutboxEventRepository(
+        var outbox = new com.smartrecruitment.core.shared.infrastructure.persistence.JooqOutboxEventRepository(
                 dsl, new tools.jackson.databind.ObjectMapper());
         outbox.append(com.smartrecruitment.core.job.application.JobVersionSubmittedEvent.from(
                 saved, "private/snapshot", java.util.UUID.randomUUID(), OffsetDateTime.now()));
@@ -260,8 +260,74 @@ class RecruitmentSearchTests {
     }
 
     private static Company company(Long owner) {
-        return new JooqCompanyRepository(dsl).insertWithOwner(Company.create(owner, "Search Legal", "Search Company",
+        var company = new JooqCompanyRepository(dsl).insertWithOwner(Company.create(owner, "Search Legal", "Search Company",
                 "search-" + com.smartrecruitment.core.support.TestIds.next(), null, null, "VN", null, null), owner);
+        return com.smartrecruitment.core.support.TestCompanies.approve(dsl, company);
+    }
+
+    @Test
+    void applicationSummariesSearchSharedProfilesAndHidePrivateOrRevokedContacts() {
+        Long owner = com.smartrecruitment.core.support.TestIds.next();
+        Long candidate = com.smartrecruitment.core.support.TestIds.next();
+        var company = company(owner);
+        var job = job(new JooqJobRepository(dsl), company, owner, "Snapshot backend title", null, true);
+        var profiles = new com.smartrecruitment.core.candidate.infrastructure.persistence.JooqCandidateProfileRepository(dsl);
+        var profile = profiles.insert(com.smartrecruitment.core.candidate.domain.CandidateProfile.create(candidate,
+                "Ứng viên kiểm thử", "Backend engineer", null,
+                com.smartrecruitment.core.candidate.domain.ProfileVisibility.APPLICATION_ONLY,
+                "+84901234567", "synthetic@example.invalid", null, null, null, null, null));
+        var repository = new JooqApplicationRepository(dsl);
+        var application = repository.insert(candidate, job.id(), confirmedCv(candidate));
+        assertThat(application.jobTitle()).isEqualTo("Snapshot backend title");
+        assertThat(application.companyName()).isEqualTo(company.displayName());
+        assertThat(application.candidateEmail()).isEqualTo("synthetic@example.invalid");
+        var search = new ApplicationSearch(0, 10, "ung vien kiem thu", "newest", null);
+        assertThat(repository.searchForRecruiter(owner, job.id(), search).total()).isOne();
+        assertThat(repository.searchForRecruiter(owner, job.id(),
+                new ApplicationSearch(0, 10, "synthetic@example.invalid", "newest", null)).total()).isOne();
+        assertThat(repository.searchForRecruiter(0L, job.id(),
+                new ApplicationSearch(0, 10, "", "newest", null, application.id())).total()).isZero();
+        assertThat(repository.searchForCandidate(0L,
+                new ApplicationSearch(0, 10, "", "newest", null, application.id())).total()).isZero();
+        profiles.update(profile.update(profile.displayName(), profile.headline(), null,
+                com.smartrecruitment.core.candidate.domain.ProfileVisibility.PRIVATE), profile.version()).orElseThrow();
+        var hidden = repository.findForRecruiter(owner, application.id()).orElseThrow();
+        assertThat(hidden.candidateName()).isNull();
+        assertThat(hidden.candidateEmail()).isNull();
+        assertThat(hidden.candidatePhone()).isNull();
+        assertThat(repository.searchForRecruiter(owner, job.id(), search).total()).isZero();
+        var current = profiles.findByUserId(candidate).orElseThrow();
+        profiles.update(current.update(current.displayName(), current.headline(), null,
+                com.smartrecruitment.core.candidate.domain.ProfileVisibility.APPLICATION_ONLY), current.version()).orElseThrow();
+        repository.revokeCvAccess(candidate, application.id(), application.version());
+        assertThat(repository.findForRecruiter(owner, application.id()).orElseThrow().candidateEmail()).isNull();
+        assertThat(repository.searchForRecruiter(owner, job.id(), search).total()).isZero();
+    }
+
+    @Test
+    void extendedRecruitmentStagesPersistAndWithdrawalRevokesAccess() {
+        Long owner = com.smartrecruitment.core.support.TestIds.next();
+        Long candidate = com.smartrecruitment.core.support.TestIds.next();
+        var company = company(owner);
+        var job = job(new JooqJobRepository(dsl), company, owner, "Recruitment pipeline", null, true);
+        var repository = new JooqApplicationRepository(dsl);
+        var application = repository.insert(candidate, job.id(), confirmedCv(candidate));
+        var service = new com.smartrecruitment.core.application.application.ApplicationService(repository);
+        for (var status : new ApplicationStatus[]{ApplicationStatus.UNDER_REVIEW, ApplicationStatus.SHORTLISTED,
+                ApplicationStatus.INTERVIEW, ApplicationStatus.OFFERED, ApplicationStatus.HIRED}) {
+            application = service.updateStatus(owner, application.id(), status, null, application.version());
+            assertThat(application.status()).isEqualTo(status);
+        }
+        assertThat(repository.findHistoryForViewer(candidate, application.id())).hasSize(6);
+        var otherJob = job(new JooqJobRepository(dsl), company, owner, "Withdraw offer", null, true);
+        var other = repository.insert(candidate, otherJob.id(), confirmedCv(candidate));
+        for (var status : new ApplicationStatus[]{ApplicationStatus.UNDER_REVIEW, ApplicationStatus.SHORTLISTED,
+                ApplicationStatus.INTERVIEW, ApplicationStatus.OFFERED}) {
+            other = service.updateStatus(owner, other.id(), status, null, other.version());
+        }
+        var withdrawn = service.withdraw(candidate, other.id(), "Changed plans", other.version());
+        assertThat(withdrawn.cvAccessGranted()).isFalse();
+        assertThat(repository.findCvSnapshotForRecruiter(owner, other.id())).isEmpty();
     }
 
     private static Job job(JooqJobRepository repository, Company company, Long owner, String title,

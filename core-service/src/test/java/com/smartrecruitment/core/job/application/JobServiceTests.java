@@ -2,8 +2,8 @@ package com.smartrecruitment.core.job.application;
 
 import com.smartrecruitment.core.application.application.ApplicationSubmittedEvent;
 import com.smartrecruitment.core.cv.application.CvUploadedEvent;
-import com.smartrecruitment.core.cv.application.port.ObjectStorage;
-import com.smartrecruitment.core.cv.application.port.OutboxEventRepository;
+import com.smartrecruitment.core.shared.application.port.ObjectStorage;
+import com.smartrecruitment.core.shared.application.port.OutboxEventRepository;
 import com.smartrecruitment.core.job.application.port.JobRepository;
 import com.smartrecruitment.core.job.domain.Job;
 import com.smartrecruitment.core.job.domain.JobStatus;
@@ -25,6 +25,22 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class JobServiceTests {
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.EnumSource(value = com.smartrecruitment.core.recruiter.domain.CompanyStatus.class,
+            names = {"PENDING", "SUSPENDED", "CLOSED"})
+    void cannotPublishForAnUnapprovedCompany(com.smartrecruitment.core.recruiter.domain.CompanyStatus status) {
+        var jobs = new FakeJobs();
+        jobs.job = draft(com.smartrecruitment.core.support.TestIds.next());
+        var companies = org.mockito.Mockito.mock(CompanyRepository.class);
+        var company = new Company(jobs.job.companyId(), "Test Legal", "Test", "test", null, null, "VN", null, null,
+                null, null, status, com.smartrecruitment.core.recruiter.domain.CompanyVerificationStatus.UNVERIFIED,
+                jobs.job.createdByUserId(), 0);
+        org.mockito.Mockito.when(companies.canRecruit(company.id(), jobs.job.createdByUserId())).thenReturn(true);
+        org.mockito.Mockito.when(companies.findByIdForMember(company.id(), jobs.job.createdByUserId())).thenReturn(Optional.of(company));
+        assertThatThrownBy(() -> new JobService(jobs, companies).publish(jobs.job.createdByUserId(), jobs.job.id(), 0))
+                .isInstanceOf(JobStateException.class).hasMessageContaining("approved");
+        assertThat(jobs.job.status()).isEqualTo(JobStatus.DRAFT);
+    }
     @Test
     void outsideIndustrySkipsParsingAndCanPublishWithoutParsedJd() {
         var jobs = new FakeJobs();
@@ -157,7 +173,11 @@ class JobServiceTests {
 
     private static final class AllowCompany implements CompanyRepository {
         @Override public Company insertWithOwner(Company company, Long ownerUserId) { return company; }
-        @Override public Optional<Company> findByIdForMember(Long companyId, Long userId) { return Optional.empty(); }
+        @Override public Optional<Company> findByIdForMember(Long companyId, Long userId) {
+            return Optional.of(new Company(companyId, "Test Legal", "Test Company", "test-company", null, null, "VN",
+                    null, null, null, null, com.smartrecruitment.core.recruiter.domain.CompanyStatus.ACTIVE,
+                    com.smartrecruitment.core.recruiter.domain.CompanyVerificationStatus.UNVERIFIED, userId, 0));
+        }
         @Override public List<Company> findAllForMember(Long userId) { return List.of(); }
         @Override public boolean isActiveMember(Long companyId, Long userId) { return true; }
         @Override public boolean canManage(Long companyId, Long userId) { return true; }

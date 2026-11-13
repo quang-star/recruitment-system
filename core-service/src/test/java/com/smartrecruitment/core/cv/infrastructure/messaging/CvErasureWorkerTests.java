@@ -2,7 +2,7 @@ package com.smartrecruitment.core.cv.infrastructure.messaging;
 
 import com.smartrecruitment.core.cv.application.port.CvErasureRepository;
 import com.smartrecruitment.core.cv.application.port.CvErasureRepository.PendingErasure;
-import com.smartrecruitment.core.cv.application.port.ObjectStorage;
+import com.smartrecruitment.core.shared.application.port.ObjectStorage;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;

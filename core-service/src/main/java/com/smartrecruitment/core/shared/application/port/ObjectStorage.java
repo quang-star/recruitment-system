@@ -1,4 +1,4 @@
-package com.smartrecruitment.core.cv.application.port;
+package com.smartrecruitment.core.shared.application.port;
 
 import java.io.InputStream;
 

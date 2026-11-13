@@ -6,8 +6,10 @@ import com.smartrecruitment.core.application.domain.ApplicationSource;
 import com.smartrecruitment.core.application.domain.ApplicationStatus;
 import com.smartrecruitment.core.application.domain.ApplicationStatusChange;
 import com.smartrecruitment.core.cv.application.CvUploadedEvent;
-import com.smartrecruitment.core.cv.application.port.OutboxEventRepository;
+import com.smartrecruitment.core.shared.application.port.OutboxEventRepository;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -18,6 +20,32 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class ApplicationServiceTests {
+    @ParameterizedTest
+    @CsvSource({"SHORTLISTED,INTERVIEW", "INTERVIEW,OFFERED", "OFFERED,HIRED"})
+    void advancesRecruitmentToHire(ApplicationStatus from, ApplicationStatus to) {
+        var repository = new FakeApplications(application(from));
+        var service = new ApplicationService(repository);
+        var updated = service.updateStatus(1L, repository.application.id(), to, null, 0);
+        assertThat(updated.status()).isEqualTo(to);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"SHORTLISTED,HIRED", "INTERVIEW,HIRED", "OFFERED,INTERVIEW", "HIRED,REJECTED", "HIRED,UNDER_REVIEW"})
+    void rejectsSkippedBackwardAndTerminalTransitions(ApplicationStatus from, ApplicationStatus to) {
+        var repository = new FakeApplications(application(from));
+        var service = new ApplicationService(repository);
+        assertThatThrownBy(() -> service.updateStatus(1L, repository.application.id(), to, "Reason", 0))
+                .isInstanceOf(ApplicationStateException.class);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"INTERVIEW", "OFFERED"})
+    void candidateMayWithdrawDuringRecruitment(ApplicationStatus from) {
+        var repository = new FakeApplications(application(from));
+        assertThat(new ApplicationService(repository).withdraw(repository.application.candidateUserId(),
+                repository.application.id(), "No longer available", 0).status()).isEqualTo(ApplicationStatus.WITHDRAWN);
+    }
+
     @Test
     void outsideIndustryApplicationDoesNotRequestMatching() {
         var c = application(ApplicationStatus.SUBMITTED);
@@ -147,7 +175,12 @@ class ApplicationServiceTests {
         @Override public Optional<Application> findForCandidate(Long candidateUserId, Long applicationId) { return Optional.of(application); }
         @Override public List<Application> findAllForRecruiter(Long recruiterUserId, Long jobId) { return List.of(application); }
         @Override public Optional<Application> findForRecruiter(Long recruiterUserId, Long applicationId) { return Optional.of(application); }
-        @Override public Optional<Application> updateStatus(Long recruiterUserId, Long applicationId, ApplicationStatus status, String reason, long expectedVersion) { return Optional.of(application); }
+        @Override public Optional<Application> updateStatus(Long recruiterUserId, Long applicationId, ApplicationStatus status, String reason, long expectedVersion) {
+            return Optional.of(new Application(application.id(), application.candidateUserId(), application.companyId(),
+                    application.cvId(), application.cvVersionId(), application.jobId(), application.jobVersionId(),
+                    application.coverLetter(), status, application.source(), application.appliedAt(), application.updatedAt(),
+                    application.version() + 1));
+        }
         @Override public Optional<Application> withdraw(Long candidateUserId, Long applicationId, String reason, long expectedVersion) {
             OffsetDateTime now = application.updatedAt();
             return Optional.of(new Application(application.id(), application.candidateUserId(), application.companyId(),

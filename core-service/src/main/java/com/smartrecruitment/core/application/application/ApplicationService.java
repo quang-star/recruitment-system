@@ -4,7 +4,8 @@ import com.smartrecruitment.core.application.application.port.ApplicationReposit
 import com.smartrecruitment.core.application.domain.Application;
 import com.smartrecruitment.core.application.domain.ApplicationStatus;
 import com.smartrecruitment.core.application.domain.ApplicationStatusChange;
-import com.smartrecruitment.core.cv.application.port.OutboxEventRepository;
+import com.smartrecruitment.core.shared.application.PrivacyEvent;
+import com.smartrecruitment.core.shared.application.port.OutboxEventRepository;
 import com.smartrecruitment.core.notification.application.NotificationService;
 import com.smartrecruitment.core.shared.application.PageResult;
 
@@ -129,15 +130,18 @@ public class ApplicationService {
         Application current = getMine(candidateUserId, applicationId);
         if (current.status() != ApplicationStatus.SUBMITTED
                 && current.status() != ApplicationStatus.UNDER_REVIEW
-                && current.status() != ApplicationStatus.SHORTLISTED) {
-            throw new ApplicationStateException("Only a submitted, under-review or shortlisted application can be withdrawn");
+                && current.status() != ApplicationStatus.SHORTLISTED
+                && current.status() != ApplicationStatus.INTERVIEW
+                && current.status() != ApplicationStatus.OFFERED) {
+            throw new ApplicationStateException("Only an application in an active recruitment stage can be withdrawn");
         }
         if (reason == null || reason.isBlank()) {
             throw new ApplicationStateException("A reason is required to withdraw an application");
         }
         Application withdrawn = applications.withdraw(candidateUserId, applicationId, reason, expectedVersion)
                 .orElseThrow(ApplicationConflictException::new);
-        outbox.append(com.smartrecruitment.core.cv.application.PrivacyEvent.revoked(applicationId));
+        outbox.append(PrivacyEvent.revoked(applicationId));
+        if (notifications != null) notifications.applicationWithdrawn(withdrawn);
         return withdrawn;
     }
 
@@ -145,7 +149,7 @@ public class ApplicationService {
     public void revokeCvAccess(Long candidateUserId, Long applicationId, long expectedVersion) {
         getMine(candidateUserId, applicationId);
         if (!applications.revokeCvAccess(candidateUserId, applicationId, expectedVersion)) throw new ApplicationConflictException();
-        outbox.append(com.smartrecruitment.core.cv.application.PrivacyEvent.revoked(applicationId));
+        outbox.append(PrivacyEvent.revoked(applicationId));
     }
 
     @Transactional
@@ -164,8 +168,10 @@ public class ApplicationService {
         boolean allowed = switch (from) {
             case SUBMITTED -> to == ApplicationStatus.UNDER_REVIEW || to == ApplicationStatus.REJECTED;
             case UNDER_REVIEW -> to == ApplicationStatus.SHORTLISTED || to == ApplicationStatus.REJECTED;
-            case SHORTLISTED -> to == ApplicationStatus.REJECTED;
-            case REJECTED, WITHDRAWN -> false;
+            case SHORTLISTED -> to == ApplicationStatus.INTERVIEW || to == ApplicationStatus.REJECTED;
+            case INTERVIEW -> to == ApplicationStatus.OFFERED || to == ApplicationStatus.REJECTED;
+            case OFFERED -> to == ApplicationStatus.HIRED || to == ApplicationStatus.REJECTED;
+            case HIRED, REJECTED, WITHDRAWN -> false;
         };
         if (!allowed) throw new ApplicationStateException("Invalid application status transition");
         if ((to == ApplicationStatus.REJECTED || to == ApplicationStatus.WITHDRAWN)

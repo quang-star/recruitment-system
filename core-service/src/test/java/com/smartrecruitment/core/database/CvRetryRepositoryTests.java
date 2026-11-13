@@ -2,12 +2,12 @@ package com.smartrecruitment.core.database;
 
 import com.smartrecruitment.core.cv.application.CvService;
 import com.smartrecruitment.core.cv.application.CvUploadedEvent;
-import com.smartrecruitment.core.cv.application.port.ObjectStorage;
+import com.smartrecruitment.core.shared.application.port.ObjectStorage;
 import com.smartrecruitment.core.cv.domain.CandidateCv;
 import com.smartrecruitment.core.cv.domain.CvVersion;
 import com.smartrecruitment.core.cv.domain.CvProcessingStatus;
 import com.smartrecruitment.core.cv.infrastructure.persistence.JooqCandidateCvRepository;
-import com.smartrecruitment.core.cv.infrastructure.persistence.JooqOutboxEventRepository;
+import com.smartrecruitment.core.shared.infrastructure.persistence.JooqOutboxEventRepository;
 import org.flywaydb.core.Flyway;
 import org.jooq.DSLContext;
 import org.jooq.impl.DSL;

@@ -190,7 +190,7 @@ public class JooqCompanyRepository implements CompanyRepository {
                 .and(COMPANIES.VERSION.eq(expectedVersion))
                 .returning()
                 .fetchOptional()
-                .map(this::toDomain);
+                .map(JooqCompanyRepository::toDomain);
     }
 
     @Override
@@ -212,7 +212,7 @@ public class JooqCompanyRepository implements CompanyRepository {
     }
 
 
-    private Company toDomain(
+    static Company toDomain(
             com.smartrecruitment.core.infrastructure.jooq.generated.tables.records.CompaniesRecord record) {
         return new Company(record.getId(), record.getLegalName(), record.getDisplayName(), record.getSlug(),
                 record.getDescription(), record.getWebsiteUrl(), record.getCountryCode(),

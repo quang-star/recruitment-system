@@ -1,7 +1,7 @@
 package com.smartrecruitment.core.cv.infrastructure.messaging;
 
 import com.smartrecruitment.core.cv.application.port.CvErasureRepository;
-import com.smartrecruitment.core.cv.application.port.ObjectStorage;
+import com.smartrecruitment.core.shared.application.port.ObjectStorage;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;

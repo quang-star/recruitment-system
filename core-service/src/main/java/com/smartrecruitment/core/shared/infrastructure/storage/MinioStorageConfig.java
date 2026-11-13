@@ -1,4 +1,4 @@
-package com.smartrecruitment.core.cv.infrastructure.storage;
+package com.smartrecruitment.core.shared.infrastructure.storage;
 
 import io.minio.MinioClient;
 import org.springframework.beans.factory.annotation.Value;

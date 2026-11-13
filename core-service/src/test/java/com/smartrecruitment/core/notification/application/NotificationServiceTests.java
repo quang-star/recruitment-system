@@ -15,7 +15,7 @@ class NotificationServiceTests {
         service.matchingCompleted(application, result, 87.4);
         verify(repository).insertForApplicationParticipants(eq(application), eq("MATCHING_COMPLETED"),
                 eq("Đã có kết quả đối sánh"), eq("Mở hồ sơ ứng tuyển để xem kết quả khi quyền chia sẻ còn hiệu lực."),
-                eq("/"), eq("matching-completed:" + result), any());
+                eq("/candidate/applications?application=" + application), eq("matching-completed:" + result), any());
     }
 
     @Test
@@ -31,7 +31,11 @@ class NotificationServiceTests {
                 java.time.OffsetDateTime.now(), java.time.OffsetDateTime.now(), 0L);
         service.applicationSubmitted(application);
         verify(repository).insertForActiveCompanyRecruiters(eq(company), eq("APPLICATION_SUBMITTED"),
-                eq("Có hồ sơ ứng tuyển mới"), anyString(), eq("/"), eq("application-submitted:" + app), any());
+                eq("Có hồ sơ ứng tuyển mới"), anyString(), eq("/recruiter/jobs/" + application.jobId() + "?application=" + app), eq("application-submitted:" + app), any());
+        service.applicationWithdrawn(application);
+        verify(repository).insertForActiveCompanyRecruiters(eq(company), eq("APPLICATION_WITHDRAWN"),
+                anyString(), anyString(), eq("/recruiter/jobs/" + application.jobId() + "?application=" + app),
+                eq("application-withdrawn:" + app), any());
     }
 
     @Test
@@ -48,6 +52,6 @@ class NotificationServiceTests {
         service.applicationStatusChanged(application);
         verify(repository).insert(eq(candidate), eq("APPLICATION_STATUS_CHANGED"),
                 eq("Trạng thái ứng tuyển đã thay đổi"), contains("Được chọn vào vòng phỏng vấn"),
-                eq("/"), eq("application-status:" + app + ":1"), any());
+                eq("/candidate/applications?application=" + app), eq("application-status:" + app + ":1"), any());
     }
 }

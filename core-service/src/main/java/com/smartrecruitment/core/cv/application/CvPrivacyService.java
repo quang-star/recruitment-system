@@ -2,7 +2,8 @@ package com.smartrecruitment.core.cv.application;
 
 import com.smartrecruitment.core.application.application.ApplicationConflictException;
 import com.smartrecruitment.core.cv.application.port.CvPrivacyRepository;
-import com.smartrecruitment.core.cv.application.port.OutboxEventRepository;
+import com.smartrecruitment.core.shared.application.PrivacyEvent;
+import com.smartrecruitment.core.shared.application.port.OutboxEventRepository;
 import com.smartrecruitment.core.cv.domain.CvStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

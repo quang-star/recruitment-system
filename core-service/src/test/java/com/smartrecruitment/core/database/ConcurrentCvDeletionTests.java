@@ -9,7 +9,7 @@ import com.smartrecruitment.core.cv.domain.CvProcessingStatus;
 import com.smartrecruitment.core.cv.domain.CvVersion;
 import com.smartrecruitment.core.cv.infrastructure.persistence.JooqCandidateCvRepository;
 import com.smartrecruitment.core.cv.infrastructure.persistence.JooqCvPrivacyRepository;
-import com.smartrecruitment.core.cv.infrastructure.persistence.JooqOutboxEventRepository;
+import com.smartrecruitment.core.shared.infrastructure.persistence.JooqOutboxEventRepository;
 import com.smartrecruitment.core.job.domain.Job;
 import com.smartrecruitment.core.job.domain.JobVersion;
 import com.smartrecruitment.core.job.infrastructure.persistence.JooqJobRepository;
@@ -214,6 +214,7 @@ class ConcurrentCvDeletionTests {
         var company = new JooqCompanyRepository(dsl).insertWithOwner(Company.create(recruiter,
                 "Synthetic Legal", "Synthetic Company", "privacy-" + com.smartrecruitment.core.support.TestIds.next(),
                 null, null, "VN", null, null), recruiter);
+        com.smartrecruitment.core.support.TestCompanies.approve(dsl, company);
         var jobs = new JooqJobRepository(dsl);
         var version = new JobVersion(com.smartrecruitment.core.support.TestIds.next(), 1, "Synthetic Java job", "Build services", "Java",
                 null, null, "VN", null, null, null, 1, null, null, null, null, false, null, "a".repeat(64), recruiter);

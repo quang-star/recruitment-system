@@ -5,7 +5,7 @@ import com.smartrecruitment.core.application.domain.ApplicationCvSnapshot;
 import com.smartrecruitment.core.application.domain.Application;
 import com.smartrecruitment.core.application.domain.ApplicationStatus;
 import com.smartrecruitment.core.application.domain.ApplicationStatusChange;
-import com.smartrecruitment.core.cv.application.port.ObjectStorage;
+import com.smartrecruitment.core.shared.application.port.ObjectStorage;
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;

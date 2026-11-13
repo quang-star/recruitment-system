@@ -4,6 +4,7 @@ import com.smartrecruitment.core.shared.domain.ExternalAiConsent;
 import com.smartrecruitment.core.job.domain.JobCategorySnapshot;
 
 import com.smartrecruitment.core.job.application.JobSearch;
+import com.smartrecruitment.core.job.application.JobDiscovery;
 import com.smartrecruitment.core.job.application.port.JobRepository;
 import com.smartrecruitment.core.job.domain.EmploymentType;
 import com.smartrecruitment.core.job.domain.Job;
@@ -38,11 +39,45 @@ public class JooqJobRepository implements JobRepository {
     public JooqJobRepository(DSLContext dsl) { this.dsl = dsl; }
 
     @Override
+    public JobDiscovery publishedDiscovery() {
+        Condition visible = JOBS.STATUS.eq(JobStatus.PUBLISHED.name())
+                .and(COMPANIES.STATUS.eq("ACTIVE"))
+                .and(JOB_VERSIONS.APPLICATION_DEADLINE.isNull()
+                        .or(JOB_VERSIONS.APPLICATION_DEADLINE.gt(OffsetDateTime.now(ZoneOffset.UTC))));
+        var location = DSL.trim(JOB_VERSIONS.LOCATION_TEXT);
+        var locations = dsl.select(location).from(JOBS)
+                .join(COMPANIES).on(COMPANIES.ID.eq(JOBS.COMPANY_ID))
+                .join(JOB_VERSIONS).on(JOB_VERSIONS.ID.eq(JOBS.ACTIVE_VERSION_ID))
+                .where(visible).and(location.isNotNull()).and(location.ne(""))
+                .groupBy(location).orderBy(DSL.count().desc(), location.asc()).limit(100)
+                .fetch(location);
+
+        var hasSpecialization = JOB_VERSIONS.SPECIALIZATION_ID.isNotNull()
+                .and(DSL.trim(JOB_VERSIONS.SPECIALIZATION_NAME).ne(DSL.inline("")));
+        var specializationId = DSL.when(hasSpecialization, JOB_VERSIONS.SPECIALIZATION_ID)
+                .otherwise(DSL.inline((Long) null));
+        var name = DSL.when(hasSpecialization, JOB_VERSIONS.SPECIALIZATION_NAME)
+                .otherwise(JOB_VERSIONS.INDUSTRY_NAME);
+        // Snapshot labels can differ after a rename; counts and filters share the same identities.
+        var label = DSL.min(name);
+        var categories = dsl.select(JOB_VERSIONS.INDUSTRY_ID, specializationId, label, DSL.count())
+                .from(JOBS).join(JOB_VERSIONS).on(JOB_VERSIONS.ID.eq(JOBS.ACTIVE_VERSION_ID))
+                .join(COMPANIES).on(COMPANIES.ID.eq(JOBS.COMPANY_ID))
+                .where(visible).and(JOB_VERSIONS.INDUSTRY_ID.isNotNull())
+                .groupBy(JOB_VERSIONS.INDUSTRY_ID, specializationId)
+                .orderBy(DSL.count().desc(), label.asc(), JOB_VERSIONS.INDUSTRY_ID.asc(), specializationId.asc())
+                .limit(12).fetch(record -> new JobDiscovery.Category(record.value1(), record.value2(),
+                        record.value3(), record.value4()));
+        return new JobDiscovery(locations, categories);
+    }
+
+    @Override
     public Map<Long, Integer> publishedCountsByCompany() {
         return dsl.select(COMPANIES.ID, DSL.count()).from(JOBS)
                 .join(COMPANIES).on(COMPANIES.ID.eq(JOBS.COMPANY_ID))
                 .join(JOB_VERSIONS).on(JOB_VERSIONS.ID.eq(JOBS.ACTIVE_VERSION_ID))
                 .where(JOBS.STATUS.eq("PUBLISHED"))
+                .and(COMPANIES.STATUS.eq("ACTIVE"))
                 .and(JOB_VERSIONS.APPLICATION_DEADLINE.isNull()
                         .or(JOB_VERSIONS.APPLICATION_DEADLINE.gt(OffsetDateTime.now(ZoneOffset.UTC))))
                 .groupBy(COMPANIES.ID).fetchMap(COMPANIES.ID, DSL.count());
@@ -51,6 +86,7 @@ public class JooqJobRepository implements JobRepository {
     @Override
     public PageResult<Job> searchPublished(JobSearch search) {
         Condition visibility = JOBS.STATUS.eq(JobStatus.PUBLISHED.name())
+                .and(COMPANIES.STATUS.eq("ACTIVE"))
                 .and(JOB_VERSIONS.APPLICATION_DEADLINE.isNull()
                         .or(JOB_VERSIONS.APPLICATION_DEADLINE.gt(OffsetDateTime.now(ZoneOffset.UTC))));
         return search(search, visibility, JOBS.PUBLISHED_AT);
@@ -165,6 +201,7 @@ public class JooqJobRepository implements JobRepository {
                 .from(JOBS).join(COMPANIES).on(COMPANIES.ID.eq(JOBS.COMPANY_ID))
                 .join(JOB_VERSIONS).on(JOB_VERSIONS.ID.eq(JOBS.ACTIVE_VERSION_ID))
                 .where(JOBS.STATUS.eq(JobStatus.PUBLISHED.name()))
+                .and(COMPANIES.STATUS.eq("ACTIVE"))
                 .and(JOB_VERSIONS.APPLICATION_DEADLINE.isNull()
                         .or(JOB_VERSIONS.APPLICATION_DEADLINE.gt(OffsetDateTime.now(ZoneOffset.UTC))))
                 .orderBy(JOBS.PUBLISHED_AT.desc())
@@ -220,6 +257,8 @@ public class JooqJobRepository implements JobRepository {
                 .set(JOBS.PUBLISHED_AT, publishedAt)
                 .set(JOBS.CLOSED_AT, closedAt)
                 .where(JOBS.ID.eq(internalId)).and(JOBS.STATUS.eq(from.name()))
+                .and(to == JobStatus.PUBLISHED ? DSL.exists(dsl.selectOne().from(COMPANIES)
+                        .where(COMPANIES.ID.eq(JOBS.COMPANY_ID)).and(COMPANIES.STATUS.eq("ACTIVE"))) : DSL.trueCondition())
                 .and(JOBS.VERSION.eq(expectedVersion)).execute();
         if (update != 1) return Optional.empty();
         return findByIdForMember(jobId, userId);

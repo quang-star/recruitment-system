@@ -1,7 +1,7 @@
 package com.smartrecruitment.core.cv.application;
 
 import com.smartrecruitment.core.cv.application.port.CandidateCvRepository;
-import com.smartrecruitment.core.cv.application.port.ObjectStorage;
+import com.smartrecruitment.core.shared.application.port.ObjectStorage;
 import com.smartrecruitment.core.cv.domain.CandidateCv;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
