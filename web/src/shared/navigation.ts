@@ -1,6 +1,8 @@
 import { useSyncExternalStore } from "react";
 
-const navigationEvent = "smarthire:navigate";
+const navigationEvent = "app:navigate";
+const beforeNavigateEvent = "app:before-navigate";
+
 function subscribe(listener: () => void) {
   window.addEventListener("popstate", listener);
   window.addEventListener(navigationEvent, listener);
@@ -8,6 +10,11 @@ function subscribe(listener: () => void) {
     window.removeEventListener("popstate", listener);
     window.removeEventListener(navigationEvent, listener);
   };
+}
+
+/** Dispatches a cancelable pre-navigation check for unsaved-draft guards. */
+export function requestBeforeNavigate(): boolean {
+  return window.dispatchEvent(new Event(beforeNavigateEvent, { cancelable: true }));
 }
 
 /** Presentation state only; credential and session ownership stays in auth. */
@@ -20,7 +27,7 @@ export function useUrlParams() {
       else url.searchParams.delete(key);
     }
     if (url.href === window.location.href) return;
-    if (!window.dispatchEvent(new Event("smarthire:before-navigate", { cancelable: true }))) return;
+    if (!requestBeforeNavigate()) return;
     window.history[replace ? "replaceState" : "pushState"](null, "", url);
     window.dispatchEvent(new Event(navigationEvent));
   }

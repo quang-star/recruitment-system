@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { apiDownload } from "../api/client";
+import { Button, ErrorBanner } from "../ui";
 import { useModalFocus } from "./useModalFocus";
 
 export type CvPreviewModalProps = {
@@ -82,71 +83,80 @@ export function CvPreviewModal({
   const displaySrc = blobUrl ? (page ? `${blobUrl}#page=${page}` : blobUrl) : null;
 
   return (
-    <div className="modal-backdrop cv-preview-backdrop" role="presentation">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-3 sm:p-5"
+      role="presentation"
+    >
       <section
         ref={ref}
         tabIndex={-1}
-        className="modal-card cv-preview-modal-card"
         role="dialog"
         aria-modal="true"
         aria-labelledby="cv-preview-modal-title"
+        className="w-full max-w-5xl rounded-2xl border border-border-subtle bg-white shadow-dialog overflow-hidden outline-none flex flex-col max-h-[92vh]"
       >
-        <div className="cv-preview-header">
-          <div className="cv-preview-title-group">
-            <p className="eyebrow">XEM TRƯỚC TỆP CV</p>
-            <h2 id="cv-preview-modal-title">{title}</h2>
-            <small className="muted">{resolvedFilename}</small>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle px-5 py-4 bg-white">
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-brand-700 m-0">
+              XEM TRƯỚC TỆP CV
+            </p>
+            <h2 id="cv-preview-modal-title" className="text-lg font-bold text-ink-900 m-0 truncate">
+              {title}
+            </h2>
+            <small className="block text-xs text-ink-500 truncate">{resolvedFilename}</small>
           </div>
 
-          <div className="button-row cv-preview-actions">
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
             {blobUrl && (
               <>
                 <a
                   href={blobUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="secondary-button compact-btn"
+                  className="inline-flex h-8 items-center rounded-lg border border-border-strong bg-white px-3 text-xs font-semibold text-ink-800 hover:bg-slate-50 no-underline"
                 >
                   Mở tab mới ↗
                 </a>
                 <a
                   href={blobUrl}
                   download={resolvedFilename}
-                  className="secondary-button compact-btn"
+                  className="inline-flex h-8 items-center rounded-lg border border-border-strong bg-white px-3 text-xs font-semibold text-ink-800 hover:bg-slate-50 no-underline"
                 >
                   Tải về máy ↓
                 </a>
               </>
             )}
-            <button
+            <Button
               type="button"
-              className="secondary-button compact-btn close-modal-btn"
+              variant="secondary"
+              size="sm"
               data-modal-autofocus
               onClick={onClose}
               aria-label="Đóng cửa sổ xem trước"
             >
               ✕ Đóng
-            </button>
+            </Button>
           </div>
         </div>
 
-        <div className="cv-preview-content">
+        <div className="flex-1 overflow-auto bg-slate-50 p-4">
           {loading && (
-            <div className="cv-preview-loading" role="status">
-              <p>Đang tải tài liệu PDF…</p>
+            <div className="flex items-center justify-center py-16 text-sm text-ink-600" role="status">
+              <p className="m-0">Đang tải tài liệu PDF…</p>
             </div>
           )}
 
           {error && (
-            <div className="cv-preview-error" role="alert">
-              <p>{error}</p>
-              <button
-                type="button"
-                className="secondary-button"
-                onClick={() => setAttempt((v) => v + 1)}
-              >
-                Thử lại
-              </button>
+            <div className="max-w-lg mx-auto my-8">
+              <ErrorBanner
+                tone="error"
+                message={error}
+                action={
+                  <Button type="button" size="sm" variant="secondary" onClick={() => setAttempt((v) => v + 1)}>
+                    Thử lại
+                  </Button>
+                }
+              />
             </div>
           )}
 
@@ -154,7 +164,7 @@ export function CvPreviewModal({
             <iframe
               src={displaySrc}
               title={`Xem trước CV: ${resolvedFilename}`}
-              className="cv-preview-iframe"
+              className="w-full h-[72vh] rounded-xl border border-border-subtle bg-white"
             />
           )}
         </div>

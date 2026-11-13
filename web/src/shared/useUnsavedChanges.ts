@@ -14,11 +14,11 @@ export function useUnsavedChanges(dirty: boolean, onBlocked: () => void) {
       onBlocked();
     }
     window.addEventListener("beforeunload", unload);
-    window.addEventListener("smarthire:before-navigate", navigate);
+    window.addEventListener("app:before-navigate", navigate);
     window.addEventListener("popstate", back, true);
     return () => {
       window.removeEventListener("beforeunload", unload);
-      window.removeEventListener("smarthire:before-navigate", navigate);
+      window.removeEventListener("app:before-navigate", navigate);
       window.removeEventListener("popstate", back, true);
     };
   }, [dirty, onBlocked]);

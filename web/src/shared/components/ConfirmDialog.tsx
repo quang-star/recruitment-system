@@ -1,17 +1,29 @@
-import { useModalFocus } from "./useModalFocus";
+import { Button, Modal } from "../ui";
 
 export function ConfirmDialog({ open, title, description, confirmLabel, busy, onCancel, onConfirm }: {
   open: boolean; title: string; description: string; confirmLabel: string; busy: boolean;
   onCancel: () => void; onConfirm: () => void;
 }) {
-  const close = () => { if (!busy) onCancel(); };
-  const ref = useModalFocus<HTMLElement>(open, close);
-  if (!open) return null;
-  return <div className="modal-backdrop" role="presentation">
-    <section ref={ref} tabIndex={-1} className="modal-card" role="dialog" aria-modal="true" aria-labelledby="confirm-dialog-title">
-      <h2 id="confirm-dialog-title">{title}</h2><p>{description}</p>
-      <div className="button-row"><button type="button" data-modal-autofocus disabled={busy} onClick={close}>Hủy</button>
-        <button type="button" className="danger-button" disabled={busy} onClick={onConfirm}>{busy ? "Đang xử lý…" : confirmLabel}</button></div>
-    </section>
-  </div>;
+  return (
+    <Modal
+      open={open}
+      onClose={onCancel}
+      closeDisabled={busy}
+      title={title}
+      titleId="confirm-dialog-title"
+      size="sm"
+    >
+      <div className="pt-4 space-y-5">
+        <p className="text-sm text-ink-600 m-0 leading-relaxed">{description}</p>
+        <div className="flex items-center justify-end gap-2.5 pt-2">
+          <Button type="button" variant="secondary" data-modal-autofocus disabled={busy} onClick={onCancel}>
+            Hủy
+          </Button>
+          <Button type="button" variant="danger" disabled={busy} onClick={onConfirm}>
+            {busy ? "Đang xử lý…" : confirmLabel}
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
 }
