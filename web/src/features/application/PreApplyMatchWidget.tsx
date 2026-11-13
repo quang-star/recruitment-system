@@ -164,8 +164,8 @@ export const PreApplyMatchWidget: FC<Props> = ({
 
   if (job.matchingSupported === false) {
     return (
-      <section className="jd-section-block ai-feature-block non-it-notice">
-        <p className="muted">
+      <section className="rounded-2xl border border-border-subtle bg-slate-50 p-5">
+        <p className="text-sm text-ink-600 m-0">
           Vị trí này thuộc nhóm xem xét hồ sơ thủ công, không áp dụng chấm điểm AI tự động.
         </p>
       </section>
@@ -173,49 +173,72 @@ export const PreApplyMatchWidget: FC<Props> = ({
   }
 
   return (
-    <section className="jd-section-block ai-feature-block pre-apply-match-card" aria-labelledby="pre-match-title">
-      <div className="ai-block-header">
-        <SparklesIcon size={24} aria-hidden="true" />
+    <section
+      aria-labelledby="pre-match-title"
+      className="rounded-2xl border border-brand-200 bg-brand-50/45 p-5 sm:p-6 space-y-4"
+    >
+      <div className="flex items-start gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-600 text-white shadow-xs">
+          <SparklesIcon size={20} aria-hidden="true" />
+        </span>
         <div>
-          <h3 id="pre-match-title" className="ai-block-title">
+          <h3 id="pre-match-title" className="text-base sm:text-lg font-bold text-ink-900 m-0">
             Đánh giá độ phù hợp với CV trước khi nộp
           </h3>
-          <small>Đối chiếu kỹ năng, kinh nghiệm và nhận lời khuyên từ AI</small>
+          <p className="text-xs sm:text-sm text-ink-600 m-0 mt-0.5">
+            Đối chiếu kỹ năng, kinh nghiệm và nhận lời khuyên từ AI
+          </p>
         </div>
       </div>
 
-      {session && loadingCvs && <p className="muted" role="status">Đang tải danh sách CV…</p>}
-      {session && cvError && <p className="error-message" role="alert">{cvError} <button type="button" className="text-button" onClick={() => setCvLoadVersion((current) => current + 1)}>Thử tải lại CV</button></p>}
-      {error && <p className="error-message" role="alert">{error}</p>}
-      {session && !job.jobVersionId && <p className="muted" role="status">Chưa có phiên bản JD được xác nhận để đối chiếu.</p>}
+      {session && loadingCvs && <p className="text-sm text-ink-500 m-0" role="status">Đang tải danh sách CV…</p>}
+      {session && cvError && (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-sm text-rose-900 flex flex-wrap items-center justify-between gap-2" role="alert">
+          <span>{cvError}</span>
+          <button
+            type="button"
+            onClick={() => setCvLoadVersion((current) => current + 1)}
+            className="text-xs font-semibold text-rose-800 underline cursor-pointer bg-transparent border-0 p-0"
+          >
+            Thử tải lại CV
+          </button>
+        </div>
+      )}
+      {error && (
+        <p className="rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-sm text-rose-900 m-0" role="alert">
+          {error}
+        </p>
+      )}
+      {session && !job.jobVersionId && (
+        <p className="text-sm text-ink-500 m-0" role="status">Chưa có phiên bản JD được xác nhận để đối chiếu.</p>
+      )}
 
-      {/* Guest Mode: Not Logged In */}
       {!session && (
-        <div className="pre-match-guest-prompt">
-          <p className="ai-block-desc">
+        <div className="space-y-3 rounded-xl border border-border-subtle bg-white p-4">
+          <p className="text-sm text-ink-600 m-0 leading-relaxed">
             Đăng nhập và dùng CV của bạn để AI kiểm tra ngay mức độ phù hợp, chỉ ra kỹ năng đã có và kỹ năng còn thiếu trước khi ứng tuyển.
           </p>
           <button
             type="button"
-            className="secondary-button pre-match-cta-btn"
             onClick={onRequireLogin}
+            className="inline-flex h-10 items-center gap-2 rounded-xl border border-brand-200 bg-brand-50 px-4 text-sm font-semibold text-brand-700 hover:bg-brand-100 cursor-pointer"
           >
-            <SparklesIcon size={16} aria-hidden="true" /> Đăng nhập để kiểm tra độ phù hợp
+            <SparklesIcon size={16} aria-hidden="true" />
+            <span>Đăng nhập để kiểm tra độ phù hợp</span>
           </button>
         </div>
       )}
 
-      {/* Candidate Mode: Logged in but has no confirmed CV */}
       {session && !loadingCvs && !cvError && cvs.length === 0 && (
-        <div className="pre-match-no-cv-prompt">
-          <p className="ai-block-desc">
+        <div className="space-y-3 rounded-xl border border-border-subtle bg-white p-4">
+          <p className="text-sm text-ink-600 m-0 leading-relaxed">
             Bạn chưa có CV nào ở trạng thái <strong>Đã xác nhận</strong>. Hãy tải lên và xác nhận CV để AI có thể đánh giá mức độ phù hợp với vị trí này.
           </p>
           {onOpenCvLibrary && (
             <button
               type="button"
-              className="secondary-button pre-match-cta-btn"
               onClick={onOpenCvLibrary}
+              className="inline-flex h-9 items-center rounded-xl border border-border-strong bg-white px-3.5 text-xs font-semibold text-ink-800 hover:bg-slate-50 cursor-pointer"
             >
               Quản lý CV của tôi
             </button>
@@ -223,16 +246,14 @@ export const PreApplyMatchWidget: FC<Props> = ({
         </div>
       )}
 
-      {/* Candidate Mode: Has confirmed CVs */}
       {session && cvs.length > 0 && (
-        <div className="pre-match-active-panel">
-          <div className="pre-match-cv-selector-row">
-            <label htmlFor="pre-match-cv-select" className="pre-match-label">
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 rounded-xl border border-border-subtle bg-white p-3">
+            <label htmlFor="pre-match-cv-select" className="text-xs font-semibold text-ink-700 shrink-0">
               Chọn CV đối chiếu:
             </label>
             <select
               id="pre-match-cv-select"
-              className="pre-match-select"
               value={selectedCvId}
               onChange={(e) => {
                 setSelectedCvId(e.target.value);
@@ -241,6 +262,7 @@ export const PreApplyMatchWidget: FC<Props> = ({
                 setShowFullBreakdown(false);
               }}
               disabled={evaluating}
+              className="h-9 flex-1 min-w-0 rounded-lg border border-border-strong bg-white px-3 text-sm text-ink-900 focus:border-brand-600 focus:outline-none"
             >
               {cvs.map((cv) => (
                 <option key={cv.cvId} value={cv.cvId}>
@@ -249,67 +271,75 @@ export const PreApplyMatchWidget: FC<Props> = ({
               ))}
             </select>
 
-            <button
-              type="button"
-              className="secondary-button compact-btn pre-match-preview-cv-btn"
-              onClick={() => {
-                const target = cvs.find((c) => c.cvId === selectedCvId);
-                if (target) setPreviewingCv(target);
-              }}
-              disabled={evaluating || loadingCvs || !selectedCvId}
-              title="Xem trước tệp PDF CV này"
-            >
-              👁 Xem CV
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  const target = cvs.find((c) => c.cvId === selectedCvId);
+                  if (target) setPreviewingCv(target);
+                }}
+                disabled={evaluating || loadingCvs || !selectedCvId}
+                title="Xem trước tệp PDF CV này"
+                className="inline-flex h-9 items-center rounded-lg border border-border-strong bg-white px-3 text-xs font-semibold text-ink-800 hover:bg-slate-50 disabled:opacity-50 cursor-pointer"
+              >
+                👁 Xem CV
+              </button>
 
-            <button
-              type="button"
-              className="primary-button pre-match-run-btn"
-              onClick={handleCheckMatch}
-              disabled={evaluating || loadingCvs || !selectedCvId || !job.jobVersionId}
-            >
-              {evaluating ? "AI đang đối chiếu…" : "⚡ Kiểm tra ngay"}
-            </button>
+              <button
+                type="button"
+                onClick={handleCheckMatch}
+                disabled={evaluating || loadingCvs || !selectedCvId || !job.jobVersionId}
+                className="inline-flex h-9 items-center rounded-lg bg-brand-600 px-3.5 text-xs font-semibold text-white hover:bg-brand-700 disabled:opacity-50 cursor-pointer"
+              >
+                {evaluating ? "AI đang đối chiếu…" : "⚡ Kiểm tra ngay"}
+              </button>
+            </div>
           </div>
 
-          {/* Results Display */}
           {previewResult && (
-            <div className="pre-match-result-card" role="region" aria-label="Kết quả đối chiếu">
-              <div className="pre-match-score-row">
-                <div className="pre-match-rating">
-                  <span className="pre-match-rating-heading">Mức độ phù hợp với vị trí</span>
+            <div className="rounded-2xl border border-border-subtle bg-white p-5 shadow-card space-y-4" role="region" aria-label="Kết quả đối chiếu">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border-subtle">
+                <div className="rounded-xl border border-brand-200 bg-brand-50/70 px-4 py-3 shrink-0">
+                  <span className="block text-[11px] font-bold uppercase tracking-wider text-brand-800 mb-1">
+                    Mức độ phù hợp với vị trí
+                  </span>
                   <MatchRating match={previewResult} />
-                  {previewResult.status === "DEGRADED" && <small className="match-rating-quality">Cần kiểm tra thêm</small>}
+                  {previewResult.status === "DEGRADED" && (
+                    <small className="block text-xs font-medium text-amber-800 mt-1">Cần kiểm tra thêm</small>
+                  )}
                 </div>
-                <div className="pre-match-meta">
-                  <div className="pre-match-badge-wrap">
-                    <small className="muted">
-                      Khớp {previewResult.summary.matchedRequiredSkills}/
-                      {previewResult.summary.totalRequiredSkills} kỹ năng cốt lõi
-                    </small>
-                  </div>
-                  <h4 className="pre-match-headline">{previewResult.status === "INSUFFICIENT_DATA" ? "Chưa đủ dữ liệu để đánh giá độ phù hợp." : previewResult.summary.headline}</h4>
+                <div className="flex-1 min-w-0 space-y-1">
+                  <small className="block text-xs font-semibold text-ink-500 tabular-nums-kpi">
+                    Khớp {previewResult.summary.matchedRequiredSkills}/{previewResult.summary.totalRequiredSkills} kỹ năng cốt lõi
+                  </small>
+                  <h4 className="text-base font-bold text-ink-900 m-0 leading-snug">
+                    {previewResult.status === "INSUFFICIENT_DATA" ? "Chưa đủ dữ liệu để đánh giá độ phù hợp." : previewResult.summary.headline}
+                  </h4>
                 </div>
               </div>
 
-              <p className="muted match-score-disclaimer">Mức độ phù hợp trên thang 1–5 sao chỉ hỗ trợ đối chiếu CV với vị trí, không phải xác suất trúng tuyển.</p>
+              <p className="text-xs text-ink-500 m-0">
+                Mức độ phù hợp trên thang 1–5 sao chỉ hỗ trợ đối chiếu CV với vị trí, không phải xác suất trúng tuyển.
+              </p>
 
-              {/* Actionable Advice Card */}
-              <div className="pre-match-advice-box">
-                <SparklesIcon size={18} aria-hidden="true" />
-                <p>{previewResult.status === "INSUFFICIENT_DATA" ? "Kiểm tra thông tin CV và yêu cầu công việc trước khi đối chiếu lại." : previewResult.summary.advice}</p>
+              <div className="flex items-start gap-2.5 rounded-xl border border-border-subtle bg-slate-50 p-3.5 text-sm text-ink-700">
+                <SparklesIcon size={18} className="text-brand-600 shrink-0 mt-0.5" aria-hidden="true" />
+                <p className="m-0 leading-relaxed">
+                  {previewResult.status === "INSUFFICIENT_DATA"
+                    ? "Kiểm tra thông tin CV và yêu cầu công việc trước khi đối chiếu lại."
+                    : previewResult.summary.advice}
+                </p>
               </div>
 
-              {/* Skills breakdown chips */}
-              <div className="pre-match-skills-breakdown">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {previewResult.summary.supportedSkills.length > 0 && (
-                  <div className="pre-match-chip-group">
-                    <span className="chip-group-label supported-label">
+                  <div className="space-y-2">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700">
                       <CheckCircleIcon size={14} aria-hidden="true" /> Kỹ năng bạn đã có:
                     </span>
-                    <div className="pre-match-chips">
+                    <div className="flex flex-wrap gap-1.5">
                       {previewResult.summary.supportedSkills.map((skill) => (
-                        <span key={skill} className="pre-match-chip chip-supported">
+                        <span key={skill} className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800">
                           {skill}
                         </span>
                       ))}
@@ -318,13 +348,13 @@ export const PreApplyMatchWidget: FC<Props> = ({
                 )}
 
                 {previewResult.summary.missingSkills.length > 0 && (
-                  <div className="pre-match-chip-group">
-                    <span className="chip-group-label missing-label">
-                      ⚠️ Kỹ năng nên bổ sung:
+                  <div className="space-y-2">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-800">
+                      Kỹ năng nên bổ sung:
                     </span>
-                    <div className="pre-match-chips">
+                    <div className="flex flex-wrap gap-1.5">
                       {previewResult.summary.missingSkills.map((skill) => (
-                        <span key={skill} className="pre-match-chip chip-missing">
+                        <span key={skill} className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-900">
                           {skill}
                         </span>
                       ))}
@@ -333,29 +363,25 @@ export const PreApplyMatchWidget: FC<Props> = ({
                 )}
               </div>
 
-              {/* Bottom Actions */}
-              <div className="pre-match-actions-row">
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-border-subtle">
                 <button
                   type="button"
-                  className="jd-big-apply-btn pre-match-apply-btn"
                   onClick={() => onApplyJob(job)}
+                  className="inline-flex h-10 items-center rounded-xl bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700 cursor-pointer"
                 >
                   Ứng tuyển vị trí này với CV đã chọn
                 </button>
                 <button
                   type="button"
-                  className="text-button pre-match-details-toggle"
                   onClick={() => setShowFullBreakdown(!showFullBreakdown)}
+                  className="text-xs font-semibold text-brand-700 hover:text-brand-800 cursor-pointer bg-transparent border-0 p-0"
                 >
-                  {showFullBreakdown
-                    ? "Thu gọn chi tiết đối chiếu ▲"
-                    : "Xem chi tiết đối chiếu đầy đủ ▼"}
+                  {showFullBreakdown ? "Thu gọn chi tiết đối chiếu ▲" : "Xem chi tiết đối chiếu đầy đủ ▼"}
                 </button>
               </div>
 
-              {/* Full breakdown if user wants to see all components and evidence */}
               {showFullBreakdown && (
-                <div className="pre-match-full-breakdown-wrap">
+                <div className="pt-2">
                   <MatchBreakdown match={previewResult} />
                 </div>
               )}

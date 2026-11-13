@@ -1,18 +1,53 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 
-import { CandidateProfilePage } from "./features/candidate/CandidateProfilePage";
-import { ResetPasswordPage } from "./features/auth/ResetPasswordPage";
-import { VerifyEmailPage } from "./features/auth/VerifyEmailPage";
-import { apiRequest } from "./shared/api/client";
-import { RecruiterWorkspace } from "./features/recruiter/RecruiterWorkspace";
-import { AdminWorkspace } from "./features/admin/AdminWorkspace";
-import { AcceptCompanyInvitationPage } from "./features/recruiter/AcceptCompanyInvitationPage";
-import { clearSession, loadSession, updateSession, sessionGeneration, subscribeSession, AuthSession } from "./shared/auth/session";
 import { PublicHomePage } from "./features/public/PublicHomePage";
+import { apiRequest } from "./shared/api/client";
+import {
+  AuthSession,
+  clearSession,
+  loadSession,
+  sessionGeneration,
+  subscribeSession,
+  updateSession
+} from "./shared/auth/session";
+import { EnsureRouter, routes } from "./shared/router";
+import { Button, ErrorBanner } from "./shared/ui";
+
+const CandidateProfilePage = lazy(() =>
+  import("./features/candidate/CandidateProfilePage").then((m) => ({ default: m.CandidateProfilePage }))
+);
+const RecruiterWorkspace = lazy(() =>
+  import("./features/recruiter/RecruiterWorkspace").then((m) => ({ default: m.RecruiterWorkspace }))
+);
+const AdminWorkspace = lazy(() =>
+  import("./features/admin/AdminWorkspace").then((m) => ({ default: m.AdminWorkspace }))
+);
+const AcceptCompanyInvitationPage = lazy(() =>
+  import("./features/recruiter/AcceptCompanyInvitationPage").then((m) => ({ default: m.AcceptCompanyInvitationPage }))
+);
+const VerifyEmailPage = lazy(() =>
+  import("./features/auth/VerifyEmailPage").then((m) => ({ default: m.VerifyEmailPage }))
+);
+const ResetPasswordPage = lazy(() =>
+  import("./features/auth/ResetPasswordPage").then((m) => ({ default: m.ResetPasswordPage }))
+);
 
 type CurrentUser = { userId: string; status: string; emailVerified: boolean; roles: string[]; };
 
-export function App() {
+function WorkspaceLoadingFallback({ message = "Đang tải không gian làm việc…" }: { message?: string }) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-canvas px-4">
+      <div className="w-full max-w-md rounded-2xl border border-border-subtle bg-surface p-6 text-center shadow-card">
+        <div className="mx-auto mb-3 h-7 w-7 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" />
+        <p className="text-sm font-medium text-ink-600 m-0">{message}</p>
+      </div>
+    </div>
+  );
+}
+
+function AppContent() {
+  const location = useLocation();
   const [session, setSession] = useState<AuthSession | null>(() => loadSession());
   const [sessionVerified, setSessionVerified] = useState(() => loadSession() === null);
   const [verificationError, setVerificationError] = useState<string | null>(null);
@@ -70,11 +105,19 @@ export function App() {
     }
   }, []);
 
-  if (window.location.pathname === "/verify-email") {
-    return <VerifyEmailPage />;
+  if (location.pathname === routes.verifyEmail) {
+    return (
+      <Suspense fallback={<WorkspaceLoadingFallback message="Đang tải trang xác minh email…" />}>
+        <VerifyEmailPage />
+      </Suspense>
+    );
   }
-  if (window.location.pathname === "/reset-password") {
-    return <ResetPasswordPage />;
+  if (location.pathname === routes.resetPassword) {
+    return (
+      <Suspense fallback={<WorkspaceLoadingFallback message="Đang tải trang đặt lại mật khẩu…" />}>
+        <ResetPasswordPage />
+      </Suspense>
+    );
   }
 
   const loginSucceeded = (authenticated: AuthSession) => {
@@ -83,28 +126,55 @@ export function App() {
   };
 
   return (
-    <main className={`shell ${session ? "authenticated-shell" : "public-portal-shell"}`}>
+    <main className={`min-h-screen bg-canvas ${session ? "authenticated-shell" : "public-portal-shell"}`}>
       {!sessionVerified ? (
-        <section className="auth-card loading-card">
-          {verificationError ? <>
-            <p className="error-message" role="alert">{verificationError}</p>
-            <button type="button" onClick={() => setVerificationAttempt((attempt) => attempt + 1)}>Thử xác minh lại</button>
-            <button type="button" className="secondary-button" onClick={() => { void logout(); }}>Đăng xuất</button>
-          </> : <p className="muted">Đang xác thực phiên đăng nhập…</p>}
-        </section>
+        <div className="min-h-screen flex items-center justify-center px-4">
+          <section className="w-full max-w-md rounded-2xl border border-border-subtle bg-surface p-6 shadow-card space-y-4">
+            {verificationError ? (
+              <>
+                <ErrorBanner tone="error" message={verificationError} />
+                <div className="flex flex-wrap gap-2.5 justify-end">
+                  <Button type="button" onClick={() => setVerificationAttempt((attempt) => attempt + 1)}>
+                    Thử xác minh lại
+                  </Button>
+                  <Button type="button" variant="secondary" onClick={() => { void logout(); }}>
+                    Đăng xuất
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center gap-3 justify-center py-2">
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" />
+                <p className="text-sm font-medium text-ink-600 m-0">Đang xác thực phiên đăng nhập…</p>
+              </div>
+            )}
+          </section>
+        </div>
       ) : session ? (
-        session.roles.includes("SYSTEM_ADMIN") ? <AdminWorkspace session={session} onLogout={logout} /> : session.roles.includes("RECRUITER") ? (
-          window.location.pathname === "/accept-invitation" ? (
-            <AcceptCompanyInvitationPage session={session} onLogout={logout} />
+        <Suspense fallback={<WorkspaceLoadingFallback />}>
+          {session.roles.includes("SYSTEM_ADMIN") ? (
+            <AdminWorkspace session={session} onLogout={logout} />
+          ) : session.roles.includes("RECRUITER") ? (
+            location.pathname === routes.acceptInvitation ? (
+              <AcceptCompanyInvitationPage session={session} onLogout={logout} />
+            ) : (
+              <RecruiterWorkspace session={session} onLogout={logout} />
+            )
           ) : (
-            <RecruiterWorkspace session={session} onLogout={logout} />
-          )
-        ) : (
-          <CandidateProfilePage session={session} onLogout={logout} />
-        )
+            <CandidateProfilePage session={session} onLogout={logout} />
+          )}
+        </Suspense>
       ) : (
         <PublicHomePage onLoginSuccess={loginSucceeded} />
       )}
     </main>
+  );
+}
+
+export function App() {
+  return (
+    <EnsureRouter>
+      <AppContent />
+    </EnsureRouter>
   );
 }

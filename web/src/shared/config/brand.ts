@@ -17,7 +17,7 @@ export const BRAND_CONFIG = {
   /**
    * Nhãn chức năng mặc định khi tên thương hiệu để trống "".
    */
-  defaultPortalLabel: "Cổng Tuyển dụng IT",
+  defaultPortalLabel: "",
   defaultCandidateLabel: "Không gian Ứng viên",
   defaultRecruiterLabel: "Quản trị Tuyển dụng",
 } as const;

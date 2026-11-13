@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 
 import { ApiClientError, apiRequest } from "../../shared/api/client";
 import { loadGoogleIdentity } from "../../shared/auth/google";
-import "./GoogleSignIn.css";
 
 type Props = {
   onCredential: (credential: string, nonce: string) => Promise<void>;
@@ -74,13 +73,29 @@ export function GoogleSignIn({ onCredential, disabled = false }: Props) {
   }, [attempt]);
 
   if (status === "disabled") return null;
-  return <div className="google-sign-in">
-    <p className="muted">Hoặc tiếp tục với Google</p>
-    <div ref={container} hidden={status !== "ready"} inert={disabled || busy} aria-disabled={disabled || busy} />
-    {status === "loading" && <p className="muted" role="status">Đang tải đăng nhập Google…</p>}
-    {busy && <p role="status">Đang xác minh tài khoản Google…</p>}
-    {error && <p className="error-message" role="alert">{error}</p>}
-    {status === "error" && <button type="button" className="text-button" disabled={disabled || busy}
-      onClick={() => setAttempt((value) => value + 1)}>Thử lại Google</button>}
-  </div>;
+  return (
+    <div className="mt-5 pt-4 border-t border-border-subtle flex flex-col items-center gap-3 text-center">
+      <p className="text-xs font-medium text-ink-500 m-0">Hoặc tiếp tục với Google</p>
+      <div
+        ref={container}
+        hidden={status !== "ready"}
+        inert={disabled || busy}
+        aria-disabled={disabled || busy}
+        className="flex justify-center max-w-full"
+      />
+      {status === "loading" && <p className="text-xs text-ink-500 m-0" role="status">Đang tải đăng nhập Google…</p>}
+      {busy && <p className="text-xs font-medium text-brand-700 m-0" role="status">Đang xác minh tài khoản Google…</p>}
+      {error && <p className="text-xs font-medium text-rose-700 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2 m-0 w-full" role="alert">{error}</p>}
+      {status === "error" && (
+        <button
+          type="button"
+          className="text-xs font-semibold text-brand-700 hover:text-brand-800 underline underline-offset-2 disabled:opacity-50 cursor-pointer"
+          disabled={disabled || busy}
+          onClick={() => setAttempt((value) => value + 1)}
+        >
+          Thử lại Google
+        </button>
+      )}
+    </div>
+  );
 }
