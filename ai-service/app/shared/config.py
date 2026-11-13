@@ -46,9 +46,16 @@ class Settings(BaseSettings):
     gemini_model: str = Field(default="gemini-3.8-flash", pattern=r"^gemini-[a-z0-9.-]+$", max_length=60)
     gemini_timeout_seconds: float = Field(default=25.0, ge=1, le=60)
     gemini_max_input_chars: int = Field(default=30000, ge=100, le=60000)
-    extraction_provider: Literal["rules", "gemini", "groq"] = "groq"
-    cv_extraction_provider: Literal["rules", "gemini", "groq"] | None = None
-    jd_extraction_provider: Literal["rules", "gemini", "groq"] | None = None
+    extraction_provider: Literal["rules", "gemini", "groq", "router9"] = "groq"
+    cv_extraction_provider: Literal["rules", "gemini", "groq", "router9"] | None = None
+    jd_extraction_provider: Literal["rules", "gemini", "groq", "router9"] | None = None
+    router9_enabled: bool = False
+    router9_api_key: SecretStr = Field(default=SecretStr(""), repr=False)
+    router9_base_url: str = "http://localhost:20128/v1"
+    router9_model: str = Field(default="", pattern=r"^(?:[A-Za-z0-9][A-Za-z0-9._/-]{0,119})?$")
+    router9_timeout_seconds: float = Field(default=25.0, ge=1, le=60)
+    router9_max_input_chars: int = Field(default=30000, ge=100, le=60000)
+    router9_max_output_tokens: int = Field(default=4096, ge=256, le=8192)
     groq_enabled: bool = False
     groq_api_key: SecretStr = Field(default=SecretStr(""), repr=False)
     groq_model: str = Field(default="qwen/qwen3.8-27b", pattern=r"^[A-Za-z0-9][A-Za-z0-9._/-]{0,119}$")

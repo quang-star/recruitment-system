@@ -13,9 +13,9 @@ from app.jd.parser import parse_jd
 from app.jd.repository import ParsedJdRevisionRecord, ParsedJdRevisionRepository
 from app.matching.algorithm import compute_match
 from app.shared.api import ApiContractError
-from app.shared.gemini import GeminiExtractor, _FIELDS, _contract
-from app.shared.groq import GroqExtractor
-from app.shared.skill_proposals import propose_skill
+from app.extraction.gemini import GeminiExtractor, _FIELDS, _contract
+from app.extraction.groq import GroqExtractor
+from app.extraction.skill_proposals import propose_skill
 from app.taxonomy.normalizer import normalize_skill
 
 

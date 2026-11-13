@@ -17,7 +17,7 @@ SINGLE = {"skill_catalog_history": "skill_history", "skill_source_occurrences": 
           "reprocessing_batches": "reprocessing_batch", "reprocessing_items": "reprocessing_item",
           "reprocessing_attempts": "reprocessing_attempt", "reprocessing_audit": "reprocessing_audit"}
 TECHNICAL = {"public_id", "event_id", "correlation_id", "causation_id", "lease_token"}
-JSON_TECHNICAL = {"eventId", "correlationId", "causationId", "evidenceId", "evidenceIds", "leaseToken"}
+JSON_TECHNICAL = {"eventId", "correlationId", "causationId", "evidenceId", "evidenceIds", "cvEvidenceIds", "jdEvidenceIds", "leaseToken"}
 UUID_PATTERN = re.compile(r"^[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$")
 
 
@@ -111,7 +111,7 @@ def convert(connection):
 
     def rewrite(value, field='', evidence=False):
         if isinstance(value, dict):
-            result = {('id' if key == 'publicId' else key): rewrite(item, key, evidence or key == 'evidence') for key, item in value.items()}
+            result = {('id' if key == 'publicId' else key): rewrite(item, key, evidence or key in ('evidence', 'evidence_refs', 'evidenceRefs', 'cvLocations', 'jdLocations')) for key, item in value.items()}
             if result.get('schemaVersion') in {'parsed-cv/1.0', 'parsed-jd/1.0', 'skill-taxonomy/1.0'}:
                 result['schemaVersion'] = result['schemaVersion'].replace('/1.0', '/2.0')
             if isinstance(result.get('$schema'), str):
@@ -196,9 +196,10 @@ def convert(connection):
     execute(connection, 'ALTER TABLE processing_tasks ADD CONSTRAINT uk_processing_task_resource UNIQUE(task_type,resource_id)')
     # JSON and key rewrites retain technical UUIDs and document text unchanged.
     for table, column in json_columns(connection):
+        is_evidence_col = column in ('evidence_refs', 'evidenceRefs')
         for locator, value in execute(connection, f'SELECT ctid::text,{quote(column)} FROM {quote(table)}').all():
             if value is not None:
-                execute(connection, f'UPDATE {quote(table)} SET {quote(column)}=CAST(:value AS json) WHERE ctid=CAST(:locator AS tid)', {'value': json.dumps(rewrite(value)), 'locator': locator})
+                execute(connection, f'UPDATE {quote(table)} SET {quote(column)}=CAST(:value AS json) WHERE ctid=CAST(:locator AS tid)', {'value': json.dumps(rewrite(value, evidence=is_evidence_col)), 'locator': locator})
     execute(connection, "UPDATE taxonomy_versions SET schema_version='skill-taxonomy/2.0'")
     for version, payload in execute(connection, 'SELECT semantic_version,payload FROM taxonomy_versions WHERE payload IS NOT NULL').all():
         execute(connection, 'UPDATE taxonomy_versions SET source_hash=:hash WHERE semantic_version=:version', {'version': version, 'hash': sha256(json.dumps(payload, sort_keys=True, ensure_ascii=False).encode()).hexdigest()})

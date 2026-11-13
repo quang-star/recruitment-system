@@ -16,8 +16,8 @@ from app.outbox import enqueue
 from app.shared.api import ApiContractError
 from app.shared.config import get_settings
 from app.shared.database import get_session
-from app.shared.evidence import inherit_review_evidence
-from app.shared.skill_proposals import skill_name_key
+from app.extraction.evidence import inherit_review_evidence
+from app.extraction.skill_proposals import skill_name_key
 from app.shared.security import AuthenticatedPrincipal, require_access_token
 from app.taxonomy.normalizer import normalize_skill
 from app.taxonomy.normalizer import use_taxonomy, taxonomy_version
@@ -124,10 +124,11 @@ async def update_parsed_cv(
         payload={
             "cvId": str(request_body.cvId), "cvVersionId": str(cv_version_id),
             "processingTaskId": str(task.id) if task else None, "sourceHash": revision.source_hash,
+            "processingGeneration": task.processing_generation if task else 0,
             "status": "PARSED", "failureCode": None,
         },
     )
-    enqueue(session, settings.kafka_cv_processing_updated_topic, str(cv_version_id), event)
+    enqueue(session, settings.kafka_cv_processing_updated_topic, str(request_body.cvId), event)
     session.commit()
     return ParsedCvResponse.from_revision(revision)
 

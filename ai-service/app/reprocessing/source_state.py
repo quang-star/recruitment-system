@@ -5,7 +5,7 @@ from urllib.parse import urlsplit
 from urllib.request import Request, build_opener
 
 from app.reprocessing.models import EligibilityRequest, EligibilityResponse
-from app.shared.source_extraction import _NoRedirect
+from app.extraction.source_extraction import _NoRedirect
 
 
 class ReprocessingFailure(RuntimeError):

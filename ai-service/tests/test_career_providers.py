@@ -58,7 +58,7 @@ def test_career_transport_reuses_timeout_usage_and_schema_with_its_own_prompt(
         return BytesIO(json.dumps(raw).encode())
 
     monkeypatch.setattr(
-        f"app.shared.{name}.build_opener",
+        f"app.extraction.{name}.build_opener",
         lambda *args: SimpleNamespace(open=open_request),
     )
     provider = career_provider(settings(name))

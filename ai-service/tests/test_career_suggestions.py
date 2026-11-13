@@ -8,7 +8,7 @@ from app.career.catalog_reader import CategoryEntry
 from app.career.models import CareerRequest
 from app.career.models import CareerSuggestion
 from app.career.service import CareerSuggestionService, draft_identity, validate_suggestion
-from app.shared.extraction_types import EXTERNAL_AI_POLICY_VERSION
+from app.extraction.contracts import EXTERNAL_AI_POLICY_VERSION
 
 
 def request(**changes):

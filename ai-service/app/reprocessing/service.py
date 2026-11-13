@@ -31,7 +31,7 @@ from app.shared.api import ApiContractError
 from app.shared.config import Settings
 from app.shared.privacy import erased, lock_resource
 from app.shared.processing_errors import ProcessingFailure, storage_failure
-from app.shared.source_extraction import _contract
+from app.extraction.source_extraction import _contract
 from app.task.persistence import ProcessingTaskRecord
 from app.taxonomy.catalog import TaxonomyVersionRecord
 from app.taxonomy.normalizer import build_taxonomy, use_taxonomy

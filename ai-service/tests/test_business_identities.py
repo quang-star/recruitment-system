@@ -79,7 +79,7 @@ def test_same_numeric_cv_and_jd_ids_have_independent_tasks_and_erasure():
     from app.jd import repository as jd_models  # noqa: F401
     from app.matching import repository as match_models  # noqa: F401
     from app.matching import shadow as shadow_models  # noqa: F401
-    from app.shared import extraction_usage as usage_models  # noqa: F401
+    from app.extraction import usage as usage_models  # noqa: F401
     from app.taxonomy import occurrences as occurrence_models  # noqa: F401
     engine = create_engine('sqlite://')
     Base.metadata.create_all(engine)

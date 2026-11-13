@@ -4,15 +4,17 @@ import logging
 import re
 from typing import Callable
 
-from app.shared.extraction_privacy import professional_source
-from app.shared.extraction_types import DocumentKind, ExtractionContext, ExtractionProvider
-from app.shared.extraction_usage import ExtractionUsageRepository
-from app.shared.gemini import GeminiExtractor
-from app.shared.groq import GroqExtractor
-from app.shared.source_extraction import SourceExtractor
+from app.extraction.redaction import professional_source
+from app.extraction.contracts import DocumentKind, ExtractionContext, ExtractionProvider
+from app.extraction.usage import ExtractionUsageRepository
+from app.extraction.gemini import GeminiExtractor
+from app.extraction.groq import GroqExtractor
+from app.extraction.router9 import Router9Extractor
+from app.extraction.source_extraction import SourceExtractor
 
 LOGGER = logging.getLogger(__name__)
 _PROVIDERS: dict[str, Callable[..., SourceExtractor]] = {
+    "router9": Router9Extractor,
     "groq": GroqExtractor,
     "gemini": lambda settings: GeminiExtractor(settings, allow_backup=False),
 }

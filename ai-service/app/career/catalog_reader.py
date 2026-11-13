@@ -9,8 +9,8 @@ from urllib.request import Request, build_opener
 
 from pydantic import BaseModel, Field, TypeAdapter
 
-from app.shared.source_extraction import _NoRedirect
-from app.shared.extraction_privacy import redact_contacts
+from app.extraction.source_extraction import _NoRedirect
+from app.extraction.redaction import redact_contacts
 
 
 class CategoryEntry(BaseModel):

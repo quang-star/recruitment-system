@@ -8,7 +8,7 @@ from app.career.service import CareerSuggestionService
 from app.shared.api import ApiContractError
 from app.shared.config import Settings, get_settings
 from app.shared.database import _session_factory
-from app.shared.extraction_usage import ExtractionUsageRepository
+from app.extraction.usage import ExtractionUsageRepository
 from app.shared.security import AuthenticatedPrincipal, require_access_token
 
 router = APIRouter(prefix="/api/v2/parsed-jds", tags=["career-suggestions"])

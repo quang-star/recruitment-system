@@ -3,7 +3,7 @@ import re
 import unicodedata
 from uuid import NAMESPACE_URL, uuid5
 
-from app.shared.evidence import _page_at
+from app.extraction.evidence import _page_at
 from app.taxonomy.normalizer import normalize_skill
 
 

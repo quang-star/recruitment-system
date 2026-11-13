@@ -4,9 +4,9 @@ import re
 from urllib.error import HTTPError
 from urllib.request import Request, build_opener
 
-from app.shared.source_extraction import SourceExtractor, _NoRedirect, _PROMPT, _response_schema
-from app.shared.source_extraction import _contract, _FIELDS  # noqa: F401 — compatibility for callers
-from app.shared.extraction_privacy import redact_contacts  # noqa: F401 — compatibility for callers
+from app.extraction.source_extraction import SourceExtractor, _NoRedirect, _PROMPT, _response_schema
+from app.extraction.source_extraction import _contract, _FIELDS  # noqa: F401 — compatibility for callers
+from app.extraction.redaction import redact_contacts  # noqa: F401 — compatibility for callers
 
 
 class GeminiExtractor(SourceExtractor):

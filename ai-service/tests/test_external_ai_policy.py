@@ -9,11 +9,11 @@ from sqlalchemy.orm import sessionmaker
 
 from app.jd.parser import parse_jd
 from app.shared.config import Settings
-from app.shared.extraction import get_extractor, get_provider
-from app.shared.extraction_privacy import professional_source
-from app.shared.extraction_types import EXTERNAL_AI_POLICY_VERSION, ExtractionContext
-from app.shared.extraction_usage import ExtractionDailyBudget, ExtractionUsage, ExtractionUsageRepository
-from app.shared.groq import GroqExtractor
+from app.extraction.policy import get_extractor, get_provider
+from app.extraction.redaction import professional_source
+from app.extraction.contracts import EXTERNAL_AI_POLICY_VERSION, ExtractionContext
+from app.extraction.usage import ExtractionDailyBudget, ExtractionUsage, ExtractionUsageRepository
+from app.extraction.groq import GroqExtractor
 
 
 VERSION = str(legacy_id('779494ac-c858-4570-a884-6e88423b8e2b'))

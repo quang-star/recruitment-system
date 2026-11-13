@@ -26,8 +26,8 @@ from app.taxonomy.normalizer import use_taxonomy
 from app.taxonomy.catalog import snapshot as taxonomy_snapshot
 from app.taxonomy.occurrences import record_cv_revision, record_jd_revision, require_live_jd
 from app.shared.config import get_settings
-from app.shared.extraction import get_extractor
-from app.shared.extraction_types import ExtractionContext
+from app.extraction.policy import get_extractor
+from app.extraction.contracts import ExtractionContext
 from app.shared.processing_errors import ProcessingFailure, storage_failure
 from app.shared.privacy import lock_resource, erased, process_privacy_event
 from app.task.domain import TaskState, TaskType

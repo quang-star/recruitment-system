@@ -4,7 +4,7 @@ from difflib import SequenceMatcher
 import math
 
 from app.matching.semantic import EmbeddingProvider, MODEL_ID, MODEL_REVISION, local_provider
-from app.shared.extraction_privacy import redact_contacts
+from app.extraction.redaction import redact_contacts
 from app.taxonomy.normalizer import Taxonomy, _key
 
 

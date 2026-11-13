@@ -8,8 +8,8 @@ import unicodedata
 from app.career.catalog_reader import CategoryEntry, CoreCatalogReader, catalog_hash, safe_label, usable_catalog
 from app.career.models import CareerRequest, CareerResponse, CareerSuggestion, ProviderSuggestions
 from app.career.providers import CareerProvider
-from app.shared.extraction_privacy import professional_source
-from app.shared.extraction_types import EXTERNAL_AI_POLICY_VERSION, ExtractionContext
+from app.extraction.redaction import professional_source
+from app.extraction.contracts import EXTERNAL_AI_POLICY_VERSION, ExtractionContext
 
 LOGGER = logging.getLogger(__name__)
 

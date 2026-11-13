@@ -9,8 +9,8 @@ from sqlalchemy.orm import sessionmaker
 
 from app.career.models import CareerRequest
 from app.career.service import CareerSuggestionService, draft_identity
-from app.shared.extraction_types import EXTERNAL_AI_POLICY_VERSION, ExtractionContext
-from app.shared.extraction_usage import (
+from app.extraction.contracts import EXTERNAL_AI_POLICY_VERSION, ExtractionContext
+from app.extraction.usage import (
     ExtractionDailyBudget,
     ExtractionUsage,
     ExtractionUsageRepository,

@@ -7,7 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.shared.api import ApiContractError
-from app.shared.extraction_privacy import redact_contacts
+from app.extraction.redaction import redact_contacts
 from app.taxonomy.catalog import SkillCatalogHistory
 from app.taxonomy.definitions import compatible_skill
 from app.taxonomy.normalizer import _key

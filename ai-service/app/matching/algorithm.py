@@ -7,7 +7,7 @@ import hashlib
 import re
 from typing import Any
 
-from app.shared.skill_proposals import skill_name_key
+from app.extraction.skill_proposals import skill_name_key
 
 
 ALGORITHM_VERSION = "baseline-v5"

@@ -4,7 +4,7 @@ import json
 from app.evaluation.extraction_smoke import JdSmokePayload
 from app.jd.parser import parse_jd
 from app.shared.config import Settings
-from app.shared.gemini import GeminiExtractor
+from app.extraction.gemini import GeminiExtractor
 
 
 def main() -> int:

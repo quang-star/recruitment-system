@@ -11,10 +11,10 @@ from pydantic import SecretStr
 from app.jd.parser import parse_jd
 from app.cv.parser import parse_pdf
 from app.shared.config import Settings
-from app.shared.extraction import get_provider
-from app.shared.gemini import GeminiExtractor
-from app.shared.groq import GroqExtractor
-from app.shared import groq
+from app.extraction.policy import get_provider
+from app.extraction.gemini import GeminiExtractor
+from app.extraction.groq import GroqExtractor
+from app.extraction import groq
 
 
 VERSION = str(legacy_id('779494ac-c858-4570-a884-6e88423b8e2b'))

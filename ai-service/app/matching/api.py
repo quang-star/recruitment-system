@@ -84,6 +84,8 @@ def preview_match(
             if label and label not in missing_skills:
                 missing_skills.append(label)
             total_required += 1
+        elif claim_type == "UNCERTAIN":
+            total_required += 1
 
     score = computed.final_score
     if score >= 80.0:

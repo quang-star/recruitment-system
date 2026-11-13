@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 from app.jd.parser import parse_jd
 from app.shared.config import Settings
-from app.shared.extraction import get_provider
+from app.extraction.policy import get_provider
 
 
 class _SkillDiagnostic(BaseModel):

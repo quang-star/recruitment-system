@@ -17,7 +17,7 @@ from app.cv.repository import ParsedCvRevision, ParsedCvRevisionRecord, ParsedCv
 from app.jd.repository import ParsedJdRevision, ParsedJdRevisionRecord, ParsedJdRevisionRepository
 from app.shared.api import ApiContractError
 from app.shared.database import Base
-from app.shared.extraction_privacy import redact_contacts
+from app.extraction.redaction import redact_contacts
 from app.shared.privacy import PrivacyTombstone, erased, lock_resource, require_live_cv
 from app.taxonomy.catalog import CATALOG_LIMIT, change, head
 from app.taxonomy.audit import catalog_projection
@@ -107,8 +107,11 @@ def _confidence(value) -> float | None:
 def _evidence(item: dict, locations: dict) -> list:
     result = []
     for value in item.get("evidenceIds", []):
-        identity = _business_id(value)
-        location = locations.get(str(identity)) if identity is not None else None
+        try:
+            identity = UUID(str(value))
+        except (ValueError, TypeError, AttributeError):
+            continue
+        location = locations.get(str(identity))
         if not isinstance(location, dict):
             continue
         start, end, page = location.get("start"), location.get("end"), location.get("page")

@@ -7,7 +7,7 @@ from app.shared.config import get_settings
 from app.shared.database import Base
 from app.task import persistence  # noqa: F401
 from app import outbox  # noqa: F401
-from app.shared import extraction_usage  # noqa: F401
+from app.extraction import usage  # noqa: F401
 from app.taxonomy import catalog  # noqa: F401
 from app.shared import privacy  # noqa: F401
 from app.matching import shadow  # noqa: F401
