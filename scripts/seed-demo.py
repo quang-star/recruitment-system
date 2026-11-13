@@ -266,6 +266,8 @@ def ensure_company(client: HttpClient, token: str) -> dict[str, Any]:
         payload={
             "legalName": "Smart Recruitment Demo Company Limited",
             "displayName": "Smart Recruitment Demo",
+            "logoUrl": "/logos/smartrecruitment.svg",
+            "coverImageUrl": "/companies/photos/workplace.webp",
             "slug": "smart-recruitment-demo",
             "description": "Local demonstration tenant for the graduation project.",
             "websiteUrl": "https://example.invalid/smart-recruitment-demo",

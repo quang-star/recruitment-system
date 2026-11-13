@@ -1,0 +1,727 @@
+{
+  "schemaVersion": "portal-seed/2.0",
+  "synthetic": true,
+  "description": "Additional demo profiles inspired by public ITviec, TopCV and Saramin company pages. All job descriptions and hiring terms are synthetic; no official recruiting affiliation.",
+  "companies": [
+    {
+      "company": {
+        "legalName": "NAVER VIETNAM (Demo)",
+        "displayName": "NAVER VIETNAM (Demo)",
+        "slug": "demo-portal-naver",
+        "description": "[Hồ sơ demo tham khảo ITviec, không đại diện doanh nghiệp.] Phát triển sản phẩm web, dịch vụ số và nền tảng phục vụ người dùng. Các vị trí và điều kiện tuyển dụng trên bản demo là dữ liệu tổng hợp. Nguồn tham khảo: https://itviec.com/companies/naver-vietnam",
+        "websiteUrl": "https://itviec.com/companies/naver-vietnam",
+        "countryCode": "VN",
+        "registrationNumber": "DEMO-EXP-NAVER",
+        "sizeRange": "151-300",
+        "logoUrl": "/companies/seed-expanded/naver-logo.webp",
+        "coverImageUrl": "/companies/seed-expanded/naver-cover.webp"
+      },
+      "jobs": [
+        {
+          "title": "Senior Backend Engineer (Java / Spring Boot) (Demo)",
+          "description": "[Tin demo tổng hợp, không phải tin tuyển dụng chính thức của NAVER VIETNAM.]\nThiết kế API cho dịch vụ có nhiều người dùng; tối ưu truy vấn và bộ nhớ đệm; bổ sung kiểm thử tải và theo dõi vận hành.\nPhối hợp review mã nguồn, kiểm thử và bàn giao tài liệu trong nhóm dự án.",
+          "requirementsText": "Tối thiểu 4 năm kinh nghiệm phù hợp. Kỹ năng bắt buộc: Java, Spring Boot, PostgreSQL, Redis, Docker. Đọc hiểu thiết kế hệ thống phân tán, xử lý giao dịch và phân tích log để tìm nguyên nhân lỗi. Ưu tiên biết viết kiểm thử tự động và làm việc theo quy trình Agile.",
+          "benefitsText": "Điều kiện minh họa cho dữ liệu demo: trao đổi mức lương khi phỏng vấn; kế hoạch đào tạo chuyên môn; hoạt động chia sẻ kiến thức trong nhóm. Không xác nhận các chế độ hiện hành của doanh nghiệp.",
+          "locationText": "Hồ Chí Minh",
+          "countryCode": "VN",
+          "workMode": "HYBRID",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "SENIOR",
+          "openings": 1,
+          "salaryMin": 0,
+          "salaryMax": 0,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": true,
+          "externalAiConsent": false,
+          "category": {
+            "industryId": "1",
+            "positionName": "Senior Backend Engineer (Java / Spring Boot) (Demo)"
+          }
+        },
+        {
+          "title": "Android Engineer (Kotlin / Mobile Apps) (Demo)",
+          "description": "[Tin demo tổng hợp, không phải tin tuyển dụng chính thức của NAVER VIETNAM.]\nXây dựng luồng đăng nhập và đồng bộ dữ liệu trên ứng dụng di động; viết kiểm thử cho trạng thái ngoại tuyến và phục hồi kết nối.\nPhối hợp review mã nguồn, kiểm thử và bàn giao tài liệu trong nhóm dự án.",
+          "requirementsText": "Tối thiểu 2 năm kinh nghiệm phù hợp. Kỹ năng bắt buộc: Kotlin, Android, REST API, Git, JUnit. Hiểu vòng đời Android, quản lý trạng thái và cách đo hiệu năng giao diện. Ưu tiên biết viết kiểm thử tự động và làm việc theo quy trình Agile.",
+          "benefitsText": "Điều kiện minh họa cho dữ liệu demo: trao đổi mức lương khi phỏng vấn; kế hoạch đào tạo chuyên môn; hoạt động chia sẻ kiến thức trong nhóm. Không xác nhận các chế độ hiện hành của doanh nghiệp.",
+          "locationText": "Hồ Chí Minh",
+          "countryCode": "VN",
+          "workMode": "HYBRID",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "MIDDLE",
+          "openings": 1,
+          "salaryMin": 0,
+          "salaryMax": 0,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": true,
+          "externalAiConsent": false,
+          "category": {
+            "industryId": "1",
+            "positionName": "Android Engineer (Kotlin / Mobile Apps) (Demo)"
+          }
+        }
+      ]
+    },
+    {
+      "company": {
+        "legalName": "LG CNS Việt Nam (Demo)",
+        "displayName": "LG CNS Việt Nam (Demo)",
+        "slug": "demo-portal-lg-cns",
+        "description": "[Hồ sơ demo tham khảo ITviec, không đại diện doanh nghiệp.] Cung cấp dịch vụ công nghệ thông tin và tư vấn triển khai hệ thống doanh nghiệp. Các vị trí và điều kiện tuyển dụng trên bản demo là dữ liệu tổng hợp. Nguồn tham khảo: https://itviec.com/companies/lg-cns-viet-nam",
+        "websiteUrl": "https://itviec.com/companies/lg-cns-viet-nam",
+        "countryCode": "VN",
+        "registrationNumber": "DEMO-EXP-LG-CNS",
+        "sizeRange": "501-1000",
+        "logoUrl": "/companies/seed-expanded/lg-cns-logo.webp",
+        "coverImageUrl": "/companies/seed-expanded/lg-cns-cover.webp"
+      },
+      "jobs": [
+        {
+          "title": "Fullstack Developer (Java / Vue.js) (Demo)",
+          "description": "[Tin demo tổng hợp, không phải tin tuyển dụng chính thức của LG CNS Việt Nam.]\nPhát triển chức năng quản lý đơn hàng cho hệ thống doanh nghiệp; kết nối giao diện với API; viết kiểm thử và tài liệu bàn giao.\nPhối hợp review mã nguồn, kiểm thử và bàn giao tài liệu trong nhóm dự án.",
+          "requirementsText": "Tối thiểu 3 năm kinh nghiệm phù hợp. Kỹ năng bắt buộc: Java, Spring Boot, Vue.js, MySQL, Git. Nắm vững phân quyền nghiệp vụ, kiểm tra dữ liệu đầu vào và truy vấn cơ sở dữ liệu quan hệ. Ưu tiên biết viết kiểm thử tự động và làm việc theo quy trình Agile.",
+          "benefitsText": "Điều kiện minh họa cho dữ liệu demo: trao đổi mức lương khi phỏng vấn; kế hoạch đào tạo chuyên môn; hoạt động chia sẻ kiến thức trong nhóm. Không xác nhận các chế độ hiện hành của doanh nghiệp.",
+          "locationText": "Hà Nội",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "MIDDLE",
+          "openings": 1,
+          "salaryMin": 0,
+          "salaryMax": 0,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": true,
+          "externalAiConsent": false,
+          "category": {
+            "industryId": "1",
+            "positionName": "Fullstack Developer (Java / Vue.js) (Demo)"
+          }
+        },
+        {
+          "title": "Frontend Engineer (React / TypeScript) (Demo)",
+          "description": "[Tin demo tổng hợp, không phải tin tuyển dụng chính thức của LG CNS Việt Nam.]\nXây dựng màn hình báo cáo, bảng dữ liệu và biểu mẫu; cải thiện khả năng truy cập; phối hợp kiểm thử tích hợp với backend.\nPhối hợp review mã nguồn, kiểm thử và bàn giao tài liệu trong nhóm dự án.",
+          "requirementsText": "Tối thiểu 1 năm kinh nghiệm phù hợp. Kỹ năng bắt buộc: React, TypeScript, JavaScript, HTML, CSS. Hiểu component React, xử lý lỗi API và thiết kế giao diện đáp ứng trên nhiều kích thước màn hình. Ưu tiên biết viết kiểm thử tự động và làm việc theo quy trình Agile.",
+          "benefitsText": "Điều kiện minh họa cho dữ liệu demo: trao đổi mức lương khi phỏng vấn; kế hoạch đào tạo chuyên môn; hoạt động chia sẻ kiến thức trong nhóm. Không xác nhận các chế độ hiện hành của doanh nghiệp.",
+          "locationText": "Hà Nội",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "JUNIOR",
+          "openings": 1,
+          "salaryMin": 0,
+          "salaryMax": 0,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": true,
+          "externalAiConsent": false,
+          "category": {
+            "industryId": "1",
+            "positionName": "Frontend Engineer (React / TypeScript) (Demo)"
+          }
+        }
+      ]
+    },
+    {
+      "company": {
+        "legalName": "Capgemini Vietnam (Demo)",
+        "displayName": "Capgemini Vietnam (Demo)",
+        "slug": "demo-portal-capgemini",
+        "description": "[Hồ sơ demo tham khảo ITviec, không đại diện doanh nghiệp.] Tư vấn công nghệ và phát triển phần mềm cho các dự án doanh nghiệp. Các vị trí và điều kiện tuyển dụng trên bản demo là dữ liệu tổng hợp. Nguồn tham khảo: https://itviec.com/companies/capgemini-vietnam",
+        "websiteUrl": "https://itviec.com/companies/capgemini-vietnam",
+        "countryCode": "VN",
+        "registrationNumber": "DEMO-EXP-CAPGEMINI",
+        "sizeRange": "301-500",
+        "logoUrl": "/companies/seed-expanded/capgemini-logo.webp",
+        "coverImageUrl": "/companies/seed-expanded/capgemini-cover.webp"
+      },
+      "jobs": [
+        {
+          "title": "Java Cloud Engineer (Microservices / AWS) (Demo)",
+          "description": "[Tin demo tổng hợp, không phải tin tuyển dụng chính thức của Capgemini Vietnam.]\nTách chức năng xử lý giao dịch thành các dịch vụ nhỏ; thiết lập quan sát hệ thống và tự động hóa quy trình kiểm thử trước phát hành.\nPhối hợp review mã nguồn, kiểm thử và bàn giao tài liệu trong nhóm dự án.",
+          "requirementsText": "Tối thiểu 4 năm kinh nghiệm phù hợp. Kỹ năng bắt buộc: Java, Spring Boot, AWS, Docker, SQL. Có kinh nghiệm thiết kế API, theo dõi thông điệp bất đồng bộ và trao đổi kỹ thuật bằng tiếng Anh. Ưu tiên biết viết kiểm thử tự động và làm việc theo quy trình Agile.",
+          "benefitsText": "Điều kiện minh họa cho dữ liệu demo: trao đổi mức lương khi phỏng vấn; kế hoạch đào tạo chuyên môn; hoạt động chia sẻ kiến thức trong nhóm. Không xác nhận các chế độ hiện hành của doanh nghiệp.",
+          "locationText": "Hồ Chí Minh",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "SENIOR",
+          "openings": 1,
+          "salaryMin": 0,
+          "salaryMax": 0,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": true,
+          "externalAiConsent": false,
+          "category": {
+            "industryId": "1",
+            "positionName": "Java Cloud Engineer (Microservices / AWS) (Demo)"
+          }
+        },
+        {
+          "title": "QA Automation Engineer (Java / Selenium) (Demo)",
+          "description": "[Tin demo tổng hợp, không phải tin tuyển dụng chính thức của Capgemini Vietnam.]\nXây dựng bộ kiểm thử hồi quy cho cổng dịch vụ; chuẩn hóa dữ liệu kiểm thử; phân tích lỗi phát hiện trong pipeline tích hợp.\nPhối hợp review mã nguồn, kiểm thử và bàn giao tài liệu trong nhóm dự án.",
+          "requirementsText": "Tối thiểu 2 năm kinh nghiệm phù hợp. Kỹ năng bắt buộc: Java, Selenium, REST API, SQL, Git. Phân biệt kiểm thử giao diện và API, quản lý fixture độc lập và báo cáo lỗi có bước tái hiện rõ ràng. Ưu tiên biết viết kiểm thử tự động và làm việc theo quy trình Agile.",
+          "benefitsText": "Điều kiện minh họa cho dữ liệu demo: trao đổi mức lương khi phỏng vấn; kế hoạch đào tạo chuyên môn; hoạt động chia sẻ kiến thức trong nhóm. Không xác nhận các chế độ hiện hành của doanh nghiệp.",
+          "locationText": "Hồ Chí Minh",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "MIDDLE",
+          "openings": 1,
+          "salaryMin": 0,
+          "salaryMax": 0,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": true,
+          "externalAiConsent": false,
+          "category": {
+            "industryId": "1",
+            "positionName": "QA Automation Engineer (Java / Selenium) (Demo)"
+          }
+        }
+      ]
+    },
+    {
+      "company": {
+        "legalName": "Toshiba Software Development Vietnam (Demo)",
+        "displayName": "Toshiba Software Development Vietnam (Demo)",
+        "slug": "demo-portal-toshiba",
+        "description": "[Hồ sơ demo tham khảo ITviec, không đại diện doanh nghiệp.] Phát triển phần mềm và các hệ thống kỹ thuật phục vụ sản phẩm công nghệ. Các vị trí và điều kiện tuyển dụng trên bản demo là dữ liệu tổng hợp. Nguồn tham khảo: https://itviec.com/companies/toshiba-software-development-viet-nam-co-ltd",
+        "websiteUrl": "https://itviec.com/companies/toshiba-software-development-viet-nam-co-ltd",
+        "countryCode": "VN",
+        "registrationNumber": "DEMO-EXP-TOSHIBA",
+        "sizeRange": "301-500",
+        "logoUrl": "/companies/seed-expanded/toshiba-logo.webp",
+        "coverImageUrl": "/companies/seed-expanded/toshiba-cover.webp"
+      },
+      "jobs": [
+        {
+          "title": "C++ Software Engineer (Embedded / Linux) (Demo)",
+          "description": "[Tin demo tổng hợp, không phải tin tuyển dụng chính thức của Toshiba Software Development Vietnam.]\nPhát triển module điều khiển và trao đổi dữ liệu trên thiết bị; phân tích lỗi bộ nhớ; viết kiểm thử cho các tình huống biên.\nPhối hợp review mã nguồn, kiểm thử và bàn giao tài liệu trong nhóm dự án.",
+          "requirementsText": "Tối thiểu 3 năm kinh nghiệm phù hợp. Kỹ năng bắt buộc: C/C++, Linux, Embedded, Git, Unit Test. Nắm con trỏ, đa luồng, cấu trúc dữ liệu và khả năng đọc tài liệu kỹ thuật tiếng Anh. Ưu tiên biết viết kiểm thử tự động và làm việc theo quy trình Agile.",
+          "benefitsText": "Điều kiện minh họa cho dữ liệu demo: trao đổi mức lương khi phỏng vấn; kế hoạch đào tạo chuyên môn; hoạt động chia sẻ kiến thức trong nhóm. Không xác nhận các chế độ hiện hành của doanh nghiệp.",
+          "locationText": "Hà Nội",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "MIDDLE",
+          "openings": 1,
+          "salaryMin": 0,
+          "salaryMax": 0,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": true,
+          "externalAiConsent": false,
+          "category": {
+            "industryId": "1",
+            "positionName": "C++ Software Engineer (Embedded / Linux) (Demo)"
+          }
+        },
+        {
+          "title": "Software Test Engineer (C# / Automation) (Demo)",
+          "description": "[Tin demo tổng hợp, không phải tin tuyển dụng chính thức của Toshiba Software Development Vietnam.]\nViết công cụ tự động hóa kịch bản kiểm thử; thu thập kết quả chạy trên thiết bị; đối chiếu hành vi với đặc tả kỹ thuật.\nPhối hợp review mã nguồn, kiểm thử và bàn giao tài liệu trong nhóm dự án.",
+          "requirementsText": "Tối thiểu 1 năm kinh nghiệm phù hợp. Kỹ năng bắt buộc: C#, Python, SQL, Git, Testing. Có tư duy kiểm thử theo rủi ro, viết báo cáo lỗi và làm việc với nhóm phát triển phần mềm. Ưu tiên biết viết kiểm thử tự động và làm việc theo quy trình Agile.",
+          "benefitsText": "Điều kiện minh họa cho dữ liệu demo: trao đổi mức lương khi phỏng vấn; kế hoạch đào tạo chuyên môn; hoạt động chia sẻ kiến thức trong nhóm. Không xác nhận các chế độ hiện hành của doanh nghiệp.",
+          "locationText": "Hà Nội",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "JUNIOR",
+          "openings": 1,
+          "salaryMin": 0,
+          "salaryMax": 0,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": true,
+          "externalAiConsent": false,
+          "category": {
+            "industryId": "1",
+            "positionName": "Software Test Engineer (C# / Automation) (Demo)"
+          }
+        }
+      ]
+    },
+    {
+      "company": {
+        "legalName": "ISB Vietnam (Demo)",
+        "displayName": "ISB Vietnam (Demo)",
+        "slug": "demo-portal-isb",
+        "description": "[Hồ sơ demo tham khảo TopCV, không đại diện doanh nghiệp.] Phát triển phần mềm thuê ngoài, ứng dụng doanh nghiệp và giải pháp kỹ thuật. Các vị trí và điều kiện tuyển dụng trên bản demo là dữ liệu tổng hợp. Nguồn tham khảo: https://www.topcv.vn/cong-ty/cong-ty-tnhh-isb-viet-nam/114323.html",
+        "websiteUrl": "https://www.topcv.vn/cong-ty/cong-ty-tnhh-isb-viet-nam/114323.html",
+        "countryCode": "VN",
+        "registrationNumber": "DEMO-EXP-ISB",
+        "sizeRange": "100-499",
+        "logoUrl": "/companies/seed-expanded/isb-logo.webp",
+        "coverImageUrl": "/companies/seed-expanded/isb-cover.webp"
+      },
+      "jobs": [
+        {
+          "title": "Junior C++ Developer (Qt / Linux) (Demo)",
+          "description": "[Tin demo tổng hợp, không phải tin tuyển dụng chính thức của ISB Vietnam.]\nXây dựng màn hình ứng dụng desktop, xử lý dữ liệu từ thiết bị và bổ sung kiểm thử đơn vị cho module phụ trách.\nPhối hợp review mã nguồn, kiểm thử và bàn giao tài liệu trong nhóm dự án.",
+          "requirementsText": "Tối thiểu 1 năm kinh nghiệm phù hợp. Kỹ năng bắt buộc: C/C++, Qt, Linux, Git, OOP. Hiểu lập trình hướng đối tượng, quản lý tài nguyên và có khả năng trao đổi yêu cầu với nhóm kiểm thử. Ưu tiên biết viết kiểm thử tự động và làm việc theo quy trình Agile.",
+          "benefitsText": "Điều kiện minh họa cho dữ liệu demo: trao đổi mức lương khi phỏng vấn; kế hoạch đào tạo chuyên môn; hoạt động chia sẻ kiến thức trong nhóm. Không xác nhận các chế độ hiện hành của doanh nghiệp.",
+          "locationText": "Hồ Chí Minh",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "JUNIOR",
+          "openings": 1,
+          "salaryMin": 0,
+          "salaryMax": 0,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": true,
+          "externalAiConsent": false,
+          "category": {
+            "industryId": "1",
+            "positionName": "Junior C++ Developer (Qt / Linux) (Demo)"
+          }
+        },
+        {
+          "title": "Backend Developer (Python / FastAPI) (Demo)",
+          "description": "[Tin demo tổng hợp, không phải tin tuyển dụng chính thức của ISB Vietnam.]\nXây dựng dịch vụ quản lý dữ liệu nghiệp vụ; thiết kế migration an toàn; xử lý tác vụ nền và kiểm tra tính nhất quán dữ liệu.\nPhối hợp review mã nguồn, kiểm thử và bàn giao tài liệu trong nhóm dự án.",
+          "requirementsText": "Tối thiểu 3 năm kinh nghiệm phù hợp. Kỹ năng bắt buộc: Python, FastAPI, PostgreSQL, Docker, REST API. Biết viết kiểm thử API, tối ưu truy vấn và xử lý lỗi có cấu trúc. Ưu tiên biết viết kiểm thử tự động và làm việc theo quy trình Agile.",
+          "benefitsText": "Điều kiện minh họa cho dữ liệu demo: trao đổi mức lương khi phỏng vấn; kế hoạch đào tạo chuyên môn; hoạt động chia sẻ kiến thức trong nhóm. Không xác nhận các chế độ hiện hành của doanh nghiệp.",
+          "locationText": "Hồ Chí Minh",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "MIDDLE",
+          "openings": 1,
+          "salaryMin": 0,
+          "salaryMax": 0,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": true,
+          "externalAiConsent": false,
+          "category": {
+            "industryId": "1",
+            "positionName": "Backend Developer (Python / FastAPI) (Demo)"
+          }
+        }
+      ]
+    },
+    {
+      "company": {
+        "legalName": "HPT Vietnam (Demo)",
+        "displayName": "HPT Vietnam (Demo)",
+        "slug": "demo-portal-hpt",
+        "description": "[Hồ sơ demo tham khảo TopCV, không đại diện doanh nghiệp.] Tư vấn giải pháp CNTT, phát triển phần mềm và tích hợp hệ thống doanh nghiệp. Các vị trí và điều kiện tuyển dụng trên bản demo là dữ liệu tổng hợp. Nguồn tham khảo: https://www.topcv.vn/cong-ty/cong-ty-co-phan-dich-vu-cong-nghe-tin-hoc-hpt/141408.html",
+        "websiteUrl": "https://www.topcv.vn/cong-ty/cong-ty-co-phan-dich-vu-cong-nghe-tin-hoc-hpt/141408.html",
+        "countryCode": "VN",
+        "registrationNumber": "DEMO-EXP-HPT",
+        "sizeRange": "100-499",
+        "logoUrl": "/companies/seed-expanded/hpt-logo.webp",
+        "coverImageUrl": "/companies/seed-expanded/hpt-cover.webp"
+      },
+      "jobs": [
+        {
+          "title": "IT Project Manager (Enterprise Software) (Demo)",
+          "description": "[Tin demo tổng hợp, không phải tin tuyển dụng chính thức của HPT Vietnam.]\nLập kế hoạch triển khai phần mềm doanh nghiệp; quản lý phạm vi và rủi ro; tổ chức nghiệm thu theo từng mốc bàn giao.\nPhối hợp review mã nguồn, kiểm thử và bàn giao tài liệu trong nhóm dự án.",
+          "requirementsText": "Tối thiểu 5 năm kinh nghiệm phù hợp. Kỹ năng bắt buộc: Project Management, SQL, Java, REST API, Agile. Có kinh nghiệm điều phối nhóm phát triển, phân tích yêu cầu và giao tiếp với các bên liên quan. Ưu tiên biết viết kiểm thử tự động và làm việc theo quy trình Agile.",
+          "benefitsText": "Điều kiện minh họa cho dữ liệu demo: trao đổi mức lương khi phỏng vấn; kế hoạch đào tạo chuyên môn; hoạt động chia sẻ kiến thức trong nhóm. Không xác nhận các chế độ hiện hành của doanh nghiệp.",
+          "locationText": "Hồ Chí Minh",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "MANAGER",
+          "openings": 1,
+          "salaryMin": 0,
+          "salaryMax": 0,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": true,
+          "externalAiConsent": false,
+          "category": {
+            "industryId": "1",
+            "positionName": "IT Project Manager (Enterprise Software) (Demo)"
+          }
+        },
+        {
+          "title": "Security Engineer (Linux / Network Security) (Demo)",
+          "description": "[Tin demo tổng hợp, không phải tin tuyển dụng chính thức của HPT Vietnam.]\nPhân tích cảnh báo an ninh trong môi trường lab; xây dựng kịch bản phát hiện; đề xuất biện pháp giảm thiểu và tài liệu vận hành.\nPhối hợp review mã nguồn, kiểm thử và bàn giao tài liệu trong nhóm dự án.",
+          "requirementsText": "Tối thiểu 3 năm kinh nghiệm phù hợp. Kỹ năng bắt buộc: Linux, Network Security, Python, SIEM, SQL. Hiểu TCP/IP, phân quyền hệ điều hành và cách phân tích log phục vụ điều tra sự cố. Ưu tiên biết viết kiểm thử tự động và làm việc theo quy trình Agile.",
+          "benefitsText": "Điều kiện minh họa cho dữ liệu demo: trao đổi mức lương khi phỏng vấn; kế hoạch đào tạo chuyên môn; hoạt động chia sẻ kiến thức trong nhóm. Không xác nhận các chế độ hiện hành của doanh nghiệp.",
+          "locationText": "Hồ Chí Minh",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "MIDDLE",
+          "openings": 1,
+          "salaryMin": 0,
+          "salaryMax": 0,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": true,
+          "externalAiConsent": false,
+          "category": {
+            "industryId": "1",
+            "positionName": "Security Engineer (Linux / Network Security) (Demo)"
+          }
+        }
+      ]
+    },
+    {
+      "company": {
+        "legalName": "CMC Technology & Solution (Demo)",
+        "displayName": "CMC Technology & Solution (Demo)",
+        "slug": "demo-portal-cmc-ts",
+        "description": "[Hồ sơ demo tham khảo TopCV, không đại diện doanh nghiệp.] Tư vấn chuyển đổi số, phần mềm, điện toán đám mây, an toàn thông tin và dữ liệu. Các vị trí và điều kiện tuyển dụng trên bản demo là dữ liệu tổng hợp. Nguồn tham khảo: https://www.topcv.vn/cong-ty/cong-ty-tnhh-tong-cong-ty-cong-nghe-giai-phap-cmc/6525.html",
+        "websiteUrl": "https://www.topcv.vn/cong-ty/cong-ty-tnhh-tong-cong-ty-cong-nghe-giai-phap-cmc/6525.html",
+        "countryCode": "VN",
+        "registrationNumber": "DEMO-EXP-CMC-TS",
+        "sizeRange": "500-1000",
+        "logoUrl": "/companies/seed-expanded/cmc-ts-logo.webp",
+        "coverImageUrl": "/companies/seed-expanded/cmc-ts-cover.webp"
+      },
+      "jobs": [
+        {
+          "title": "Fullstack Developer (Java / Go / React) (Demo)",
+          "description": "[Tin demo tổng hợp, không phải tin tuyển dụng chính thức của CMC Technology & Solution.]\nPhát triển cổng dịch vụ doanh nghiệp; kết nối hệ thống nội bộ qua API; xây dựng màn hình theo dõi và kiểm thử nghiệp vụ.\nPhối hợp review mã nguồn, kiểm thử và bàn giao tài liệu trong nhóm dự án.",
+          "requirementsText": "Tối thiểu 2 năm kinh nghiệm phù hợp. Kỹ năng bắt buộc: Java, Go, React, PostgreSQL, Docker. Có nền tảng cấu trúc dữ liệu, giao dịch SQL và kiểm thử chức năng ở cả frontend lẫn backend. Ưu tiên biết viết kiểm thử tự động và làm việc theo quy trình Agile.",
+          "benefitsText": "Điều kiện minh họa cho dữ liệu demo: trao đổi mức lương khi phỏng vấn; kế hoạch đào tạo chuyên môn; hoạt động chia sẻ kiến thức trong nhóm. Không xác nhận các chế độ hiện hành của doanh nghiệp.",
+          "locationText": "Hà Nội",
+          "countryCode": "VN",
+          "workMode": "HYBRID",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "MIDDLE",
+          "openings": 1,
+          "salaryMin": 0,
+          "salaryMax": 0,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": true,
+          "externalAiConsent": false,
+          "category": {
+            "industryId": "1",
+            "positionName": "Fullstack Developer (Java / Go / React) (Demo)"
+          }
+        },
+        {
+          "title": "AI Engineer (Python / NLP / FastAPI) (Demo)",
+          "description": "[Tin demo tổng hợp, không phải tin tuyển dụng chính thức của CMC Technology & Solution.]\nXây dựng pipeline xử lý văn bản tổng hợp; đánh giá mô hình bằng bộ dữ liệu kiểm thử; triển khai API suy luận và theo dõi chất lượng.\nPhối hợp review mã nguồn, kiểm thử và bàn giao tài liệu trong nhóm dự án.",
+          "requirementsText": "Tối thiểu 2 năm kinh nghiệm phù hợp. Kỹ năng bắt buộc: Python, NLP, FastAPI, PyTorch, Docker. Hiểu chia tập dữ liệu, đánh giá sai số và ghi nhận phiên bản mô hình để tái lập thí nghiệm. Ưu tiên biết viết kiểm thử tự động và làm việc theo quy trình Agile.",
+          "benefitsText": "Điều kiện minh họa cho dữ liệu demo: trao đổi mức lương khi phỏng vấn; kế hoạch đào tạo chuyên môn; hoạt động chia sẻ kiến thức trong nhóm. Không xác nhận các chế độ hiện hành của doanh nghiệp.",
+          "locationText": "Hà Nội",
+          "countryCode": "VN",
+          "workMode": "HYBRID",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "MIDDLE",
+          "openings": 1,
+          "salaryMin": 0,
+          "salaryMax": 0,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": true,
+          "externalAiConsent": false,
+          "category": {
+            "industryId": "1",
+            "positionName": "AI Engineer (Python / NLP / FastAPI) (Demo)"
+          }
+        }
+      ]
+    },
+    {
+      "company": {
+        "legalName": "SmartOSC (Demo)",
+        "displayName": "SmartOSC (Demo)",
+        "slug": "demo-portal-smartosc",
+        "description": "[Hồ sơ demo tham khảo TopCV, không đại diện doanh nghiệp.] Phát triển giải pháp số và nền tảng thương mại điện tử cho doanh nghiệp. Các vị trí và điều kiện tuyển dụng trên bản demo là dữ liệu tổng hợp. Nguồn tham khảo: https://www.topcv.vn/brand/smartosc?id=84788",
+        "websiteUrl": "https://www.topcv.vn/brand/smartosc?id=84788",
+        "countryCode": "VN",
+        "registrationNumber": "DEMO-EXP-SMARTOSC",
+        "sizeRange": "1000+",
+        "logoUrl": "/companies/seed-expanded/smartosc-logo.webp",
+        "coverImageUrl": "/companies/seed-expanded/smartosc-cover.webp"
+      },
+      "jobs": [
+        {
+          "title": "Data Engineer (Python / SQL / Airflow) (Demo)",
+          "description": "[Tin demo tổng hợp, không phải tin tuyển dụng chính thức của SmartOSC.]\nThiết kế luồng ETL cho dữ liệu bán hàng tổng hợp; kiểm tra dữ liệu đầu vào; quản lý lịch chạy và khôi phục tác vụ bị lỗi.\nPhối hợp review mã nguồn, kiểm thử và bàn giao tài liệu trong nhóm dự án.",
+          "requirementsText": "Tối thiểu 3 năm kinh nghiệm phù hợp. Kỹ năng bắt buộc: Python, SQL, Airflow, PostgreSQL, Docker. Có kinh nghiệm mô hình hóa dữ liệu, kiểm tra chất lượng và tối ưu truy vấn trên tập dữ liệu lớn. Ưu tiên biết viết kiểm thử tự động và làm việc theo quy trình Agile.",
+          "benefitsText": "Điều kiện minh họa cho dữ liệu demo: trao đổi mức lương khi phỏng vấn; kế hoạch đào tạo chuyên môn; hoạt động chia sẻ kiến thức trong nhóm. Không xác nhận các chế độ hiện hành của doanh nghiệp.",
+          "locationText": "Đà Nẵng",
+          "countryCode": "VN",
+          "workMode": "HYBRID",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "MIDDLE",
+          "openings": 1,
+          "salaryMin": 0,
+          "salaryMax": 0,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": true,
+          "externalAiConsent": false,
+          "category": {
+            "industryId": "1",
+            "positionName": "Data Engineer (Python / SQL / Airflow) (Demo)"
+          }
+        },
+        {
+          "title": "Performance Test Engineer (Java / API Testing) (Demo)",
+          "description": "[Tin demo tổng hợp, không phải tin tuyển dụng chính thức của SmartOSC.]\nThiết kế kịch bản kiểm thử tải cho quy trình thanh toán mô phỏng; phân tích độ trễ và tài nguyên; đề xuất giới hạn tải vận hành.\nPhối hợp review mã nguồn, kiểm thử và bàn giao tài liệu trong nhóm dự án.",
+          "requirementsText": "Tối thiểu 4 năm kinh nghiệm phù hợp. Kỹ năng bắt buộc: Java, SQL, REST API, Linux, Testing. Biết diễn giải percentile độ trễ, phân tích log và phân biệt lỗi ứng dụng với lỗi hạ tầng. Ưu tiên biết viết kiểm thử tự động và làm việc theo quy trình Agile.",
+          "benefitsText": "Điều kiện minh họa cho dữ liệu demo: trao đổi mức lương khi phỏng vấn; kế hoạch đào tạo chuyên môn; hoạt động chia sẻ kiến thức trong nhóm. Không xác nhận các chế độ hiện hành của doanh nghiệp.",
+          "locationText": "Đà Nẵng",
+          "countryCode": "VN",
+          "workMode": "HYBRID",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "SENIOR",
+          "openings": 1,
+          "salaryMin": 0,
+          "salaryMax": 0,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": true,
+          "externalAiConsent": false,
+          "category": {
+            "industryId": "1",
+            "positionName": "Performance Test Engineer (Java / API Testing) (Demo)"
+          }
+        }
+      ]
+    },
+    {
+      "company": {
+        "legalName": "MobiFone IT (Demo)",
+        "displayName": "MobiFone IT (Demo)",
+        "slug": "demo-portal-mobifone-it",
+        "description": "[Hồ sơ demo tham khảo Saramin, không đại diện doanh nghiệp.] Phát triển giải pháp CNTT và hệ sinh thái dịch vụ số cho tổ chức, doanh nghiệp. Các vị trí và điều kiện tuyển dụng trên bản demo là dữ liệu tổng hợp. Nguồn tham khảo: https://saramin.vn/companies/mobifone-it-83682",
+        "websiteUrl": "https://saramin.vn/companies/mobifone-it-83682",
+        "countryCode": "VN",
+        "registrationNumber": "DEMO-EXP-MOBIFONE-IT",
+        "sizeRange": "100-499",
+        "logoUrl": "/companies/seed-expanded/mobifone-it-logo.webp",
+        "coverImageUrl": "/companies/seed-expanded/mobifone-it-cover.webp"
+      },
+      "jobs": [
+        {
+          "title": "Backend Java Developer (Spring Boot / Kafka) (Demo)",
+          "description": "[Tin demo tổng hợp, không phải tin tuyển dụng chính thức của MobiFone IT.]\nXây dựng API dịch vụ số; xử lý thông điệp bất đồng bộ; bổ sung retry và kiểm tra trùng lặp trong luồng tích hợp.\nPhối hợp review mã nguồn, kiểm thử và bàn giao tài liệu trong nhóm dự án.",
+          "requirementsText": "Tối thiểu 3 năm kinh nghiệm phù hợp. Kỹ năng bắt buộc: Java, Spring Boot, Kafka, PostgreSQL, Docker. Nắm vững giao dịch cơ sở dữ liệu, kiểm thử tích hợp và cách theo dõi yêu cầu qua nhiều dịch vụ. Ưu tiên biết viết kiểm thử tự động và làm việc theo quy trình Agile.",
+          "benefitsText": "Điều kiện minh họa cho dữ liệu demo: trao đổi mức lương khi phỏng vấn; kế hoạch đào tạo chuyên môn; hoạt động chia sẻ kiến thức trong nhóm. Không xác nhận các chế độ hiện hành của doanh nghiệp.",
+          "locationText": "Hà Nội",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "MIDDLE",
+          "openings": 1,
+          "salaryMin": 0,
+          "salaryMax": 0,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": true,
+          "externalAiConsent": false,
+          "category": {
+            "industryId": "1",
+            "positionName": "Backend Java Developer (Spring Boot / Kafka) (Demo)"
+          }
+        },
+        {
+          "title": "Business Analyst (Software / SQL) (Demo)",
+          "description": "[Tin demo tổng hợp, không phải tin tuyển dụng chính thức của MobiFone IT.]\nKhảo sát quy trình và mô hình hóa yêu cầu; viết tiêu chí nghiệm thu; đối chiếu dữ liệu giữa các hệ thống trong môi trường kiểm thử.\nPhối hợp review mã nguồn, kiểm thử và bàn giao tài liệu trong nhóm dự án.",
+          "requirementsText": "Tối thiểu 3 năm kinh nghiệm phù hợp. Kỹ năng bắt buộc: Business Analysis, SQL, REST API, UML, Agile. Có khả năng phân tích luồng dữ liệu, viết tài liệu rõ ràng và làm việc với nhóm phát triển phần mềm. Ưu tiên biết viết kiểm thử tự động và làm việc theo quy trình Agile.",
+          "benefitsText": "Điều kiện minh họa cho dữ liệu demo: trao đổi mức lương khi phỏng vấn; kế hoạch đào tạo chuyên môn; hoạt động chia sẻ kiến thức trong nhóm. Không xác nhận các chế độ hiện hành của doanh nghiệp.",
+          "locationText": "Hà Nội",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "MIDDLE",
+          "openings": 1,
+          "salaryMin": 0,
+          "salaryMax": 0,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": true,
+          "externalAiConsent": false,
+          "category": {
+            "industryId": "1",
+            "positionName": "Business Analyst (Software / SQL) (Demo)"
+          }
+        }
+      ]
+    },
+    {
+      "company": {
+        "legalName": "Bosch Global Software Technologies Vietnam (Demo)",
+        "displayName": "Bosch Global Software Technologies Vietnam (Demo)",
+        "slug": "demo-portal-bosch",
+        "description": "[Hồ sơ demo tham khảo Saramin, không đại diện doanh nghiệp.] Phát triển phần mềm và dịch vụ kỹ thuật trong hệ sinh thái công nghệ Bosch. Các vị trí và điều kiện tuyển dụng trên bản demo là dữ liệu tổng hợp. Nguồn tham khảo: https://saramin.vn/companies/bosch-global-software-technologies-company-limited-54407",
+        "websiteUrl": "https://saramin.vn/companies/bosch-global-software-technologies-company-limited-54407",
+        "countryCode": "VN",
+        "registrationNumber": "DEMO-EXP-BOSCH",
+        "sizeRange": "1000+",
+        "logoUrl": "/companies/seed-expanded/bosch-logo.webp",
+        "coverImageUrl": "/companies/seed-expanded/bosch-cover.webp"
+      },
+      "jobs": [
+        {
+          "title": "Embedded C++ Engineer (AUTOSAR / Automotive) (Demo)",
+          "description": "[Tin demo tổng hợp, không phải tin tuyển dụng chính thức của Bosch Global Software Technologies Vietnam.]\nPhát triển chức năng giao tiếp trên hệ thống nhúng mô phỏng; phân tích lỗi thời gian thực; bổ sung kiểm thử và tài liệu thiết kế.\nPhối hợp review mã nguồn, kiểm thử và bàn giao tài liệu trong nhóm dự án.",
+          "requirementsText": "Tối thiểu 3 năm kinh nghiệm phù hợp. Kỹ năng bắt buộc: C/C++, AUTOSAR, Embedded, Linux, Git. Hiểu quản lý bộ nhớ, lập trình đa luồng và đọc đặc tả giao thức kỹ thuật. Ưu tiên biết viết kiểm thử tự động và làm việc theo quy trình Agile.",
+          "benefitsText": "Điều kiện minh họa cho dữ liệu demo: trao đổi mức lương khi phỏng vấn; kế hoạch đào tạo chuyên môn; hoạt động chia sẻ kiến thức trong nhóm. Không xác nhận các chế độ hiện hành của doanh nghiệp.",
+          "locationText": "Hồ Chí Minh",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "MIDDLE",
+          "openings": 1,
+          "salaryMin": 0,
+          "salaryMax": 0,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": true,
+          "externalAiConsent": false,
+          "category": {
+            "industryId": "1",
+            "positionName": "Embedded C++ Engineer (AUTOSAR / Automotive) (Demo)"
+          }
+        },
+        {
+          "title": "Data Platform Engineer (Python / SQL) (Demo)",
+          "description": "[Tin demo tổng hợp, không phải tin tuyển dụng chính thức của Bosch Global Software Technologies Vietnam.]\nXử lý dữ liệu đo kiểm tổng hợp; xây dựng bảng dữ liệu phục vụ phân tích; giám sát chất lượng và độ trễ của pipeline.\nPhối hợp review mã nguồn, kiểm thử và bàn giao tài liệu trong nhóm dự án.",
+          "requirementsText": "Tối thiểu 2 năm kinh nghiệm phù hợp. Kỹ năng bắt buộc: Python, SQL, Spark, Docker, PostgreSQL. Biết thiết kế job batch, viết kiểm thử dữ liệu và truy vết nguồn gốc từng tập kết quả. Ưu tiên biết viết kiểm thử tự động và làm việc theo quy trình Agile.",
+          "benefitsText": "Điều kiện minh họa cho dữ liệu demo: trao đổi mức lương khi phỏng vấn; kế hoạch đào tạo chuyên môn; hoạt động chia sẻ kiến thức trong nhóm. Không xác nhận các chế độ hiện hành của doanh nghiệp.",
+          "locationText": "Hồ Chí Minh",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "MIDDLE",
+          "openings": 1,
+          "salaryMin": 0,
+          "salaryMax": 0,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": true,
+          "externalAiConsent": false,
+          "category": {
+            "industryId": "1",
+            "positionName": "Data Platform Engineer (Python / SQL) (Demo)"
+          }
+        }
+      ]
+    },
+    {
+      "company": {
+        "legalName": "Vietcombank (Demo)",
+        "displayName": "Vietcombank (Demo)",
+        "slug": "demo-portal-vietcombank",
+        "description": "[Hồ sơ demo tham khảo Saramin, không đại diện doanh nghiệp.] Tổ chức ngân hàng với các hệ thống công nghệ phục vụ dịch vụ tài chính số. Các vị trí và điều kiện tuyển dụng trên bản demo là dữ liệu tổng hợp. Nguồn tham khảo: https://saramin.vn/companies/vietcombank-85897",
+        "websiteUrl": "https://saramin.vn/companies/vietcombank-85897",
+        "countryCode": "VN",
+        "registrationNumber": "DEMO-EXP-VIETCOMBANK",
+        "sizeRange": "1000+",
+        "logoUrl": "/companies/seed-expanded/vietcombank-logo.webp",
+        "coverImageUrl": "/companies/seed-expanded/vietcombank-cover.webp"
+      },
+      "jobs": [
+        {
+          "title": "Java Banking Engineer (Spring Boot / Oracle) (Demo)",
+          "description": "[Tin demo tổng hợp, không phải tin tuyển dụng chính thức của Vietcombank.]\nPhát triển dịch vụ giao dịch tài chính mô phỏng; kiểm tra tính nhất quán; bổ sung audit kỹ thuật và kiểm thử hồi quy.\nPhối hợp review mã nguồn, kiểm thử và bàn giao tài liệu trong nhóm dự án.",
+          "requirementsText": "Tối thiểu 4 năm kinh nghiệm phù hợp. Kỹ năng bắt buộc: Java, Spring Boot, Oracle, SQL, REST API. Hiểu giao dịch cơ sở dữ liệu, cơ chế idempotency và yêu cầu bảo vệ thông tin trong ứng dụng tài chính. Ưu tiên biết viết kiểm thử tự động và làm việc theo quy trình Agile.",
+          "benefitsText": "Điều kiện minh họa cho dữ liệu demo: trao đổi mức lương khi phỏng vấn; kế hoạch đào tạo chuyên môn; hoạt động chia sẻ kiến thức trong nhóm. Không xác nhận các chế độ hiện hành của doanh nghiệp.",
+          "locationText": "Hà Nội",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "SENIOR",
+          "openings": 1,
+          "salaryMin": 0,
+          "salaryMax": 0,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": true,
+          "externalAiConsent": false,
+          "category": {
+            "industryId": "1",
+            "positionName": "Java Banking Engineer (Spring Boot / Oracle) (Demo)"
+          }
+        },
+        {
+          "title": "Information Security Engineer (Network / Linux) (Demo)",
+          "description": "[Tin demo tổng hợp, không phải tin tuyển dụng chính thức của Vietcombank.]\nRà soát cấu hình an ninh trong môi trường thực hành; phân tích log cảnh báo; đề xuất kiểm soát và kiểm chứng bản sửa.\nPhối hợp review mã nguồn, kiểm thử và bàn giao tài liệu trong nhóm dự án.",
+          "requirementsText": "Tối thiểu 3 năm kinh nghiệm phù hợp. Kỹ năng bắt buộc: Linux, Network Security, SQL, Python, SIEM. Có nền tảng mạng máy tính, kiểm soát truy cập và viết báo cáo rủi ro có bằng chứng. Ưu tiên biết viết kiểm thử tự động và làm việc theo quy trình Agile.",
+          "benefitsText": "Điều kiện minh họa cho dữ liệu demo: trao đổi mức lương khi phỏng vấn; kế hoạch đào tạo chuyên môn; hoạt động chia sẻ kiến thức trong nhóm. Không xác nhận các chế độ hiện hành của doanh nghiệp.",
+          "locationText": "Hà Nội",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "MIDDLE",
+          "openings": 1,
+          "salaryMin": 0,
+          "salaryMax": 0,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": true,
+          "externalAiConsent": false,
+          "category": {
+            "industryId": "1",
+            "positionName": "Information Security Engineer (Network / Linux) (Demo)"
+          }
+        }
+      ]
+    },
+    {
+      "company": {
+        "legalName": "DataStreams Asia (Demo)",
+        "displayName": "DataStreams Asia (Demo)",
+        "slug": "demo-portal-datastreams",
+        "description": "[Hồ sơ demo tham khảo Saramin, không đại diện doanh nghiệp.] Cung cấp giải pháp tích hợp dữ liệu, ETL và quản trị dữ liệu doanh nghiệp. Các vị trí và điều kiện tuyển dụng trên bản demo là dữ liệu tổng hợp. Nguồn tham khảo: https://saramin.vn/companies/datastreams-asia-83824",
+        "websiteUrl": "https://saramin.vn/companies/datastreams-asia-83824",
+        "countryCode": "VN",
+        "registrationNumber": "DEMO-EXP-DATASTREAMS",
+        "sizeRange": "100-499",
+        "logoUrl": "/companies/seed-expanded/datastreams-logo.webp",
+        "coverImageUrl": "/companies/seed-expanded/datastreams-cover.webp"
+      },
+      "jobs": [
+        {
+          "title": "ETL Developer (SQL / Python / Data Integration) (Demo)",
+          "description": "[Tin demo tổng hợp, không phải tin tuyển dụng chính thức của DataStreams Asia.]\nThiết kế luồng trích xuất và chuyển đổi dữ liệu tổng hợp; xử lý sai lệch schema; kiểm tra đối soát trước và sau mỗi lần nạp.\nPhối hợp review mã nguồn, kiểm thử và bàn giao tài liệu trong nhóm dự án.",
+          "requirementsText": "Tối thiểu 2 năm kinh nghiệm phù hợp. Kỹ năng bắt buộc: SQL, Python, PostgreSQL, ETL, Linux. Nắm vững SQL, mô hình dữ liệu quan hệ và cách khôi phục pipeline khi có lỗi từng phần. Ưu tiên biết viết kiểm thử tự động và làm việc theo quy trình Agile.",
+          "benefitsText": "Điều kiện minh họa cho dữ liệu demo: trao đổi mức lương khi phỏng vấn; kế hoạch đào tạo chuyên môn; hoạt động chia sẻ kiến thức trong nhóm. Không xác nhận các chế độ hiện hành của doanh nghiệp.",
+          "locationText": "Hà Nội",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "MIDDLE",
+          "openings": 1,
+          "salaryMin": 0,
+          "salaryMax": 0,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": true,
+          "externalAiConsent": false,
+          "category": {
+            "industryId": "1",
+            "positionName": "ETL Developer (SQL / Python / Data Integration) (Demo)"
+          }
+        },
+        {
+          "title": "Data Governance Analyst (SQL / Metadata) (Demo)",
+          "description": "[Tin demo tổng hợp, không phải tin tuyển dụng chính thức của DataStreams Asia.]\nXây dựng danh mục và từ điển dữ liệu mẫu; mô tả lineage; xác định quy tắc chất lượng và theo dõi kết quả kiểm tra.\nPhối hợp review mã nguồn, kiểm thử và bàn giao tài liệu trong nhóm dự án.",
+          "requirementsText": "Tối thiểu 1 năm kinh nghiệm phù hợp. Kỹ năng bắt buộc: SQL, Data Governance, Metadata, Python, Business Analysis. Có tư duy phân tích, khả năng viết tài liệu và phối hợp xác minh định nghĩa dữ liệu với các nhóm nghiệp vụ. Ưu tiên biết viết kiểm thử tự động và làm việc theo quy trình Agile.",
+          "benefitsText": "Điều kiện minh họa cho dữ liệu demo: trao đổi mức lương khi phỏng vấn; kế hoạch đào tạo chuyên môn; hoạt động chia sẻ kiến thức trong nhóm. Không xác nhận các chế độ hiện hành của doanh nghiệp.",
+          "locationText": "Hà Nội",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "JUNIOR",
+          "openings": 1,
+          "salaryMin": 0,
+          "salaryMax": 0,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": true,
+          "externalAiConsent": false,
+          "category": {
+            "industryId": "1",
+            "positionName": "Data Governance Analyst (SQL / Metadata) (Demo)"
+          }
+        }
+      ]
+    }
+  ]
+}

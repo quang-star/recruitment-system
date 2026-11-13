@@ -1,0 +1,325 @@
+{
+  "schemaVersion": "portal-seed-sources/1.0",
+  "checkedOn": "2026-11-03",
+  "fixture": "seed-portal-expanded.json",
+  "contentPolicy": "Public company identity, scale and sector references; original synthetic demo JDs, not replicas or verified live vacancies. Salary is undisclosed. Brand/media rights remain with their owners; assets are for local demo with recorded sources.",
+  "companies": [
+    {
+      "slug": "demo-portal-naver",
+      "sourceSite": "ITviec",
+      "profileUrl": "https://itviec.com/companies/naver-vietnam",
+      "referenceUrls": [
+        "https://itviec.com/companies/naver-vietnam"
+      ],
+      "websiteUrlMeaning": "Public recruitment profile reference, not an asserted official corporate website",
+      "jobContent": "ORIGINAL_SYNTHETIC_DEMO",
+      "media": {
+        "logo": {
+          "sourceUrl": "https://itviec.com/rails/active_storage/representations/proxy/eyJfcmFpbHMiOnsiZGF0YSI6MjM4NzY2MSwicHVyIjoiYmxvYl9pZCJ9fQ==--ea902481f8993444310a1fb4cd09822c9f9af1de/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJwbmciLCJyZXNpemVfdG9fZml0IjpbMTcwLG51bGxdfSwicHVyIjoidmFyaWF0aW9uIn19--f02e0eabf9f34431b8e6312d2e4f969eef4fa3a8/Naver_Logo(2)-white.png",
+          "localPath": "/companies/seed-expanded/naver-logo.webp",
+          "width": 170,
+          "height": 170,
+          "sha256": "a092557144639b3e642f20ea12cd5c9b6b432573a3040cb46ba22aad2fe3c5dc"
+        },
+        "cover": {
+          "sourceUrl": "https://itviec.com/rails/active_storage/blobs/proxy/eyJfcmFpbHMiOnsiZGF0YSI6NzE4NDU5MywicHVyIjoiYmxvYl9pZCJ9fQ==--139c36f6982b96d29b85b88c7f5f741310a1577d/NAVER%20Vietnam-team.jpg",
+          "localPath": "/companies/seed-expanded/naver-cover.webp",
+          "width": 940,
+          "height": 492,
+          "sha256": "f87e3591c8b2ac488717760c293d1e26dd80b8a1a3db47e8fd79258045d9767b"
+        }
+      }
+    },
+    {
+      "slug": "demo-portal-lg-cns",
+      "sourceSite": "ITviec",
+      "profileUrl": "https://itviec.com/companies/lg-cns-viet-nam",
+      "referenceUrls": [
+        "https://itviec.com/companies/lg-cns-viet-nam"
+      ],
+      "websiteUrlMeaning": "Public recruitment profile reference, not an asserted official corporate website",
+      "jobContent": "ORIGINAL_SYNTHETIC_DEMO",
+      "media": {
+        "logo": {
+          "sourceUrl": "https://itviec.com/rails/active_storage/representations/proxy/eyJfcmFpbHMiOnsiZGF0YSI6NTc3MTIzMiwicHVyIjoiYmxvYl9pZCJ9fQ==--79414bdba1830df263fbf0fe3fbf7127abc83386/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fZml0IjpbMTcwLG51bGxdfSwicHVyIjoidmFyaWF0aW9uIn19--9564d4cdd8c0ef6cf2e271f22261587dfb550e26/Annotation%202025-02-14%20172858.jpg",
+          "localPath": "/companies/seed-expanded/lg-cns-logo.webp",
+          "width": 170,
+          "height": 167,
+          "sha256": "dc470faab169dff2ddf75d5efbaa7fe3024160ed4a2a6d4914f209a7f07dea23"
+        },
+        "cover": {
+          "sourceUrl": "https://itviec.com/rails/active_storage/representations/proxy/eyJfcmFpbHMiOnsiZGF0YSI6NjM2OTU5MywicHVyIjoiYmxvYl9pZCJ9fQ==--84e1a620d5293beae372e720d2010ccb25c83cde/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGVnIiwicmVzaXplX3RvX2ZpbGwiOls2MzgsNDUwXX0sInB1ciI6InZhcmlhdGlvbiJ9fQ==--1dc18182dc8d9f4df6b439706515885317e6801f/IMG_5265.jpeg",
+          "localPath": "/companies/seed-expanded/lg-cns-cover.webp",
+          "width": 638,
+          "height": 450,
+          "sha256": "1485488644c5b1734a815b90b191d101ec663397068e84773649e2db098fe49d"
+        }
+      }
+    },
+    {
+      "slug": "demo-portal-capgemini",
+      "sourceSite": "ITviec",
+      "profileUrl": "https://itviec.com/companies/capgemini-vietnam",
+      "referenceUrls": [
+        "https://itviec.com/companies/capgemini-vietnam"
+      ],
+      "websiteUrlMeaning": "Public recruitment profile reference, not an asserted official corporate website",
+      "jobContent": "ORIGINAL_SYNTHETIC_DEMO",
+      "media": {
+        "logo": {
+          "sourceUrl": "https://itviec.com/rails/active_storage/representations/proxy/eyJfcmFpbHMiOnsiZGF0YSI6Nzk2NzcwLCJwdXIiOiJibG9iX2lkIn19--b64c7e7749d6343faa318ff956e5f43d4db1d72f/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fZml0IjpbMTcwLG51bGxdfSwicHVyIjoidmFyaWF0aW9uIn19--9564d4cdd8c0ef6cf2e271f22261587dfb550e26/capgemini-vietnam-logo.jpg",
+          "localPath": "/companies/seed-expanded/capgemini-logo.webp",
+          "width": 170,
+          "height": 42,
+          "sha256": "8fa0f97206ccdf0fb9f1dde2efde545f696afb358e4c7a63786fee74eec23488"
+        },
+        "cover": {
+          "sourceUrl": "https://itviec.com/rails/active_storage/representations/proxy/eyJfcmFpbHMiOnsiZGF0YSI6ODM1NzkzLCJwdXIiOiJibG9iX2lkIn19--4b65b52a095b3cf13ef2c68c9069d9b6b20f2612/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJKUEciLCJyZXNpemVfdG9fZmlsbCI6WzYzOCw0NTBdfSwicHVyIjoidmFyaWF0aW9uIn19--0e7ea2a2ba569f3816306768c58e439b3154a5d9/original_(1).JPG",
+          "localPath": "/companies/seed-expanded/capgemini-cover.webp",
+          "width": 638,
+          "height": 450,
+          "sha256": "c6c804aca80566a3b04f87863505fcbe99ecd4925abcaad94a3aebdf813e8d0e"
+        }
+      }
+    },
+    {
+      "slug": "demo-portal-toshiba",
+      "sourceSite": "ITviec",
+      "profileUrl": "https://itviec.com/companies/toshiba-software-development-viet-nam-co-ltd",
+      "referenceUrls": [
+        "https://itviec.com/companies/toshiba-software-development-viet-nam-co-ltd"
+      ],
+      "websiteUrlMeaning": "Public recruitment profile reference, not an asserted official corporate website",
+      "jobContent": "ORIGINAL_SYNTHETIC_DEMO",
+      "media": {
+        "logo": {
+          "sourceUrl": "https://itviec.com/rails/active_storage/representations/proxy/eyJfcmFpbHMiOnsiZGF0YSI6MTA3MjE3OCwicHVyIjoiYmxvYl9pZCJ9fQ==--1f0cd998a724071f4b8754c83195edbc6b7a5ba1/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJwbmciLCJyZXNpemVfdG9fZml0IjpbMTcwLG51bGxdfSwicHVyIjoidmFyaWF0aW9uIn19--f02e0eabf9f34431b8e6312d2e4f969eef4fa3a8/toshiba-software-development-viet-nam-co-ltd-logo.png",
+          "localPath": "/companies/seed-expanded/toshiba-logo.webp",
+          "width": 170,
+          "height": 99,
+          "sha256": "d09265321ba73c0c511d2a63e942ba1004208e481ff333489596fc87f654059f"
+        },
+        "cover": {
+          "sourceUrl": "https://itviec.com/rails/active_storage/representations/proxy/eyJfcmFpbHMiOnsiZGF0YSI6MTcxNjA1OCwicHVyIjoiYmxvYl9pZCJ9fQ==--aa19a195bec0e0ba127f257a2984f6c559613093/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fZmlsbCI6WzYzOCw0NTBdfSwicHVyIjoidmFyaWF0aW9uIn19--6bfaff7af77f9940f396796c037b14588008b831/LCS02979.jpg",
+          "localPath": "/companies/seed-expanded/toshiba-cover.webp",
+          "width": 638,
+          "height": 450,
+          "sha256": "9e71cddad412ea0c92b2cdaa81254d7644f226c6a5c36a3e8864cb45beda0da1"
+        }
+      }
+    },
+    {
+      "slug": "demo-portal-isb",
+      "sourceSite": "TopCV",
+      "profileUrl": "https://www.topcv.vn/cong-ty/cong-ty-tnhh-isb-viet-nam/114323.html",
+      "referenceUrls": [
+        "https://www.topcv.vn/cong-ty/cong-ty-tnhh-isb-viet-nam/114323.html",
+        "https://isb-vietnam.com.vn/",
+        "https://itviec.com/companies/ivc-isb-vietnam"
+      ],
+      "websiteUrlMeaning": "Public recruitment profile reference, not an asserted official corporate website",
+      "jobContent": "ORIGINAL_SYNTHETIC_DEMO",
+      "media": {
+        "logo": {
+          "sourceUrl": "https://static.topcv.vn/company_logos/vfH5Qj1fBIKFHzcv3Dma6eu0iUthoE99_1660036553____031e0da6643b18b7399af6234aefa38b.png",
+          "localPath": "/companies/seed-expanded/isb-logo.webp",
+          "width": 360,
+          "height": 252,
+          "sha256": "338654dfffb54cd7d64b227fbd6157f50b623005f78c8b61b6d48242ebc4cb54"
+        },
+        "cover": {
+          "sourceUrl": "https://itviec.com/rails/active_storage/representations/proxy/eyJfcmFpbHMiOnsiZGF0YSI6Mjg1MDQxMiwicHVyIjoiYmxvYl9pZCJ9fQ==--b9e042b944e2b913bffc839eab6fe786e7174489/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJqcGciLCJyZXNpemVfdG9fZmlsbCI6WzI3NiwxODRdLCJjcm9wIjpbMCwwLDI3NiwxODRdfSwicHVyIjoidmFyaWF0aW9uIn19--e24b2a4aa5883fa9930b06f98b3c676501abbf83/cover.jpg",
+          "localPath": "/companies/seed-expanded/isb-cover.webp",
+          "width": 276,
+          "height": 184,
+          "sha256": "08fa4b50982bc9c9d72ee9924fd914ef23be998cf65a3d6414c1b96eee6c5429"
+        }
+      }
+    },
+    {
+      "slug": "demo-portal-hpt",
+      "sourceSite": "TopCV",
+      "profileUrl": "https://www.topcv.vn/cong-ty/cong-ty-co-phan-dich-vu-cong-nghe-tin-hoc-hpt/141408.html",
+      "referenceUrls": [
+        "https://www.topcv.vn/cong-ty/cong-ty-co-phan-dich-vu-cong-nghe-tin-hoc-hpt/141408.html",
+        "https://www.hpt.vn/"
+      ],
+      "websiteUrlMeaning": "Public recruitment profile reference, not an asserted official corporate website",
+      "jobContent": "ORIGINAL_SYNTHETIC_DEMO",
+      "media": {
+        "logo": {
+          "sourceUrl": "https://static.topcv.vn/company_logos/OjeVA7S0ZlE1E2V6JCyBt7aTLnAo24Yf_1686366106____aef8984a6cc2f94491d95a807a6fd114.jpg",
+          "localPath": "/companies/seed-expanded/hpt-logo.webp",
+          "width": 360,
+          "height": 255,
+          "sha256": "40de04ccf79905c769432119fedb801d3fa6241f4db31d3e3e494099cc67c523"
+        },
+        "cover": {
+          "sourceUrl": "https://www.hpt.vn/res/banner/A5602CB.jpg?w=1366&h=638&format=jpg&v=23042026105245",
+          "localPath": "/companies/seed-expanded/hpt-cover.webp",
+          "width": 1000,
+          "height": 467,
+          "sha256": "c4c1365f901539c9377ecb374e03d804c8416f3a1af52ae90d3ee3896a42b777"
+        }
+      }
+    },
+    {
+      "slug": "demo-portal-cmc-ts",
+      "sourceSite": "TopCV",
+      "profileUrl": "https://www.topcv.vn/cong-ty/cong-ty-tnhh-tong-cong-ty-cong-nghe-giai-phap-cmc/6525.html",
+      "referenceUrls": [
+        "https://www.topcv.vn/cong-ty/cong-ty-tnhh-tong-cong-ty-cong-nghe-giai-phap-cmc/6525.html",
+        "https://cmcts.com.vn/"
+      ],
+      "websiteUrlMeaning": "Public recruitment profile reference, not an asserted official corporate website",
+      "jobContent": "ORIGINAL_SYNTHETIC_DEMO",
+      "media": {
+        "logo": {
+          "sourceUrl": "https://static.topcv.vn/company_logos/W5VBpNhKUFG9wbumupC3HFpCggtoTh9V_1657787825____79d856f16bfc01fa82aad2d0536fcb53.jpg",
+          "localPath": "/companies/seed-expanded/cmc-ts-logo.webp",
+          "width": 360,
+          "height": 225,
+          "sha256": "242a1e7b632f42d764b94556537a139299c7f8b46214387fb7f3e67c252a7e45"
+        },
+        "cover": {
+          "sourceUrl": "https://cmcts.com.vn/media/data/banner/bg__nangluc.jpg",
+          "localPath": "/companies/seed-expanded/cmc-ts-cover.webp",
+          "width": 1000,
+          "height": 618,
+          "sha256": "c567c548fe1e8dc90e9de8ad1e52c36908eb8dfc73edadc7c0f7404c918012a8"
+        }
+      }
+    },
+    {
+      "slug": "demo-portal-smartosc",
+      "sourceSite": "TopCV",
+      "profileUrl": "https://www.topcv.vn/brand/smartosc?id=84788",
+      "referenceUrls": [
+        "https://www.topcv.vn/brand/smartosc?id=84788",
+        "https://www.topcv.vn/brand/smartosc?id=84788"
+      ],
+      "websiteUrlMeaning": "Public recruitment profile reference, not an asserted official corporate website",
+      "jobContent": "ORIGINAL_SYNTHETIC_DEMO",
+      "media": {
+        "logo": {
+          "sourceUrl": "https://static.topcv.vn/company_logos/cong-ty-co-phan-smartosc-61d50e76c4aec.jpg",
+          "localPath": "/companies/seed-expanded/smartosc-logo.webp",
+          "width": 150,
+          "height": 148,
+          "sha256": "d0db02a3ecb082c80dd8baccefca5b8a937803c7ef131453a04fff03701d406a"
+        },
+        "cover": {
+          "sourceUrl": "https://static.topcv.vn/premium_companies/images/7b19a9309a64e96e8427bb2f157512f0-6628ec010f8a0.jpg",
+          "localPath": "/companies/seed-expanded/smartosc-cover.webp",
+          "width": 1000,
+          "height": 667,
+          "sha256": "06aca38a06a0699f3b920e52a66adb6120133632fe7d9eab4a1c785544c7985e"
+        }
+      }
+    },
+    {
+      "slug": "demo-portal-mobifone-it",
+      "sourceSite": "Saramin",
+      "profileUrl": "https://saramin.vn/companies/mobifone-it-83682",
+      "referenceUrls": [
+        "https://saramin.vn/companies/mobifone-it-83682"
+      ],
+      "websiteUrlMeaning": "Public recruitment profile reference, not an asserted official corporate website",
+      "jobContent": "ORIGINAL_SYNTHETIC_DEMO",
+      "media": {
+        "logo": {
+          "sourceUrl": "https://assets.saramin.vn/images/2024/08/06/TopDev-MobileFoneIT_logoRGB-01-1722936255.png",
+          "localPath": "/companies/seed-expanded/mobifone-it-logo.webp",
+          "width": 360,
+          "height": 134,
+          "sha256": "94854461519045d89da422f90bab444c9af0989d0727c721fb504610e95aedc4"
+        },
+        "cover": {
+          "sourceUrl": "https://assets.saramin.vn/images/2024/08/06/TopDev-efc367a57dcadcae096e4af421106500-1722938017.png",
+          "localPath": "/companies/seed-expanded/mobifone-it-cover.webp",
+          "width": 1000,
+          "height": 370,
+          "sha256": "26b372fcc7b77ca68006f795d7eb55b63b2cdccc97fc525c74f9a28c56ec5bd0"
+        }
+      }
+    },
+    {
+      "slug": "demo-portal-bosch",
+      "sourceSite": "Saramin",
+      "profileUrl": "https://saramin.vn/companies/bosch-global-software-technologies-company-limited-54407",
+      "referenceUrls": [
+        "https://saramin.vn/companies/bosch-global-software-technologies-company-limited-54407"
+      ],
+      "websiteUrlMeaning": "Public recruitment profile reference, not an asserted official corporate website",
+      "jobContent": "ORIGINAL_SYNTHETIC_DEMO",
+      "media": {
+        "logo": {
+          "sourceUrl": "https://assets.topdev.vn/images/2025/09/15/TopDev-c27ed62449d2a80088bee1d04509a1a4-1757923218.jpg",
+          "localPath": "/companies/seed-expanded/bosch-logo.webp",
+          "width": 360,
+          "height": 360,
+          "sha256": "c4bdb311ae5c8ca91f4ff9501166e9501f54219ec45b6c3e62ce4ca47c74f835"
+        },
+        "cover": {
+          "sourceUrl": "https://assets.topdev.vn/images/2025/09/15/TopDev-z7013201215147_f6d7c5d59508a840d77237d22f216db0-1757910571.jpg",
+          "localPath": "/companies/seed-expanded/bosch-cover.webp",
+          "width": 1000,
+          "height": 667,
+          "sha256": "418462c78e0245bf30644f3e8b3bead4edb84ac230c2989f3ae6389239e8cf33"
+        }
+      }
+    },
+    {
+      "slug": "demo-portal-vietcombank",
+      "sourceSite": "Saramin",
+      "profileUrl": "https://saramin.vn/companies/vietcombank-85897",
+      "referenceUrls": [
+        "https://saramin.vn/companies/vietcombank-85897"
+      ],
+      "websiteUrlMeaning": "Public recruitment profile reference, not an asserted official corporate website",
+      "jobContent": "ORIGINAL_SYNTHETIC_DEMO",
+      "media": {
+        "logo": {
+          "sourceUrl": "https://assets.saramin.vn/images/2023/02/21/TopDev-VCB_Logo-1676942891.jpg",
+          "localPath": "/companies/seed-expanded/vietcombank-logo.webp",
+          "width": 360,
+          "height": 138,
+          "sha256": "3799c41f816e479bb84270244b20d8f3ba39b5e909049029f77e58a90a6507fe"
+        },
+        "cover": {
+          "sourceUrl": "https://assets.saramin.vn/images/2023/04/19/TopDev-Vietcombank-Image-1-1681875043.png",
+          "localPath": "/companies/seed-expanded/vietcombank-cover.webp",
+          "width": 693,
+          "height": 349,
+          "sha256": "8508d453bd158c7ac15cd00400c9d52b133380e37f3da5ef65202d2eac8c0eab"
+        }
+      }
+    },
+    {
+      "slug": "demo-portal-datastreams",
+      "sourceSite": "Saramin",
+      "profileUrl": "https://saramin.vn/companies/datastreams-asia-83824",
+      "referenceUrls": [
+        "https://saramin.vn/companies/datastreams-asia-83824"
+      ],
+      "websiteUrlMeaning": "Public recruitment profile reference, not an asserted official corporate website",
+      "jobContent": "ORIGINAL_SYNTHETIC_DEMO",
+      "media": {
+        "logo": {
+          "sourceUrl": "https://assets.saramin.vn/images/2020/08/05/e880d0df742c9f249011aa1d0db9a30d-8C9oj.png",
+          "localPath": "/companies/seed-expanded/datastreams-logo.webp",
+          "width": 360,
+          "height": 126,
+          "sha256": "3c3369820bfca916bdcfa21f2852e7b9ebcff92bef9480af76a036a630af957b"
+        },
+        "cover": {
+          "sourceUrl": "https://assets.saramin.vn/images/2020/08/05/Datastreams-Image-4-kjUas.jpg",
+          "localPath": "/companies/seed-expanded/datastreams-cover.webp",
+          "width": 932,
+          "height": 700,
+          "sha256": "4c490347247f768ffda3100fc3b75c14dee98ebf34adb3f965a338be75522973"
+        }
+      }
+    }
+  ]
+}

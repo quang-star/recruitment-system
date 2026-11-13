@@ -20,6 +20,7 @@ demo = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(demo)
 
 COMPANY_FIELDS = {'legalName', 'displayName', 'slug', 'description', 'websiteUrl', 'countryCode', 'registrationNumber', 'sizeRange'}
+COMPANY_MEDIA_FIELDS = {'logoUrl', 'coverImageUrl'}
 JOB_FIELDS = {'title', 'description', 'requirementsText', 'benefitsText', 'locationText', 'countryCode', 'workMode',
               'employmentType', 'seniorityLevel', 'openings', 'salaryMin', 'salaryMax', 'salaryCurrency',
               'salaryPeriod', 'salaryNegotiable', 'externalAiConsent', 'category'}
@@ -58,10 +59,12 @@ def load_fixture(path: Path) -> list[dict]:
         if not isinstance(group, dict) or set(group) != {'company', 'jobs'}:
             raise ValueError('Invalid company fixture group')
         company, jobs = group['company'], group['jobs']
-        if not isinstance(company, dict) or set(company) != COMPANY_FIELDS:
+        if (not isinstance(company, dict) or not COMPANY_FIELDS.issubset(company)
+                or set(company) - COMPANY_FIELDS - COMPANY_MEDIA_FIELDS):
             raise ValueError('Company fixture must contain content fields only, without IDs or status overrides')
         _strings(company, {'legalName': 240, 'displayName': 240, 'slug': 160, 'description': 10000,
                            'websiteUrl': 500, 'countryCode': 2, 'registrationNumber': 80, 'sizeRange': 30})
+        _strings(company, {field: 1000 for field in COMPANY_MEDIA_FIELDS if field in company})
         slug = company['slug']
         if not re.fullmatch(r'demo-portal-[a-z0-9]+(?:-[a-z0-9]+)*', slug) or slug in slugs:
             raise ValueError('Use unique demo-portal- company slugs')

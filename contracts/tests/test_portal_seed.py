@@ -3,6 +3,7 @@ from copy import deepcopy
 from datetime import UTC, datetime
 import importlib.util
 import json
+import hashlib
 from pathlib import Path
 import re
 
@@ -13,6 +14,7 @@ spec = importlib.util.spec_from_file_location('portal_seed', ROOT / 'scripts/see
 portal = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(portal)
 FIXTURE = ROOT / 'scripts/seed-portal-data.json'
+EXPANDED_FIXTURE = ROOT / 'scripts/seed-portal-expanded.json'
 
 
 class FakeApi:
@@ -74,6 +76,11 @@ def test_fixture_preserves_portal_content_without_business_uuid_or_status_overri
     assert len(companies) == 8 and sum(len(group['jobs']) for group in companies) == 11
     assert not re.search(r'[0-9a-fA-F]{8}(?:-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}', FIXTURE.read_text(encoding='utf-8'))
     assert all(group['company']['slug'].startswith('demo-portal-') for group in companies)
+    for group in companies:
+        for field in ('logoUrl', 'coverImageUrl'):
+            media = group['company'][field]
+            assert media.startswith('/') and not media.startswith('//')
+            assert (ROOT / 'web' / 'public' / media.lstrip('/')).is_file()
     assert all(job['externalAiConsent'] is False for group in companies for job in group['jobs'])
     assert 'Kỹ sư Lập trình Fullstack (Java / Spring Boot & React)' in {job['title'] for group in companies for job in group['jobs']}
 
@@ -148,3 +155,43 @@ def test_seed_requires_an_explicit_local_origin(url):
     with pytest.raises(SystemExit) as result:
         portal.main(['--dry-run', '--gateway-url', url])
     assert result.value.code == 2
+
+
+def test_expanded_seed_has_complete_sourced_media_and_no_duplicate_base_companies():
+    groups = portal.load_fixture(EXPANDED_FIXTURE)
+    sources = json.loads((ROOT / 'scripts/seed-portal-expanded.sources.json').read_text(encoding='utf-8'))
+    assert len(groups) == 12 and sum(len(group['jobs']) for group in groups) == 24
+    assert not {group['company']['slug'] for group in groups}.intersection(
+        group['company']['slug'] for group in portal.load_fixture(FIXTURE))
+    provenance = {company['slug']: company for company in sources['companies']}
+    assert set(provenance) == {group['company']['slug'] for group in groups}
+    assert {source: sum(company['sourceSite'] == source for company in provenance.values())
+            for source in ('ITviec', 'TopCV', 'Saramin')} == {'ITviec': 4, 'TopCV': 4, 'Saramin': 4}
+    for group in groups:
+        company = group['company']
+        assert '(Demo)' in company['displayName']
+        source = provenance[company['slug']]
+        assert source['jobContent'] == 'ORIGINAL_SYNTHETIC_DEMO'
+        for field, kind in (('logoUrl', 'logo'), ('coverImageUrl', 'cover')):
+            path = company[field]
+            assert path.startswith('/companies/seed-expanded/') and '..' not in path
+            image = (ROOT / 'web/public' / path.lstrip('/')).read_bytes()
+            assert image[:4] == b'RIFF' and image[8:12] == b'WEBP'
+            assert source['media'][kind]['localPath'] == path
+            assert hashlib.sha256(image).hexdigest() == source['media'][kind]['sha256']
+            assert source['media'][kind]['sourceUrl'].startswith('https://')
+        for job in group['jobs']:
+            assert job['externalAiConsent'] is False
+            assert job['salaryNegotiable'] is True and job['salaryMin'] == job['salaryMax'] == 0
+            assert 'Tin demo' in job['description']
+
+
+def test_expanded_seed_can_be_repeated_without_changing_existing_data():
+    api = FakeApi()
+    groups = portal.load_fixture(EXPANDED_FIXTURE)
+    first = portal.seed_portal(api, 'synthetic-only', groups)
+    initial_companies, initial_jobs = deepcopy(api.companies), deepcopy(api.jobs)
+    second = portal.seed_portal(api, 'synthetic-only', groups)
+    assert first == second and first['companyCount'] == 12 and first['jobCount'] == 24
+    assert api.companies == initial_companies and api.jobs == initial_jobs
+    assert all(company['logoUrl'] and company['coverImageUrl'] for company in api.companies)
