@@ -1,0 +1,88 @@
+openapi: 3.1.0
+info:
+  title: Recruitment application workflow
+  version: 2.0.0
+paths:
+  /api/v2/candidate/applications:
+    get:
+      summary: List applications owned by the candidate
+      description: With page, returns a page; without page, returns the legacy array. Uses the immutable submitted JobVersion title and current company name. New submissions require a published open job owned by an ACTIVE company; existing applications remain readable after company status changes.
+      parameters:
+        - $ref: common-v2.yaml#/components/parameters/Page
+        - $ref: common-v2.yaml#/components/parameters/PageSize
+        - $ref: common-v2.yaml#/components/parameters/SearchText
+        - $ref: '#/components/parameters/ApplicationId'
+        - $ref: '#/components/parameters/Status'
+      responses:
+        '200':
+          description: Application summaries with jobTitle and companyName. Existing identity fields are preserved.
+  /api/v2/recruiter/applications:
+    get:
+      summary: List applications for a job within the recruiter's active company membership
+      description: Search includes shared candidate name/email, job title, company name, candidate ID and cover letter. PRIVATE profiles and withdrawn, revoked or deleted CV sources expose no profile name, headline, email or phone and cannot be found by those hidden fields.
+      parameters:
+        - name: jobId
+          in: query
+          required: true
+          schema:
+            $ref: ../schemas/cv-response-v2.schema.json#/properties/cvId
+        - $ref: common-v2.yaml#/components/parameters/Page
+        - $ref: common-v2.yaml#/components/parameters/PageSize
+        - $ref: common-v2.yaml#/components/parameters/SearchText
+        - $ref: '#/components/parameters/ApplicationId'
+        - $ref: '#/components/parameters/Status'
+      responses:
+        '200':
+          description: Page when page is supplied; legacy array otherwise. applicationId is an optional paged filter and never bypasses ownership or membership.
+  /api/v2/recruiter/applications/{applicationId}/status:
+    patch:
+      summary: Advance a recruitment application with optimistic concurrency
+      description: >-
+        SUBMITTED -> UNDER_REVIEW -> SHORTLISTED -> INTERVIEW -> OFFERED -> HIRED.
+        Any active stage may transition to REJECTED with a nonblank reason.
+        HIRED, REJECTED and WITHDRAWN are terminal. Candidates may withdraw at any
+        active stage with a reason, which revokes CV access and notifies recruiters.
+      parameters:
+        - name: applicationId
+          in: path
+          required: true
+          schema:
+            $ref: ../schemas/cv-response-v2.schema.json#/properties/cvId
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status, version]
+              properties:
+                status:
+                  $ref: '#/components/schemas/ApplicationStatus'
+                version:
+                  type: integer
+                  minimum: 0
+                reason:
+                  type: [string, 'null']
+                  maxLength: 2000
+      responses:
+        '200':
+          description: Updated application with incremented version
+        '409':
+          description: Invalid transition or stale version
+components:
+  parameters:
+    ApplicationId:
+      name: applicationId
+      in: query
+      description: Optional exact application filter for notification links, used with page.
+      schema:
+        $ref: ../schemas/cv-response-v2.schema.json#/properties/cvId
+    Status:
+      name: status
+      in: query
+      schema:
+        $ref: '#/components/schemas/ApplicationStatus'
+  schemas:
+    ApplicationStatus:
+      type: string
+      enum: [SUBMITTED, UNDER_REVIEW, SHORTLISTED, INTERVIEW, OFFERED, HIRED, REJECTED, WITHDRAWN]

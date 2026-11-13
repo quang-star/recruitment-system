@@ -1,0 +1,55 @@
+openapi: 3.1.0
+info:
+  title: Public job discovery
+  version: 2.0.0
+paths:
+  /api/v2/public/jobs/discovery:
+    get:
+      summary: Discover locations and categories from open published jobs
+      description: >-
+        Aggregates PUBLISHED active job versions owned by ACTIVE companies whose
+        application deadline is absent or in the future. No authentication required. Locations are the
+        employer-provided location text, ordered by job count then name, capped at
+        100. Categories use the version's specialization when its ID and name are
+        available, otherwise its industry; uncatalogued industries are omitted.
+        Counts group by category IDs, independently of historical snapshot label
+        changes. The lexicographically first snapshot label represents each group.
+        Categories are ordered by job count then name and IDs, capped at 12.
+        Counts are jobs, not openings. No AI service or external provider is called.
+        Pass industryId and specializationId to the existing paged job search.
+      responses:
+        '200':
+          description: Current discovery options; arrays are empty when no eligible jobs exist
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [locations, categories]
+                additionalProperties: false
+                properties:
+                  locations:
+                    type: array
+                    maxItems: 100
+                    items:
+                      type: string
+                      minLength: 1
+                  categories:
+                    type: array
+                    maxItems: 12
+                    items:
+                      type: object
+                      additionalProperties: false
+                      required: [industryId, specializationId, name, jobCount]
+                      properties:
+                        industryId:
+                          $ref: common-v2.yaml#/components/schemas/AsyncCommandResponse/properties/resourceId
+                        specializationId:
+                          anyOf:
+                          - $ref: common-v2.yaml#/components/schemas/AsyncCommandResponse/properties/resourceId
+                          - type: 'null'
+                        name:
+                          type: string
+                          minLength: 1
+                        jobCount:
+                          type: integer
+                          minimum: 1

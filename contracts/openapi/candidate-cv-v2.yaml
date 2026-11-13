@@ -7,7 +7,7 @@ paths:
     post:
       summary: Upload an owned CV with optional external AI assistance
       description: Candidate role required. External assistance is optional and defaults
-        to declined. Granting it requires externalAiPolicyVersion=external-ai/2.0.
+        to declined. Granting it requires externalAiPolicyVersion=external-ai/1.0.
         The choice belongs to this CV version and is retained on a storage retry.
         Existing versions and legacy requests default to declined. Local parsing and
         manual review remain available when assistance is declined or unavailable.
@@ -37,7 +37,7 @@ paths:
                 externalAiPolicyVersion:
                   type: string
                   maxLength: 40
-                  description: external-ai/2.0 is required when consent is true; omit
+                  description: external-ai/1.0 is required when consent is true; omit
                     when false
       responses:
         '201':

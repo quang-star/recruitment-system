@@ -1,0 +1,161 @@
+openapi: 3.1.0
+info:
+  title: Admin company approval
+  version: 2.0.0
+security:
+  - bearerAuth: []
+paths:
+  /api/v2/dashboard/companies:
+    get:
+      summary: Search companies for review (SYSTEM_ADMIN only)
+      description: Stable ordering by creation time then ID. Filtering is applied before pagination. No automatic company approval occurs.
+      parameters:
+        - $ref: common-v2.yaml#/components/parameters/Page
+        - $ref: common-v2.yaml#/components/parameters/PageSize
+        - $ref: common-v2.yaml#/components/parameters/SearchText
+        - name: status
+          in: query
+          description: Omit to list all statuses; the Admin UI initially selects PENDING.
+          schema:
+            type: string
+            enum: [PENDING, ACTIVE, SUSPENDED, CLOSED]
+      responses:
+        '200':
+          description: Paged companies; default page 0 and size 20
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: common-v2.yaml#/components/schemas/PageResponse
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Company'
+        '403':
+          description: SYSTEM_ADMIN is required
+  /api/v2/dashboard/companies/{companyId}/approve:
+    post:
+      summary: Approve a pending company (SYSTEM_ADMIN only)
+      description: >-
+        Atomically changes operating status PENDING to ACTIVE, increments version
+        and appends an audit entry with actor, reason, correlation ID and timestamp.
+        The shown version is required; stale/repeated approvals return 409 without
+        another audit entry. Legal verification status is unchanged.
+        Existing company/job/application data is preserved.
+      parameters:
+        - $ref: '#/components/parameters/CompanyId'
+        - $ref: common-v2.yaml#/components/parameters/CorrelationId
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Approval'
+      responses:
+        '200':
+          description: Approved company
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Company'
+        '400':
+          description: Invalid version or blank/oversized reason
+        '403':
+          description: SYSTEM_ADMIN is required
+        '404':
+          description: Company does not exist
+        '409':
+          description: Company changed or is no longer PENDING
+  /api/v2/dashboard/companies/{companyId}/history:
+    get:
+      summary: Recent operating approval history (SYSTEM_ADMIN only)
+      description: Up to 100 audit entries, newest timestamp then ID first. Historical companies approved before this feature truthfully have no approval audit.
+      parameters:
+        - $ref: '#/components/parameters/CompanyId'
+      responses:
+        '200':
+          description: Approval audit entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApprovalChange'
+        '403':
+          description: SYSTEM_ADMIN is required
+        '404':
+          description: Company does not exist
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    CompanyId:
+      name: companyId
+      in: path
+      required: true
+      schema:
+        $ref: ../schemas/cv-response-v2.schema.json#/properties/cvId
+  schemas:
+    Approval:
+      type: object
+      required: [version, reason]
+      properties:
+        version:
+          type: integer
+          minimum: 0
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 1000
+          pattern: '\S'
+    Company:
+      type: object
+      required: [companyId, legalName, displayName, status, verificationStatus, version]
+      properties:
+        companyId:
+          $ref: ../schemas/cv-response-v2.schema.json#/properties/cvId
+        legalName:
+          type: string
+        displayName:
+          type: string
+        status:
+          type: string
+          enum: [PENDING, ACTIVE, SUSPENDED, CLOSED]
+        verificationStatus:
+          type: string
+          enum: [UNVERIFIED, PENDING, VERIFIED, REJECTED]
+        version:
+          type: integer
+          minimum: 0
+    ApprovalChange:
+      type: object
+      required: [id, companyId, actorUserId, action, fromStatus, toStatus, version, reason, correlationId, occurredAt]
+      properties:
+        id:
+          $ref: ../schemas/cv-response-v2.schema.json#/properties/cvId
+        companyId:
+          $ref: ../schemas/cv-response-v2.schema.json#/properties/cvId
+        actorUserId:
+          $ref: ../schemas/cv-response-v2.schema.json#/properties/cvId
+        action:
+          const: APPROVE
+        fromStatus:
+          const: PENDING
+        toStatus:
+          const: ACTIVE
+        version:
+          type: integer
+          minimum: 1
+        reason:
+          type: string
+        correlationId:
+          type: string
+          format: uuid
+        occurredAt:
+          type: string
+          format: date-time
