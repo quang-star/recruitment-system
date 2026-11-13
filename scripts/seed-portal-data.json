@@ -12,7 +12,9 @@
         "websiteUrl": "https://vnpt.com.vn",
         "countryCode": "VN",
         "registrationNumber": "DEMO-PORTAL-VNPT-NET",
-        "sizeRange": "1000+"
+        "sizeRange": "1000+",
+        "logoUrl": "/logos/official/vnpt.png",
+        "coverImageUrl": "/companies/photos/vnpt.webp"
       },
       "jobs": [
         {
@@ -70,7 +72,9 @@
         "websiteUrl": "https://fptsoftware.com",
         "countryCode": "VN",
         "registrationNumber": "DEMO-PORTAL-FPT-SOFTWARE",
-        "sizeRange": "1000+"
+        "sizeRange": "1000+",
+        "logoUrl": "/logos/official/fpt.png",
+        "coverImageUrl": "/companies/photos/fpt.webp"
       },
       "jobs": [
         {
@@ -128,7 +132,9 @@
         "websiteUrl": "https://viettelsolutions.vn",
         "countryCode": "VN",
         "registrationNumber": "DEMO-PORTAL-VIETTEL-SOLUTIONS",
-        "sizeRange": "1000+"
+        "sizeRange": "1000+",
+        "logoUrl": "/logos/official/viettel.png",
+        "coverImageUrl": "/companies/photos/viettel.webp"
       },
       "jobs": [
         {
@@ -186,7 +192,9 @@
         "websiteUrl": "https://vng.com.vn",
         "countryCode": "VN",
         "registrationNumber": "DEMO-PORTAL-VNG-CORPORATION",
-        "sizeRange": "1000+"
+        "sizeRange": "1000+",
+        "logoUrl": "/logos/official/vng.png",
+        "coverImageUrl": "/companies/photos/vng.webp"
       },
       "jobs": [
         {
@@ -222,7 +230,9 @@
         "websiteUrl": "https://momo.vn",
         "countryCode": "VN",
         "registrationNumber": "DEMO-PORTAL-MOMO-FINTECH",
-        "sizeRange": "501-1000"
+        "sizeRange": "501-1000",
+        "logoUrl": "/logos/official/momo.svg",
+        "coverImageUrl": "/companies/photos/momo.webp"
       },
       "jobs": [
         {
@@ -258,7 +268,9 @@
         "websiteUrl": "https://shopee.vn",
         "countryCode": "VN",
         "registrationNumber": "DEMO-PORTAL-SHOPEE-VIETNAM",
-        "sizeRange": "1000+"
+        "sizeRange": "1000+",
+        "logoUrl": "/logos/official/shopee.svg",
+        "coverImageUrl": "/companies/photos/shopee.webp"
       },
       "jobs": [
         {
@@ -294,7 +306,9 @@
         "websiteUrl": "https://vpbank.com.vn",
         "countryCode": "VN",
         "registrationNumber": "DEMO-PORTAL-VPBANK-DIGITAL",
-        "sizeRange": "1000+"
+        "sizeRange": "1000+",
+        "logoUrl": "/logos/official/vpbank.svg",
+        "coverImageUrl": "/companies/photos/vpbank.webp"
       },
       "jobs": [
         {
@@ -330,7 +344,9 @@
         "websiteUrl": "https://techcombank.com",
         "countryCode": "VN",
         "registrationNumber": "DEMO-PORTAL-TECHCOMBANK-SOFTWARE",
-        "sizeRange": "1000+"
+        "sizeRange": "1000+",
+        "logoUrl": "/logos/official/techcombank.svg",
+        "coverImageUrl": "/companies/photos/techcombank.webp"
       },
       "jobs": [
         {
