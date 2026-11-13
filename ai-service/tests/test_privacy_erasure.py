@@ -18,7 +18,7 @@ from app.shared.api import ApiContractError
 from app.task.persistence import ProcessingTaskRecord
 from app.taxonomy.catalog import SkillCatalogRecord, seed_skills
 from app.outbox import OutboxEvent
-from app.shared import extraction_usage  # noqa: F401 - registers erasure-owned data
+from app.extraction import usage  # noqa: F401 - registers erasure-owned data
 from app.matching.shadow import MatchingShadowResult
 
 

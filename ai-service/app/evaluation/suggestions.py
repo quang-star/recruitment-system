@@ -8,7 +8,7 @@ import re
 import sys
 import unicodedata
 
-from app.shared.extraction_privacy import redact_contacts
+from app.extraction.redaction import redact_contacts
 from app.evaluation.validation import digest
 
 PROTOCOL = "suggestions-annotation-v1"

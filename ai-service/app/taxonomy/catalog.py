@@ -16,7 +16,7 @@ from sqlalchemy.orm import Mapped, Session, mapped_column
 
 from app.shared.database import Base
 from app.shared.api import ApiContractError
-from app.shared.extraction_privacy import redact_contacts
+from app.extraction.redaction import redact_contacts
 from app.taxonomy.normalizer import _key, _taxonomy_path, build_taxonomy
 from app.taxonomy.definitions import SkillCategory, SkillType, SkillRelation, compatible_skill, normalized_name
 

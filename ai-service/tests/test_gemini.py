@@ -11,9 +11,9 @@ from pydantic import SecretStr
 
 from app.cv.parser import parse_pdf
 from app.jd.parser import parse_jd
-from app.shared import gemini
+from app.extraction import gemini
 from app.shared.config import Settings
-from app.shared.gemini import GeminiExtractor, _contract, redact_contacts
+from app.extraction.gemini import GeminiExtractor, _contract, redact_contacts
 
 
 VERSION = str(legacy_id('779494ac-c858-4570-a884-6e88423b8e2b'))

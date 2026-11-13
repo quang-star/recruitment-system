@@ -61,7 +61,7 @@ def process_privacy_event(envelope: dict, factory) -> None:
     from app.cv.repository import ParsedCvHeadRecord, ParsedCvRevisionRecord
     from app.matching.repository import MatchingResultRecord
     from app.task.persistence import ProcessingTaskRecord
-    from app.shared.extraction_usage import ExtractionUsage
+    from app.extraction.usage import ExtractionUsage
     from app.outbox import OutboxEvent
     from app.taxonomy.occurrences import erase_source_occurrences
     from app.reprocessing.privacy import scrub_source

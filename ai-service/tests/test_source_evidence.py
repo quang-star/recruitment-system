@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 from app.cv.parser import parse_pdf
 from app.jd.parser import parse_jd
-from app.shared.evidence import attach_source_evidence
+from app.extraction.evidence import attach_source_evidence
 
 
 VERSION = str(legacy_id('779494ac-c858-4570-a884-6e88423b8e2b'))

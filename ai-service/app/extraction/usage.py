@@ -9,7 +9,7 @@ from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.shared.database import Base
-from app.shared.extraction_types import ExtractionContext
+from app.extraction.contracts import ExtractionContext
 
 
 class ExtractionDailyBudget(Base):

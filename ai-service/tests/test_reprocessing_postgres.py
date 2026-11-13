@@ -68,7 +68,7 @@ def test_two_workers_claim_and_materialize_exactly_once_on_migrated_postgres(pg_
 
     def worker():
         barrier.wait(timeout=10)
-        return asyncio.run(service.step(identity, actor, new_id(), "Bearer synthetic-only"))
+        return asyncio.run(service.step(identity, actor, uuid4(), "Bearer synthetic-only"))
 
     with ThreadPoolExecutor(max_workers=2) as pool:
         results = list(pool.map(lambda _: worker(), range(2)))
@@ -125,7 +125,7 @@ def test_delete_during_postgres_processing_scrubs_and_prevents_late_revision(pg_
         return raw
 
     service.read_object = erase_during_read
-    result = asyncio.run(service.step(identity, actor, new_id(), "Bearer synthetic-only"))
+    result = asyncio.run(service.step(identity, actor, uuid4(), "Bearer synthetic-only"))
     assert result["batch"]["items"][0]["state"] == "SKIPPED"
     assert result["batch"]["items"][0]["resourceId"] is None
     with factory() as session:

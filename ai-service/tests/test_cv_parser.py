@@ -340,7 +340,7 @@ def test_undated_projects_still_split_on_blank_lines():
 
 
 def test_skill_location_points_to_actual_page_and_text_span():
-    from app.shared.evidence import skill_locations
+    from app.extraction.evidence import skill_locations
     pages = ["Summary", "", "Experience with Java"]
     text = "\n".join(page for page in pages if page)
     locations = skill_locations(text, [{"raw": "Java", "evidenceIds": ["test-evidence"]}], pages)

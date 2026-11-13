@@ -162,6 +162,34 @@ def test_matching_preview_rejects_unowned_cv(test_setup):
     assert resp.json()["code"] == "CV_NOT_FOUND"
 
 
+def test_matching_preview_counts_uncertain_required_skills(test_setup, monkeypatch):
+    from dataclasses import replace
+
+    client, _, cv_version_id, job_version_id = test_setup
+    from app.matching import api
+
+    original = api.compute_match
+
+    def compute(*args, **kwargs):
+        result = original(*args, **kwargs)
+        return replace(result, claims=[
+            {"type": "SUPPORTED", "label": "Java"},
+            {"type": "UNCERTAIN", "label": "Kafka"},
+            {"type": "MISSING", "label": "Docker"},
+        ])
+
+    monkeypatch.setattr(api, "compute_match", compute)
+    response = client.post("/api/v2/matching-requests/preview", json={
+        "cvVersionId": str(cv_version_id), "jobVersionId": str(job_version_id),
+    })
+    assert response.status_code == 200
+    summary = response.json()["summary"]
+    assert summary["totalRequiredSkills"] == 3
+    assert summary["matchedRequiredSkills"] == 1
+    assert summary["missingSkills"] == ["Docker"]
+    assert response.json()["explanation"]["claims"][1]["type"] == "UNCERTAIN"
+
+
 def test_matching_preview_rejects_nonexistent_jd(test_setup):
     client, actor_id, cv_version_id, job_version_id = test_setup
     unknown_job_id = new_id()

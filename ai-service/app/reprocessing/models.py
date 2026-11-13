@@ -10,7 +10,7 @@ from sqlalchemy import DateTime, ForeignKey, Integer, JSON, String, UniqueConstr
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.shared.database import Base
-from app.shared.extraction_privacy import redact_contacts
+from app.extraction.redaction import redact_contacts
 
 Operation = Literal["PARSE_CV", "PARSE_JD", "MATCH_APPLICATION"]
 TERMINAL_STATES = ("COMPLETED", "SKIPPED", "FAILED")

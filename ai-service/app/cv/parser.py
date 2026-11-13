@@ -10,8 +10,8 @@ from pypdf import PdfReader
 
 from app.cv.ocr import OcrProcessingError, OcrUnavailableError, extract_pdf_text
 from app.taxonomy.normalizer import extract_known_skills, normalize_skill, taxonomy_version
-from app.shared.evidence import attach_source_evidence, skill_locations
-from app.shared.skill_proposals import propose_skill, skill_name_key
+from app.extraction.evidence import attach_source_evidence, skill_locations
+from app.extraction.skill_proposals import propose_skill, skill_name_key
 
 
 PARSER_VERSION = "rules-v0.5.4+ocr-tesseract5"

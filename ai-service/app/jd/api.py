@@ -18,8 +18,8 @@ from app.shared.api import ApiContractError
 from app.shared.config import get_settings
 from app.shared.database import get_session
 from app.shared.revision_status import ParsedRevisionStatus, validate_revision_status
-from app.shared.evidence import inherit_review_evidence
-from app.shared.skill_proposals import skill_name_key
+from app.extraction.evidence import inherit_review_evidence
+from app.extraction.skill_proposals import skill_name_key
 from app.shared.security import AuthenticatedPrincipal, require_access_token
 from app.taxonomy.normalizer import normalize_skill
 from app.taxonomy.normalizer import use_taxonomy, taxonomy_version
@@ -120,7 +120,7 @@ async def update_parsed_jd(
             "status": "PARSED", "failureCode": None,
         },
     )
-    enqueue(session, settings.kafka_job_processing_updated_topic, str(job_version_id), event)
+    enqueue(session, settings.kafka_job_processing_updated_topic, str(revision.job_id), event)
     session.commit()
     return ParsedJdResponse.from_revision(revision)
 
@@ -156,7 +156,7 @@ async def confirm_parsed_jd(
             "confirmedBy": str(principal.subject),
         },
     )
-    enqueue(session, settings.kafka_job_confirmed_topic, str(job_version_id), event)
+    enqueue(session, settings.kafka_job_confirmed_topic, str(revision.job_id), event)
     session.commit()
     return ParsedJdResponse.from_revision(revision)
 

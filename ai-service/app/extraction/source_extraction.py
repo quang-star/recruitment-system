@@ -12,8 +12,8 @@ from uuid import NAMESPACE_URL, uuid5
 from jsonschema import Draft202012Validator, FormatChecker
 
 from app.taxonomy.normalizer import extract_known_skills
-from app.shared.skill_proposals import propose_skill, skill_name_key
-from app.shared.extraction_privacy import professional_source
+from app.extraction.skill_proposals import propose_skill, skill_name_key
+from app.extraction.redaction import professional_source
 
 
 _FIELDS = {

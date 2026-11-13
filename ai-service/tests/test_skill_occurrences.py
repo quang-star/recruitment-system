@@ -22,7 +22,7 @@ from app.matching.repository import MatchingResultRecord
 from app.outbox import OutboxEvent
 from app.shared.api import ApiContractError, install_api_conventions
 from app.shared.database import Base, get_session
-from app.shared.extraction_usage import ExtractionUsage
+from app.extraction.usage import ExtractionUsage
 from app.shared.privacy import PrivacyTombstone, process_privacy_event
 from app.shared.privacy import require_live_cv
 from app.shared.security import AuthenticatedPrincipal, require_access_token
@@ -57,7 +57,7 @@ def session():
 def payload(kind, names=("NewFrameworkX",), *, evidence=True, group="requiredSkills", private=False):
     refs, skills = [], []
     for index, name in enumerate(names):
-        identity = str(new_id())
+        identity = str(uuid4())
         refs.append({"id": identity, "page": 1 if kind == "CV" else None, "start": index * 20, "end": index * 20 + len(name),
                      "rawText": "private@example.invalid", "objectRef": "private/original.pdf"})
         item = {"raw": name, "canonicalSkillId": None, "normalizationStatus": "PENDING", "confidence": 0.7,
@@ -119,6 +119,70 @@ def fill_catalog(session):
                             "category": "cross_functional", "aliases": [], "relations": []})
     catalog.skills = definitions
     session.commit()
+
+
+@pytest.mark.parametrize("kind", ["CV", "JD"])
+def test_uuid_evidence_survives_recording_and_jd_confirmation(session, kind):
+    data = payload(kind)
+    revision = store(session, kind, data)
+    item = rows(session)[0]
+    expected = {key: data["evidence"][0][key] for key in ("id", "page", "start", "end")}
+    assert item.evidence_refs == [expected]
+    assert item.provenance == "EXTRACTED"
+    repository = ParsedCvRevisionRepository(session) if kind == "CV" else ParsedJdRevisionRepository(session)
+    version = revision.cv_version_id if kind == "CV" else revision.job_version_id
+    confirmed = repository.confirm(version, revision.owner_user_id, revision.id, revision.owner_user_id)
+    (record_cv_revision if kind == "CV" else record_jd_revision)(session, confirmed)
+    assert rows(session)[0].evidence_refs == [expected]
+    if kind == "JD":
+        assert rows(session)[0].provenance == "USER_CONFIRMED"
+
+
+@pytest.mark.parametrize("identity", ["1", "9223372036854775807", "not-a-uuid", None])
+def test_evidence_rejects_non_uuid_identifiers(identity):
+    from app.taxonomy.occurrences import _evidence
+
+    location = {"id": identity, "page": 1, "start": 0, "end": 4}
+    assert _evidence({"evidenceIds": [identity]}, {str(identity): location}) == []
+
+
+@pytest.mark.parametrize("kind", ["CV", "JD"])
+def test_review_events_use_resource_keys_and_preserve_cv_processing_generation(session, monkeypatch, kind):
+    import asyncio
+    from types import SimpleNamespace
+    from unittest.mock import Mock
+
+    from app.cv import api as cv_api
+    from app.jd import api as jd_api
+
+    api = cv_api if kind == "CV" else jd_api
+    revision = store(session, kind, payload(kind))
+    version = revision.cv_version_id if kind == "CV" else revision.job_version_id
+    aggregate = new_id() if kind == "CV" else revision.job_id
+    task_repository = Mock()
+    task_repository.find_by_resource_id.return_value = SimpleNamespace(id=new_id(), processing_generation=3)
+    monkeypatch.setattr(api, "SqlAlchemyProcessingTaskRepository", lambda _: task_repository)
+    monkeypatch.setattr(api, "_validate_user_payload", lambda *args: revision.payload)
+    monkeypatch.setattr(api, "get_settings", lambda: SimpleNamespace(
+        kafka_cv_processing_updated_topic="cv.processing.updated.v2",
+        kafka_job_processing_updated_topic="job.processing.updated.v2"))
+    # The real validators and repositories are covered separately; this exercises
+    # revision/outbox transaction behavior without any network or secret settings.
+    data = deepcopy(revision.payload)
+    data["document"]["sourceHash"] = revision.source_hash
+    revision.payload["document"]["sourceHash"] = revision.source_hash
+    request = SimpleNamespace(state=SimpleNamespace(correlation_id=uuid4()))
+    principal = AuthenticatedPrincipal(revision.owner_user_id, ("CANDIDATE" if kind == "CV" else "RECRUITER",))
+    if kind == "CV":
+        body = cv_api.UpdateParsedCvRequest(cvId=aggregate, expectedRevisionId=revision.id, payload=data)
+        asyncio.run(cv_api.update_parsed_cv(version, body, request, principal, session))
+    else:
+        body = jd_api.UpdateParsedJdRequest(expectedRevisionId=revision.id, payload=data)
+        asyncio.run(jd_api.update_parsed_jd(version, body, request, principal, session))
+    event = session.scalar(select(OutboxEvent))
+    assert event.message_key == str(aggregate)
+    if kind == "CV":
+        assert event.envelope["payload"]["processingGeneration"] == 3
 
 
 @pytest.mark.parametrize("kind", ["CV", "JD"])

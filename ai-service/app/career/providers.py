@@ -2,9 +2,10 @@ from typing import Protocol
 
 from app.career.models import ProviderSuggestions
 from app.shared.config import Settings
-from app.shared.extraction import get_provider
-from app.shared.gemini import GeminiExtractor
-from app.shared.groq import GroqExtractor
+from app.extraction.policy import get_provider
+from app.extraction.gemini import GeminiExtractor
+from app.extraction.groq import GroqExtractor
+from app.extraction.router9 import Router9Extractor
 
 
 PROMPT = """Suggest up to three career classifications for this job description.
@@ -34,7 +35,7 @@ class CareerProvider(Protocol):
 
 
 class JsonCareerProvider:
-    def __init__(self, client: GroqExtractor | GeminiExtractor):
+    def __init__(self, client: GroqExtractor | GeminiExtractor | Router9Extractor):
         self.client = client
 
     @property
@@ -61,4 +62,4 @@ class JsonCareerProvider:
 
 def career_provider(settings: Settings) -> CareerProvider | None:
     client = get_provider(settings, kind="jd")
-    return JsonCareerProvider(client) if isinstance(client, (GroqExtractor, GeminiExtractor)) else None
+    return JsonCareerProvider(client) if isinstance(client, (GroqExtractor, GeminiExtractor, Router9Extractor)) else None

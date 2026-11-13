@@ -96,8 +96,8 @@ def test_upgrade_preserves_ids_revisions_payloads_events_and_fails_closed(legacy
     assert pending.envelope['correlationId'] == envelope['correlationId']
     assert pending.envelope['idempotencyKey'] == 'cv.processing.updated.v2:1:PARSED'
     from sqlalchemy.orm import sessionmaker
-    from app.shared.extraction_usage import ExtractionUsageRepository
-    from app.shared.extraction_types import ExtractionContext
+    from app.extraction.usage import ExtractionUsageRepository
+    from app.extraction.contracts import ExtractionContext
     factory = sessionmaker(bind=connection, join_transaction_mode='create_savepoint')
     budget = ExtractionUsageRepository(factory, daily_limit=10, user_daily_limit=10)
     result = budget.reserve(ExtractionContext(9007199254740993, 1, 'a' * 64, True, 'external-ai/1.0'), 'cv', 'gemini', 'synthetic', now=datetime.now(UTC))
