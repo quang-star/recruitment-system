@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from "react";
 
 import { ApiClientError, apiRequest } from "../../shared/api/client";
 import { AuthSession } from "../../shared/auth/session";
+import { Badge, Button, Card, ErrorBanner } from "../../shared/ui";
 
 export type CompanyMember = {
   memberId: string;
@@ -125,50 +126,157 @@ export function CompanyAccessPanel({ session, companyId, members, canManage, onM
     else setError(errorMessage(requestError));
   }
 
-  return <section className="workspace-panel company-access-panel">
-    <div className="section-heading"><h3>Thành viên công ty</h3><span>{members.length}</span></div>
-    {members.length === 0 ? <p className="muted">Đang tải hoặc chưa có thành viên.</p> : <div className="member-list">
-      {members.map((member) => <div className="member-row member-management-row" key={member.memberId}>
-        <span><strong>{member.userId === session.userId ? "Bạn" : `${member.userId.slice(0, 8)}…`}</strong>
-          <small>Tham gia {new Date(member.joinedAt).toLocaleDateString("vi-VN")} · v{member.version}</small></span>
-        {canManage && member.role !== "OWNER" && member.status !== "LEFT" ? <div className="member-controls">
-          <label>Vai trò<select aria-label={`Vai trò ${member.userId}`} value={member.role} disabled={busyId === member.memberId}
-            onChange={(event) => void updateMember(member, event.target.value as CompanyMember["role"], member.status)}>
-            <option value="COMPANY_ADMIN">COMPANY_ADMIN</option><option value="RECRUITER">RECRUITER</option><option value="VIEWER">VIEWER</option>
-          </select></label>
-          <label>Trạng thái<select aria-label={`Trạng thái ${member.userId}`} value={member.status} disabled={busyId === member.memberId}
-            onChange={(event) => void updateMember(member, member.role, event.target.value as CompanyMember["status"])}>
-            <option value="ACTIVE">ACTIVE</option><option value="SUSPENDED">SUSPENDED</option><option value="LEFT">LEFT</option>
-          </select></label>
-        </div> : <span className="status-pill">{member.role} · {member.status}</span>}
-      </div>)}
-    </div>}
-    {!canManage && <p className="muted">Chỉ OWNER hoặc COMPANY_ADMIN mới được mời và quản lý thành viên.</p>}
+  const fieldClass =
+    "mt-1 h-9 w-full rounded-xl border border-border-strong bg-white px-3 text-sm text-ink-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:bg-slate-50 disabled:text-ink-400";
 
-    {canManage && <>
-      <div className="section-heading"><div><p className="eyebrow">Company invitations</p><h3>Mời thành viên</h3></div></div>
-      <form className="invite-form" onSubmit={invite}>
-        <label>Email recruiter<input type="email" value={inviteEmail} maxLength={320} required
-          onChange={(event) => setInviteEmail(event.target.value)} /></label>
-        <label>Vai trò<select value={inviteRole} onChange={(event) => setInviteRole(event.target.value as CompanyInvitation["role"])}>
-          <option value="COMPANY_ADMIN">Quản trị công ty</option><option value="RECRUITER">Nhà tuyển dụng</option><option value="VIEWER">Chỉ xem</option>
-        </select></label>
-        <button type="submit" disabled={inviting}>{inviting ? "Đang gửi…" : "Gửi lời mời"}</button>
-      </form>
-      {loadingInvitations ? <p className="muted">Đang tải lời mời…</p> : invitations.length === 0 ? <p className="muted">Chưa có lời mời nào.</p> : <div className="invitation-list">
-        {invitations.map((invitation) => {
-          const status = invitationStatus(invitation);
-          return <div className="invitation-row" key={invitation.invitationId}>
-            <span><strong>{invitation.email}</strong><small>{invitation.role} · hết hạn {new Date(invitation.expiresAt).toLocaleString("vi-VN")}</small></span>
-            <div className="button-row"><span className="status-pill">{status}</span>{status === "PENDING" && <button className="danger-button" type="button"
-              disabled={busyId === invitation.invitationId} onClick={() => void revoke(invitation)}>Thu hồi</button>}</div>
-          </div>;
-        })}
-      </div>}
-    </>}
-    {message && <p className="success-message" role="status">{message}</p>}
-    {error && <p className="error-message" role="alert">{error}</p>}
-  </section>;
+  return (
+    <Card padding="lg" className="space-y-6">
+      <div className="flex items-center justify-between gap-3 border-b border-border-subtle pb-4">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-brand-700 m-0">Access control</p>
+          <h3 className="text-lg font-bold text-ink-900 m-0 mt-0.5">Thành viên công ty</h3>
+        </div>
+        <Badge tone="neutral">{members.length} thành viên</Badge>
+      </div>
+
+      {members.length === 0 ? (
+        <p className="text-sm text-ink-500 m-0">Đang tải hoặc chưa có thành viên.</p>
+      ) : (
+        <div className="divide-y divide-border-subtle rounded-xl border border-border-subtle bg-slate-50/50">
+          {members.map((member) => (
+            <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3" key={member.memberId}>
+              <div>
+                <p className="text-sm font-semibold text-ink-900 m-0">
+                  {member.userId === session.userId ? "Bạn" : `${member.userId.slice(0, 8)}…`}
+                </p>
+                <p className="text-xs text-ink-500 m-0 mt-0.5">
+                  Tham gia {new Date(member.joinedAt).toLocaleDateString("vi-VN")} · v{member.version}
+                </p>
+              </div>
+              {canManage && member.role !== "OWNER" && member.status !== "LEFT" ? (
+                <div className="grid grid-cols-2 gap-2.5 sm:w-auto w-full">
+                  <label className="text-xs font-medium text-ink-600">
+                    Vai trò
+                    <select
+                      aria-label={`Vai trò ${member.userId}`}
+                      className={fieldClass}
+                      value={member.role}
+                      disabled={busyId === member.memberId}
+                      onChange={(event) => void updateMember(member, event.target.value as CompanyMember["role"], member.status)}
+                    >
+                      <option value="COMPANY_ADMIN">COMPANY_ADMIN</option>
+                      <option value="RECRUITER">RECRUITER</option>
+                      <option value="VIEWER">VIEWER</option>
+                    </select>
+                  </label>
+                  <label className="text-xs font-medium text-ink-600">
+                    Trạng thái
+                    <select
+                      aria-label={`Trạng thái ${member.userId}`}
+                      className={fieldClass}
+                      value={member.status}
+                      disabled={busyId === member.memberId}
+                      onChange={(event) => void updateMember(member, member.role, event.target.value as CompanyMember["status"])}
+                    >
+                      <option value="ACTIVE">ACTIVE</option>
+                      <option value="SUSPENDED">SUSPENDED</option>
+                      <option value="LEFT">LEFT</option>
+                    </select>
+                  </label>
+                </div>
+              ) : (
+                <Badge tone={member.status === "ACTIVE" ? "brand" : "neutral"}>
+                  {member.role} · {member.status}
+                </Badge>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!canManage && (
+        <p className="text-xs text-ink-500 m-0">Chỉ OWNER hoặc COMPANY_ADMIN mới được mời và quản lý thành viên.</p>
+      )}
+
+      {canManage && (
+        <div className="space-y-4 border-t border-border-subtle pt-5">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-brand-700 m-0">Company invitations</p>
+            <h3 className="text-base font-bold text-ink-900 m-0 mt-0.5">Mời thành viên</h3>
+          </div>
+          <form className="grid gap-3 sm:grid-cols-[1fr_180px_auto] sm:items-end" onSubmit={invite}>
+            <label className="block text-xs font-semibold text-ink-700">
+              Email recruiter
+              <input
+                type="email"
+                className={fieldClass}
+                value={inviteEmail}
+                maxLength={320}
+                required
+                placeholder="recruiter@company.vn"
+                onChange={(event) => setInviteEmail(event.target.value)}
+              />
+            </label>
+            <label className="block text-xs font-semibold text-ink-700">
+              Vai trò
+              <select
+                className={fieldClass}
+                value={inviteRole}
+                onChange={(event) => setInviteRole(event.target.value as CompanyInvitation["role"])}
+              >
+                <option value="COMPANY_ADMIN">Quản trị công ty</option>
+                <option value="RECRUITER">Nhà tuyển dụng</option>
+                <option value="VIEWER">Chỉ xem</option>
+              </select>
+            </label>
+            <Button type="submit" disabled={inviting} loading={inviting} size="md">
+              {inviting ? "Đang gửi…" : "Gửi lời mời"}
+            </Button>
+          </form>
+
+          {loadingInvitations ? (
+            <p className="text-sm text-ink-500 m-0">Đang tải lời mời…</p>
+          ) : invitations.length === 0 ? (
+            <p className="text-sm text-ink-500 m-0">Chưa có lời mời nào.</p>
+          ) : (
+            <div className="divide-y divide-border-subtle rounded-xl border border-border-subtle bg-white">
+              {invitations.map((invitation) => {
+                const status = invitationStatus(invitation);
+                const statusTone =
+                  status === "ACCEPTED" ? "success" : status === "PENDING" ? "brand" : status === "REVOKED" ? "danger" : "neutral";
+                return (
+                  <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3" key={invitation.invitationId}>
+                    <div>
+                      <p className="text-sm font-semibold text-ink-900 m-0">{invitation.email}</p>
+                      <p className="text-xs text-ink-500 m-0 mt-0.5">
+                        {invitation.role} · hết hạn {new Date(invitation.expiresAt).toLocaleString("vi-VN")}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge tone={statusTone}>{status}</Badge>
+                      {status === "PENDING" && (
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          disabled={busyId === invitation.invitationId}
+                          onClick={() => void revoke(invitation)}
+                        >
+                          Thu hồi
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {message && <ErrorBanner tone="success" message={message} />}
+      {error && <ErrorBanner tone="error" message={error} />}
+    </Card>
+  );
 }
 
 function invitationStatus(invitation: CompanyInvitation): "PENDING" | "ACCEPTED" | "REVOKED" | "EXPIRED" {

@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { apiRequest } from "../../shared/api/client";
 import { externalAiPolicyVersion } from "../../shared/components/ExternalAiConsent";
+import { SparklesIcon } from "../../shared/components/Icon";
+import { Badge, Button } from "../../shared/ui";
 import type { CategoryChoice } from "./JobCategoryFields";
 
 type Suggestion = { category: CategoryChoice; evidenceQuotes: string[] };
@@ -77,30 +79,88 @@ export function CareerCategorySuggestions({ draft, userId, companyId, jobId, job
     }
   }
 
-  return <section className="form-section-card" aria-label="Gợi ý phân loại nghề">
-    <h4>Gợi ý phân loại nghề từ JD</h4>
-    <p className="muted">Kiểm tra ngành, nhóm chuyên môn, vị trí và trích dẫn trước khi áp dụng.
-      Gợi ý chỉ điền biểu mẫu; bạn cần lưu bản nháp để ghi nhận thay đổi.</p>
-    <button type="button" className="secondary-button" onClick={() => void requestSuggestions()}
-      disabled={disabled || busy || !draft.externalAiConsent || !draft.title.trim()}>
-      {busy ? "Đang gợi ý nghề…" : "Gợi ý phân loại nghề"}
-    </button>
-    {!draft.externalAiConsent && <p className="muted">Chọn cho phép AI bên ngoài để dùng gợi ý nghề. Bạn vẫn có thể nhập thủ công.</p>}
-    {notice?.context === context && <p role="status">{notice.message}</p>}
-    {visible?.status === "SUGGESTED" && <ol>
-      {visible.suggestions.map((suggestion, index) => <li key={index}>
-        <p><strong>{suggestion.category.industryName}</strong> · {suggestion.category.specializationName} · {suggestion.category.positionName}</p>
-        <p className="muted">Trích dẫn từ nội dung nghề nghiệp đã lọc:</p>
-        {suggestion.evidenceQuotes.map((quote, quoteIndex) => <blockquote key={quoteIndex}>{quote}</blockquote>)}
-        {[suggestion.category.industryId, suggestion.category.specializationId, suggestion.category.positionId].some((id) => id === null)
-          && <p className="muted">Có tên mới; khi lưu, danh mục mới sẽ được gửi Admin duyệt.</p>}
-        <button type="button" className="secondary-button" disabled={disabled}
-          onClick={() => { if (currentContext.current === context) onApply({ ...suggestion.category }); }}>
-          Áp dụng gợi ý {index + 1}
-        </button>
-      </li>)}
-    </ol>}
-  </section>;
+  return (
+    <section
+      className="rounded-xl border border-brand-200/80 bg-brand-50/40 p-4 space-y-3"
+      aria-label="Gợi ý phân loại nghề"
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-1 max-w-2xl">
+          <div className="flex items-center gap-2">
+            <SparklesIcon size={15} className="text-brand-700" />
+            <h4 className="text-sm font-bold text-ink-900 m-0">Gợi ý phân loại nghề từ JD</h4>
+          </div>
+          <p className="text-xs text-ink-600 m-0 leading-relaxed">
+            Kiểm tra ngành, nhóm chuyên môn, vị trí và trích dẫn trước khi áp dụng. Gợi ý chỉ điền biểu mẫu; bạn cần lưu bản nháp để ghi nhận thay đổi.
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant="subtle"
+          size="sm"
+          onClick={() => void requestSuggestions()}
+          disabled={disabled || busy || !draft.externalAiConsent || !draft.title.trim()}
+          loading={busy}
+        >
+          {busy ? "Đang gợi ý nghề…" : "Gợi ý phân loại nghề"}
+        </Button>
+      </div>
+
+      {!draft.externalAiConsent && (
+        <p className="text-xs text-ink-600 m-0">
+          Chọn cho phép AI bên ngoài để dùng gợi ý nghề. Bạn vẫn có thể nhập thủ công.
+        </p>
+      )}
+      {notice?.context === context && (
+        <p role="status" className="rounded-lg border border-border-subtle bg-white px-3 py-2 text-xs text-ink-700 m-0">
+          {notice.message}
+        </p>
+      )}
+      {visible?.status === "SUGGESTED" && (
+        <ol className="space-y-3 pl-0 list-none m-0">
+          {visible.suggestions.map((suggestion, index) => (
+            <li key={index} className="rounded-xl border border-border-subtle bg-white p-3.5 shadow-xs space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-semibold text-ink-900 m-0">
+                  <strong>{suggestion.category.industryName}</strong> · {suggestion.category.specializationName} · {suggestion.category.positionName}
+                </p>
+                {[suggestion.category.industryId, suggestion.category.specializationId, suggestion.category.positionId].some((id) => id === null) && (
+                  <Badge tone="warning">Có tên mới · chờ Admin duyệt</Badge>
+                )}
+              </div>
+              <p className="text-xs font-medium text-ink-500 m-0">Trích dẫn từ nội dung nghề nghiệp đã lọc:</p>
+              <div className="space-y-1.5">
+                {suggestion.evidenceQuotes.map((quote, quoteIndex) => (
+                  <blockquote
+                    key={quoteIndex}
+                    className="m-0 border-l-2 border-brand-400 bg-slate-50 px-3 py-1.5 text-xs italic text-ink-700 rounded-r-lg"
+                  >
+                    {quote}
+                  </blockquote>
+                ))}
+              </div>
+              {[suggestion.category.industryId, suggestion.category.specializationId, suggestion.category.positionId].some((id) => id === null) && (
+                <p className="text-xs text-ink-500 m-0">Có tên mới; khi lưu, danh mục mới sẽ được gửi Admin duyệt.</p>
+              )}
+              <div className="pt-1">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  disabled={disabled}
+                  onClick={() => {
+                    if (currentContext.current === context) onApply({ ...suggestion.category });
+                  }}
+                >
+                  Áp dụng gợi ý {index + 1}
+                </Button>
+              </div>
+            </li>
+          ))}
+        </ol>
+      )}
+    </section>
+  );
 }
 
 function validResponse(value: SuggestionResponse): boolean {
@@ -115,7 +175,7 @@ function validResponse(value: SuggestionResponse): boolean {
       const name = suggestion.category[`${key}Name` as keyof CategoryChoice];
       const id = suggestion.category[`${key}Id` as keyof CategoryChoice];
       return typeof name === "string" && !!name.trim() && name.length <= 160
-        && (id === null || typeof id === "string" && /^[a-f0-9-]{36}$/i.test(id));
+        && (id === null || typeof id === "string" && /^[1-9][0-9]{0,18}$/.test(id) && BigInt(id) <= 9223372036854775807n);
     }) && Array.isArray(suggestion.evidenceQuotes) && suggestion.evidenceQuotes.length >= 1
     && suggestion.evidenceQuotes.length <= 3 && suggestion.evidenceQuotes.every((quote) => typeof quote === "string"
       && !!quote.trim() && quote.length <= 240));

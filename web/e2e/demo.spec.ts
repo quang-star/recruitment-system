@@ -1,46 +1,33 @@
-import { expect, Page, test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import path from "node:path";
 import { readFileSync } from "node:fs";
-
-const candidate = {
-  email: process.env.E2E_CANDIDATE_EMAIL ?? "candidate.demo@smart.local",
-  password: process.env.E2E_CANDIDATE_PASSWORD ?? "DemoCandidate!2026"
-};
-
-const recruiter = {
-  email: process.env.E2E_RECRUITER_EMAIL ?? "recruiter.demo@smart.local",
-  password: process.env.E2E_RECRUITER_PASSWORD ?? "DemoRecruiter!2026"
-};
-
-async function login(page: Page, email: string, password: string) {
-  await page.goto("/?auth=login");
-  const form = page.locator("form");
-  await form.getByLabel("Email").fill(email);
-  await form.getByLabel("Mật khẩu").fill(password);
-  await form.getByRole("button", { name: "Đăng nhập", exact: true }).click();
-}
+import { candidateAccount as candidate, recruiterAccount as recruiter, expectCandidateSignedIn,
+  login, openCandidateMenu, openCandidateSection } from "./helpers";
 
 test("candidate can open the complete demo workspace", async ({ page }) => {
   await login(page, candidate.email, candidate.password);
-
+  await expectCandidateSignedIn(page);
+  await expect(page.getByRole("form", { name: "Tìm cơ hội nghề nghiệp" })).toBeVisible();
+  await openCandidateSection(page, "Tổng quan");
   await expect(page.getByRole("heading", { name: /^Xin chào,/, level: 1 })).toBeVisible();
   await expect(page.getByRole("button", { name: /^CV sẵn sàng / })).toBeVisible();
-  await page.getByRole("button", { name: "Hồ sơ", exact: true }).click();
+  await openCandidateSection(page, "Hồ sơ");
   await expect(page.getByRole("heading", { name: "Hồ sơ ứng viên" })).toBeVisible();
   await page.getByRole("button", { name: "Thông báo", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Thông báo", exact: true, level: 3 })).toBeVisible();
-  await page.getByRole("button", { name: "Bảo mật", exact: true }).click();
+  await openCandidateSection(page, "Bảo mật");
   await expect(page.getByRole("heading", { name: "Mật khẩu & phiên đăng nhập" })).toBeVisible();
-  await page.getByRole("button", { name: "CV của tôi", exact: true }).click();
+  await openCandidateSection(page, "CV của tôi");
   await expect(page.getByRole("heading", { name: "CV của tôi", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Tìm việc", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Tìm việc làm" })).toBeVisible();
+  await page.getByRole("button", { name: "Tìm việc làm", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Tìm công việc phù hợp với bạn" })).toBeVisible();
+  await openCandidateMenu(page);
   await expect(page.getByRole("button", { name: /Đăng xuất$/ })).toBeEnabled();
 });
 
 test("candidate explicitly controls external AI consent per uploaded CV", async ({ page }) => {
   await login(page, candidate.email, candidate.password);
-  await page.getByRole("button", { name: "CV của tôi", exact: true }).click();
+  await openCandidateSection(page, "CV của tôi");
   const choice = page.getByRole("checkbox", { name: "Cho phép dịch vụ AI bên ngoài hỗ trợ phân tích nội dung này" });
   for (const consented of [false, true]) {
     const title = `E2E external AI ${consented} ${Date.now()}`;
@@ -80,8 +67,8 @@ test("recruiter can open company, access control, JD and pipeline features", asy
   await expect(page.getByRole("heading", { name: "Thành viên công ty" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Mời thành viên" })).toBeVisible();
   await page.getByRole("button", { name: "Tin & ứng viên", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "JD của công ty" })).toBeVisible();
-  await page.locator(".job-list .company-option").first().click();
+  await expect(page.getByRole("heading", { name: "Quản lý Tin tuyển dụng & ATS" })).toBeVisible();
+  await page.locator(".ats-job-card-rich .job-card-title-link").first().click();
   await expect(page.getByRole("heading", { name: "Ứng viên", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Bảo mật", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Mật khẩu & phiên đăng nhập" })).toBeVisible();
@@ -99,7 +86,7 @@ test("recruiter explicitly controls external AI consent per JD version", async (
     await page.getByLabel("Yêu cầu", { exact: true }).fill("Required: Java and SQL. At least 1 year experience.");
     if (consented) await choice.check();
     const responsePromise = page.waitForResponse((response) => response.request().method() === "POST"
-      && /^\/api\/v1\/companies\/[^/]+\/jobs$/.test(new URL(response.url()).pathname));
+      && /^\/api\/v2\/companies\/[^/]+\/jobs$/.test(new URL(response.url()).pathname));
     await page.getByRole("button", { name: "Tạo bản nháp", exact: true }).click();
     const response = await responsePromise;
     expect(response.status()).toBe(200);
@@ -114,6 +101,7 @@ test("recruiter explicitly controls external AI consent per JD version", async (
       await expect(page.getByRole("button", { name: "Xác nhận yêu cầu tuyển dụng", exact: true })).toBeEnabled();
       await page.screenshot({ path: "test-results/external-ai-jd-consent.png", fullPage: true });
     }
+    await page.getByRole("button", { name: "← Quay lại danh sách tin", exact: true }).click();
   }
 });
 
@@ -137,7 +125,7 @@ test("forgot-password remains public and account-enumeration safe", async ({ pag
 test("corrupted PDF reaches failed status with an actionable recovery instruction", async ({ page }) => {
   const unique = `E2E corrupted PDF ${Date.now()}`;
   await login(page, candidate.email, candidate.password);
-  await page.getByRole("button", { name: "CV của tôi", exact: true }).click();
+  await openCandidateSection(page, "CV của tôi");
   await page.getByLabel("Tên CV (tuỳ chọn)").fill(unique);
   await page.locator("#cv-file").setInputFiles({
     name: "synthetic-corrupted.pdf", mimeType: "application/pdf",
@@ -157,7 +145,7 @@ test("candidate retries a transient failed CV using the same stored file", async
   const title = process.env.E2E_RETRY_CV_TITLE;
   test.skip(!cvId || !title, "Requires an insert-only synthetic storage-failure fixture in the QA stack");
   await login(page, candidate.email, candidate.password);
-  await page.getByRole("button", { name: "CV của tôi", exact: true }).click();
+  await openCandidateSection(page, "CV của tôi");
   const cv = page.locator(".cv-item").filter({ has: page.getByRole("heading", { name: title!, exact: true }) });
   await expect(cv.getByRole("button", { name: "Thử lại", exact: true })).toBeVisible();
   expect((await request.post(`/api/v2/cvs/${cvId}/retry`, {
@@ -225,7 +213,7 @@ test("complete recruitment workflow through UI with editable CV and evidence", a
   const candidatePage = await candidateContext.newPage();
   try {
     await login(candidatePage, candidate.email, candidate.password);
-    await candidatePage.getByRole("button", { name: "CV của tôi", exact: true }).click();
+    await openCandidateSection(candidatePage, "CV của tôi");
     await candidatePage.getByLabel("Tên CV (tuỳ chọn)").fill(unique);
     // Regression: real exporters can prepend a newline before the PDF header.
     await candidatePage.locator("#cv-file").setInputFiles({
@@ -247,11 +235,14 @@ test("complete recruitment workflow through UI with editable CV and evidence", a
     await expect(cvFeedback).toContainText("CV đã được xác nhận và sẵn sàng ứng tuyển.");
     // Core receives confirmation asynchronously; revisit the panel until it projects the CV.
     await expect(async () => {
-      await candidatePage.getByRole("button", { name: "CV của tôi", exact: true }).click();
-      await candidatePage.getByRole("button", { name: "Tìm việc", exact: true }).click();
-      await candidatePage.getByLabel("Tìm kiếm", { exact: true }).fill(unique);
-      await candidatePage.locator(".job-card").filter({ hasText: unique }).click();
+      await openCandidateSection(candidatePage, "CV của tôi");
+      await candidatePage.getByRole("button", { name: "Tìm việc làm", exact: true }).click();
+      const search = candidatePage.getByRole("textbox", { name: "Tìm kiếm việc làm", exact: true });
+      await search.fill(unique);
+      await search.press("Enter");
+      await candidatePage.locator(".public-job-list-card").filter({ hasText: unique }).click();
       await candidatePage.getByRole("button", { name: "Ứng tuyển vị trí này" }).click();
+      await expect(candidatePage.getByRole("dialog")).toBeVisible();
       const available = await candidatePage.getByRole("dialog").getByLabel("CV đã xác nhận").locator("option").allTextContents();
       if (!available.includes(unique)) {
         await candidatePage.getByRole("dialog").getByRole("button", { name: "Đóng", exact: true }).click();
@@ -274,18 +265,19 @@ test("complete recruitment workflow through UI with editable CV and evidence", a
     await expect(page.locator(".match-claims li").filter({ hasText: "NewFrameworkX" })).toContainText("kỹ năng riêng của Job, đối chiếu tên chính xác");
     await page.screenshot({ path: "test-results/job-skills-matching.png", fullPage: true });
     const sourceResponse = page.waitForResponse((response) =>
-      response.request().method() === "GET" && /\/api\/v1\/recruiter\/applications\/[^/]+\/cv$/.test(new URL(response.url()).pathname));
-    const sourceWindow = page.waitForEvent("popup");
+      response.request().method() === "GET" && /\/api\/v2\/recruiter\/applications\/[^/]+\/cv$/.test(new URL(response.url()).pathname));
     await page.getByRole("button", { name: "Xem CV trang 1" }).first().click();
     expect((await sourceResponse).ok()).toBeTruthy();
-    const sourcePage = await sourceWindow;
-    await expect(sourcePage).toHaveURL(/blob:.*#page=1$/);
-    await sourcePage.close();
+    const preview = page.getByRole("dialog", { name: "CV Ứng viên (Bằng chứng trang 1)" });
+    await expect(preview.locator("iframe")).toHaveAttribute("src", /blob:.*#page=1$/);
+    await preview.getByRole("button", { name: "Đóng cửa sổ xem trước" }).click();
     await page.getByRole("button", { name: "Bắt đầu xem xét", exact: true }).click();
     await page.getByRole("button", { name: "Đưa vào shortlist", exact: true }).click();
-    await expect(page.locator(".application-item")).toContainText("Danh sách rút gọn");
-    await candidatePage.reload();
-    await candidatePage.getByRole("button", { name: "Đã ứng tuyển", exact: true }).click();
+    await expect(page.getByRole("table", { name: "Danh sách ứng viên" }).getByRole("row").filter({ hasText: "Demo Candidate" }))
+      .toContainText("Danh sách rút gọn");
+    await candidatePage.reload({ waitUntil: "domcontentloaded", timeout: 15_000 });
+    await expect(candidatePage.getByRole("heading", { name: unique, exact: true, level: 1 })).toBeFocused();
+    await openCandidateSection(candidatePage, "Việc làm đã ứng tuyển");
     await expect(candidatePage.locator(".application-detail").filter({ hasText: unique })).toContainText("Danh sách rút gọn");
   } finally {
     await candidateContext.close();

@@ -1,14 +1,7 @@
 import { expect, Page, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-
-async function login(page: Page, email: string, password: string) {
-  await page.goto("/?auth=login");
-  await page.locator("form").getByLabel("Email").fill(email);
-  await page.locator("form").getByLabel("Mật khẩu").fill(password);
-  await page.locator("form").getByRole("button", { name: "Đăng nhập", exact: true }).click();
-  await expect.poll(() => page.evaluate(() => Boolean(sessionStorage.getItem("smart-recruitment.session")))).toBe(true);
-}
+import { adminAccount, candidateAccount, recruiterAccount, login, openCandidateSection } from "./helpers";
 async function headers(page: Page) {
   const token = await page.evaluate(() => JSON.parse(sessionStorage.getItem("smart-recruitment.session")!).accessToken as string);
   return { Authorization: `Bearer ${token}`, "Idempotency-Key": crypto.randomUUID() };
@@ -28,7 +21,7 @@ test("Recruiter career suggestions preserve an unsaved manual draft when QA prov
   const recruiter = await browser.newPage();
   const candidate = await browser.newPage();
   try {
-    await login(recruiter, "recruiter.demo@smart.local", "DemoRecruiter!2026");
+    await login(recruiter, recruiterAccount.email, recruiterAccount.password);
     await recruiter.getByRole("button", { name: "Tin & ứng viên", exact: true }).click();
     await recruiter.getByRole("button", { name: "+ Tạo JD mới", exact: true }).click();
     const draftTitle = `Synthetic accounting draft ${Date.now()}`;
@@ -58,21 +51,21 @@ test("Recruiter career suggestions preserve an unsaved manual draft when QA prov
     await expect(recruiter.getByLabel("Tiêu đề", { exact: true })).toHaveValue(draftTitle);
     await expect(recruiter.getByLabel("Tên ngành mới", { exact: true })).toHaveValue("Synthetic accounting industry");
     await expect(recruiter.getByLabel("Tên vị trí mới", { exact: true })).toHaveValue("Synthetic accountant");
-    expect(writes.filter((url) => /^\/api\/v1\/(companies\/[^/]+\/jobs|jobs\/|dashboard\/catalog)/.test(url))).toEqual([]);
+    expect(writes.filter((url) => /^\/api\/v2\/(companies\/[^/]+\/jobs|jobs\/|dashboard\/catalog)/.test(url))).toEqual([]);
     expect(writes.filter((url) => url === "/api/v2/parsed-jds/category-suggestions")).toHaveLength(1);
     await consent.uncheck();
     await expect(trigger).toBeDisabled();
     await expect(section.getByRole("status")).toHaveCount(0);
-    await login(candidate, "candidate.demo@smart.local", "DemoCandidate!2026");
+    await login(candidate, candidateAccount.email, candidateAccount.password);
     await call(candidate, "/api/v2/parsed-jds/category-suggestions", "POST", { title: "Synthetic draft" }, 403);
   } finally { await recruiter.close(); await candidate.close(); }
 });
 
 test("Admin reviews deferred proposals with reasons, versioned definitions and immutable source snapshots", async ({ browser }) => {
   test.setTimeout(120_000);
-  test.skip(!process.env.E2E_ADMIN_EMAIL, "Requires a verified SYSTEM_ADMIN test account");
+  test.skip(!adminAccount.email || !adminAccount.password, "Requires a verified SYSTEM_ADMIN test account");
   const recruiter = await browser.newPage();
-  await login(recruiter, "recruiter.demo@smart.local", "DemoRecruiter!2026");
+  await login(recruiter, recruiterAccount.email, recruiterAccount.password);
   const companies = await call(recruiter, "/api/v2/companies");
   const industryName = `Synthetic industry ${Date.now()}`;
   const job = await call(recruiter, `/api/v2/companies/${companies[0].companyId}/jobs`, "POST", {
@@ -84,7 +77,7 @@ test("Admin reviews deferred proposals with reasons, versioned definitions and i
   expect(job.category.matchingDomain).toBe("OUTSIDE_IT");
   await call(recruiter, `/api/v2/jobs/${job.jobId}/publish?version=${job.version}`, "POST");
   const admin = await browser.newPage();
-  await login(admin, process.env.E2E_ADMIN_EMAIL!, process.env.E2E_ADMIN_PASSWORD ?? "SyntheticAdmin!2026");
+  await login(admin, adminAccount.email, adminAccount.password);
   await expect(admin.getByRole("heading", { name: "Ngành, nhóm chuyên môn và vị trí" })).toBeVisible();
   const categories = await call(admin, "/api/v2/dashboard/catalog");
   const proposed = categories.find((entry: { name: string }) => entry.name === industryName);
@@ -95,19 +88,19 @@ test("Admin reviews deferred proposals with reasons, versioned definitions and i
   expect((await call(admin, "/api/v2/dashboard/catalog")).find((entry: { id: string }) => entry.id === proposed.id).version).toBe(proposed.version);
   await admin.getByLabel("Lý do thay đổi").fill("Synthetic category requires additional review");
   await admin.getByRole("button", { name: "Tạm hoãn", exact: true }).click();
-  await expect(admin.getByRole("option", { name: `${industryName} · DEFERRED`, exact: true })).toHaveCount(1);
+  await expect(admin.getByRole("option", { name: `${industryName} · Tạm hoãn`, exact: true })).toHaveCount(1);
   await admin.getByLabel("Danh mục", { exact: true }).selectOption(proposed.id);
   await expect(admin.getByRole("button", { name: "Lưu sửa đổi", exact: true })).toBeDisabled();
   await expect(admin.getByRole("button", { name: "Duyệt", exact: true })).toHaveCount(0);
   await admin.getByLabel("Lý do thay đổi").fill("Synthetic category has sufficient evidence");
   await admin.getByRole("button", { name: "Mở lại đề xuất", exact: true }).click();
-  await expect(admin.getByRole("option", { name: `${industryName} · PENDING`, exact: true })).toHaveCount(1);
+  await expect(admin.getByRole("option", { name: `${industryName} · Chờ duyệt`, exact: true })).toHaveCount(1);
   await admin.getByLabel("Danh mục", { exact: true }).selectOption(proposed.id);
   const reviewedIndustryName = `${industryName} reviewed`;
   await admin.getByLabel("Tên", { exact: true }).fill(reviewedIndustryName);
   await admin.getByLabel("Lý do thay đổi").fill("Synthetic category name verified before approval");
   await admin.getByRole("button", { name: "Duyệt", exact: true }).click();
-  await expect(admin.getByRole("option", { name: `${reviewedIndustryName} · ACTIVE`, exact: true })).toHaveCount(1);
+  await expect(admin.getByRole("option", { name: `${reviewedIndustryName} · Đang hoạt động`, exact: true })).toHaveCount(1);
   const unchanged = await call(recruiter, `/api/v2/public/jobs?page=0&size=1&jobId=${job.jobId}`);
   expect(unchanged.items[0].category).toEqual(job.category);
   const history = await call(admin, `/api/v2/dashboard/catalog/${proposed.id}/history`);
@@ -139,7 +132,7 @@ test("Admin reviews deferred proposals with reasons, versioned definitions and i
     && new URL(response.url()).pathname === "/api/v2/taxonomy/skills");
   await admin.getByRole("button", { name: "Thêm danh mục", exact: true }).click();
   expect((await savedSkill).status()).toBe(200);
-  await expect(admin.getByRole("option", { name: `${skillName} · ACTIVE`, exact: true })).toHaveCount(1);
+  await expect(admin.getByRole("option", { name: `${skillName} · Đang hoạt động`, exact: true })).toHaveCount(1);
   const catalog = await call(admin, "/api/v2/taxonomy/skills");
   const skill = catalog.skills.find((entry: { canonicalName: string }) => entry.canonicalName === skillName);
   expect(skill.aliases[0].value).toBe(`${skillName}Alias`);
@@ -166,18 +159,18 @@ test("Admin reviews deferred proposals with reasons, versioned definitions and i
   expect(pendingSkill.status).toBe("PENDING");
   await admin.reload();
   await admin.getByRole("button", { name: "Kỹ năng / tên gọi khác" }).click();
-  await expect(admin.getByRole("option", { name: `${pendingSkillName} · PENDING`, exact: true })).toHaveCount(1);
+  await expect(admin.getByRole("option", { name: `${pendingSkillName} · Chờ duyệt`, exact: true })).toHaveCount(1);
   await admin.getByLabel("Danh mục", { exact: true }).selectOption(pendingSkill.stableId);
   await admin.getByLabel("Lý do thay đổi").fill("Synthetic skill needs evidence review");
   await admin.getByRole("button", { name: "Tạm hoãn", exact: true }).click();
-  await expect(admin.getByRole("option", { name: `${pendingSkillName} · DEFERRED`, exact: true })).toHaveCount(1);
+  await expect(admin.getByRole("option", { name: `${pendingSkillName} · Tạm hoãn`, exact: true })).toHaveCount(1);
   const deferredCatalog = await call(admin, "/api/v2/taxonomy/skills");
   expect(deferredCatalog.version).toBe(proposalCatalog.version + 1);
   expect(deferredCatalog.taxonomyVersion).toBe(proposalCatalog.taxonomyVersion);
   await admin.getByLabel("Danh mục", { exact: true }).selectOption(pendingSkill.stableId);
   await admin.getByLabel("Lý do thay đổi").fill("Synthetic skill review resumed");
   await admin.getByRole("button", { name: "Mở lại đề xuất", exact: true }).click();
-  await expect(admin.getByRole("option", { name: `${pendingSkillName} · PENDING`, exact: true })).toHaveCount(1);
+  await expect(admin.getByRole("option", { name: `${pendingSkillName} · Chờ duyệt`, exact: true })).toHaveCount(1);
   expect((await call(admin, "/api/v2/taxonomy/skills")).taxonomyVersion).toBe(proposalCatalog.taxonomyVersion);
   await admin.getByLabel("Danh mục", { exact: true }).selectOption(pendingSkill.stableId);
   const approvedSkillName = `${pendingSkillName}Verified`;
@@ -190,7 +183,7 @@ test("Admin reviews deferred proposals with reasons, versioned definitions and i
   await admin.getByLabel("Kỹ năng đích 1", { exact: true }).selectOption(targetSkill.stableId);
   await admin.getByLabel("Lý do thay đổi").fill("Synthetic skill name and relationships verified");
   await admin.getByRole("button", { name: "Duyệt", exact: true }).click();
-  await expect(admin.getByRole("option", { name: `${approvedSkillName} · ACTIVE`, exact: true })).toHaveCount(1);
+  await expect(admin.getByRole("option", { name: `${approvedSkillName} · Đang hoạt động`, exact: true })).toHaveCount(1);
   const approvedCatalog = await call(admin, "/api/v2/taxonomy/skills");
   const approvedSkill = approvedCatalog.skills.find((entry: { stableId: string }) => entry.stableId === pendingSkill.stableId);
   expect(approvedSkill).toMatchObject({ canonicalName: approvedSkillName, type: "library", category: "frontend",
@@ -212,14 +205,14 @@ test("Admin reviews deferred proposals with reasons, versioned definitions and i
 
 test("Admin skill sources deduplicate JD revisions and confirmations and disappear after CV erasure", async ({ browser }) => {
   test.setTimeout(180_000);
-  test.skip(!process.env.E2E_ADMIN_EMAIL, "Requires a verified SYSTEM_ADMIN test account");
+  test.skip(!adminAccount.email || !adminAccount.password, "Requires a verified SYSTEM_ADMIN test account");
   const recruiter = await browser.newPage();
   const candidate = await browser.newPage();
   const admin = await browser.newPage();
   try {
-    await login(recruiter, "recruiter.demo@smart.local", "DemoRecruiter!2026");
-    await login(candidate, "candidate.demo@smart.local", "DemoCandidate!2026");
-    await login(admin, process.env.E2E_ADMIN_EMAIL!, process.env.E2E_ADMIN_PASSWORD ?? "SyntheticAdmin!2026");
+    await login(recruiter, recruiterAccount.email, recruiterAccount.password);
+    await login(candidate, candidateAccount.email, candidateAccount.password);
+    await login(admin, adminAccount.email, adminAccount.password);
     await call(candidate, "/api/v2/taxonomy/pending-skills", "GET", undefined, 403);
     await call(recruiter, "/api/v2/taxonomy/pending-skills", "GET", undefined, 403);
     const term = `SyntheticSource${Date.now()}`;
@@ -293,14 +286,16 @@ test("Admin skill sources deduplicate JD revisions and confirmations and disappe
     await queue.getByLabel("Nguồn đề xuất", { exact: true }).selectOption("");
     await queue.getByRole("button", { name: term, exact: true }).click();
     const sourceRegion = admin.getByRole("region", { name: "Nguồn kỹ năng", exact: true });
-    await expect(sourceRegion).toContainText(cvVersionId);
-    await expect(sourceRegion).toContainText(job.jobVersionId);
+    const cvSources = sourceRegion.getByRole("listitem").filter({ has: admin.locator("p").filter({ hasText: /^CV ·/ }) });
+    const jdSourceRows = sourceRegion.getByRole("listitem").filter({ has: admin.locator("p").filter({ hasText: /^JD ·/ }) });
+    await expect(cvSources.locator("dd").first()).toHaveText(cvVersionId);
+    await expect(jdSourceRows.locator("dd").first()).toHaveText(job.jobVersionId);
     await expect(sourceRegion.getByRole("link")).toHaveCount(0);
     await sourceRegion.getByLabel("Lọc nguồn ghi nhận", { exact: true }).selectOption("JD");
     await expect(sourceRegion).toContainText("1 lần ghi nhận · Trang 1");
-    await expect(sourceRegion).not.toContainText(cvVersionId);
+    await expect(cvSources).toHaveCount(0);
     await sourceRegion.getByLabel("Lọc nguồn ghi nhận", { exact: true }).selectOption("");
-    await expect(sourceRegion).toContainText(cvVersionId);
+    await expect(cvSources.locator("dd").first()).toHaveText(cvVersionId);
     await admin.getByLabel("Lý do thay đổi", { exact: true }).fill("Synthetic review draft survives source refresh");
 
     await expect.poll(async () => (await call(candidate, "/api/v2/cvs")).find((entry: { cvId: string }) => entry.cvId === cv.cvId)?.activeVersion.processingStatus,
@@ -311,11 +306,11 @@ test("Admin skill sources deduplicate JD revisions and confirmations and disappe
       { timeout: 45_000 }).toBe(1);
     const remaining = await call(admin, `/api/v2/taxonomy/pending-skills/${proposed.skillId}/occurrences`);
     expect(remaining.totalElements).toBe(1);
-    expect(remaining.items[0].sourceKind).toBe("JD");
-    expect(JSON.stringify(remaining)).not.toContain(cvVersionId);
+    expect(remaining.items).toEqual([expect.objectContaining({ sourceKind: "JD", sourceVersionId: job.jobVersionId })]);
     await sourceRegion.getByRole("button", { name: "Làm mới nguồn kỹ năng", exact: true }).click();
     await expect(sourceRegion).toContainText("1 lần ghi nhận · 1 phiên bản nguồn");
-    await expect(sourceRegion).not.toContainText(cvVersionId);
+    await expect(cvSources).toHaveCount(0);
+    await expect(jdSourceRows.locator("dd").first()).toHaveText(job.jobVersionId);
     await expect(admin.getByRole("textbox", { name: "Lý do thay đổi", exact: true })).toHaveValue("Synthetic review draft survives source refresh");
     await queue.getByRole("button", { name: "Làm mới hàng chờ", exact: true }).click();
     await expect(queue).toContainText("1 lần ghi nhận · 1 phiên bản nguồn");
@@ -329,14 +324,14 @@ test("Admin skill sources deduplicate JD revisions and confirmations and disappe
 
 test("Admin reviews read-only skill rankings and searches separate Core and AI audit pages", async ({ browser }) => {
   test.setTimeout(120_000);
-  test.skip(!process.env.E2E_ADMIN_EMAIL, "Requires a verified SYSTEM_ADMIN test account");
+  test.skip(!adminAccount.email || !adminAccount.password, "Requires a verified SYSTEM_ADMIN test account");
   const admin = await browser.newPage();
   const recruiter = await browser.newPage();
   const candidate = await browser.newPage();
   try {
-    await login(admin, process.env.E2E_ADMIN_EMAIL!, process.env.E2E_ADMIN_PASSWORD ?? "SyntheticAdmin!2026");
-    await login(recruiter, "recruiter.demo@smart.local", "DemoRecruiter!2026");
-    await login(candidate, "candidate.demo@smart.local", "DemoCandidate!2026");
+    await login(admin, adminAccount.email, adminAccount.password);
+    await login(recruiter, recruiterAccount.email, recruiterAccount.password);
+    await login(candidate, candidateAccount.email, candidateAccount.password);
     const adminId = await admin.evaluate(() => JSON.parse(sessionStorage.getItem("smart-recruitment.session")!).userId as string);
     const suffix = Date.now();
     const core = await call(admin, "/api/v2/dashboard/catalog", "POST", {
@@ -399,7 +394,7 @@ test("Admin reviews read-only skill rankings and searches separate Core and AI a
     await call(recruiter, `${candidatePath}?semantic=false`, "GET", undefined, 403);
 
     await admin.getByRole("button", { name: "Kỹ năng / tên gọi khác" }).click();
-    await expect(admin.getByRole("option", { name: `${term} · PENDING`, exact: true })).toHaveCount(1);
+    await expect(admin.getByRole("option", { name: `${term} · Chờ duyệt`, exact: true })).toHaveCount(1);
     await admin.getByLabel("Danh mục", { exact: true }).selectOption(pending.stableId);
     const suggestions = admin.getByRole("region", { name: "Gợi ý chuẩn hóa kỹ năng" });
     await expect(suggestions.getByText(canonicalName, { exact: true })).toBeVisible();
@@ -476,8 +471,8 @@ test("real CV access is revoked per application, withdrawal revokes its grant an
   test.setTimeout(120_000);
   const candidate = await browser.newPage();
   const recruiter = await browser.newPage();
-  await login(candidate, "candidate.demo@smart.local", "DemoCandidate!2026");
-  await login(recruiter, "recruiter.demo@smart.local", "DemoRecruiter!2026");
+  await login(candidate, candidateAccount.email, candidateAccount.password);
+  await login(recruiter, recruiterAccount.email, recruiterAccount.password);
   await call(candidate, "/api/v2/dashboard/catalog", "GET", undefined, 403);
   await call(candidate, "/api/v2/taxonomy/skills", "GET", undefined, 403);
   const title = `Synthetic privacy CV ${Date.now()}`;
@@ -515,7 +510,7 @@ test("real CV access is revoked per application, withdrawal revokes its grant an
   expect(withdrawn.cvAccessGranted).toBe(false);
   expect((await recruiter.request.get(`/api/v2/recruiter/applications/${applications[1].applicationId}/cv`, { headers: await headers(recruiter) })).status()).toBe(404);
   await candidate.reload();
-  await candidate.getByRole("button", { name: "CV của tôi", exact: true }).click();
+  await openCandidateSection(candidate, "CV của tôi");
   const card = candidate.locator(".cv-item").filter({ hasText: title });
   await card.getByRole("button", { name: "Xóa CV", exact: true }).click();
   await expect(candidate.getByRole("dialog", { name: "Xóa CV" })).toBeVisible();

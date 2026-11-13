@@ -104,3 +104,20 @@ it("retries the same applied filters after an API failure", async () => {
   expect(lastQuery().searchParams.get("resourceId")).toBe(resourceId);
   expect(screen.getByLabelText("ID danh mục / kỹ năng")).toHaveValue(resourceId);
 });
+
+it("keeps the highlighted audit row aligned with the detail after paging away from a selection", async () => {
+  vi.mocked(apiRequest).mockImplementation(async (path) => {
+    const page = Number(new URL(path, "http://synthetic.local").searchParams.get("page") ?? "0");
+    return { items: page === 0 ? [core, { ...core, id: 2, reason: "Selected old page" }]
+      : [{ ...core, id: 3, reason: "First on new page" }, { ...core, id: 4, reason: "Second on new page" }],
+    total: 4, page, size: 2 };
+  });
+  render(<AdminAuditPanel accessToken="synthetic-admin" />);
+  await screen.findByText("Synthetic Core edit");
+  fireEvent.click(screen.getAllByRole("button", { name: "Sửa" })[1]);
+  expect(screen.getByText("Selected old page")).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "Trang nhật ký sau" }));
+  await screen.findByText("First on new page");
+  expect(screen.getAllByRole("button", { name: "Sửa" })[0].closest("tr")).toHaveClass("bg-brand-50/50");
+  expect(screen.queryByText("Selected old page")).not.toBeInTheDocument();
+});

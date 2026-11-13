@@ -1,16 +1,9 @@
-import { expect, Page, test } from "@playwright/test";
-
-async function login(page: Page) {
-  await page.goto("/?auth=login");
-  const form = page.locator("form");
-  await form.getByLabel("Email").fill("candidate.demo@smart.local");
-  await form.getByLabel("Mật khẩu").fill("DemoCandidate!2026");
-  await form.getByRole("button", { name: "Đăng nhập", exact: true }).click();
-  await expect(page.getByRole("heading", { name: /^Xin chào,/, level: 1 })).toBeVisible();
-}
+import { expect, test } from "@playwright/test";
+import { candidateAccount, expectCandidateSignedIn, login, openCandidateSection } from "./helpers";
 
 test("stored invalid access token rotates through real Auth and recovers the workspace", async ({ page }) => {
-  await login(page);
+  await login(page, candidateAccount.email, candidateAccount.password);
+  await expectCandidateSignedIn(page);
   await page.evaluate(() => {
     const key = "smart-recruitment.session";
     const value = JSON.parse(sessionStorage.getItem(key)!);
@@ -20,15 +13,15 @@ test("stored invalid access token rotates through real Auth and recovers the wor
   let refreshes = 0;
   page.on("request", (request) => { if (new URL(request.url()).pathname === "/api/v2/auth/refresh") refreshes++; });
   await page.reload();
-  await expect(page.getByRole("heading", { name: /^Xin chào,/, level: 1 })).toBeVisible();
+  await expectCandidateSignedIn(page);
   expect(refreshes).toBe(1);
-  await page.getByRole("button", { name: "CV của tôi", exact: true }).click();
+  await openCandidateSection(page, "CV của tôi");
   await expect(page.getByRole("button", { name: "Tải CV lên", exact: true })).toBeVisible();
 });
 
 test("concurrent unauthorized reads use one real refresh while an unsaved profile stays intact", async ({ page }) => {
-  await login(page);
-  await page.getByRole("button", { name: "Hồ sơ", exact: true }).click();
+  await login(page, candidateAccount.email, candidateAccount.password);
+  await openCandidateSection(page, "Hồ sơ");
   const draft = page.getByLabel("Tên hiển thị", { exact: true });
   await draft.fill("Unsaved refresh draft");
   const paths = new Set(["/api/v2/cvs", "/api/v2/candidate/applications"]);
@@ -48,18 +41,19 @@ test("concurrent unauthorized reads use one real refresh while an unsaved profil
     } else await route.fallback();
   });
   // The dashboard loads both independently protected resources in parallel.
-  await page.getByRole("button", { name: "Tổng quan", exact: true }).click();
+  await openCandidateSection(page, "Tổng quan");
   await expect(page.getByRole("heading", { name: /^Xin chào,/, level: 1 })).toBeVisible();
   await expect.poll(() => denied.size).toBe(2);
   await expect.poll(() => refreshes).toBe(1);
   await expect(page.getByRole("button", { name: /^CV sẵn sàng / })).toBeVisible();
-  await page.getByRole("button", { name: "Hồ sơ", exact: true }).click();
+  await openCandidateSection(page, "Hồ sơ");
   await expect(draft).toHaveValue("Unsaved refresh draft");
   expect(refreshes).toBe(1);
 });
 
 test("initial verification outage retains the stored session and blocks private content until retry", async ({ page }) => {
-  await login(page);
+  await login(page, candidateAccount.email, candidateAccount.password);
+  await expectCandidateSignedIn(page);
   let unavailable = true;
   await page.route("**/api/v2/auth/me", async (route) => {
     if (unavailable) await route.fulfill({ status: 503, contentType: "application/json", body: '{"code":"UNAVAILABLE","message":"Try later"}' });
@@ -68,8 +62,9 @@ test("initial verification outage retains the stored session and blocks private 
   await page.reload();
   await expect(page.getByRole("alert")).toContainText("Phiên được giữ lại");
   await expect(page.getByRole("button", { name: "CV của tôi", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^Tài khoản / })).toHaveCount(0);
   expect(await page.evaluate(() => sessionStorage.getItem("smart-recruitment.session") !== null)).toBe(true);
   unavailable = false;
   await page.getByRole("button", { name: "Thử xác minh lại" }).click();
-  await expect(page.getByRole("heading", { name: /^Xin chào,/, level: 1 })).toBeVisible();
+  await expectCandidateSignedIn(page);
 });
