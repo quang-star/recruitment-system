@@ -1,21 +1,31 @@
-import { MatchState, matchSummary } from "../application/matchPresentation";
-import { ConfirmDialog } from "../../shared/components/ConfirmDialog";
-import { CategoryFilterValue, emptyCategoryFilter, JobCategoryFilter } from "../recruiter/JobCategoryFilter";
 import { FormEvent, useEffect, useRef, useState } from "react";
 
 import { ApiClientError, apiRequest } from "../../shared/api/client";
 import { PageResult, usePagedResource } from "../../shared/api/pagination";
-import { PageControls } from "../../shared/components/PageControls";
 import { AuthSession } from "../../shared/auth/session";
-import { ApplicationMatch, MatchBreakdown } from "../application/MatchBreakdown";
-import { getPendingJobId, setPendingJobId } from "../../shared/pendingApplication";
+import { ConfirmDialog } from "../../shared/components/ConfirmDialog";
+import { CvPreviewModal } from "../../shared/components/CvPreviewModal";
+import { JobsIcon, MapPinIcon } from "../../shared/components/Icon";
+import { PageControls } from "../../shared/components/PageControls";
 import { ReasonDialog } from "../../shared/components/ReasonDialog";
-import { useModalFocus } from "../../shared/components/useModalFocus";
-
-type Job = { jobId: string; title: string; description: string; requirementsText: string; locationText: string | null; workMode: string | null; employmentType: string | null; openings: number; companyId: string; };
-type Cv = { cvId: string; title: string; activeVersion: { cvVersionId: string; processingStatus: string; }; };
-type Application = { applicationId: string; jobId: string; status: string; appliedAt: string; version: number; matchingSupported?: boolean; cvAccessGranted?: boolean; match?: ApplicationMatch | null; matchState?: MatchState; };
-type StatusChange = { statusChangeId: string; fromStatus: string | null; toStatus: string; reason: string | null; occurredAt: string; };
+import { getPendingJobId, setPendingJobId } from "../../shared/pendingApplication";
+import { EnsureRouter, routes, useSafeNavigate } from "../../shared/router";
+import { Badge, Button, Card, CardContent, EmptyState, ErrorBanner, Modal, PageHeader, Skeleton } from "../../shared/ui";
+import { ApplicationMatch } from "../application/MatchBreakdown";
+import { CategoryFilterValue, JobCategoryFilter, emptyCategoryFilter } from "../recruiter/JobCategoryFilter";
+import { CandidateApplicationsSection } from "./CandidateApplicationsSection";
+import { CandidateApplyModal } from "./CandidateApplyModal";
+import {
+  Application,
+  Cv,
+  Job,
+  StatusChange,
+  employmentTypeLabel,
+  formatSalary,
+  getErrorMessage,
+  inputClass,
+  workModeLabel
+} from "./candidateJobTypes";
 
 type Props = {
   session: AuthSession;
@@ -26,262 +36,561 @@ type Props = {
   onApplied?: (message: string) => void;
 };
 
-export function CandidateJobsPanel({ session, initialJobId, applicationsOnly = false, dialogOnly = false, onClose, onApplied }: Props) {
-  const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null);
+function CandidateJobsPanelInner({
+  session,
+  initialJobId,
+  applicationsOnly = false,
+  dialogOnly = false,
+  onClose,
+  onApplied
+}: Props) {
+  const navigate = useSafeNavigate();
+  const [linkedApplicationId, setLinkedApplicationId] = useState<string | null>(() => new URLSearchParams(window.location.search).get("application"));
+  const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(() => new URLSearchParams(window.location.search).get("application"));
   const [pendingJob, setPendingJob] = useState<Job | null>(null);
+  const [missingInitialJobNotice, setMissingInitialJobNotice] = useState<string | null>(null);
   const [cvs, setCvs] = useState<Cv[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
-  const [jobId, setJobId] = useState("");
   const [cvId, setCvId] = useState("");
   const [consentAccepted, setConsentAccepted] = useState(false);
   const [coverLetter, setCoverLetter] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loadingInitialTarget, setLoadingInitialTarget] = useState(
+    Boolean(initialJobId || (!dialogOnly && getPendingJobId()))
+  );
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [histories, setHistories] = useState<Record<string, StatusChange[]>>({});
   const [workingApplicationId, setWorkingApplicationId] = useState<string | null>(null);
-  const [query, setQuery] = useState("");
-  const [workMode, setWorkMode] = useState("");
-  const [employmentType, setEmploymentType] = useState("");
-  const [applyOpen, setApplyOpen] = useState(false);
-  function closeApply() { if (!submitting) { setApplyOpen(false); if (dialogOnly) onClose?.(); } }
-  const applyDialogRef = useModalFocus<HTMLElement>(applyOpen, closeApply);
   const [withdrawTarget, setWithdrawTarget] = useState<Application | null>(null);
   const [revokeTarget, setRevokeTarget] = useState<Application | null>(null);
+  const [previewCv, setPreviewCv] = useState<{ cvId: string; cvVersionId?: string; title?: string; page?: number } | null>(null);
   const submissionKey = useRef(crypto.randomUUID());
 
-  const [sort, setSort] = useState("newest");
+  const [pendingTargetJobId] = useState<string | null>(() => initialJobId ?? (!dialogOnly ? getPendingJobId() : null));
+  const [jobQuery, setJobQuery] = useState("");
+  const [jobSort, setJobSort] = useState("newest");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilterValue>(emptyCategoryFilter);
-  const [applicationStatus, setApplicationStatus] = useState("");
-  const [applicationQuery, setApplicationQuery] = useState("");
-  const [applicationSort, setApplicationSort] = useState("newest");
-  const jobResults = usePagedResource<Job>(dialogOnly ? null : "/api/v2/candidate/jobs", { q: query, workMode, employmentType: employmentType || undefined, sort, ...categoryFilter }, session.accessToken);
-  const applicationResults = usePagedResource<Application>(dialogOnly ? null : "/api/v2/candidate/applications",
-    { status: applicationStatus, q: applicationQuery, sort: applicationSort }, session.accessToken, 10);
-  const jobs = jobResults.items;
 
-  function startNewSubmission() { submissionKey.current = crypto.randomUUID(); }
+  const [appQuery, setAppQuery] = useState("");
+  const [appSort, setAppSort] = useState("newest");
+  const [appStatus, setAppStatus] = useState("");
 
+  const jobResults = usePagedResource<Job>(
+    applicationsOnly || dialogOnly ? null : "/api/v2/candidate/jobs",
+    {
+      q: jobQuery.trim(),
+      sort: jobSort,
+      industryId: categoryFilter.industryId,
+      specializationId: categoryFilter.specializationId,
+      positionId: categoryFilter.positionId
+    },
+    session.accessToken,
+    8
+  );
+
+  const applicationResults = usePagedResource<Application>(
+    dialogOnly ? null : "/api/v2/candidate/applications",
+    {
+      q: appQuery.trim(),
+      sort: appSort,
+      status: appStatus,
+      applicationId: linkedApplicationId
+    },
+    session.accessToken,
+    8
+  );
+
+  // Clear pending sessionStorage key immediately so leaving and returning never re-triggers stale prompts.
   useEffect(() => {
-    let active = true;
-    const requestedJobId = getPendingJobId() ?? initialJobId;
-    void Promise.all([
-      apiRequest<Cv[]>("/api/v2/cvs", { accessToken: session.accessToken }),
-      requestedJobId ? apiRequest<PageResult<Job>>(`/api/v2/candidate/jobs?page=0&size=1&jobId=${encodeURIComponent(requestedJobId)}`,
-        { accessToken: session.accessToken }) : Promise.resolve(null)
-    ]).then(([cvResult, requestedJob]) => {
-      if (!active) return;
-      setCvs(cvResult);
-      setCvId(cvResult.find((cv) => cv.activeVersion.processingStatus === "CONFIRMED")?.cvId ?? "");
-      if (requestedJob?.items[0]) {
-        setPendingJob(requestedJob.items[0]); setJobId(requestedJob.items[0].jobId); setApplyOpen(true);
-      } else if (requestedJobId) {
-        setMessage("Vị trí bạn chọn hiện không còn tuyển dụng. Bạn có thể xem các cơ hội khác bên dưới.");
-      }
+    if (!dialogOnly && getPendingJobId()) {
       setPendingJobId(null);
-    }).catch((requestError) => { if (active) setError(getErrorMessage(requestError)); })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
-  }, [session.accessToken, initialJobId]);
+    }
+  }, [dialogOnly]);
 
+  // Load candidate CVs for application modal (skipped in applicationsOnly when modal isn't opened until needed).
   useEffect(() => {
+    if (applicationsOnly && !pendingJob && !pendingTargetJobId) return;
+    const controller = new AbortController();
+    void apiRequest<Cv[]>("/api/v2/cvs", { accessToken: session.accessToken, signal: controller.signal })
+      .then((items) => {
+        if (controller.signal.aborted) return;
+        setCvs(items);
+        const confirmed = items.filter((item) => item.activeVersion?.processingStatus === "CONFIRMED");
+        if (confirmed.length > 0) {
+          setCvId((current) => current || confirmed[0].cvId);
+        }
+      })
+      .catch((failure) => {
+        if (!controller.signal.aborted && dialogOnly) {
+          setError(getErrorMessage(failure));
+        }
+      });
+    return () => controller.abort();
+  }, [session.accessToken, applicationsOnly, pendingJob, pendingTargetJobId, dialogOnly]);
+
+  // Load preselected target job from route prop or pending login redirect.
+  useEffect(() => {
+    if (!pendingTargetJobId) {
+      setLoadingInitialTarget(false);
+      return;
+    }
+    const controller = new AbortController();
+    setLoadingInitialTarget(true);
+    void apiRequest<PageResult<Job>>(
+      `/api/v2/candidate/jobs?jobId=${encodeURIComponent(pendingTargetJobId)}&page=0&size=1`,
+      { accessToken: session.accessToken, signal: controller.signal }
+    )
+      .then((page) => {
+        if (controller.signal.aborted) return;
+        const found = page.items[0];
+        if (found) {
+          setConsentAccepted(false);
+          setCoverLetter("");
+          submissionKey.current = crypto.randomUUID();
+          setPendingJob(found);
+          setMissingInitialJobNotice(null);
+        } else {
+          setPendingJob(null);
+          setMissingInitialJobNotice("Vị trí bạn chọn hiện đã đóng hoặc không còn tuyển dụng.");
+        }
+      })
+      .catch((failure) => {
+        if (!controller.signal.aborted) {
+          setError(getErrorMessage(failure));
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoadingInitialTarget(false);
+      });
+    return () => controller.abort();
+  }, [pendingTargetJobId, session.accessToken]);
+
+  // Enrich paged applications with match scores without blocking list render.
+  useEffect(() => {
+    if (dialogOnly) return;
+    if (applicationResults.items.length === 0) {
+      setApplications([]);
+      return;
+    }
     let active = true;
     setApplications(applicationResults.items.map((item) => ({ ...item, matchState: "loading" })));
-    void Promise.all(applicationResults.items.map(async (application) => {
-      if (application.matchingSupported === false || application.cvAccessGranted === false) return { ...application, match: null };
-      try {
-        const match = await apiRequest<ApplicationMatch>(`/api/v2/applications/${application.applicationId}/match`, { accessToken: session.accessToken });
-        return { ...application, match, matchState: "ready" as const };
-      } catch (failure) { return { ...application, match: null, matchState: failure instanceof ApiClientError && failure.status === 404 ? "waiting" as const : "error" as const }; }
-    })).then((items) => { if (active) setApplications(items); });
-    return () => { active = false; };
-  }, [applicationResults.items, session.accessToken]);
+    void Promise.all(
+      applicationResults.items.map(async (application) => {
+        if (application.matchingSupported === false || application.cvAccessGranted === false) {
+          return { ...application, match: null };
+        }
+        try {
+          const match = await apiRequest<ApplicationMatch>(`/api/v2/applications/${application.applicationId}/match`, {
+            accessToken: session.accessToken
+          });
+          return { ...application, match, matchState: "ready" as const };
+        } catch (failure) {
+          return {
+            ...application,
+            match: null,
+            matchState: failure instanceof ApiClientError && failure.status === 404 ? ("waiting" as const) : ("error" as const)
+          };
+        }
+      })
+    ).then((items) => {
+      if (active) setApplications(items);
+    });
+    return () => {
+      active = false;
+    };
+  }, [applicationResults.items, session.accessToken, dialogOnly]);
 
-  async function apply(event: FormEvent<HTMLFormElement>) {
+  const confirmedCvs = cvs.filter((item) => item.activeVersion?.processingStatus === "CONFIRMED");
+  const selectedCv = confirmedCvs.find((item) => item.cvId === cvId) ?? confirmedCvs[0] ?? null;
+
+  function openApplyModal(job: Job) {
+    setError(null);
+    setConsentAccepted(false);
+    setCoverLetter("");
+    submissionKey.current = crypto.randomUUID();
+    setPendingJob(job);
+  }
+
+  function closeApplyModal() {
+    setPendingJob(null);
+    setConsentAccepted(false);
+    setMissingInitialJobNotice(null);
+    onClose?.();
+  }
+
+  async function handleSubmitApplication(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!selectedJob || !cvId || !consentAccepted || submitting) return;
-    setSubmitting(true); setMessage(null); setError(null);
+    if (!pendingJob || !selectedCv || !consentAccepted) return;
+    setSubmitting(true);
+    setError(null);
     try {
-      const created = await apiRequest<Application>("/api/v2/candidate/applications", {
-        method: "POST", accessToken: session.accessToken,
+      await apiRequest("/api/v2/candidate/applications", {
+        method: "POST",
+        accessToken: session.accessToken,
         idempotencyKey: submissionKey.current,
         body: JSON.stringify({
-          jobId: selectedJob?.jobId, cvId,
-          cvVersionId: confirmedCvs.find((cv) => cv.cvId === cvId)?.activeVersion.cvVersionId,
+          jobId: pendingJob.jobId,
+          cvId: selectedCv.cvId,
+          cvVersionId: selectedCv.activeVersion.cvVersionId,
           coverLetter: coverLetter.trim() || null,
-          consentAccepted, policyVersion: "cv-sharing-v1"
+          consentAccepted: true,
+          policyVersion: "cv-sharing-v1"
         })
       });
-      setApplications((current) => current.some((item) => item.applicationId === created.applicationId)
-        ? current
-        : [{ ...created, match: null }, ...current]);
-      applicationResults.refresh();
-      setCoverLetter(""); setConsentAccepted(false); startNewSubmission();
-      setApplyOpen(false);
-      const success = created.matchingSupported === false
-        ? "Đã gửi hồ sơ ứng tuyển. Nhà tuyển dụng sẽ xem hồ sơ thủ công."
-        : "Đã gửi hồ sơ ứng tuyển. Kết quả đối chiếu sẽ cập nhật sau khi xử lý.";
-      setMessage(success);
-      onApplied?.(success);
-    } catch (requestError) { setError(getErrorMessage(requestError)); }
-    finally { setSubmitting(false); }
+      submissionKey.current = crypto.randomUUID();
+      const successText = `Đã nộp hồ sơ ứng tuyển vào vị trí "${pendingJob.title}".`;
+      setPendingJob(null);
+      setConsentAccepted(false);
+      setCoverLetter("");
+      setMessage(successText);
+      onApplied?.(successText);
+      if (!dialogOnly) {
+        applicationResults.refresh();
+      }
+    } catch (requestError) {
+      setError(getErrorMessage(requestError));
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   async function loadHistory(applicationId: string) {
-    setWorkingApplicationId(applicationId); setError(null);
+    setWorkingApplicationId(applicationId);
+    setError(null);
     try {
       const history = await apiRequest<StatusChange[]>(`/api/v2/applications/${applicationId}/history`, {
         accessToken: session.accessToken
       });
       setHistories((current) => ({ ...current, [applicationId]: history }));
-    } catch (requestError) { setError(getErrorMessage(requestError)); }
-    finally { setWorkingApplicationId(null); }
+    } catch (requestError) {
+      setError(getErrorMessage(requestError));
+    } finally {
+      setWorkingApplicationId(null);
+    }
   }
 
-  async function revoke(application: Application) {
-    setWorkingApplicationId(application.applicationId); setError(null);
-    try {
-      await apiRequest(`/api/v2/candidate/applications/${application.applicationId}/cv-access?version=${application.version}`,
-        { method: "DELETE", accessToken: session.accessToken });
-      setApplications((current) => current.map((item) => item.applicationId === application.applicationId
-        ? { ...item, cvAccessGranted: false, match: null } : item));
-      applicationResults.refresh(); setRevokeTarget(null); setMessage("Đã thu hồi quyền xem CV và điểm.");
-    } catch (e) { setError(getErrorMessage(e)); }
-    finally { setWorkingApplicationId(null); }
+  function toggleApplicationDetail(applicationId: string) {
+    if (selectedApplicationId === applicationId) {
+      setSelectedApplicationId(null);
+      return;
+    }
+    setSelectedApplicationId(applicationId);
+    if (!histories[applicationId]) {
+      void loadHistory(applicationId);
+    }
   }
 
-  async function withdraw(application: Application, reason: string) {
-    setWithdrawTarget(null);
-    setWorkingApplicationId(application.applicationId); setMessage(null); setError(null);
+  async function revokeCvAccess(application: Application) {
+    setWorkingApplicationId(application.applicationId);
+    setError(null);
     try {
-      const updated = await apiRequest<Application>(
-        `/api/v2/candidate/applications/${application.applicationId}/withdraw`, {
-          method: "POST", accessToken: session.accessToken,
-          body: JSON.stringify({ reason, version: application.version })
-        });
-      setApplications((current) => current.map((item) => item.applicationId === updated.applicationId
-        ? { ...item, ...updated }
-        : item));
-      setMessage("Đã rút hồ sơ ứng tuyển.");
-      await loadHistory(application.applicationId);
+      await apiRequest<void>(`/api/v2/candidate/applications/${application.applicationId}/cv-access?version=${application.version}`, {
+        method: "DELETE",
+        accessToken: session.accessToken
+      });
+      setRevokeTarget(null);
+      setMessage("Đã thu hồi quyền xem CV cho hồ sơ ứng tuyển này.");
       applicationResults.refresh();
-    } catch (requestError) { setError(getErrorMessage(requestError)); }
-    finally { setWorkingApplicationId(null); }
+    } catch (requestError) {
+      setError(getErrorMessage(requestError));
+    } finally {
+      setWorkingApplicationId(null);
+    }
   }
 
-  if (loading) return <section className={dialogOnly ? "portal-data-message" : "cv-panel"}><p className="muted" role="status">Đang tải thông tin ứng tuyển…</p></section>;
-  const confirmedCvs = cvs.filter((cv) => cv.activeVersion.processingStatus === "CONFIRMED");
-  const selectedJob = pendingJob ?? jobs.find((job) => job.jobId === jobId) ?? jobs[0];
-  const filteredJobs = jobs;
-  const applicationDialog = applyOpen && <div className="modal-backdrop" role="presentation"><section ref={applyDialogRef} tabIndex={-1} className="modal-card" role="dialog" aria-modal="true" aria-labelledby="apply-title">
-      <div className="section-heading"><div><p className="eyebrow">Ứng tuyển vị trí</p><h2 id="apply-title">{selectedJob?.title}</h2></div><button type="button" className="icon-button secondary-button" aria-label="Đóng" disabled={submitting} onClick={closeApply}>×</button></div>
-      <form className="application-form" onSubmit={apply}>
-      <label>CV đã xác nhận<select value={cvId} onChange={(event) => { setCvId(event.target.value); startNewSubmission(); }} disabled={!confirmedCvs.length}>{confirmedCvs.length ? confirmedCvs.map((cv) => <option key={cv.cvId} value={cv.cvId}>{cv.title}</option>) : <option value="">Cần xác nhận ParsedCV trước</option>}</select></label>
-      <label>Thư ứng tuyển (không bắt buộc)<textarea value={coverLetter} maxLength={5000} rows={5}
-        onChange={(event) => { setCoverLetter(event.target.value); startNewSubmission(); }}
-        placeholder="Giới thiệu ngắn về sự phù hợp của bạn với vị trí…" /></label>
-      <label className="consent-check"><input type="checkbox" checked={consentAccepted} onChange={(event) => { setConsentAccepted(event.target.checked); startNewSubmission(); }} /> Tôi đồng ý chia sẻ CV đã chọn với nhà tuyển dụng của vị trí này để xem xét hồ sơ. Tôi có thể thu hồi quyền xem trong mục đã ứng tuyển.</label>
-      {!confirmedCvs.length && <p className="muted">Bạn cần tải lên và xác nhận CV trong mục “CV của tôi” trước khi ứng tuyển.</p>}
-      {error && <p className="error-message" role="alert">{error}</p>}
-      <button type="submit" disabled={!confirmedCvs.length || !consentAccepted || submitting}>{submitting ? "Đang gửi…" : "Ứng tuyển"}</button>
-      </form></section></div>;
-  if (dialogOnly) return <div className="portal-application-layer">
-    {applicationDialog}
-    {!applyOpen && (message || error) && <div className="portal-data-message" role={error ? "alert" : "status"}>
-      {message || error}<button type="button" onClick={onClose}>Đóng</button></div>}
-  </div>;
-  return <section className="cv-panel candidate-jobs" aria-labelledby="candidate-jobs-title">
-    <div className="section-heading"><div><p className="eyebrow">HÀNH TRÌNH NGHỀ NGHIỆP</p><h2 id="candidate-jobs-title">{applicationsOnly ? "Đã ứng tuyển" : "Tìm việc làm"}</h2></div><span>{applicationsOnly ? `${applicationResults.total} hồ sơ` : `${jobResults.total} vị trí`}</span></div>
-    {!applicationsOnly && <>
-    <JobCategoryFilter value={categoryFilter} onChange={setCategoryFilter} />
-    <div className="job-filters"><label>Tìm kiếm<input value={query} maxLength={200} onChange={(event) => setQuery(event.target.value)} placeholder="Chức danh, kỹ năng hoặc địa điểm" /></label>
-      <label>Hình thức<select value={workMode} onChange={(event) => setWorkMode(event.target.value)}><option value="">Tất cả</option><option value="REMOTE">Remote</option><option value="HYBRID">Hybrid</option><option value="ONSITE">Tại văn phòng</option></select></label>
-      <label>Loại hợp đồng<select value={employmentType} onChange={(event) => setEmploymentType(event.target.value)}><option value="">Tất cả</option><option value="FULL_TIME">Toàn thời gian</option><option value="PART_TIME">Bán thời gian</option><option value="CONTRACT">Hợp đồng</option><option value="INTERNSHIP">Thực tập</option></select></label>
-      <label>Sắp xếp việc làm<select value={sort} onChange={(event) => setSort(event.target.value)}><option value="newest">Mới nhất</option><option value="oldest">Cũ nhất</option><option value="title">Tên vị trí A–Z</option></select></label></div>
-    <PageControls {...jobResults} onPageChange={(page) => { setPendingJob(null); setJobId(""); jobResults.setPage(page); }} label="Phân trang việc làm" />
-    {jobResults.error && <p role="alert">{jobResults.error} <button type="button" onClick={jobResults.refresh}>Thử lại</button></p>}
-    {jobs.length === 0 ? <p className="muted">Hiện chưa có Job đang tuyển.</p> : <div className="job-discovery-layout">
-      <div className="job-card-list">{filteredJobs.map((job) => <button type="button" key={job.jobId}
-        className={`job-card ${job.jobId === jobId ? "selected" : ""}`} onClick={() => { setJobId(job.jobId); setPendingJob(null); setConsentAccepted(false); startNewSubmission(); }}>
-        <span>
-          <strong>{job.title}</strong>
-          <small>{job.locationText ?? "Địa điểm linh hoạt"} · {translateWorkMode(job.workMode)}</small>
-          <span className="job-tags">
-            {extractSkills(`${job.title} ${job.requirementsText}`).slice(0, 3).map((skill) => (
-              <span key={skill} className="tech-badge">{skill}</span>
-            ))}
-          </span>
-        </span>
-        <span className="status-pill">{job.employmentType ?? "Toàn thời gian"}</span>
-      </button>)}{filteredJobs.length === 0 && <p className="muted">Không có Job phù hợp bộ lọc.</p>}</div>
-      {selectedJob && <article className="job-detail-card"><p className="eyebrow">Chi tiết vị trí</p><h3>{selectedJob.title}</h3>
-        <div className="job-meta"><span>{selectedJob.locationText ?? "Linh hoạt"}</span><span>{translateWorkMode(selectedJob.workMode)}</span><span>{selectedJob.openings} vị trí</span></div>
-        <p>{selectedJob.description}</p><h4>Yêu cầu</h4><p>{selectedJob.requirementsText}</p>
-        <button type="button" onClick={() => { startNewSubmission(); setConsentAccepted(false); setApplyOpen(true); }}>Ứng tuyển vị trí này</button></article>}
-    </div>}
-    </>}
-    {applicationDialog}
-    {message && <p className="success-message" role="status">{message}</p>}{error && !applyOpen && <p className="error-message" role="alert">{error}</p>}
-    <div className="job-filters">
-      <label>Tìm hồ sơ đã nộp<input value={applicationQuery} maxLength={200} onChange={(event) => setApplicationQuery(event.target.value)} /></label>
-      <label>Trạng thái hồ sơ<select value={applicationStatus} onChange={(event) => setApplicationStatus(event.target.value)}>
-        <option value="">Tất cả</option>{["SUBMITTED", "UNDER_REVIEW", "SHORTLISTED", "REJECTED", "WITHDRAWN"].map((status) => <option key={status} value={status}>{translateApplicationStatus(status)}</option>)}
-      </select></label>
-      <label>Sắp xếp hồ sơ<select value={applicationSort} onChange={(event) => setApplicationSort(event.target.value)}><option value="newest">Mới nhất</option><option value="oldest">Cũ nhất</option><option value="score">Mức độ phù hợp</option></select></label>
+  async function withdrawApplication(application: Application, reason: string) {
+    setWorkingApplicationId(application.applicationId);
+    setError(null);
+    try {
+      await apiRequest(`/api/v2/candidate/applications/${application.applicationId}/withdraw`, {
+        method: "POST",
+        accessToken: session.accessToken,
+        body: JSON.stringify({ version: application.version, reason })
+      });
+      setWithdrawTarget(null);
+      setMessage("Đã rút hồ sơ ứng tuyển thành công.");
+      applicationResults.refresh();
+    } catch (requestError) {
+      setError(getErrorMessage(requestError));
+    } finally {
+      setWorkingApplicationId(null);
+    }
+  }
+
+  const applyModal = (
+    <CandidateApplyModal
+      pendingJob={pendingJob}
+      confirmedCvs={confirmedCvs}
+      selectedCv={selectedCv}
+      coverLetter={coverLetter}
+      consentAccepted={consentAccepted}
+      submitting={submitting}
+      error={error}
+      onClose={closeApplyModal}
+      onSelectCv={setCvId}
+      onCoverLetterChange={setCoverLetter}
+      onConsentChange={setConsentAccepted}
+      onPreviewCv={(cv) =>
+        setPreviewCv({
+          cvId: cv.cvId,
+          cvVersionId: cv.activeVersion.cvVersionId,
+          title: cv.title
+        })
+      }
+      onSubmit={handleSubmitApplication}
+    />
+  );
+
+  const previewModal = previewCv && (
+    <CvPreviewModal
+      open
+      onClose={() => setPreviewCv(null)}
+      title={previewCv.title ?? "Xem trước CV"}
+      downloadPath={
+        previewCv.cvVersionId
+          ? `/api/v2/cvs/${previewCv.cvId}/file?cvVersionId=${previewCv.cvVersionId}`
+          : `/api/v2/cvs/${previewCv.cvId}/file`
+      }
+      accessToken={session.accessToken}
+      page={previewCv.page}
+    />
+  );
+
+  if (dialogOnly) {
+    return (
+      <>
+        {loadingInitialTarget && (
+          <Modal open onClose={closeApplyModal} title="Đang tải thông tin vị trí…" size="sm">
+            <div className="py-6 space-y-3">
+              <Skeleton className="h-5 w-2/3" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-24 w-full" />
+            </div>
+          </Modal>
+        )}
+        {!loadingInitialTarget && missingInitialJobNotice && (
+          <Modal open onClose={closeApplyModal} title="Không thể ứng tuyển" size="sm">
+            <div className="pt-4 space-y-4">
+              <ErrorBanner tone="info" message={missingInitialJobNotice} />
+              <div className="flex justify-end">
+                <Button type="button" variant="secondary" onClick={closeApplyModal}>
+                  Đóng
+                </Button>
+              </div>
+            </div>
+          </Modal>
+        )}
+        {applyModal}
+        {previewModal}
+      </>
+    );
+  }
+
+  return (
+    <div className="space-y-8">
+      {!applicationsOnly && (
+        <section className="space-y-5">
+          <PageHeader
+            eyebrow="Cơ hội việc làm"
+            title="Tìm việc làm"
+            subtitle="Khám phá các vị trí đang tuyển dụng, kiểm tra độ phù hợp với CV đã xác nhận và nộp hồ sơ nhanh chóng."
+            actions={
+              <Button type="button" variant="secondary" size="sm" onClick={() => jobResults.refresh()}>
+                Làm mới danh sách
+              </Button>
+            }
+          />
+
+          {missingInitialJobNotice && <ErrorBanner tone="info" message={missingInitialJobNotice} />}
+          {message && <ErrorBanner tone="success" message={message} />}
+          {error && <ErrorBanner tone="error" message={error} />}
+
+          <Card>
+            <CardContent className="pt-5 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-[1fr_220px] gap-3">
+                <label className="block space-y-1.5 text-xs font-semibold text-ink-700">
+                  <span>Từ khóa vị trí hoặc kỹ năng</span>
+                  <input
+                    type="search"
+                    value={jobQuery}
+                    onChange={(event) => setJobQuery(event.target.value)}
+                    placeholder="Ví dụ: Backend Java, React, Product…"
+                    className={inputClass}
+                  />
+                </label>
+                <label className="block space-y-1.5 text-xs font-semibold text-ink-700">
+                  <span>Sắp xếp</span>
+                  <select value={jobSort} onChange={(event) => setJobSort(event.target.value)} className={inputClass}>
+                    <option value="newest">Mới nhất</option>
+                    <option value="title">Theo tiêu đề A–Z</option>
+                  </select>
+                </label>
+              </div>
+              <div className="[&_.job-filters]:grid [&_.job-filters]:grid-cols-1 sm:[&_.job-filters]:grid-cols-3 [&_.job-filters]:gap-3 [&_.job-filters]:m-0 [&_label]:flex [&_label]:flex-col [&_label]:gap-1.5 [&_label]:text-xs [&_label]:font-semibold [&_label]:text-ink-700 [&_select]:h-10 [&_select]:rounded-xl [&_select]:border [&_select]:border-border-strong [&_select]:bg-white [&_select]:px-3 [&_select]:text-sm [&_select]:font-normal [&_select]:text-ink-900">
+                <JobCategoryFilter value={categoryFilter} onChange={setCategoryFilter} />
+              </div>
+            </CardContent>
+          </Card>
+
+          {jobResults.error && <ErrorBanner tone="error" message={jobResults.error} />}
+
+          {jobResults.loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Skeleton className="h-44" />
+              <Skeleton className="h-44" />
+            </div>
+          ) : jobResults.items.length === 0 ? (
+            <EmptyState
+              icon={<JobsIcon size={24} />}
+              title="Chưa tìm thấy vị trí phù hợp"
+              description="Thử mở rộng từ khóa hoặc đặt lại bộ lọc ngành nghề để xem thêm cơ hội việc làm."
+              action={
+                (jobQuery || categoryFilter.industryId) && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      setJobQuery("");
+                      setCategoryFilter(emptyCategoryFilter);
+                    }}
+                  >
+                    Xóa bộ lọc
+                  </Button>
+                )
+              }
+            />
+          ) : (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {jobResults.items.map((job) => (
+                  <Card key={job.jobId} interactive className="flex flex-col justify-between">
+                    <CardContent className="pt-5 flex flex-col justify-between gap-4 flex-1">
+                      <div className="space-y-2.5">
+                        <div className="flex items-start justify-between gap-2">
+                          <h3 className="text-base font-bold text-ink-900 m-0 leading-snug">{job.title}</h3>
+                          <Badge tone={job.matchingSupported === false ? "neutral" : "brand"} className="shrink-0">
+                            {job.matchingSupported === false ? "Xét thủ công" : "AI Match"}
+                          </Badge>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-ink-600">
+                          {job.locationText && (
+                            <span className="inline-flex items-center gap-1">
+                              <MapPinIcon size={13} /> {job.locationText}
+                            </span>
+                          )}
+                          {workModeLabel(job.workMode) && <Badge tone="neutral">{workModeLabel(job.workMode)}</Badge>}
+                          {employmentTypeLabel(job.employmentType) && (
+                            <Badge tone="neutral">{employmentTypeLabel(job.employmentType)}</Badge>
+                          )}
+                          <Badge tone="info">{formatSalary(job)}</Badge>
+                        </div>
+
+                        <p className="text-sm text-ink-600 line-clamp-2 m-0 leading-relaxed">{job.description}</p>
+                      </div>
+
+                      <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-border-subtle">
+                        <span className="text-xs text-ink-500">Số lượng tuyển: {job.openings}</span>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => navigate(routes.jobDetail(job.jobId))}
+                          >
+                            Xem chi tiết
+                          </Button>
+                          <Button type="button" size="sm" onClick={() => openApplyModal(job)}>
+                            Ứng tuyển vị trí này
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+              <PageControls
+                page={jobResults.page}
+                size={jobResults.size}
+                total={jobResults.total}
+                loading={jobResults.loading}
+                onPageChange={jobResults.setPage}
+                label="Phân trang danh sách việc làm"
+              />
+            </div>
+          )}
+        </section>
+      )}
+
+      {linkedApplicationId && <Button variant="secondary" size="sm" onClick={() => {
+        setLinkedApplicationId(null);
+        navigate(routes.candidate.applications, { replace: true });
+      }}>Xem tất cả hồ sơ ứng tuyển</Button>}
+      <CandidateApplicationsSection
+        applicationsOnly={applicationsOnly}
+        applications={applications}
+        histories={histories}
+        selectedApplicationId={selectedApplicationId}
+        workingApplicationId={workingApplicationId}
+        page={applicationResults.page}
+        size={applicationResults.size}
+        total={applicationResults.total}
+        loading={applicationResults.loading}
+        error={applicationResults.error}
+        missingInitialJobNotice={missingInitialJobNotice}
+        message={message}
+        bannerError={error}
+        appQuery={appQuery}
+        appStatus={appStatus}
+        appSort={appSort}
+        onAppQueryChange={setAppQuery}
+        onAppStatusChange={setAppStatus}
+        onAppSortChange={setAppSort}
+        onPageChange={applicationResults.setPage}
+        onRefresh={() => applicationResults.refresh()}
+        onToggleDetail={toggleApplicationDetail}
+        onOpenJobDetail={(jobId) => navigate(routes.jobDetail(jobId))}
+        onPreviewCv={setPreviewCv}
+        onRevokeCvAccess={setRevokeTarget}
+        onWithdraw={setWithdrawTarget}
+      />
+
+      {applyModal}
+      {previewModal}
+
+      <ReasonDialog
+        open={withdrawTarget !== null}
+        title="Rút hồ sơ ứng tuyển"
+        confirmLabel="Xác nhận rút hồ sơ"
+        description="Rút hồ sơ và thu hồi quyền xem CV, điểm của nhà tuyển dụng. Lịch sử ứng tuyển được giữ lại; thao tác không thể hoàn tác."
+        onCancel={() => setWithdrawTarget(null)}
+        onConfirm={(reason) => {
+          if (withdrawTarget) void withdrawApplication(withdrawTarget, reason);
+        }}
+      />
+
+      <ConfirmDialog
+        open={revokeTarget !== null}
+        title="Thu hồi quyền xem CV"
+        confirmLabel="Xác nhận thu hồi"
+        busy={workingApplicationId !== null}
+        description="Nhà tuyển dụng sẽ không xem được CV hoặc điểm của hồ sơ này. Trạng thái và lịch sử ứng tuyển vẫn được giữ lại."
+        onCancel={() => setRevokeTarget(null)}
+        onConfirm={() => {
+          if (revokeTarget) void revokeCvAccess(revokeTarget);
+        }}
+      />
     </div>
-    <PageControls {...applicationResults} onPageChange={applicationResults.setPage} label="Phân trang hồ sơ đã nộp" />
-    {applicationResults.error && <p role="alert">{applicationResults.error} <button type="button" onClick={applicationResults.refresh}>Thử lại</button></p>}
-    {!applicationResults.loading && !applicationResults.error && applicationResults.total === 0 && <p className="muted">Không có hồ sơ phù hợp bộ lọc.</p>}
-    {applications.length > 0 && <div className="application-master-detail candidate-application-history">
-      <div className="application-table-wrap"><table className="application-table"><caption>Lịch sử ứng tuyển</caption>
-      <thead><tr><th>Vị trí</th><th>Ngày nộp</th><th>Trạng thái</th></tr></thead>
-      <tbody>{applications.map((application) => <tr key={application.applicationId} className={(selectedApplicationId ?? applications[0]?.applicationId) === application.applicationId ? "selected" : ""}>
-        <td><button type="button" className="text-button" onClick={() => setSelectedApplicationId(application.applicationId)}>{jobs.find((job) => job.jobId === application.jobId)?.title ?? `Hồ sơ ${application.applicationId.slice(0, 8)}`}</button></td>
-        <td>{new Date(application.appliedAt).toLocaleDateString("vi-VN")}</td><td>{translateApplicationStatus(application.status)}</td>
-      </tr>)}</tbody></table></div>
-      <div className="application-selected-panel" aria-label="Chi tiết hồ sơ đã nộp">
-      {applications.filter((item) => item.applicationId === (applications.find((row) => row.applicationId === selectedApplicationId)?.applicationId ?? applications[0]?.applicationId)).map((application) => <article className="application-detail" key={application.applicationId}>
-      <div className="application-item"><span>{jobs.find((job) => job.jobId === application.jobId)?.title ?? application.jobId}<small>{new Date(application.appliedAt).toLocaleString()}</small></span><span className="status-pill">{translateApplicationStatus(application.status)}</span></div>
-      {application.match ? <MatchBreakdown match={application.match} /> : <p className="muted">{application.cvAccessGranted === false ? "Quyền xem CV và điểm đã được thu hồi." : application.matchingSupported === false ? "Ngành này chưa hỗ trợ AI; nhà tuyển dụng sẽ xem xét hồ sơ thủ công." : matchSummary(application)}</p>}
-      {application.matchState === "error" && <p role="alert">Không tải được điểm. <button type="button" onClick={applicationResults.refresh}>Thử lại điểm</button></p>}
-      <div className="button-row">
-        <button className="secondary-button" type="button" disabled={workingApplicationId === application.applicationId}
-          onClick={() => void loadHistory(application.applicationId)}>
-          {workingApplicationId === application.applicationId ? "Đang tải…" : "Xem tiến trình"}
-        </button>
-        {application.cvAccessGranted !== false && application.status !== "WITHDRAWN" && <button className="danger-button" type="button"
-          disabled={workingApplicationId !== null} onClick={() => setRevokeTarget(application)}>Thu hồi quyền xem CV</button>}
-        {["SUBMITTED", "UNDER_REVIEW", "SHORTLISTED"].includes(application.status) && <button className="danger-button" type="button"
-          disabled={workingApplicationId === application.applicationId} onClick={() => setWithdrawTarget(application)}>Rút hồ sơ</button>}
-      </div>
-      {histories[application.applicationId] && <ol className="status-timeline">
-        {histories[application.applicationId].map((change) => <li key={change.statusChangeId}>
-          <strong>{translateApplicationStatus(change.toStatus)}</strong><span>{new Date(change.occurredAt).toLocaleString()}</span>
-          {change.reason && <small>Lý do: {change.reason}</small>}
-        </li>)}
-      </ol>}
-    </article>)}</div></div>}
-    <ReasonDialog open={withdrawTarget !== null} title="Rút hồ sơ ứng tuyển" confirmLabel="Xác nhận rút hồ sơ"
-      description="Rút hồ sơ và thu hồi quyền xem CV, điểm của nhà tuyển dụng. Lịch sử ứng tuyển được giữ lại; thao tác không thể hoàn tác."
-      onCancel={() => setWithdrawTarget(null)} onConfirm={(reason) => { if (withdrawTarget) void withdraw(withdrawTarget, reason); }} />
-    <ConfirmDialog open={revokeTarget !== null} title="Thu hồi quyền xem CV" confirmLabel="Xác nhận thu hồi"
-      busy={workingApplicationId !== null} description="Nhà tuyển dụng sẽ không xem được CV hoặc điểm của hồ sơ này. Trạng thái và lịch sử ứng tuyển vẫn được giữ lại."
-      onCancel={() => setRevokeTarget(null)} onConfirm={() => { if (revokeTarget) void revoke(revokeTarget); }} />
-  </section>;
+  );
 }
 
-function translateWorkMode(value: string | null): string {
-  return ({ REMOTE: "Remote", HYBRID: "Hybrid", ONSITE: "Tại văn phòng" } as Record<string, string>)[value ?? ""] ?? "Linh hoạt";
-}
-
-function translateApplicationStatus(status: string): string {
-  return ({ SUBMITTED: "Mới ứng tuyển", UNDER_REVIEW: "Đang xem xét", SHORTLISTED: "Danh sách rút gọn", REJECTED: "Đã từ chối", WITHDRAWN: "Đã rút" } as Record<string, string>)[status] ?? status;
-}
-
-function getErrorMessage(error: unknown): string { return error instanceof ApiClientError ? error.error.message : "Không thể kết nối tới Gateway. Vui lòng thử lại."; }
-
-const commonTechs = ["Java", "Kafka", "Spring Boot", "React", "Python", "Docker", "PostgreSQL", "AWS", "TypeScript", "Node.js", "AI", "Go", "SQL"];
-function extractSkills(text: string): string[] {
-  return commonTechs.filter((tech) => new RegExp(`\\b${tech}\\b`, "i").test(text));
+/** Candidate jobs discovery + applications tracker wrapped with router fallback. */
+export function CandidateJobsPanel(props: Props) {
+  return (
+    <EnsureRouter>
+      <CandidateJobsPanelInner {...props} />
+    </EnsureRouter>
+  );
 }

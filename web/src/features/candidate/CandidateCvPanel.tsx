@@ -1,600 +1,53 @@
-import { DocumentReview } from "../../shared/components/DocumentReview";
-import { PdfSource } from "../../shared/components/PdfSource";
-import { useUnsavedChanges } from "../../shared/useUnsavedChanges";
-import { ConfirmDialog } from "../../shared/components/ConfirmDialog";
-import { CvPreviewModal } from "../../shared/components/CvPreviewModal";
-import { ExternalAiConsent, externalAiPolicyVersion, extractionNeedsManualReview, visibleQualityFlags } from "../../shared/components/ExternalAiConsent";
-import { FormEvent, useEffect, useRef, useState } from "react";
-
+import { FormEvent, lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { ApiClientError, apiRequest } from "../../shared/api/client";
 import { AuthSession } from "../../shared/auth/session";
-import { CvIcon, CheckCircleIcon } from "../../shared/components/Icon";
-import { canRetryCv, cvFailureInstruction, cvStatusLabels, pendingCvStatuses, reviewCvStatuses } from "./cvStatus";
-import { CvDetails, CvDetailsEditor } from "./CvDetailsEditor";
+import { ConfirmDialog } from "../../shared/components/ConfirmDialog";
+import { CvPreviewModal } from "../../shared/components/CvPreviewModal";
+import { DocumentReview } from "../../shared/components/DocumentReview";
+import {
+  externalAiPolicyVersion,
+  ExternalAiConsent
+} from "../../shared/components/ExternalAiConsent";
+import { CvIcon, EyeIcon, TrashIcon, UploadIcon } from "../../shared/components/Icon";
+import { PdfSource } from "../../shared/components/PdfSource";
+import { Badge, Button, Card, EmptyState, ErrorBanner } from "../../shared/ui";
+import { useUnsavedChanges } from "../../shared/useUnsavedChanges";
+import {
+  canRetryCv,
+  cvFailureInstruction,
+  cvStatusLabels,
+  pendingCvStatuses,
+  reviewCvStatuses
+} from "./cvStatus";
+import { ParsedCvPayload, ParsedCvReview, ParsedCvReviewData } from "./ParsedCvReview";
 
-type CandidateCv = {
+export type CandidateCvRecord = {
   cvId: string;
-  version: number;
   title: string;
-  status: "ACTIVE" | "ARCHIVED" | "DELETED";
+  status: string;
+  version: number;
+  createdAt?: string;
   activeVersion: {
     cvVersionId: string;
-    versionNumber: number;
     originalFilename: string;
-    mimeType: string;
     sizeBytes: number;
-    processingStatus: "UPLOADED" | "QUEUED" | "PROCESSING" | "PARSED" | "NEEDS_REVIEW"
-      | "CONFIRMED" | "REJECTED" | "FAILED" | "SUPERSEDED" | "DELETED";
-    failureCode: string | null;
+    processingStatus: string;
     version: number;
+    failureCode: string | null;
   };
 };
 
-type CandidateCvPanelProps = {
-  session: AuthSession;
-  onFindJobs?: () => void;
-};
+type Props = { session: AuthSession; onLogout?: () => void };
 
-type ParsedCvReview = {
-  revisionId: string;
-  cvVersionId: string;
-  revisionNumber: number;
-  sourceHash: string;
-  status: "PARSED" | "CONFIRMED" | "SUPERSEDED";
-  payload: CvDetails & {
-    [key: string]: unknown;
-    skills: Array<{ raw: string; canonicalSkillId: string | null; normalizationStatus: "KNOWN" | "PENDING" | "UNRESOLVED"; evidenceIds: string[]; confidence: number; provenance: "EXTRACTED" | "USER_CONFIRMED" | "USER_ASSERTED" }>;
-    experiences: Array<{ titleRaw: string; titleCanonical: string | null; companyRedacted: string | null; startMonth: string | null; endMonth: string | null; isCurrent: boolean; responsibilities: string[]; skillIds: string[]; evidenceIds: string[]; confidence: number }>;
-    summary: { totalExperienceMonths: number; overallConfidence: number; qualityFlags: string[] };
-  };
-};
+const MAX_CV_BYTES = 10 * 1024 * 1024;
+const CvBuilder = lazy(() => import("./cv-builder/CvBuilder"));
 
-export function CandidateCvPanel({ session, onFindJobs }: CandidateCvPanelProps) {
-  const [focusedVersionId, setFocusedVersionId] = useState<string | null>(null);
-  const [cvs, setCvs] = useState<CandidateCv[]>([]);
-  const [filter, setFilter] = useState("all");
-  const [title, setTitle] = useState("");
-  const [file, setFile] = useState<File | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
-  const [externalAiConsent, setExternalAiConsent] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const dragCounter = useRef(0);
-  const [reviews, setReviews] = useState<Record<string, ParsedCvReview>>({});
-  const [drafts, setDrafts] = useState<Record<string, ParsedCvReview["payload"]>>({});
-  const [reviewingVersionId, setReviewingVersionId] = useState<string | null>(null);
-  const [confirmingVersionId, setConfirmingVersionId] = useState<string | null>(null);
-  const [savingVersionId, setSavingVersionId] = useState<string | null>(null);
-  const [retryingCvId, setRetryingCvId] = useState<string | null>(null);
-
-  const [deleteTarget, setDeleteTarget] = useState<CandidateCv | null>(null);
-  const [previewCvTarget, setPreviewCvTarget] = useState<CandidateCv | null>(null);
-  const [deleting, setDeleting] = useState(false);
-  const deletedCvs = useRef(new Set<string>());
-  const deletedVersions = useRef(new Set<string>());
-
-  async function deleteCv(cv: CandidateCv) {
-    setDeleting(true); setError(null);
-    try {
-      await apiRequest(`/api/v2/cvs/${cv.cvId}?version=${cv.version}`, { method: "DELETE", accessToken: session.accessToken });
-      deletedCvs.current.add(cv.cvId);
-      deletedVersions.current.add(cv.activeVersion.cvVersionId);
-      setCvs((current) => current.filter((item) => item.cvId !== cv.cvId));
-      setReviews((current) => { const next = { ...current }; delete next[cv.activeVersion.cvVersionId]; return next; });
-      setDrafts((current) => { const next = { ...current }; delete next[cv.activeVersion.cvVersionId]; return next; });
-      setDeleteTarget(null);
-      setMessage("CV đã bị thu hồi quyền truy cập. Hệ thống đang xóa tệp và dữ liệu phân tích; lịch sử ứng tuyển được giữ lại.");
-    } catch (e) { setError(getErrorMessage(e)); }
-    finally { setDeleting(false); }
-  }
-
-  async function loadCvs() {
-    try {
-      const result = await apiRequest<CandidateCv[]>("/api/v2/cvs", { accessToken: session.accessToken });
-      setCvs((current) => result.filter((cv) => !deletedCvs.current.has(cv.cvId)).map((incoming) => {
-        const local = current.find((cv) => cv.cvId === incoming.cvId);
-        return local && local.activeVersion.cvVersionId === incoming.activeVersion.cvVersionId
-          && local.activeVersion.version > incoming.activeVersion.version ? local : incoming;
-      }));
-    } catch (requestError) {
-      setError(getErrorMessage(requestError));
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    void loadCvs();
-  }, [session.accessToken]);
-
-  useEffect(() => {
-    const hasPendingCv = cvs.some((cv) => ["UPLOADED", "QUEUED", "PROCESSING"].includes(
-      cv.activeVersion.processingStatus));
-    if (!hasPendingCv) return;
-    const timer = window.setInterval(() => void loadCvs(), 2000);
-    return () => window.clearInterval(timer);
-  }, [cvs, session.accessToken]);
-
-  function handleDragEnter(e: React.DragEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    dragCounter.current += 1;
-    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
-      setIsDragging(true);
-    }
-  }
-
-  function handleDragOver(e: React.DragEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-  }
-
-  function handleDragLeave(e: React.DragEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    dragCounter.current -= 1;
-    if (dragCounter.current <= 0) {
-      setIsDragging(false);
-      dragCounter.current = 0;
-    }
-  }
-
-  function handleDrop(e: React.DragEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-    dragCounter.current = 0;
-    if (uploading) return;
-    const droppedFiles = e.dataTransfer.files;
-    if (droppedFiles && droppedFiles.length > 0) {
-      const droppedFile = droppedFiles[0];
-      if (droppedFile.type === "application/pdf" || droppedFile.name.toLowerCase().endsWith(".pdf")) {
-        setFile(droppedFile);
-        setError(null);
-      } else {
-        setError("Chỉ chấp nhận tệp có định dạng PDF.");
-      }
-    }
-  }
-
-  async function upload(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!file || uploading) return;
-    if (!file.name.toLowerCase().endsWith(".pdf") || (file.type && file.type !== "application/pdf")) {
-      setError("Vui lòng chọn tệp PDF."); return;
-    }
-    if (file.size === 0 || file.size > 10 * 1024 * 1024) {
-      setError("Tệp PDF phải có nội dung và không vượt quá 10 MiB."); return;
-    }
-    setUploading(true);
-    setError(null);
-    setMessage(null);
-    const body = new FormData();
-    body.append("file", file);
-    body.append("externalAiConsent", String(externalAiConsent));
-    if (externalAiConsent) body.append("externalAiPolicyVersion", externalAiPolicyVersion);
-    if (title.trim()) body.append("title", title.trim());
-
-    try {
-      const created = await apiRequest<CandidateCv>("/api/v2/cvs", {
-        method: "POST",
-        accessToken: session.accessToken,
-        body
-      });
-      setCvs((current) => [created, ...current]);
-      setFile(null);
-      setExternalAiConsent(false);
-      setTitle("");
-      const input = document.getElementById("cv-file") as HTMLInputElement | null;
-      if (input) input.value = "";
-      setMessage("CV đã được lưu an toàn. Kết quả phân tích sẽ hiển thị trong danh sách bên dưới.");
-    } catch (requestError) {
-      setError(getErrorMessage(requestError));
-    } finally {
-      setUploading(false);
-    }
-  }
-
-  async function retryCv(cv: CandidateCv) {
-    if (retryingCvId || !canRetryCv(cv.activeVersion.processingStatus, cv.activeVersion.failureCode)) return;
-    setRetryingCvId(cv.cvId);
-    setError(null);
-    setMessage(null);
-    try {
-      const updated = await apiRequest<CandidateCv>(`/api/v2/cvs/${cv.cvId}/retry`, {
-        method: "POST", accessToken: session.accessToken,
-        body: JSON.stringify({ cvVersionId: cv.activeVersion.cvVersionId, expectedVersion: cv.activeVersion.version }),
-      });
-      setCvs((current) => current.map((item) => item.cvId === updated.cvId
-        && item.activeVersion.version <= updated.activeVersion.version ? updated : item));
-      setMessage("Đã yêu cầu phân tích lại CV. Trạng thái sẽ tự cập nhật.");
-    } catch (requestError) {
-      setError(requestError instanceof ApiClientError && requestError.error.code === "CV_RETRY_CONFLICT"
-        ? "Trạng thái CV đã thay đổi. Hãy xem kết quả mới nhất trước khi thử lại."
-        : getErrorMessage(requestError));
-      await loadCvs();
-    } finally {
-      setRetryingCvId(null);
-    }
-  }
-
-  async function loadReview(cvVersionId: string) {
-    setError(null);
-    setReviewingVersionId(cvVersionId);
-    try {
-      const review = await apiRequest<ParsedCvReview>(`/api/v2/parsed-cvs/${cvVersionId}`, {
-        accessToken: session.accessToken
-      });
-      if (deletedVersions.current.has(cvVersionId)) return;
-      setReviews((current) => ({ ...current, [cvVersionId]: review }));
-      setDrafts((current) => ({ ...current, [cvVersionId]: structuredClone(review.payload) }));
-      setFocusedVersionId(cvVersionId);
-    } catch (requestError) {
-      setError(getErrorMessage(requestError));
-    } finally {
-      setReviewingVersionId(null);
-    }
-  }
-
-  async function saveReview(cvId: string, cvVersionId: string) {
-    const review = reviews[cvVersionId];
-    const draft = drafts[cvVersionId];
-    if (!review || draft === undefined || savingVersionId || confirmingVersionId || review.status === "CONFIRMED") return;
-    if (draft.skills.some((skill) => !skill.raw.trim())
-      || draft.experiences.some((experience) => !experience.titleRaw.trim())) {
-      setError("Kỹ năng và chức danh kinh nghiệm không được để trống.");
-      return;
-    }
-    const payload = draft;
-    setError(null);
-    setSavingVersionId(cvVersionId);
-    try {
-      const updated = await apiRequest<ParsedCvReview>(`/api/v2/parsed-cvs/${cvVersionId}`, {
-        method: "PUT",
-        accessToken: session.accessToken,
-        body: JSON.stringify({ cvId, expectedRevisionId: review.revisionId, payload })
-      });
-      if (deletedVersions.current.has(cvVersionId)) return;
-      setReviews((current) => ({ ...current, [cvVersionId]: updated }));
-      setDrafts((current) => ({ ...current, [cvVersionId]: structuredClone(updated.payload) }));
-      setCvs((current) => current.map((cv) => cv.activeVersion.cvVersionId === cvVersionId
-        ? { ...cv, activeVersion: { ...cv.activeVersion, processingStatus: "PARSED" } }
-        : cv));
-      setMessage("Đã lưu thay đổi. Bạn có thể xác nhận thông tin để dùng CV ứng tuyển.");
-    } catch (requestError) {
-      setError(getErrorMessage(requestError));
-    } finally {
-      setSavingVersionId(null);
-    }
-  }
-
-  async function confirmReview(cvVersionId: string) {
-    const review = reviews[cvVersionId];
-    if (!review || confirmingVersionId || savingVersionId || JSON.stringify(drafts[cvVersionId]) !== JSON.stringify(review.payload)) return;
-    setError(null);
-    setConfirmingVersionId(cvVersionId);
-    try {
-      const confirmed = await apiRequest<ParsedCvReview>(`/api/v2/parsed-cvs/${cvVersionId}/confirm`, {
-        method: "POST",
-        accessToken: session.accessToken,
-        body: JSON.stringify({ expectedRevisionId: review.revisionId })
-      });
-      if (deletedVersions.current.has(cvVersionId)) return;
-      setReviews((current) => ({ ...current, [cvVersionId]: confirmed }));
-      setDrafts((current) => ({ ...current, [cvVersionId]: structuredClone(confirmed.payload) }));
-      setCvs((current) => current.map((cv) => cv.activeVersion.cvVersionId === cvVersionId
-        ? { ...cv, activeVersion: { ...cv.activeVersion, processingStatus: "CONFIRMED" } }
-        : cv));
-      setMessage("CV đã được xác nhận và sẵn sàng ứng tuyển.");
-    } catch (requestError) {
-      setError(getErrorMessage(requestError));
-    } finally {
-      setConfirmingVersionId(null);
-    }
-  }
-
-  const activeCvs = cvs.filter((cv) => cv.status === "ACTIVE");
-  const readyCount = activeCvs.filter((cv) => cv.activeVersion.processingStatus === "CONFIRMED").length;
-  const reviewCount = activeCvs.filter((cv) => reviewCvStatuses.includes(cv.activeVersion.processingStatus)).length;
-  const visibleCvs = activeCvs.filter((cv) => filter === "all" || (filter === "ready"
-    ? cv.activeVersion.processingStatus === "CONFIRMED" : reviewCvStatuses.includes(cv.activeVersion.processingStatus)));
-
-  const focusedCv = activeCvs.find((cv) => cv.activeVersion.cvVersionId === focusedVersionId);
-  const focusedReview = focusedVersionId ? reviews[focusedVersionId] : null;
-  const reviewDirty = !!focusedVersionId && !!focusedReview && JSON.stringify(drafts[focusedVersionId]) !== JSON.stringify(focusedReview.payload);
-  useUnsavedChanges(reviewDirty, () => setError("Bạn còn thay đổi chưa lưu. Hãy lưu trước khi rời bản phân tích."));
-  function closeReview() {
-    if (reviewDirty || savingVersionId || confirmingVersionId) {
-      setError("Bạn còn thay đổi chưa lưu hoặc đang xử lý. Hãy lưu trước khi đóng bản phân tích."); return;
-    }
-    setFocusedVersionId(null); setError(null); setMessage(null);
-  }
-  if (focusedCv && focusedReview && focusedVersionId) return <section className="cv-panel focused-cv-review">
-    <div className="section-heading"><div><p className="eyebrow">ĐỐI SOÁT HỒ SƠ</p><h2>{focusedCv.title}</h2><small>Bản CV {focusedCv.activeVersion.versionNumber} · {focusedCv.activeVersion.originalFilename}</small></div>
-      <button type="button" className="secondary-button" onClick={closeReview}>Đóng bản phân tích</button></div>
-    {error && <p className="error-message" role="alert">{error}</p>}
-    {message && <p className="success-message" role="status">{message}</p>}
-    <DocumentReview title="Tệp CV gốc" source={<PdfSource filename={focusedCv.activeVersion.originalFilename}
-      path={`/api/v2/cvs/${focusedCv.cvId}/file?cvVersionId=${encodeURIComponent(focusedVersionId)}`} accessToken={session.accessToken} />}>
-      <ParsedCvReviewCard review={focusedReview} confirming={confirmingVersionId === focusedVersionId} saving={savingVersionId === focusedVersionId}
-        draft={drafts[focusedVersionId] ?? focusedReview.payload}
-        onDraftChange={(value) => setDrafts((current) => ({ ...current, [focusedVersionId]: value }))}
-        onSave={() => void saveReview(focusedCv.cvId, focusedVersionId)} onConfirm={() => void confirmReview(focusedVersionId)} />
-    </DocumentReview>
-  </section>;
-
-  return (
-    <section className="cv-panel candidate-cv-library" aria-labelledby="cv-title">
-      <div className="section-heading">
-        <div>
-          <p className="eyebrow">HỒ SƠ NGHỀ NGHIỆP</p>
-          <h2 id="cv-title">CV của tôi</h2><p className="muted">Chuẩn bị hồ sơ chính xác trước khi gửi đến nhà tuyển dụng.</p>
-        </div>
-        <span className="candidate-state confirmed">{readyCount} CV sẵn sàng</span>
-      </div>
-      <ol className="cv-workflow" aria-label="Các bước chuẩn bị CV">
-        <li><span>01</span><div><strong>Tải CV lên</strong><small>Chọn tệp PDF của bạn</small></div></li>
-        <li><span>02</span><div><strong>Kiểm tra thông tin</strong><small>Đọc và sửa kết quả AI</small></div></li>
-        <li><span>03</span><div><strong>Xác nhận & ứng tuyển</strong><small>Bạn quyết định thông tin sử dụng</small></div></li>
-      </ol>
-      <div className="cv-upload-intro"><CvIcon size={25} aria-hidden="true" /><div><h3>Thêm CV mới</h3><p>PDF tối đa 10 MiB. Sau khi phân tích, hãy kiểm tra lại thông tin trước khi xác nhận.</p></div></div>
-      <form className="cv-upload-form" aria-label="Tải CV mới" onSubmit={upload}>
-        <div className="cv-upload-fields">
-          <label className="cv-title-field">
-            <span>Tên CV (tuỳ chọn)</span>
-            <input
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              maxLength={160}
-              placeholder="Ví dụ: Backend CV 2026"
-            />
-          </label>
-
-          <div className="cv-file-field-group">
-            <label htmlFor="cv-file" className="cv-file-label">
-              File PDF (tối đa 10 MiB)
-            </label>
-            <div
-              className={`cv-dropzone-box ${isDragging ? "dragging" : ""} ${file ? "has-file" : ""}`}
-              onDragEnter={handleDragEnter}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              onClick={() => {
-                document.getElementById("cv-file")?.click();
-              }}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  document.getElementById("cv-file")?.click();
-                }
-              }}
-            >
-              <input
-                id="cv-file"
-                type="file"
-                accept="application/pdf,.pdf"
-                className="cv-file-hidden-input"
-                onChange={(event) => {
-                  setFile(event.target.files?.[0] ?? null);
-                  setError(null);
-                }}
-                disabled={uploading}
-                required={!file}
-              />
-              <div className="cv-dropzone-inner">
-                {file ? (
-                  <div className="cv-selected-file">
-                    <div className="cv-file-icon">
-                      <CvIcon size={32} aria-hidden="true" />
-                    </div>
-                    <div className="cv-file-meta">
-                      <strong className="cv-file-name">{file.name}</strong>
-                      <span className="cv-file-size">{formatBytes(file.size)}</span>
-                    </div>
-                    <button
-                      type="button"
-                      className="cv-change-file-btn"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setFile(null);
-                        const input = document.getElementById("cv-file") as HTMLInputElement | null;
-                        if (input) input.value = "";
-                      }}
-                    >
-                      Đổi tệp khác
-                    </button>
-                  </div>
-                ) : (
-                  <div className="cv-dropzone-prompt">
-                    <div className="cv-dropzone-icon">
-                      <CvIcon size={32} aria-hidden="true" />
-                    </div>
-                    <div className="cv-dropzone-text">
-                      <strong>Kéo và thả tệp CV (PDF) vào đây</strong>
-                      <span>hoặc <span className="cv-browse-link">chọn tệp từ máy tính</span></span>
-                    </div>
-                    <span className="cv-dropzone-hint">Định dạng hỗ trợ: PDF (tối đa 10 MiB)</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <ExternalAiConsent checked={externalAiConsent} disabled={uploading} onChange={setExternalAiConsent} />
-
-        <div className="cv-upload-action-row">
-          <button type="submit" className="cv-submit-upload-btn" disabled={!file || uploading}>
-            {uploading ? "Đang tải lên…" : "Tải CV lên"}
-          </button>
-        </div>
-      </form>
-      {message && <p className="success-message" role="status">{message}</p>}
-      {error && <p className="error-message" role="alert">{error}</p>}
-      <div className="cv-library-toolbar"><div role="group" aria-label="Lọc danh sách CV">{[
-        ["all", `Tất cả (${activeCvs.length})`], ["review", `Cần kiểm tra (${reviewCount})`], ["ready", `Sẵn sàng (${readyCount})`]
-      ].map(([value, label]) => <button type="button" key={value} aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}</button>)}</div><button type="button" className="secondary-button" onClick={() => void loadCvs()}>Làm mới</button></div>
-      {loading ? <p className="muted" role="status">Đang tải danh sách CV…</p> : visibleCvs.length === 0 ? (
-        <div className="candidate-empty"><CvIcon size={32} aria-hidden="true" /><h3>{activeCvs.length === 0 ? "Thêm CV đầu tiên của bạn" : "Không có CV trong nhóm này"}</h3><p>{activeCvs.length === 0 ? "Tải tệp PDF ở phía trên để bắt đầu. AI sẽ hỗ trợ điền thông tin, bạn kiểm tra và xác nhận." : "Chọn nhóm khác để xem các CV còn lại."}</p></div>
-      ) : (
-        <div className="cv-list">
-          {visibleCvs.map((cv) => (
-            <article className="cv-item" key={cv.cvId}>
-              <div className="cv-item-content">
-                <div className="cv-item-heading"><h3>{cv.title}</h3><span className={`candidate-state ${cv.activeVersion.processingStatus.toLowerCase()}`}>{cvStatusLabels[cv.activeVersion.processingStatus] ?? cv.activeVersion.processingStatus}</span></div>
-                <button type="button" className="danger-button" disabled={deleting}
-                  onClick={() => setDeleteTarget(cv)}>Xóa CV</button>
-                <p>{cv.activeVersion.originalFilename} · {formatBytes(cv.activeVersion.sizeBytes)}</p>
-                <p className="cv-next-instruction">{pendingCvStatuses.includes(cv.activeVersion.processingStatus)
-                  ? "AI đang xử lý tệp. Trạng thái sẽ tự cập nhật, bạn chưa cần thao tác."
-                  : reviewCvStatuses.includes(cv.activeVersion.processingStatus) ? "Mở bản phân tích để kiểm tra, chỉnh sửa và xác nhận thông tin."
-                  : cv.activeVersion.processingStatus === "CONFIRMED" ? "CV này đã có thể sử dụng khi ứng tuyển."
-                  : cv.activeVersion.processingStatus === "FAILED" ? cvFailureInstruction(cv.activeVersion.failureCode)
-                  : "Hãy kiểm tra tệp PDF và tải một bản mới nếu cần."}</p>
-                {cv.status === "ACTIVE" && canRetryCv(cv.activeVersion.processingStatus, cv.activeVersion.failureCode) && (
-                  <button type="button" className="secondary-button" disabled={retryingCvId !== null}
-                    onClick={() => void retryCv(cv)}>
-                    {retryingCvId === cv.cvId ? "Đang gửi yêu cầu…" : "Thử lại"}
-                  </button>
-                )}
-                {cv.activeVersion.processingStatus === "CONFIRMED" && onFindJobs && <button type="button" className="cv-find-jobs" onClick={onFindJobs}><CheckCircleIcon size={16} aria-hidden="true" /> Tìm việc để ứng tuyển →</button>}
-                {(["PARSED", "NEEDS_REVIEW", "CONFIRMED"].includes(cv.activeVersion.processingStatus)) && (
-                  <div className="cv-actions">
-                    <button type="button" className="secondary-button"
-                      onClick={() => setPreviewCvTarget(cv)}>
-                      Xem tệp gốc (PDF)
-                    </button>
-                    <button type="button" className="secondary-button"
-                      onClick={() => {
-                        const id = cv.activeVersion.cvVersionId;
-                        if (reviews[id]) setFocusedVersionId(id);
-                        else void loadReview(id);
-                      }}
-                      disabled={reviewingVersionId === cv.activeVersion.cvVersionId}>
-                      {reviewingVersionId === cv.activeVersion.cvVersionId ? "Đang tải…" : "Xem bản phân tích"}
-                    </button>
-                  </div>
-                )}
-              </div>
-
-            </article>
-          ))}
-        </div>
-      )}
-      <ConfirmDialog open={deleteTarget !== null} title="Xóa CV" confirmLabel="Xác nhận xóa CV" busy={deleting}
-        description="Xóa tệp và dữ liệu phân tích của CV này, thu hồi quyền xem CV và điểm của các hồ sơ đã nộp. Lịch sử ứng tuyển tối thiểu được giữ lại. Thao tác không thể hoàn tác."
-        onCancel={() => setDeleteTarget(null)} onConfirm={() => { if (deleteTarget) void deleteCv(deleteTarget); }} />
-      {previewCvTarget && (
-        <CvPreviewModal
-          open={previewCvTarget !== null}
-          onClose={() => setPreviewCvTarget(null)}
-          title={`CV: ${previewCvTarget.title}`}
-          filename={previewCvTarget.activeVersion.originalFilename}
-          downloadPath={`/api/v2/cvs/${previewCvTarget.cvId}/file?cvVersionId=${encodeURIComponent(previewCvTarget.activeVersion.cvVersionId)}`}
-          accessToken={session.accessToken}
-        />
-      )}
-    </section>
-  );
-}
-
-function ParsedCvReviewCard({ review, confirming, saving, draft, onDraftChange, onSave, onConfirm }: {
-  review: ParsedCvReview;
-  confirming: boolean;
-  saving: boolean;
-  draft: ParsedCvReview["payload"];
-  onDraftChange: (value: ParsedCvReview["payload"]) => void;
-  onSave: () => void;
-  onConfirm: () => void;
-}) {
-  const summary = review.payload.summary;
-  const qualityFlags = visibleQualityFlags(summary?.qualityFlags ?? []);
-  const dirty = JSON.stringify(draft) !== JSON.stringify(review.payload);
-  const locked = saving || confirming || review.status === "CONFIRMED";
-  return (
-    <div className="parsed-review">
-      <p className="parsed-review-title">Kiểm tra thông tin CV · Bản {review.revisionNumber}</p><p className="muted">AI có thể đọc chưa chính xác. Hãy kiểm tra các mục dưới đây trước khi xác nhận.</p>
-      <details className="extraction-details"><summary>Chi tiết phân tích tự động</summary><p>
-        Độ tin cậy trích xuất: {summary ? `${Math.round(summary.overallConfidence * 100)}%` : "chưa có"}
-        {qualityFlags.length ? ` · ${qualityFlags.join(", ")}` : ""}
-      </p>
-      </details>
-      <p>
-        {review.payload.skills?.length ?? 0} kỹ năng · {review.payload.experiences?.length ?? 0} kinh nghiệm
-      </p>
-      {summary && extractionNeedsManualReview(summary.qualityFlags) && <p className="muted" role="status">
-        Phân tích tự động chưa đầy đủ, vui lòng kiểm tra và bổ sung.
-      </p>}
-      <fieldset className="cv-review-fields" disabled={locked}><legend className="sr-only">Thông tin được trích xuất từ CV</legend>
-      <div className="parsed-section">
-        <div className="parsed-section-heading"><strong>Kỹ năng</strong>
-          <button type="button" className="secondary-button" onClick={() => onDraftChange({ ...draft,
-            skills: [...draft.skills, { raw: "", canonicalSkillId: null, normalizationStatus: "UNRESOLVED", evidenceIds: [], confidence: 1, provenance: "USER_ASSERTED" }]
-          })}>Thêm kỹ năng</button>
-        </div>
-        {draft.skills.map((skill, index) => (
-          <div key={index}>
-          <div className="parsed-row">
-            <input aria-label={`Kỹ năng ${index + 1}`} value={skill.raw} maxLength={240}
-              onChange={(event) => onDraftChange({ ...draft, skills: draft.skills.map((item, itemIndex) => itemIndex === index ? { ...item, raw: event.target.value } : item) })} />
-            <button type="button" className="danger-button" aria-label={`Xóa kỹ năng ${skill.raw || index + 1}`}
-              onClick={() => onDraftChange({ ...draft, skills: draft.skills.filter((_, itemIndex) => itemIndex !== index) })}>Xóa</button>
-          </div>
-          {skill.normalizationStatus !== "KNOWN" && <small className="muted">Chưa vào danh mục chung · có thể đối chiếu tên chính xác với yêu cầu Job đã xác nhận khi có bằng chứng CV.</small>}
-          </div>
-        ))}
-      </div>
-      <div className="parsed-section">
-        <div className="parsed-section-heading"><strong>Kinh nghiệm</strong>
-          <button type="button" className="secondary-button" onClick={() => onDraftChange({ ...draft,
-            experiences: [...draft.experiences, { titleRaw: "", titleCanonical: null, companyRedacted: null, startMonth: null, endMonth: null, isCurrent: false, responsibilities: [], skillIds: [], evidenceIds: [], confidence: 1 }]
-          })}>Thêm kinh nghiệm</button>
-        </div>
-        {draft.experiences.map((experience, index) => (
-          <div className="parsed-experience" key={index}>
-            <input aria-label={`Chức danh ${index + 1}`} value={experience.titleRaw} maxLength={240} placeholder="Chức danh"
-              onChange={(event) => onDraftChange({ ...draft, experiences: draft.experiences.map((item, itemIndex) => itemIndex === index ? { ...item, titleRaw: event.target.value } : item) })} />
-            <textarea aria-label={`Trách nhiệm ${index + 1}`} rows={3} value={experience.responsibilities.join("\n")} placeholder="Mỗi trách nhiệm một dòng"
-              onChange={(event) => onDraftChange({ ...draft, experiences: draft.experiences.map((item, itemIndex) => itemIndex === index ? { ...item, responsibilities: event.target.value.split("\n").map((value) => value.trim()).filter(Boolean) } : item) })} />
-            <label>Bắt đầu công việc {index + 1}<input type="month" value={experience.startMonth ?? ""}
-              onChange={(event) => onDraftChange({ ...draft, experiences: draft.experiences.map((item, i) => i === index ? { ...item, startMonth: event.target.value || null } : item) })} /></label>
-            <label>Đang làm việc {index + 1}<input type="checkbox" checked={experience.isCurrent}
-              onChange={(event) => onDraftChange({ ...draft, experiences: draft.experiences.map((item, i) => i === index ? { ...item, isCurrent: event.target.checked, endMonth: event.target.checked ? null : item.endMonth } : item) })} /></label>
-            <label>Kết thúc công việc {index + 1}<input type="month" disabled={experience.isCurrent} min={experience.startMonth ?? undefined} value={experience.endMonth ?? ""}
-              onChange={(event) => onDraftChange({ ...draft, experiences: draft.experiences.map((item, i) => i === index ? { ...item, endMonth: event.target.value || null } : item) })} /></label>
-            <button type="button" className="danger-button" onClick={() => onDraftChange({ ...draft, experiences: draft.experiences.filter((_, itemIndex) => itemIndex !== index) })}>Xóa kinh nghiệm</button>
-          </div>
-        ))}
-      </div>
-      <div className="parsed-section parsed-summary-fields">
-        <label>Tổng số tháng kinh nghiệm
-          <input type="number" min={0} value={draft.summary.totalExperienceMonths}
-            onChange={(event) => onDraftChange({ ...draft, summary: { ...draft.summary, totalExperienceMonths: Math.max(0, Number.parseInt(event.target.value || "0", 10)) } })} />
-        </label>
-      </div>
-      <CvDetailsEditor value={draft} onChange={(patch) => onDraftChange({ ...draft, ...patch })} />
-      </fieldset>
-      <div className="cv-review-footer">
-      {dirty && <p role="status">Bạn có thay đổi chưa lưu. Lưu thay đổi trước khi xác nhận.</p>}
-      <button type="button" className="secondary-button" onClick={onSave} disabled={locked || !dirty}>
-        {saving ? "Đang lưu…" : "Lưu thay đổi"}
-      </button>
-      {review.status === "CONFIRMED" ? (
-        <span className="confirmed-label">Đã xác nhận</span>
-      ) : (
-        <button type="button" onClick={onConfirm} disabled={confirming || saving || dirty}>
-          {confirming ? "Đang xác nhận…" : "Xác nhận bản phân tích"}
-        </button>
-      )}
-      </div>
-    </div>
-  );
+function statusBadgeTone(status: string): "success" | "warning" | "danger" | "info" | "neutral" {
+  if (status === "CONFIRMED") return "success";
+  if (reviewCvStatuses.includes(status)) return "warning";
+  if (pendingCvStatuses.includes(status)) return "info";
+  if (status === "FAILED" || status === "REJECTED") return "danger";
+  return "neutral";
 }
 
 function formatBytes(bytes: number): string {
@@ -605,4 +58,502 @@ function getErrorMessage(error: unknown): string {
   return error instanceof ApiClientError
     ? error.error.message
     : "Không thể kết nối tới Gateway. Vui lòng thử lại.";
+}
+
+export function CandidateCvPanel({ session, onLogout }: Props) {
+  const [builderOpen, setBuilderOpen] = useState(false);
+  const [cvs, setCvs] = useState<CandidateCvRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [title, setTitle] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [fileInputKey, setFileInputKey] = useState(0);
+  const [externalAiConsent, setExternalAiConsent] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadMessage, setUploadMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const [retryingCvId, setRetryingCvId] = useState<string | null>(null);
+  const [deletingCv, setDeletingCv] = useState<CandidateCvRecord | null>(null);
+  const [deletingBusy, setDeletingBusy] = useState(false);
+  const [previewingCv, setPreviewingCv] = useState<CandidateCvRecord | null>(null);
+
+  const [activeCv, setActiveCv] = useState<CandidateCvRecord | null>(null);
+  const [review, setReview] = useState<ParsedCvReviewData | null>(null);
+  const [draft, setDraft] = useState<ParsedCvPayload | null>(null);
+  const [savedSnapshot, setSavedSnapshot] = useState("");
+  const [loadingReview, setLoadingReview] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+
+  const listGeneration = useRef(0);
+  const mutationEpoch = useRef(0);
+  const reviewRequestSeq = useRef(0);
+
+  const dirty = Boolean(draft && JSON.stringify(draft) !== savedSnapshot);
+  useUnsavedChanges(dirty, () => {
+    setError("Bạn có thay đổi chưa lưu. Vui lòng lưu hoặc hủy trước khi rời trang.");
+  });
+
+  const loadCvs = useCallback(async () => {
+    const seq = ++listGeneration.current;
+    const epochAtStart = mutationEpoch.current;
+    setLoading(true);
+    try {
+      const items = await apiRequest<CandidateCvRecord[]>("/api/v2/cvs", {
+        accessToken: session.accessToken
+      });
+      if (seq !== listGeneration.current || epochAtStart !== mutationEpoch.current) return;
+      const activeItems = items.filter((cv) => cv.status === "ACTIVE");
+      setCvs((current) =>
+        activeItems.map((incoming) => {
+          const existing = current.find((item) => item.cvId === incoming.cvId);
+          if (
+            existing &&
+            existing.activeVersion.cvVersionId === incoming.activeVersion.cvVersionId &&
+            existing.activeVersion.version > incoming.activeVersion.version
+          ) {
+            return existing;
+          }
+          return incoming;
+        })
+      );
+      setError(null);
+    } catch (requestError) {
+      if (requestError instanceof ApiClientError && requestError.status === 401) {
+        onLogout?.();
+      } else {
+        setError(getErrorMessage(requestError));
+      }
+    } finally {
+      if (seq === listGeneration.current) setLoading(false);
+    }
+  }, [onLogout, session.accessToken]);
+
+  useEffect(() => {
+    void loadCvs();
+  }, [loadCvs]);
+
+  useEffect(() => {
+    if (!cvs.some((cv) => pendingCvStatuses.includes(cv.activeVersion.processingStatus))) return;
+    const timer = window.setInterval(() => {
+      void loadCvs();
+    }, 5000);
+    return () => window.clearInterval(timer);
+  }, [cvs, loadCvs]);
+
+  async function handleUpload(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (uploading) return;
+    setError(null);
+    setUploadMessage(null);
+
+    if (!selectedFile) {
+      setError("Vui lòng chọn một tệp PDF.");
+      return;
+    }
+    if (selectedFile.size === 0) {
+      setError("File PDF phải có nội dung.");
+      return;
+    }
+    if (selectedFile.size > MAX_CV_BYTES) {
+      setError("Kích thước tệp vượt quá giới hạn 10 MiB.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", selectedFile);
+    if (title.trim()) formData.append("title", title.trim());
+    formData.append("externalAiConsent", String(externalAiConsent));
+    if (externalAiConsent) {
+      formData.append("externalAiPolicyVersion", externalAiPolicyVersion);
+    }
+
+    setUploading(true);
+    try {
+      mutationEpoch.current += 1;
+      await apiRequest<CandidateCvRecord>("/api/v2/cvs", {
+        method: "POST",
+        accessToken: session.accessToken,
+        body: formData
+      });
+      setTitle("");
+      setSelectedFile(null);
+      setFileInputKey((k) => k + 1);
+      setExternalAiConsent(false);
+      setUploadMessage("CV đã được lưu an toàn. Kết quả phân tích sẽ hiển thị trong danh sách bên dưới.");
+      await loadCvs();
+    } catch (requestError) {
+      if (requestError instanceof ApiClientError && requestError.status === 401) onLogout?.();
+      else setError(getErrorMessage(requestError));
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleRetry(cv: CandidateCvRecord) {
+    if (retryingCvId) return;
+    setRetryingCvId(cv.cvId);
+    setError(null);
+    try {
+      const updated = await apiRequest<CandidateCvRecord>(`/api/v2/cvs/${cv.cvId}/retry`, {
+        method: "POST",
+        accessToken: session.accessToken,
+        body: JSON.stringify({
+          cvVersionId: cv.activeVersion.cvVersionId,
+          expectedVersion: cv.activeVersion.version
+        })
+      });
+      mutationEpoch.current += 1;
+      setCvs((current) => current.map((item) => (item.cvId === cv.cvId ? updated : item)));
+    } catch (requestError) {
+      if (requestError instanceof ApiClientError && requestError.status === 401) onLogout?.();
+      else setError(getErrorMessage(requestError));
+    } finally {
+      setRetryingCvId(null);
+    }
+  }
+
+  async function openReview(cv: CandidateCvRecord) {
+    if (dirty) {
+      setError("Bạn có thay đổi chưa lưu. Vui lòng lưu hoặc hủy trước khi chuyển sang CV khác.");
+      return;
+    }
+    const seq = ++reviewRequestSeq.current;
+    setActiveCv(cv);
+    setReview(null);
+    setDraft(null);
+    setSavedSnapshot("");
+    setLoadingReview(true);
+    setError(null);
+    try {
+      const result = await apiRequest<ParsedCvReviewData>(
+        `/api/v2/parsed-cvs/${cv.activeVersion.cvVersionId}`,
+        { accessToken: session.accessToken }
+      );
+      if (seq !== reviewRequestSeq.current) return;
+      setReview(result);
+      setDraft(result.payload);
+      setSavedSnapshot(JSON.stringify(result.payload));
+    } catch (requestError) {
+      if (seq !== reviewRequestSeq.current) return;
+      setActiveCv(null);
+      if (requestError instanceof ApiClientError && requestError.status === 401) onLogout?.();
+      else setError(getErrorMessage(requestError));
+    } finally {
+      if (seq === reviewRequestSeq.current) setLoadingReview(false);
+    }
+  }
+
+  function closeReview() {
+    if (dirty) {
+      setError("Bạn có thay đổi chưa lưu. Vui lòng lưu thay đổi trước khi đóng.");
+      return;
+    }
+    reviewRequestSeq.current += 1;
+    setActiveCv(null);
+    setReview(null);
+    setDraft(null);
+    setSavedSnapshot("");
+  }
+
+  async function saveDraft() {
+    if (!review || !draft || !activeCv || saving) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const updated = await apiRequest<ParsedCvReviewData>(
+        `/api/v2/parsed-cvs/${review.cvVersionId}`,
+        {
+          method: "PUT",
+          accessToken: session.accessToken,
+          body: JSON.stringify({ cvId: activeCv.cvId, expectedRevisionId: review.revisionId, payload: draft })
+        }
+      );
+      setReview(updated);
+      setDraft(updated.payload);
+      setSavedSnapshot(JSON.stringify(updated.payload));
+    } catch (requestError) {
+      if (requestError instanceof ApiClientError && requestError.status === 401) onLogout?.();
+      else setError(getErrorMessage(requestError));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function confirmReview() {
+    if (!review || dirty || confirming) return;
+    setConfirming(true);
+    setError(null);
+    try {
+      const confirmed = await apiRequest<ParsedCvReviewData>(
+        `/api/v2/parsed-cvs/${review.cvVersionId}/confirm`,
+        {
+          method: "POST",
+          accessToken: session.accessToken,
+          body: JSON.stringify({ expectedRevisionId: review.revisionId })
+        }
+      );
+      setReview(confirmed);
+      setDraft(confirmed.payload);
+      setSavedSnapshot(JSON.stringify(confirmed.payload));
+      await loadCvs();
+    } catch (requestError) {
+      if (requestError instanceof ApiClientError && requestError.status === 401) onLogout?.();
+      else setError(getErrorMessage(requestError));
+    } finally {
+      setConfirming(false);
+    }
+  }
+
+  async function confirmDeleteCv() {
+    if (!deletingCv || deletingBusy) return;
+    setDeletingBusy(true);
+    setError(null);
+    try {
+      await apiRequest<void>(`/api/v2/cvs/${deletingCv.cvId}?version=${deletingCv.version}`, {
+        method: "DELETE",
+        accessToken: session.accessToken
+      });
+      mutationEpoch.current += 1;
+      if (activeCv?.cvId === deletingCv.cvId) {
+        reviewRequestSeq.current += 1;
+        setActiveCv(null);
+        setReview(null);
+        setDraft(null);
+        setSavedSnapshot("");
+      }
+      setCvs((current) => current.filter((item) => item.cvId !== deletingCv.cvId));
+      setDeletingCv(null);
+    } catch (requestError) {
+      if (requestError instanceof ApiClientError && requestError.status === 401) onLogout?.();
+      else setError(getErrorMessage(requestError));
+    } finally {
+      setDeletingBusy(false);
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-wider text-brand-700 m-0">
+            THƯ VIỆN HỒ SƠ PDF
+          </p>
+          <h2 className="text-xl font-bold text-ink-900 m-0 mt-0.5">CV của tôi</h2>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" size="sm" disabled={dirty} onClick={() => setBuilderOpen(true)}>Tạo CV theo mẫu</Button>
+          <Button type="button" variant="secondary" size="sm" onClick={() => void loadCvs()} disabled={loading}>
+            Làm mới
+          </Button>
+        </div>
+      </div>
+
+      {error && <ErrorBanner tone="error" message={error} />}
+      {uploadMessage && (
+        <p
+          className="success-message rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 m-0"
+          role="status"
+        >
+          {uploadMessage}
+        </p>
+      )}
+
+      <Card padding="lg" className="space-y-4">
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+            <UploadIcon size={18} aria-hidden="true" />
+          </span>
+          <div>
+            <h3 className="text-base font-bold text-ink-900 m-0">Tải CV mới</h3>
+            <p className="text-xs text-ink-500 m-0">
+              Định dạng PDF tối đa 10 MiB. AI trích xuất thông tin và chỉ sử dụng khi bạn xác nhận.
+            </p>
+          </div>
+        </div>
+
+        <form aria-label="Tải CV mới" onSubmit={handleUpload} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <label className="block text-sm font-medium text-ink-800">
+              Tên CV (tuỳ chọn)
+              <input
+                type="text"
+                maxLength={180}
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                placeholder="Ví dụ: Backend Java CV 2026"
+                className="mt-1.5 h-10 w-full rounded-xl border border-border-strong bg-white px-3.5 text-sm text-ink-900 focus:border-brand-600 focus:outline-none"
+              />
+            </label>
+
+            <label className="block text-sm font-medium text-ink-800">
+              File PDF (tối đa 10 MiB)
+              <input
+                key={fileInputKey}
+                type="file"
+                accept=".pdf,application/pdf"
+                onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
+                className="mt-1.5 block w-full rounded-xl border border-dashed border-border-strong bg-slate-50/70 px-3 py-2 text-xs text-ink-700 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-brand-700 hover:file:bg-brand-100 cursor-pointer"
+              />
+            </label>
+          </div>
+
+          <ExternalAiConsent checked={externalAiConsent} onChange={setExternalAiConsent} />
+
+          <div className="flex justify-end">
+            <Button type="submit" disabled={uploading}>
+              {uploading ? "Đang tải lên…" : "Tải CV lên"}
+            </Button>
+          </div>
+        </form>
+      </Card>
+
+      {loading && cvs.length === 0 ? (
+        <Card padding="lg" role="status">
+          <p className="text-sm text-ink-500 text-center m-0">Đang tải danh sách CV…</p>
+        </Card>
+      ) : cvs.length === 0 ? (
+        <EmptyState
+          icon={<CvIcon size={24} />}
+          title="Chưa có CV nào trong thư viện"
+          description="Tải lên bản CV PDF đầu tiên để AI bóc tách kỹ năng và kinh nghiệm."
+        />
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {cvs.map((cv) => {
+            const st = cv.activeVersion.processingStatus;
+            const retryable = canRetryCv(st, cv.activeVersion.failureCode);
+            const reviewable = st === "CONFIRMED" || reviewCvStatuses.includes(st);
+            const isFailed = st === "FAILED" || st === "REJECTED";
+            return (
+              <Card key={cv.cvId} as="article" padding="md" className="cv-item flex flex-col justify-between gap-4">
+                <div className="space-y-2.5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="text-base font-bold text-ink-900 m-0 truncate">{cv.title}</h3>
+                      <p className="text-xs text-ink-500 m-0 mt-0.5 truncate">
+                        {cv.activeVersion.originalFilename} · {formatBytes(cv.activeVersion.sizeBytes)}
+                      </p>
+                    </div>
+                    <Badge tone={statusBadgeTone(st)}>{cvStatusLabels[st] ?? st}</Badge>
+                  </div>
+
+                  {isFailed && (
+                    <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 m-0">
+                      {cvFailureInstruction(cv.activeVersion.failureCode)}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-border-subtle">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => setPreviewingCv(cv)}
+                    >
+                      <EyeIcon size={14} aria-hidden="true" />
+                      <span>Xem PDF</span>
+                    </Button>
+
+                    {reviewable && (
+                      <Button type="button" size="sm" onClick={() => void openReview(cv)}>
+                        Xem bản phân tích
+                      </Button>
+                    )}
+
+                    {retryable && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        disabled={retryingCvId === cv.cvId}
+                        onClick={() => void handleRetry(cv)}
+                      >
+                        {retryingCvId === cv.cvId ? "Đang gửi yêu cầu…" : "Thử lại"}
+                      </Button>
+                    )}
+                  </div>
+
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="danger"
+                    onClick={() => setDeletingCv(cv)}
+                  >
+                    <TrashIcon size={13} aria-hidden="true" />
+                    <span>Xóa CV</span>
+                  </Button>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {activeCv && (
+        <section aria-label="Kiểm tra bản phân tích CV" className="pt-2">
+          <DocumentReview
+            title={`CV gốc: ${activeCv.activeVersion.originalFilename}`}
+            source={
+              <PdfSource
+                path={`/api/v2/cvs/${activeCv.cvId}/file?cvVersionId=${activeCv.activeVersion.cvVersionId}`}
+                accessToken={session.accessToken}
+                filename={activeCv.activeVersion.originalFilename}
+              />
+            }
+          >
+            {loadingReview || !review || !draft ? (
+              <Card padding="lg" role="status">
+                <p className="text-sm text-ink-500 text-center m-0">Đang tải dữ liệu phân tích CV…</p>
+              </Card>
+            ) : (
+              <ParsedCvReview
+                review={review}
+                draft={draft}
+                dirty={dirty}
+                saving={saving}
+                confirming={confirming}
+                onDraftChange={setDraft}
+                onSave={() => void saveDraft()}
+                onConfirm={() => void confirmReview()}
+                onClose={closeReview}
+              />
+            )}
+          </DocumentReview>
+        </section>
+      )}
+
+      {previewingCv && (
+        <CvPreviewModal
+          open={true}
+          onClose={() => setPreviewingCv(null)}
+          title={previewingCv.title}
+          filename={previewingCv.activeVersion.originalFilename}
+          downloadPath={`/api/v2/cvs/${previewingCv.cvId}/file?cvVersionId=${previewingCv.activeVersion.cvVersionId}`}
+          accessToken={session.accessToken}
+        />
+      )}
+
+      <ConfirmDialog
+        open={Boolean(deletingCv)}
+        title="Xóa CV"
+        description={
+          deletingCv
+            ? `Bạn chắc chắn muốn xóa CV "${deletingCv.title}"? Dữ liệu tệp và phân tích liên quan sẽ bị thu hồi khỏi thư viện.`
+            : ""
+        }
+        confirmLabel={deletingBusy ? "Đang xóa…" : "Xác nhận xóa CV"}
+        busy={deletingBusy}
+        onCancel={() => {
+          if (!deletingBusy) setDeletingCv(null);
+        }}
+        onConfirm={() => void confirmDeleteCv()}
+      />
+      {builderOpen && <Suspense fallback={<p role="status">Đang mở trình tạo CV…</p>}>
+        <CvBuilder key={session.userId} session={session} cvs={cvs} onClose={() => setBuilderOpen(false)} onLogout={onLogout} />
+      </Suspense>}
+    </div>
+  );
 }

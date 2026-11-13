@@ -19,6 +19,7 @@ beforeEach(() => {
   vi.mocked(apiRequest).mockClear();
   vi.mocked(apiRequest).mockImplementation(async (path) => {
     if (path === "/api/v2/candidates/me") return { displayName: "Nguyễn An", headline: "Developer", locationText: "Hà Nội", visibility: "APPLICATION_ONLY", version: 0 };
+    if (path === "/api/v2/public/jobs/discovery") return { locations: [], categories: [] };
     if (path === "/api/v2/public/jobs?summary") return {};
     if (path.includes("/jobs?") || path.includes("/applications?")) return { items: [], total: 0, page: 0, size: 12 };
     return [];
@@ -27,7 +28,7 @@ beforeEach(() => {
 
 it("defaults signed-in candidates to the same job-first homepage and puts personal pages in the name menu", async () => {
   render(<CandidateProfilePage session={session} onLogout={vi.fn()} />);
-  expect(screen.getByRole("heading", { name: /Tìm công việc IT/ })).toBeInTheDocument();
+  expect(screen.getByRole("form", { name: "Tìm cơ hội nghề nghiệp" })).toBeInTheDocument();
   const trigger = await screen.findByRole("button", { name: "Tài khoản Nguyễn An" });
   expect(screen.queryByRole("navigation", { name: "Tài khoản cá nhân" })).not.toBeInTheDocument();
   expect(screen.queryByRole("button", { name: /^Đăng nhập$/ })).not.toBeInTheDocument();
@@ -40,10 +41,12 @@ it("defaults signed-in candidates to the same job-first homepage and puts person
   expect(within(menu).queryByRole("button", { name: "Thông báo" })).not.toBeInTheDocument();
   fireEvent.click(within(menu).getByRole("button", { name: "CV của tôi" }));
   expect(screen.getByRole("heading", { name: "Thư viện CV cá nhân" })).toBeInTheDocument();
-  expect(new URLSearchParams(location.search).get("candidate")).toBe("cv");
+  expect(window.location.pathname).toBe("/candidate/cv");
+  expect(screen.getByRole("button", { name: /^Thông báo$/ })).toBeVisible();
+  expect(screen.getByRole("button", { name: /^Tìm việc làm$/ })).toBeVisible();
   expect(trigger).toHaveAttribute("aria-expanded", "false");
   fireEvent.click(screen.getByRole("button", { name: /^Trang chủ$/ }));
-  expect(screen.getByRole("heading", { name: /Tìm công việc IT/ })).toBeInTheDocument();
+  expect(screen.getByRole("form", { name: "Tìm cơ hội nghề nghiệp" })).toBeInTheDocument();
 });
 
 it("opens notifications outside the account menu and supports closing the name menu with Escape", async () => {
@@ -133,4 +136,24 @@ it("edits and saves expanded candidate profile contact, social links, and bio", 
   expect(payload.phoneNumber).toBe("0988888888");
   expect(payload.contactEmail).toBe("an@example.com");
   expect(payload.version).toBe(0);
+});
+
+it("renders /candidate/cv directly without fetching public portal endpoints", async () => {
+  window.history.replaceState({}, "", "/candidate/cv");
+  render(
+    <CandidateProfilePage
+      session={{
+        userId: "user-1",
+        accessToken: "token-1",
+        refreshToken: "refresh-1",
+        accessTokenExpiresAt: "2030-01-01T00:00:00Z",
+        refreshTokenExpiresAt: "2030-01-02T00:00:00Z",
+        roles: ["CANDIDATE"]
+      }}
+      onLogout={() => {}}
+    />
+  );
+
+  expect(await screen.findByRole("heading", { name: "Thư viện CV cá nhân" })).toBeInTheDocument();
+  expect(vi.mocked(apiRequest).mock.calls.some(([path]) => typeof path === "string" && path.startsWith("/api/v2/public/"))).toBe(false);
 });

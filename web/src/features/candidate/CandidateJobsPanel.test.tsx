@@ -105,3 +105,17 @@ it("requests fresh sharing consent after closing and reopening an application", 
   expect(screen.getByRole("checkbox", { name: /Tôi đồng ý chia sẻ CV/ })).not.toBeChecked();
   expect(vi.mocked(apiRequest).mock.calls.some(([, options]) => options?.method === "POST")).toBe(false);
 });
+
+it("shows the submitted job title and company and follows exact notification application filters", async () => {
+  window.history.replaceState(null, "", "/candidate/applications?application=57");
+  vi.mocked(apiRequest).mockImplementation(async (path) => {
+    if (path.includes("/applications?")) return { items: [{ applicationId: "57", jobId: "9", jobTitle: "Senior Java Engineer",
+      companyName: "Synthetic Company", status: "INTERVIEW", appliedAt: "2026-11-01T00:00:00Z", version: 3,
+      matchingSupported: false }], total: 1, page: 0, size: 8 };
+    return [];
+  });
+  render(<CandidateJobsPanel session={session} applicationsOnly />);
+  expect(await screen.findByText("Senior Java Engineer")).toBeVisible();
+  expect(screen.getByText(/Synthetic Company/)).toBeVisible();
+  expect(apiRequest).toHaveBeenCalledWith(expect.stringMatching(/applicationId=57.*page=0/), expect.anything());
+});
