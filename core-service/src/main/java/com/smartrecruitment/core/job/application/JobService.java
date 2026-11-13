@@ -5,8 +5,8 @@ import com.smartrecruitment.core.catalog.application.CategoryService;
 import com.smartrecruitment.core.catalog.domain.CategoryChoice;
 import com.smartrecruitment.core.job.domain.JobCategorySnapshot;
 
-import com.smartrecruitment.core.cv.application.port.ObjectStorage;
-import com.smartrecruitment.core.cv.application.port.OutboxEventRepository;
+import com.smartrecruitment.core.shared.application.port.ObjectStorage;
+import com.smartrecruitment.core.shared.application.port.OutboxEventRepository;
 import com.smartrecruitment.core.job.application.port.JobRepository;
 import com.smartrecruitment.core.job.domain.EmploymentType;
 import com.smartrecruitment.core.job.domain.Job;
@@ -15,6 +15,7 @@ import com.smartrecruitment.core.job.domain.JobVersion;
 import com.smartrecruitment.core.job.domain.WorkMode;
 import com.smartrecruitment.core.recruiter.application.CompanyNotFoundException;
 import com.smartrecruitment.core.recruiter.application.port.CompanyRepository;
+import com.smartrecruitment.core.recruiter.domain.CompanyStatus;
 import com.smartrecruitment.core.shared.application.PageResult;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -124,6 +125,9 @@ public class JobService {
     public Map<Long, Integer> publishedCountsByCompany() { return jobs.publishedCountsByCompany(); }
 
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+    public JobDiscovery publishedDiscovery() { return jobs.publishedDiscovery(); }
+
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public PageResult<Job> searchPublished(JobSearch search) {
         return jobs.searchPublished(search);
     }
@@ -192,6 +196,10 @@ public class JobService {
     public Job publish(Long userId, Long jobId, long expectedVersion) {
         Job existing = getMine(userId, jobId);
         ensureCanRecruit(existing.companyId(), userId);
+        var company = companies.findByIdForMember(existing.companyId(), userId).orElseThrow(CompanyNotFoundException::new);
+        if (company.status() != CompanyStatus.ACTIVE) {
+            throw new JobStateException("Company must be approved and ACTIVE before publishing jobs");
+        }
         if (existing.status() != JobStatus.DRAFT) {
             throw new JobStateException("Only draft jobs can be published");
         }

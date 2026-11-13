@@ -113,7 +113,7 @@ public class V26__Convert_business_identity_references extends BaseJavaMigration
 
     private static void rewriteJsonReferences(Connection connection) throws SQLException {
         execute(connection, """
-                CREATE OR REPLACE FUNCTION pg_temp.convert_identity_json(data JSONB, field_name TEXT DEFAULT '')
+                CREATE OR REPLACE FUNCTION pg_temp.convert_identity_json(data JSONB, field_name TEXT DEFAULT '', is_evidence BOOLEAN DEFAULT FALSE)
                 RETURNS JSONB LANGUAGE plpgsql AS $function$
                 DECLARE result JSONB; entry RECORD; value TEXT; converted BIGINT; variants BIGINT;
                 BEGIN
@@ -121,16 +121,16 @@ public class V26__Convert_business_identity_references extends BaseJavaMigration
                         result := '{}'::jsonb;
                         FOR entry IN SELECT * FROM jsonb_each(data) LOOP
                             result := result || jsonb_build_object(CASE WHEN entry.key='publicId' THEN 'id' ELSE entry.key END,
-                                pg_temp.convert_identity_json(entry.value,entry.key));
+                                pg_temp.convert_identity_json(entry.value,entry.key,is_evidence OR entry.key IN ('evidence','evidence_refs','evidenceRefs','cvLocations','jdLocations')));
                         END LOOP;
                         RETURN result;
                     ELSIF jsonb_typeof(data)='array' THEN
-                        SELECT COALESCE(jsonb_agg(pg_temp.convert_identity_json(element,field_name) ORDER BY ordinal),'[]'::jsonb)
+                        SELECT COALESCE(jsonb_agg(pg_temp.convert_identity_json(element,field_name,is_evidence) ORDER BY ordinal),'[]'::jsonb)
                         INTO result FROM jsonb_array_elements(data) WITH ORDINALITY AS items(element,ordinal);
                         RETURN result;
-                    ELSIF jsonb_typeof(data)='string' AND
+                    ELSIF jsonb_typeof(data)='string' AND NOT is_evidence AND
                         (field_name ~ '(Id|Ids|_id|_ids)$' OR field_name IN ('id','publicId')) AND
-                        field_name NOT IN ('eventId','correlationId','causationId','evidenceId','evidenceIds','leaseToken') THEN
+                        field_name NOT IN ('eventId','correlationId','causationId','evidenceId','evidenceIds','cvEvidenceIds','jdEvidenceIds','leaseToken') THEN
                         value := data #>> '{}';
                         IF value ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN
                             SELECT MIN(entity_id),COUNT(DISTINCT entity_id) INTO converted,variants

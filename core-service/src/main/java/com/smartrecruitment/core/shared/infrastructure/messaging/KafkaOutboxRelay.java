@@ -1,8 +1,8 @@
-package com.smartrecruitment.core.cv.infrastructure.messaging;
+package com.smartrecruitment.core.shared.infrastructure.messaging;
 
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
-import com.smartrecruitment.core.cv.infrastructure.persistence.JooqOutboxEventRepository;
+import com.smartrecruitment.core.shared.infrastructure.persistence.JooqOutboxEventRepository;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -47,8 +47,9 @@ public class CandidateApplicationController {
             @AuthenticationPrincipal Jwt jwt,
             @RequestParam int page, @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "") String q, @RequestParam(defaultValue = "newest") String sort,
-            @RequestParam(required = false) ApplicationStatus status) {
-        var search = new ApplicationSearch(page, size, q, sort, status);
+            @RequestParam(required = false) ApplicationStatus status,
+            @RequestParam(required = false) Long applicationId) {
+        var search = new ApplicationSearch(page, size, q, sort, status, applicationId);
         return applications.searchMine(userId(jwt), search).map(ApplicationResponse::from);
     }
 

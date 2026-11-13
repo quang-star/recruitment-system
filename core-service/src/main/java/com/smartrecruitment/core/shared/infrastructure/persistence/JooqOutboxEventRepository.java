@@ -1,11 +1,11 @@
-package com.smartrecruitment.core.cv.infrastructure.persistence;
+package com.smartrecruitment.core.shared.infrastructure.persistence;
 
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 import com.smartrecruitment.core.cv.application.CvUploadedEvent;
 import com.smartrecruitment.core.application.application.ApplicationSubmittedEvent;
 import com.smartrecruitment.core.job.application.JobVersionSubmittedEvent;
-import com.smartrecruitment.core.cv.application.port.OutboxEventRepository;
+import com.smartrecruitment.core.shared.application.port.OutboxEventRepository;
 import org.jooq.DSLContext;
 import org.jooq.JSON;
 import org.springframework.stereotype.Repository;
@@ -54,7 +54,7 @@ public class JooqOutboxEventRepository implements OutboxEventRepository {
     }
 
     @Override
-    public void append(com.smartrecruitment.core.cv.application.PrivacyEvent event) {
+    public void append(com.smartrecruitment.core.shared.application.PrivacyEvent event) {
         String payload = objectMapper.writeValueAsString(event.payload());
         dsl.insertInto(OUTBOX_EVENTS).set(OUTBOX_EVENTS.EVENT_ID, UUID.randomUUID())
                 .set(OUTBOX_EVENTS.AGGREGATE_TYPE, event.eventType().startsWith("cv.") ? "CV" : "APPLICATION")

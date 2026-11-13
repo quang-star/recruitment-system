@@ -29,6 +29,7 @@ import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.App
 import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.ApplicationStatusHistory.APPLICATION_STATUS_HISTORY;
 import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.Applications.APPLICATIONS;
 import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.CandidateConsents.CANDIDATE_CONSENTS;
+import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.CandidateProfiles.CANDIDATE_PROFILES;
 import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.Companies.COMPANIES;
 import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.CompanyMembers.COMPANY_MEMBERS;
 import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.CvVersions.CV_VERSIONS;
@@ -56,10 +57,14 @@ public class JooqApplicationRepository implements ApplicationRepository {
 
     private PageResult<Application> search(ApplicationSearch search, Condition visibility) {
         Condition filters = visibility;
+        if (search.applicationId() != null) filters = filters.and(APPLICATIONS.ID.eq(search.applicationId()));
         if (search.status() != null) filters = filters.and(APPLICATIONS.STATUS.eq(search.status().name()));
         if (!search.q().isEmpty()) filters = filters.and(SearchText.contains(JOB_VERSIONS.TITLE, search.q())
+                .or(SearchText.contains(COMPANIES.DISPLAY_NAME, search.q()))
                 .or(APPLICATIONS.CANDIDATE_USER_ID.cast(String.class).containsIgnoreCase(search.q()))
-                .or(SearchText.contains(APPLICATIONS.COVER_LETTER, search.q())));
+                .or(SearchText.contains(APPLICATIONS.COVER_LETTER, search.q()))
+                .or(candidateProfileShared().and(SearchText.contains(CANDIDATE_PROFILES.DISPLAY_NAME, search.q())
+                        .or(SearchText.contains(CANDIDATE_PROFILES.CONTACT_EMAIL, search.q())))));
         var query = applicationQuery().leftJoin(APPLICATION_MATCHING_PROJECTIONS)
                 .on(APPLICATION_MATCHING_PROJECTIONS.APPLICATION_ID.eq(APPLICATIONS.ID)).where(filters);
         long total = dsl.fetchCount(query);
@@ -105,11 +110,13 @@ public class JooqApplicationRepository implements ApplicationRepository {
                         JOB_VERSIONS.ID.as("selected_job_version_id"), CVS.ID.as("selected_cv_id"),
                         CV_VERSIONS.ID.as("selected_cv_version_id"))
                 .from(JOBS).join(JOB_VERSIONS).on(JOB_VERSIONS.ID.eq(JOBS.ACTIVE_VERSION_ID))
+                .join(COMPANIES).on(COMPANIES.ID.eq(JOBS.COMPANY_ID))
                 .join(CVS).on(CVS.ID.eq(cvId).and(CVS.CANDIDATE_USER_ID.eq(candidateUserId)))
                 .join(CV_VERSIONS).on(CV_VERSIONS.CV_ID.eq(CVS.ID).and(cvVersionId == null
                         ? CV_VERSIONS.ID.eq(CVS.ACTIVE_VERSION_ID)
                         : CV_VERSIONS.ID.eq(cvVersionId)))
                 .where(JOBS.ID.eq(jobId)).and(JOBS.STATUS.eq("PUBLISHED"))
+                .and(COMPANIES.STATUS.eq("ACTIVE"))
                 .and(CVS.STATUS.eq("ACTIVE"))
                 .and(CV_VERSIONS.PROCESSING_STATUS.eq("CONFIRMED"))
                 .and(JOB_VERSIONS.APPLICATION_DEADLINE.isNull()
@@ -209,7 +216,8 @@ public class JooqApplicationRepository implements ApplicationRepository {
                 .where(APPLICATIONS.ID.eq(applicationId))
                 .and(APPLICATIONS.CANDIDATE_USER_ID.eq(candidateUserId))
                 .and(APPLICATIONS.STATUS.in(ApplicationStatus.SUBMITTED.name(),
-                        ApplicationStatus.UNDER_REVIEW.name(), ApplicationStatus.SHORTLISTED.name()))
+                        ApplicationStatus.UNDER_REVIEW.name(), ApplicationStatus.SHORTLISTED.name(),
+                        ApplicationStatus.INTERVIEW.name(), ApplicationStatus.OFFERED.name()))
                 .and(APPLICATIONS.VERSION.eq(expectedVersion))
                 .execute();
         if (updated != 1) return Optional.empty();
@@ -294,12 +302,18 @@ public class JooqApplicationRepository implements ApplicationRepository {
 
     private org.jooq.SelectJoinStep<org.jooq.Record> applicationQuery() {
         return dsl.select(APPLICATIONS.fields()).select(COMPANIES.ID, JOBS.ID,
-                        JOB_VERSIONS.ID, JOB_VERSIONS.MATCHING_DOMAIN, cvAccessGranted().as("cv_access_granted"), CVS.ID, CV_VERSIONS.ID)
+                        JOB_VERSIONS.ID, JOB_VERSIONS.TITLE, COMPANIES.DISPLAY_NAME,
+                        DSL.when(candidateProfileShared(), CANDIDATE_PROFILES.DISPLAY_NAME).as("candidate_name"),
+                        DSL.when(candidateProfileShared(), CANDIDATE_PROFILES.HEADLINE).as("candidate_headline"),
+                        DSL.when(candidateProfileShared(), CANDIDATE_PROFILES.CONTACT_EMAIL).as("candidate_email"),
+                        DSL.when(candidateProfileShared(), CANDIDATE_PROFILES.PHONE_NUMBER).as("candidate_phone"),
+                        JOB_VERSIONS.MATCHING_DOMAIN, cvAccessGranted().as("cv_access_granted"), CVS.ID, CV_VERSIONS.ID)
                 .from(APPLICATIONS).join(COMPANIES).on(COMPANIES.ID.eq(APPLICATIONS.COMPANY_ID))
                 .join(JOBS).on(JOBS.ID.eq(APPLICATIONS.JOB_ID))
                 .join(JOB_VERSIONS).on(JOB_VERSIONS.ID.eq(APPLICATIONS.JOB_VERSION_ID))
                 .join(CVS).on(CVS.ID.eq(APPLICATIONS.CV_ID))
-                .join(CV_VERSIONS).on(CV_VERSIONS.ID.eq(APPLICATIONS.CV_VERSION_ID));
+                .join(CV_VERSIONS).on(CV_VERSIONS.ID.eq(APPLICATIONS.CV_VERSION_ID))
+                .leftJoin(CANDIDATE_PROFILES).on(CANDIDATE_PROFILES.USER_ID.eq(APPLICATIONS.CANDIDATE_USER_ID));
     }
 
     private Optional<Application> findForCandidateById(Long candidateUserId, Long applicationId) {
@@ -382,7 +396,12 @@ public class JooqApplicationRepository implements ApplicationRepository {
                 .join(CANDIDATE_CONSENTS).on(CANDIDATE_CONSENTS.ID.eq(APPLICATION_CV_ACCESS_GRANTS.CONSENT_ID))
                 .where(APPLICATION_CV_ACCESS_GRANTS.APPLICATION_ID.eq(APPLICATIONS.ID))
                 .and(APPLICATION_CV_ACCESS_GRANTS.REVOKED_AT.isNull()).and(CANDIDATE_CONSENTS.REVOKED_AT.isNull()))
-                .and(APPLICATIONS.STATUS.ne("WITHDRAWN")).and(CVS.STATUS.ne("DELETED")));
+                .and(APPLICATIONS.STATUS.ne("WITHDRAWN")).and(CVS.STATUS.ne("DELETED"))
+                .and(CV_VERSIONS.PROCESSING_STATUS.ne("DELETED")));
+    }
+
+    private Condition candidateProfileShared() {
+        return CANDIDATE_PROFILES.VISIBILITY.eq("APPLICATION_ONLY").and(cvAccessGranted().isTrue());
     }
 
     private Application toDomain(org.jooq.Record record) {
@@ -391,6 +410,9 @@ public class JooqApplicationRepository implements ApplicationRepository {
                 record.get(JOBS.ID), record.get(JOB_VERSIONS.ID), record.get(APPLICATIONS.COVER_LETTER),
                 ApplicationStatus.valueOf(record.get(APPLICATIONS.STATUS)),
                 ApplicationSource.valueOf(record.get(APPLICATIONS.SOURCE)), record.get(APPLICATIONS.APPLIED_AT),
-                record.get(APPLICATIONS.UPDATED_AT), record.get(APPLICATIONS.VERSION), "IT".equals(record.get(JOB_VERSIONS.MATCHING_DOMAIN)), record.get("cv_access_granted", Boolean.class));
+                record.get(APPLICATIONS.UPDATED_AT), record.get(APPLICATIONS.VERSION), "IT".equals(record.get(JOB_VERSIONS.MATCHING_DOMAIN)), record.get("cv_access_granted", Boolean.class),
+                record.get(JOB_VERSIONS.TITLE), record.get(COMPANIES.DISPLAY_NAME),
+                record.get("candidate_name", String.class), record.get("candidate_headline", String.class),
+                record.get("candidate_email", String.class), record.get("candidate_phone", String.class));
     }
 }

@@ -1,7 +1,7 @@
-package com.smartrecruitment.core.cv.infrastructure.storage;
+package com.smartrecruitment.core.shared.infrastructure.storage;
 
 import com.smartrecruitment.core.cv.application.CvStorageException;
-import com.smartrecruitment.core.cv.application.port.ObjectStorage;
+import com.smartrecruitment.core.shared.application.port.ObjectStorage;
 import io.minio.BucketExistsArgs;
 import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;

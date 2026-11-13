@@ -259,6 +259,7 @@ class ReprocessingEligibilityRepositoryTests {
         Long owner = com.smartrecruitment.core.support.TestIds.next(), candidate = com.smartrecruitment.core.support.TestIds.next();
         var company = new JooqCompanyRepository(dsl).insertWithOwner(Company.create(owner, "Synthetic Legal", "Synthetic Company",
                 "reprocess-" + com.smartrecruitment.core.support.TestIds.next(), null, null, "VN", null, null), owner);
+        com.smartrecruitment.core.support.TestCompanies.approve(dsl, company);
         var jobs = new JooqJobRepository(dsl);
         var job = jobs.insert(Job.draft(company.id(), owner, new JobVersion(com.smartrecruitment.core.support.TestIds.next(), 1, "Synthetic Java role",
                 "Build Java services", "Java", null, null, "VN", null, null, null, 1, null, null, null, null, false, null, "a".repeat(64), owner)));

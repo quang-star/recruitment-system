@@ -111,7 +111,7 @@ class CoreDatabaseMigrationTests {
 
         assertThat(Arrays.stream(applied).map(info -> info.getVersion().getVersion()))
                 .containsExactly(
-                        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29");
+                        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31");
     }
 
     @Test
@@ -522,5 +522,57 @@ class CoreDatabaseMigrationTests {
         assertThat(notifications.markRead(owner, feed.getFirst().id(), 0, now.plusSeconds(1))).isTrue();
         assertThat(notifications.countUnread(owner)).isZero();
         assertThat(notifications.markRead(owner, feed.getFirst().id(), 0, now.plusSeconds(2))).isFalse();
+    }
+
+    @Test
+    void discoveryCountsAllOpenJobsAndExcludesExpiredDraftAndClosedJobs() {
+        var dataSource = new PGSimpleDataSource();
+        dataSource.setURL(POSTGRES.getJdbcUrl());
+        dataSource.setUser(POSTGRES.getUsername());
+        dataSource.setPassword(POSTGRES.getPassword());
+        var dsl = DSL.using(dataSource, SQLDialect.POSTGRES);
+        var companies = new JooqCompanyRepository(dsl);
+        var jobs = new com.smartrecruitment.core.job.infrastructure.persistence.JooqJobRepository(dsl);
+        Long owner = com.smartrecruitment.core.support.TestIds.next();
+        var company = companies.insertWithOwner(Company.create(owner, "Discovery Test", "Discovery Test",
+                "discovery-test", null, null, "VN", null, null), owner);
+        com.smartrecruitment.core.support.TestCompanies.approve(dsl, company);
+        var catalog = new CategoryService(new JooqCategoryRepository(dsl, new tools.jackson.databind.ObjectMapper()));
+        var specialization = catalog.create(owner, CategoryKind.SPECIALIZATION, 1L, "Discovery Specialization",
+                "Synthetic discovery test", null);
+        int before = jobs.publishedDiscovery().categories().stream().mapToInt(category -> category.jobCount()).sum();
+        var now = OffsetDateTime.now(ZoneOffset.UTC);
+        for (int index = 0; index < 19; index++) {
+            var location = index < 16 ? "Discovery City" : "Hidden City " + index;
+            var deadline = index == 0 ? null : index == 16 ? now.minusDays(1) : now.plusDays(30);
+            var category = new com.smartrecruitment.core.job.domain.JobCategorySnapshot(1L, "Công nghệ thông tin",
+                    index < 8 ? specialization.id() : null,
+                    index < 8 ? specialization.name() + (index == 0 ? " (previous label)" : "") : null,
+                    null, "Discovery Engineer", com.smartrecruitment.core.job.domain.JobCategorySnapshot.MatchingDomain.IT);
+            var version = new com.smartrecruitment.core.job.domain.JobVersion(0L, 1,
+                    "Discovery Engineer", "Synthetic description", "Synthetic requirements", null,
+                    location, "VN", null, null, null, 3, null, null, "VND", "MONTH", true,
+                    deadline, "d".repeat(64), owner, com.smartrecruitment.core.shared.domain.ExternalAiConsent.declined(), category);
+            var job = jobs.insert(com.smartrecruitment.core.job.domain.Job.draft(company.id(), owner, version));
+            String status = index == 17 ? "DRAFT" : index == 18 ? "CLOSED" : "PUBLISHED";
+            var table = com.smartrecruitment.core.infrastructure.jooq.generated.tables.Jobs.JOBS;
+            dsl.update(table).set(table.STATUS, status).set(table.PUBLISHED_AT, index == 17 ? null : now)
+                    .set(table.CLOSED_AT, index == 18 ? now : null)
+                    .where(table.ID.eq(job.id())).execute();
+        }
+        var discovery = jobs.publishedDiscovery();
+        assertThat(discovery.locations()).contains("Discovery City")
+                .doesNotContain("Hidden City 16", "Hidden City 17", "Hidden City 18");
+        assertThat(discovery.categories().stream().mapToInt(category -> category.jobCount()).sum()).isEqualTo(before + 16);
+        assertThat(discovery.categories()).anySatisfy(category -> {
+            assertThat(category.industryId()).isEqualTo(1L);
+            assertThat(category.specializationId()).isNull();
+            assertThat(category.jobCount()).isGreaterThanOrEqualTo(8);
+        });
+        assertThat(discovery.categories()).anySatisfy(category -> {
+            assertThat(category.specializationId()).isEqualTo(specialization.id());
+            assertThat(category.name()).isEqualTo("Discovery Specialization");
+            assertThat(category.jobCount()).isEqualTo(8);
+        });
     }
 }

@@ -1,6 +1,7 @@
 package com.smartrecruitment.core.job.application.port;
 
 import com.smartrecruitment.core.job.application.JobSearch;
+import com.smartrecruitment.core.job.application.JobDiscovery;
 import com.smartrecruitment.core.job.domain.Job;
 import com.smartrecruitment.core.job.domain.JobVersion;
 import com.smartrecruitment.core.shared.application.PageResult;
@@ -11,6 +12,9 @@ import java.util.Map;
 import java.util.Optional;
 
 public interface JobRepository {
+    default JobDiscovery publishedDiscovery() {
+        throw new UnsupportedOperationException("Published discovery is not implemented");
+    }
     Map<Long, Integer> publishedCountsByCompany();
     PageResult<Job> searchPublished(
             JobSearch search);

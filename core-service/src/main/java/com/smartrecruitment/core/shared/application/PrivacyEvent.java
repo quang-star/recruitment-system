@@ -1,4 +1,4 @@
-package com.smartrecruitment.core.cv.application;
+package com.smartrecruitment.core.shared.application;
 
 import java.time.OffsetDateTime;
 import java.util.Map;

@@ -1,7 +1,7 @@
 package com.smartrecruitment.core.application.application;
 
 import com.smartrecruitment.core.application.application.port.ApplicationRepository;
-import com.smartrecruitment.core.cv.application.port.ObjectStorage;
+import com.smartrecruitment.core.shared.application.port.ObjectStorage;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

@@ -19,8 +19,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.core.io.InputStreamResource;
-import org.springframework.beans.factory.annotation.Autowired;
-import com.smartrecruitment.core.candidate.application.port.CandidateProfileRepository;
 
 import java.util.List;
 
@@ -29,31 +27,15 @@ import java.util.List;
 public class RecruiterApplicationController {
     private final ApplicationService applications;
     private final ApplicationCvAccessService cvAccess;
-    private final CandidateProfileRepository candidateProfiles;
 
     public RecruiterApplicationController(ApplicationService applications, ApplicationCvAccessService cvAccess) {
-        this(applications, cvAccess, null);
-    }
-
-    @Autowired
-    public RecruiterApplicationController(ApplicationService applications, ApplicationCvAccessService cvAccess,
-                                          @Autowired(required = false) CandidateProfileRepository candidateProfiles) {
         this.applications = applications;
         this.cvAccess = cvAccess;
-        this.candidateProfiles = candidateProfiles;
-    }
-
-    private ApplicationResponse toResponse(Application application) {
-        if (candidateProfiles == null) {
-            return ApplicationResponse.from(application);
-        }
-        var profile = candidateProfiles.findByUserId(application.candidateUserId()).orElse(null);
-        return ApplicationResponse.from(application, profile);
     }
 
     @GetMapping(params = "!page")
     public List<ApplicationResponse> list(@AuthenticationPrincipal Jwt jwt, @RequestParam Long jobId) {
-        return applications.findForRecruiter(userId(jwt), jobId).stream().map(this::toResponse).toList();
+        return applications.findForRecruiter(userId(jwt), jobId).stream().map(ApplicationResponse::from).toList();
     }
 
     @GetMapping(params = "page")
@@ -61,14 +43,15 @@ public class RecruiterApplicationController {
             @AuthenticationPrincipal Jwt jwt, @RequestParam Long jobId,
             @RequestParam int page, @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "") String q, @RequestParam(defaultValue = "newest") String sort,
-            @RequestParam(required = false) ApplicationStatus status) {
-        var search = new ApplicationSearch(page, size, q, sort, status);
-        return applications.searchForRecruiter(userId(jwt), jobId, search).map(this::toResponse);
+            @RequestParam(required = false) ApplicationStatus status,
+            @RequestParam(required = false) Long applicationId) {
+        var search = new ApplicationSearch(page, size, q, sort, status, applicationId);
+        return applications.searchForRecruiter(userId(jwt), jobId, search).map(ApplicationResponse::from);
     }
 
     @GetMapping("/{applicationId}")
     public ApplicationResponse get(@AuthenticationPrincipal Jwt jwt, @PathVariable Long applicationId) {
-        return toResponse(applications.getForRecruiter(userId(jwt), applicationId));
+        return ApplicationResponse.from(applications.getForRecruiter(userId(jwt), applicationId));
     }
 
     @GetMapping(value = "/{applicationId}/cv", produces = MediaType.APPLICATION_PDF_VALUE)
@@ -89,7 +72,7 @@ public class RecruiterApplicationController {
     @PatchMapping("/{applicationId}/status")
     public ApplicationResponse updateStatus(@AuthenticationPrincipal Jwt jwt, @PathVariable Long applicationId,
                                             @Valid @RequestBody UpdateApplicationStatusRequest request) {
-        return toResponse(applications.updateStatus(userId(jwt), applicationId, request.status(),
+        return ApplicationResponse.from(applications.updateStatus(userId(jwt), applicationId, request.status(),
                 request.reason(), request.version()));
     }
 

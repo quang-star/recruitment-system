@@ -51,17 +51,18 @@ public class JooqNotificationRepository implements NotificationRepository {
     @Override
     public void insertForApplicationParticipants(Long applicationId, String type, String title, String message,
                                                   String linkUrl, String key, OffsetDateTime createdAt) {
-        Long candidate = dsl.select(APPLICATIONS.CANDIDATE_USER_ID).from(APPLICATIONS)
-                .where(APPLICATIONS.ID.eq(applicationId)).fetchOne(APPLICATIONS.CANDIDATE_USER_ID);
-        if (candidate == null) return;
-        insert(candidate, type, title, message, linkUrl, key, createdAt);
+        var application = dsl.select(APPLICATIONS.CANDIDATE_USER_ID, APPLICATIONS.JOB_ID).from(APPLICATIONS)
+                .where(APPLICATIONS.ID.eq(applicationId)).fetchOne();
+        if (application == null) return;
+        insert(application.value1(), type, title, message, linkUrl, key, createdAt);
+        String recruiterLink = "/recruiter/jobs/" + application.value2() + "?application=" + applicationId;
         dsl.select(COMPANY_MEMBERS.USER_ID).from(COMPANY_MEMBERS)
                 .join(APPLICATIONS).on(APPLICATIONS.COMPANY_ID.eq(COMPANY_MEMBERS.COMPANY_ID))
                 .where(APPLICATIONS.ID.eq(applicationId))
                 .and(COMPANY_MEMBERS.STATUS.eq("ACTIVE"))
                 .and(COMPANY_MEMBERS.ROLE.in("OWNER", "COMPANY_ADMIN", "RECRUITER"))
                 .fetch(COMPANY_MEMBERS.USER_ID)
-                .forEach(userId -> insert(userId, type, title, message, linkUrl, key, createdAt));
+                .forEach(userId -> insert(userId, type, title, message, recruiterLink, key, createdAt));
     }
 
     @Override

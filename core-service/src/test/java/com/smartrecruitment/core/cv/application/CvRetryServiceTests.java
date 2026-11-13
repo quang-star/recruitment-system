@@ -1,8 +1,8 @@
 package com.smartrecruitment.core.cv.application;
 
 import com.smartrecruitment.core.cv.application.port.CandidateCvRepository;
-import com.smartrecruitment.core.cv.application.port.ObjectStorage;
-import com.smartrecruitment.core.cv.application.port.OutboxEventRepository;
+import com.smartrecruitment.core.shared.application.port.ObjectStorage;
+import com.smartrecruitment.core.shared.application.port.OutboxEventRepository;
 import com.smartrecruitment.core.cv.domain.CandidateCv;
 import com.smartrecruitment.core.cv.domain.CvProcessingStatus;
 import com.smartrecruitment.core.cv.domain.CvStatus;
