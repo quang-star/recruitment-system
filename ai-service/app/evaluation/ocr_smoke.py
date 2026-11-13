@@ -56,8 +56,11 @@ def main() -> None:
         raise RuntimeError("Generated OCR fixture unexpectedly contains an embedded text layer")
 
     digest = sha256(scanned).hexdigest()
-    payload = parse_pdf("779494ac-c858-4570-a884-6e88423b8e2b", digest, scanned)
-    schema_path = Path("/app/contracts/schemas/parsed-cv-v2.schema.json")
+    payload = parse_pdf("1", digest, scanned)
+    schema_root = Path(__file__).resolve().parents[3] / "contracts/schemas"
+    if not schema_root.is_dir():
+        schema_root = Path("/app/contracts/schemas")
+    schema_path = schema_root / "parsed-cv-v2.schema.json"
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
     Draft202012Validator(schema, format_checker=FormatChecker()).validate(payload)
     diagnostics = _OcrSmokePayload.model_validate(payload, strict=True)

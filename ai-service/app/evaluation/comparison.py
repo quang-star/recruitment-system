@@ -6,12 +6,13 @@ from pathlib import Path
 import shutil
 
 from app.evaluation.kit import evaluate_kit, score, status
+from app.evaluation.components import export_components
 from app.evaluation.semantic import HYBRID_VERSION, MODEL_ID, MODEL_REVISION, run as run_semantic
-from app.evaluation.validation import LABEL_FILES, annotation_rows, digest, read_manifest
+from app.evaluation.validation import (
+    INPUT_SNAPSHOT_PATH, PROVENANCES, annotation_files, annotation_rows, digest,
+    input_snapshot_digest, read_manifest,
+)
 from app.matching.algorithm import ALGORITHM_VERSION
-
-
-PROVENANCES = ("HUMAN_INDEPENDENT", "MODEL_GENERATED", "UNKNOWN")
 
 
 def compare(source: Path, output: Path, *, provenance: str, cache: Path | None = None) -> dict:
@@ -20,13 +21,22 @@ def compare(source: Path, output: Path, *, provenance: str, cache: Path | None =
     if output.exists():
         raise FileExistsError("Comparison output already exists; select a new run directory")
     manifest = read_manifest(source)
-    for name in LABEL_FILES:
-        annotation_rows(source / name, manifest)
-    source_hashes = {name: digest(source / name) for name in ("manifest.json", *LABEL_FILES)}
-    output.mkdir(parents=True)
-    for name in LABEL_FILES:
-        shutil.copyfile(source / name, output / name)
+    if manifest.get("annotation_provenance") == "HUMAN_SINGLE_RATER" and provenance != "HUMAN_SINGLE_RATER":
+        raise ValueError("A single-rater kit cannot be relabeled as another annotation design")
     manifest["annotation_provenance"] = provenance
+    label_files = annotation_files(manifest)
+    for name in label_files:
+        annotation_rows(source / name, manifest)
+    snapshot_hash = input_snapshot_digest(source, manifest)
+    artifacts = ("manifest.json", *label_files, *((INPUT_SNAPSHOT_PATH,) if snapshot_hash else ()))
+    source_hashes = {name: digest(source / name) for name in artifacts}
+    output.mkdir(parents=True)
+    for name in label_files:
+        shutil.copyfile(source / name, output / name)
+    if snapshot_hash:
+        target = output / INPUT_SNAPSHOT_PATH
+        target.parent.mkdir()
+        shutil.copyfile(source / INPUT_SNAPSHOT_PATH, target)
     (output / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
     run: dict[str, object] = {
         "startedAt": datetime.now(UTC).isoformat(), "status": "RUNNING",
@@ -34,7 +44,11 @@ def compare(source: Path, output: Path, *, provenance: str, cache: Path | None =
         "baselineVersion": ALGORITHM_VERSION, "hybridVersion": HYBRID_VERSION,
         "modelId": MODEL_ID if cache else None, "modelRevision": MODEL_REVISION if cache else None,
         "localOnly": True, "semanticStatus": "NOT_REQUESTED", "metrics": [],
-        "qualityClaim": "DIAGNOSTIC_ONLY" if provenance != "HUMAN_INDEPENDENT" else "REQUIRES_PROTOCOL_REVIEW",
+        "inputMode": "FROZEN_PARSED" if snapshot_hash else "LEGACY_TEXT_ONLY",
+        "inputSnapshotSha256": snapshot_hash,
+        "componentArtifacts": [],
+        "qualityClaim": ("SINGLE_RATER_LIMITATIONS" if provenance == "HUMAN_SINGLE_RATER" else
+                         "REQUIRES_PROTOCOL_REVIEW" if provenance == "HUMAN_INDEPENDENT" else "DIAGNOSTIC_ONLY"),
     }
     run_path = output / "run.json"
 
@@ -56,6 +70,14 @@ def compare(source: Path, output: Path, *, provenance: str, cache: Path | None =
             else:
                 run["semanticStatus"] = "COMPLETED"
                 variants.extend(("semantic", "hybrid"))
+        if snapshot_hash:
+            components = []
+            for variant in variants:
+                path = Path("model-only") / f"components-{variant}.json"
+                exported = export_components(output, output / path, variant=variant)
+                components.append({"variant": variant, "path": path.as_posix(),
+                                   "sha256": exported["outputSha256"], "schemaVersion": exported["schemaVersion"]})
+            run["componentArtifacts"] = components
         progress = status(output)
         run["annotationProgress"] = progress["annotations"]
         if progress["readyForMetrics"]:
