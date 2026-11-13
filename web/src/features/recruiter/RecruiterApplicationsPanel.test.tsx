@@ -118,6 +118,9 @@ it("switches to kanban board view, displays stages, and supports quick card stag
   expect(within(kanban).getByText("Đang xem xét")).toBeInTheDocument();
   expect(within(kanban).getByText("Danh sách rút gọn")).toBeInTheDocument();
   expect(within(kanban).getByText("Đã từ chối")).toBeInTheDocument();
+  expect(within(kanban).getByText("Đang phỏng vấn")).toBeInTheDocument();
+  expect(within(kanban).getByText("Đã gửi đề nghị")).toBeInTheDocument();
+  expect(within(kanban).getByText("Đã tuyển dụng")).toBeInTheDocument();
 
   // Verify candidate card in Mới ứng tuyển
   expect(await within(kanban).findByText(/Ứng viên cand-kan/)).toBeInTheDocument();
@@ -136,4 +139,18 @@ it("switches to kanban board view, displays stages, and supports quick card stag
       })
     );
   });
+});
+
+it("clears the table status filter in Kanban so moved cards remain visible", async () => {
+  vi.mocked(apiRequest).mockImplementation(async (path) => path.endsWith("/match")
+    ? { finalScore: 50, status: "COMPLETED", qualityFlags: [], explanation: { components: [], claims: [] } }
+    : { items: [], total: 0, page: 0, size: 10 });
+  render(<RecruiterApplicationsPanel session={{ accessToken: "fixture" } as AuthSession} jobId="42" canTransition />);
+  fireEvent.change(screen.getByLabelText("Trạng thái"), { target: { value: "SUBMITTED" } });
+  await waitFor(() => expect(apiRequest).toHaveBeenCalledWith(expect.stringMatching(/status=SUBMITTED/), expect.anything()));
+  vi.mocked(apiRequest).mockClear();
+  fireEvent.click(screen.getByRole("button", { name: "📊 Bảng Kanban" }));
+  await waitFor(() => expect(apiRequest).toHaveBeenCalledWith(expect.stringMatching(/jobId=42&sort=newest.*page=0/), expect.anything()));
+  expect(screen.getByLabelText("Trạng thái")).toBeDisabled();
+  expect(screen.getByText(/Bảng hiển thị các hồ sơ trên trang hiện tại/)).toBeVisible();
 });

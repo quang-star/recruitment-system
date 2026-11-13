@@ -20,6 +20,26 @@ function deferred() {
 }
 beforeEach(() => { vi.mocked(apiRequest).mockReset(); });
 
+it.each(["1", "9007199254740993", "9223372036854775807"])("accepts decimal catalog IDs without precision loss: %s", async (id) => {
+  const initial = props();
+  const existing = { ...category, industryId: id, specializationId: id, positionId: id };
+  vi.mocked(apiRequest).mockResolvedValue({ ...suggestion, suggestions: [{ category: existing, evidenceQuotes: ["Lập báo cáo tài chính"] }] });
+  render(<CareerCategorySuggestions {...initial} />);
+  fireEvent.click(screen.getByRole("button", { name: "Gợi ý phân loại nghề" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Áp dụng gợi ý 1" }));
+  expect(initial.onApply).toHaveBeenCalledExactlyOnceWith(existing);
+});
+
+it.each(["0", "01", "-1", "9223372036854775808", "f851769d-9cdd-4dd2-a34a-157608f2432e"])("rejects invalid catalog ID: %s", async (id) => {
+  const initial = props();
+  vi.mocked(apiRequest).mockResolvedValue({ ...suggestion, suggestions: [{ category: { ...category, industryId: id }, evidenceQuotes: ["Lập báo cáo tài chính"] }] });
+  render(<CareerCategorySuggestions {...initial} />);
+  fireEvent.click(screen.getByRole("button", { name: "Gợi ý phân loại nghề" }));
+  await screen.findByRole("status");
+  expect(screen.queryByRole("button", { name: "Áp dụng gợi ý 1" })).not.toBeInTheDocument();
+  expect(initial.onApply).not.toHaveBeenCalled();
+});
+
 it("requests only after explicit consent and applies only after a separate click", async () => {
   const initial = props();
   vi.mocked(apiRequest).mockResolvedValue(suggestion);

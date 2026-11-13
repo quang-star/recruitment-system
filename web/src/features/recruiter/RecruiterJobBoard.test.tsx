@@ -9,6 +9,43 @@ vi.mock("../../shared/api/client", async (original) => ({
 }));
 const session = { accessToken: "test", roles: ["RECRUITER"] } as AuthSession;
 
+it("keeps draft work available but disables publication for a pending company", async () => {
+  vi.mocked(apiRequest).mockImplementation(async (path) => path === "/api/v2/public/job-categories" ? [] : {
+    items: [{ jobId: "42", jobVersionId: "99", title: "Pending company draft", status: "DRAFT", version: 0,
+      openings: 1, category: { industryName: "IT" } }], total: 1, page: 0, size: 12
+  });
+  render(<RecruiterJobBoard session={session} companyId="company" companyStatus="PENDING" canRecruit />);
+  expect(screen.getByText(/Công ty đang chờ Admin duyệt/)).toBeVisible();
+  const publish = await screen.findByRole("button", { name: "🚀 Đăng tin" });
+  expect(publish).toBeDisabled();
+  fireEvent.click(publish);
+  expect(vi.mocked(apiRequest).mock.calls.some(([path]) => path.includes("/publish?"))).toBe(false);
+  expect(screen.getByRole("button", { name: "+ Tạo JD mới" })).toBeEnabled();
+});
+
+it.each(["CONFIRMED", "PARSED"])("checks the clicked job's saved ParsedJD before publishing from the list: %s", async (parsedStatus) => {
+  const job = { jobId: "42", jobVersionId: "99", jobVersionNumber: 1, companyId: "company", title: "List publish job",
+    description: "Build services", requirementsText: "Java", status: "DRAFT", version: 2,
+    openings: 1, salaryNegotiable: true, externalAiConsent: false, matchingSupported: true,
+    category: { industryId: "1", industryName: "IT" } };
+  vi.mocked(apiRequest).mockImplementation(async (path, options) => {
+    if (path === "/api/v2/public/job-categories") return [];
+    if (path === "/api/v2/parsed-jds/99") return { status: parsedStatus };
+    if (path === "/api/v2/jobs/42/publish?version=2" && options?.method === "POST") return { ...job, status: "PUBLISHED", version: 3 };
+    return { items: [job], total: 1, page: 0, size: 12 };
+  });
+  render(<RecruiterJobBoard session={session} companyId="company" companyStatus="ACTIVE" canRecruit />);
+  fireEvent.click(await screen.findByRole("button", { name: "🚀 Đăng tin" }));
+  await waitFor(() => expect(apiRequest).toHaveBeenCalledWith("/api/v2/parsed-jds/99", expect.anything()));
+  if (parsedStatus === "CONFIRMED") {
+    await waitFor(() => expect(screen.getAllByText("JD đã được đăng.").some((item) => item.closest(".fixed") === null)).toBe(true));
+    expect(apiRequest).toHaveBeenCalledWith("/api/v2/jobs/42/publish?version=2", expect.objectContaining({ method: "POST" }));
+  } else {
+    await waitFor(() => expect(screen.getAllByText("Cần review và xác nhận ParsedJD trước khi đăng JD.").some((item) => item.closest(".fixed") === null)).toBe(true));
+    expect(vi.mocked(apiRequest).mock.calls.some(([path]) => path.includes("/publish?"))).toBe(false);
+  }
+});
+
 it("reviews the saved JD beside editable requirements and requires saving before confirmation", async () => {
   const job = { jobId: "job", jobVersionId: "version", jobVersionNumber: 1, companyId: "company", title: "Backend role",
     description: "Original source description", requirementsText: "Original Java requirement", status: "DRAFT", version: 0,
@@ -89,6 +126,31 @@ it.each([false, true])("submits the explicit JD external AI choice (%s) with the
   const body = JSON.parse(call[1]!.body as string);
   expect(body.externalAiConsent).toBe(consented);
   expect(body.externalAiPolicyVersion).toBe(consented ? "external-ai/1.0" : null);
+});
+
+it("starts a clean JD after returning from a saved job and still protects an unsaved draft", async () => {
+  vi.mocked(apiRequest).mockImplementation(async (path, options) => {
+    if (path === "/api/v2/public/job-categories") return [];
+    if (options?.method === "POST") return { ...JSON.parse(options.body as string), jobId: "saved-job", jobVersionId: "saved-version",
+      jobVersionNumber: 1, companyId: "company", status: "DRAFT", version: 0, matchingSupported: false };
+    return { items: [], total: 0, page: 0, size: 12 };
+  });
+  render(<RecruiterJobBoard session={session} companyId="company" canRecruit />);
+  fireEvent.click(screen.getByRole("button", { name: "+ Tạo JD mới" }));
+  fireEvent.change(screen.getByLabelText("Tiêu đề"), { target: { value: "Saved job" } });
+  fireEvent.change(screen.getByLabelText("Mô tả công việc"), { target: { value: "Build services" } });
+  fireEvent.change(screen.getByLabelText("Yêu cầu"), { target: { value: "Java" } });
+  fireEvent.click(screen.getByRole("checkbox", { name: "Cho phép dịch vụ AI bên ngoài hỗ trợ phân tích nội dung này" }));
+  fireEvent.click(screen.getByRole("button", { name: "Tạo bản nháp" }));
+  await screen.findByText("Đã lưu tin. Ngành này chưa hỗ trợ AI; có thể đăng tin và tuyển dụng thủ công.");
+  fireEvent.click(screen.getByRole("button", { name: "← Quay lại danh sách tin" }));
+  fireEvent.click(screen.getByRole("button", { name: "+ Tạo JD mới" }));
+  expect(screen.getByLabelText("Tiêu đề")).toHaveValue("");
+  expect(screen.getByRole("checkbox", { name: "Cho phép dịch vụ AI bên ngoài hỗ trợ phân tích nội dung này" })).not.toBeChecked();
+  fireEvent.change(screen.getByLabelText("Tiêu đề"), { target: { value: "Unsaved next job" } });
+  fireEvent.click(screen.getByRole("button", { name: "← Quay lại danh sách tin" }));
+  expect(screen.getByRole("alert")).toHaveTextContent("Bạn còn thay đổi chưa lưu hoặc đang xử lý.");
+  expect(screen.getByLabelText("Tiêu đề")).toHaveValue("Unsaved next job");
 });
 
 it("applies a career suggestion to the unsaved draft and persists it only through the normal save", async () => {

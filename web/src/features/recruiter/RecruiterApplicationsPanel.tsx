@@ -1,58 +1,42 @@
-import { MatchState, matchSummary } from "../application/matchPresentation";
 import { useEffect, useState } from "react";
 
 import { ApiClientError, apiDownload, apiRequest } from "../../shared/api/client";
 import { usePagedResource } from "../../shared/api/pagination";
-import { PageControls } from "../../shared/components/PageControls";
 import { AuthSession } from "../../shared/auth/session";
-import { ApplicationMatch, MatchBreakdown } from "../application/MatchBreakdown";
-import { MatchRating } from "../application/MatchRating";
-import { ReasonDialog } from "../../shared/components/ReasonDialog";
-import { SparklesIcon, CvIcon } from "../../shared/components/Icon";
 import { CvPreviewModal } from "../../shared/components/CvPreviewModal";
+import { CvIcon, SparklesIcon } from "../../shared/components/Icon";
+import { PageControls } from "../../shared/components/PageControls";
+import { ReasonDialog } from "../../shared/components/ReasonDialog";
+import { Badge, Button, Card, EmptyState, ErrorBanner, cn } from "../../shared/ui";
+import { ApplicationMatch } from "../application/MatchBreakdown";
+import { RecruiterApplicationDetail } from "./RecruiterApplicationDetail";
+import { RecruiterApplicationsTable } from "./RecruiterApplicationsTable";
+import { RecruiterKanbanBoard } from "./RecruiterKanbanBoard";
+import {
+  Application,
+  ApplicationWithMatch,
+  PipelineStage,
+  RecruiterTransition,
+  nextRecruitmentStage,
+  STAGE_PILLS,
+  StatusChange,
+  candidateDisplayName,
+  controlClass,
+  getErrorMessage,
+  translateApplicationStatus
+} from "./recruiterApplicationTypes";
 
-type Application = {
-  applicationId: string;
-  candidateUserId: string;
-  coverLetter: string | null;
-  status: string;
-  appliedAt: string;
-  version: number;
-  matchingSupported?: boolean;
-  cvAccessGranted?: boolean;
-  candidateName?: string | null;
-  candidateHeadline?: string | null;
-  candidateEmail?: string | null;
-  candidatePhone?: string | null;
-};
-
-type StatusChange = {
-  statusChangeId: string;
-  fromStatus: string | null;
-  toStatus: string;
-  reason: string | null;
-  occurredAt: string;
-};
-
-type PipelineStage = {
-  key: "SUBMITTED" | "UNDER_REVIEW" | "SHORTLISTED" | "REJECTED";
-  label: string;
-  icon: string;
-  color: string;
-  bgLight: string;
-};
-
-const PIPELINE_STAGES: PipelineStage[] = [
-  { key: "SUBMITTED", label: "Mới ứng tuyển", icon: "📥", color: "#2563eb", bgLight: "#eff6ff" },
-  { key: "UNDER_REVIEW", label: "Đang xem xét", icon: "🔍", color: "#d97706", bgLight: "#fffbeb" },
-  { key: "SHORTLISTED", label: "Danh sách rút gọn", icon: "⭐", color: "#16a34a", bgLight: "#f0fdf4" },
-  { key: "REJECTED", label: "Đã từ chối", icon: "🚫", color: "#64748b", bgLight: "#f8fafc" },
-];
-
-export function RecruiterApplicationsPanel({ session, jobId, canTransition }: {
-  session: AuthSession; jobId: string | null; canTransition: boolean;
+/** Recruiter ATS pipeline panel coordinating list/Kanban views, match enrichment, and status transitions. */
+export function RecruiterApplicationsPanel({
+  session,
+  jobId,
+  canTransition
+}: {
+  session: AuthSession;
+  jobId: string | null;
+  canTransition: boolean;
 }) {
-  const [applications, setApplications] = useState<Array<Application & { match?: ApplicationMatch | null; matchState?: MatchState }>>([]);
+  const [applications, setApplications] = useState<ApplicationWithMatch[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [histories, setHistories] = useState<Record<string, StatusChange[]>>({});
@@ -60,64 +44,105 @@ export function RecruiterApplicationsPanel({ session, jobId, canTransition }: {
   const [statusFilter, setStatusFilter] = useState("");
   const [sortBy, setSortBy] = useState<"newest" | "score">("newest");
   const [rejectTarget, setRejectTarget] = useState<Application | null>(null);
-  const [previewCvTarget, setPreviewCvTarget] = useState<{ path: string; filename: string; title: string; page?: number } | null>(null);
+  const [previewCvTarget, setPreviewCvTarget] = useState<{
+    path: string;
+    filename: string;
+    title: string;
+    page?: number;
+  } | null>(null);
   const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
 
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(() => new URLSearchParams(window.location.search).get("application"));
+  const [linkedApplicationId, setLinkedApplicationId] = useState<string | null>(() => new URLSearchParams(window.location.search).get("application"));
   const [query, setQuery] = useState("");
-  const results = usePagedResource<Application>(jobId ? "/api/v2/recruiter/applications" : null,
-    { jobId: jobId ?? "", status: statusFilter, sort: sortBy, q: query }, session.accessToken, 10);
+  const results = usePagedResource<Application>(
+    jobId ? "/api/v2/recruiter/applications" : null,
+    { jobId: jobId ?? "", status: viewMode === "kanban" ? "" : statusFilter, sort: sortBy, q: query, applicationId: linkedApplicationId },
+    session.accessToken,
+    10
+  );
   const loading = results.loading;
 
   useEffect(() => {
     let active = true;
-    setApplications(results.items.map((item) => ({ ...item, matchState: "loading" }))); setError(null);
+    setApplications(results.items.map((item) => ({ ...item, matchState: "loading" })));
+    setError(null);
     void (async () => {
-      const withMatches = await Promise.all(results.items.map(async (application) => {
-        if (application.matchingSupported === false || application.cvAccessGranted === false) return { ...application, match: null };
-        try {
-          const match = await apiRequest<ApplicationMatch>(`/api/v2/applications/${application.applicationId}/match`, { accessToken: session.accessToken });
-          return { ...application, match, matchState: "ready" as const };
-        } catch (failure) { return { ...application, match: null, matchState: failure instanceof ApiClientError && failure.status === 404 ? "waiting" as const : "error" as const }; }
-      }));
+      const withMatches = await Promise.all(
+        results.items.map(async (application) => {
+          if (application.matchingSupported === false || application.cvAccessGranted === false) {
+            return { ...application, match: null };
+          }
+          try {
+            const match = await apiRequest<ApplicationMatch>(`/api/v2/applications/${application.applicationId}/match`, {
+              accessToken: session.accessToken
+            });
+            return { ...application, match, matchState: "ready" as const };
+          } catch (failure) {
+            return {
+              ...application,
+              match: null,
+              matchState: failure instanceof ApiClientError && failure.status === 404 ? ("waiting" as const) : ("error" as const)
+            };
+          }
+        })
+      );
       if (active) setApplications(withMatches);
-    })()
-      .catch((requestError) => { if (active) setError(getErrorMessage(requestError)); });
-    return () => { active = false; };
+    })().catch((requestError) => {
+      if (active) setError(getErrorMessage(requestError));
+    });
+    return () => {
+      active = false;
+    };
   }, [results.items, session.accessToken]);
 
   async function loadHistory(applicationId: string) {
-    setWorkingApplicationId(applicationId); setError(null);
+    setWorkingApplicationId(applicationId);
+    setError(null);
     try {
       const history = await apiRequest<StatusChange[]>(`/api/v2/applications/${applicationId}/history`, {
         accessToken: session.accessToken
       });
       setHistories((current) => ({ ...current, [applicationId]: history }));
-    } catch (requestError) { setError(getErrorMessage(requestError)); }
-    finally { setWorkingApplicationId(null); }
+    } catch (requestError) {
+      setError(getErrorMessage(requestError));
+    } finally {
+      setWorkingApplicationId(null);
+    }
   }
 
-  async function transition(application: Application, status: "UNDER_REVIEW" | "SHORTLISTED" | "REJECTED", reason: string | null = null) {
+  async function transition(
+    application: Application,
+    status: RecruiterTransition | "REJECTED",
+    reason: string | null = null
+  ) {
     setRejectTarget(null);
-    setWorkingApplicationId(application.applicationId); setError(null); setMessage(null);
+    setWorkingApplicationId(application.applicationId);
+    setError(null);
+    setMessage(null);
     try {
       const updated = await apiRequest<Application>(`/api/v2/recruiter/applications/${application.applicationId}/status`, {
-        method: "PATCH", accessToken: session.accessToken,
+        method: "PATCH",
+        accessToken: session.accessToken,
         body: JSON.stringify({ status, reason, version: application.version })
       });
-      setApplications((current) => current.map((item) => item.applicationId === updated.applicationId
-        ? { ...item, ...updated }
-        : item));
+      setApplications((current) =>
+        current.map((item) => (item.applicationId === updated.applicationId ? { ...item, ...updated } : item))
+      );
       setMessage(`Đã chuyển hồ sơ sang ${translateApplicationStatus(status)}.`);
       await loadHistory(application.applicationId);
       results.refresh();
-    } catch (requestError) { setError(getErrorMessage(requestError)); }
-    finally { setWorkingApplicationId(null); }
+    } catch (requestError) {
+      setError(getErrorMessage(requestError));
+    } finally {
+      setWorkingApplicationId(null);
+    }
   }
 
   async function downloadCv(applicationId: string) {
-    setWorkingApplicationId(applicationId); setError(null);
+    setWorkingApplicationId(applicationId);
+    setError(null);
     try {
       const download = await apiDownload(`/api/v2/recruiter/applications/${applicationId}/cv`, {
         accessToken: session.accessToken
@@ -127,10 +152,15 @@ export function RecruiterApplicationsPanel({ session, jobId, canTransition }: {
       link.href = objectUrl;
       link.download = download.filename;
       link.rel = "noopener";
-      document.body.appendChild(link); link.click(); link.remove();
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
       URL.revokeObjectURL(objectUrl);
-    } catch (requestError) { setError(getErrorMessage(requestError)); }
-    finally { setWorkingApplicationId(null); }
+    } catch (requestError) {
+      setError(getErrorMessage(requestError));
+    } finally {
+      setWorkingApplicationId(null);
+    }
   }
 
   function viewCvEvidence(applicationId: string, page: number) {
@@ -147,252 +177,156 @@ export function RecruiterApplicationsPanel({ session, jobId, canTransition }: {
     e.dataTransfer.effectAllowed = "move";
   }
 
-  function handleDrop(e: React.DragEvent, targetStatus: "SUBMITTED" | "UNDER_REVIEW" | "SHORTLISTED" | "REJECTED") {
+  function handleDrop(e: React.DragEvent, targetStatus: PipelineStage["key"]) {
     e.preventDefault();
     setDragOverStage(null);
     const applicationId = e.dataTransfer.getData("text/plain");
     const app = applications.find((a) => a.applicationId === applicationId);
-    if (!app || !canTransition) return;
-    if (app.status === targetStatus) return;
+    if (!app || !canTransition || app.status === targetStatus) return;
 
     if (targetStatus === "REJECTED") {
       setRejectTarget(app);
-    } else if (targetStatus === "UNDER_REVIEW" && app.status === "SUBMITTED") {
-      void transition(app, "UNDER_REVIEW");
-    } else if (targetStatus === "SHORTLISTED" && app.status === "UNDER_REVIEW") {
-      void transition(app, "SHORTLISTED");
+    } else if (targetStatus === nextRecruitmentStage[app.status]) {
+      void transition(app, targetStatus as RecruiterTransition);
     } else {
-      setError(`Không thể chuyển trực tiếp từ ${translateApplicationStatus(app.status)} sang ${translateApplicationStatus(targetStatus)}.`);
+      setError(
+        `Không thể chuyển trực tiếp từ ${translateApplicationStatus(app.status)} sang ${translateApplicationStatus(targetStatus)}.`
+      );
     }
   }
 
   if (!jobId) return null;
 
-  const visibleApplications = applications.filter((item) => results.items.some((row) => row.applicationId === item.applicationId));
-  const activeSelectedApp = visibleApplications.find((item) => item.applicationId === selectedId) ?? visibleApplications[0];
+  const visibleApplications = applications.filter((item) =>
+    results.items.some((row) => row.applicationId === item.applicationId)
+  );
+  const activeSelectedApp =
+    visibleApplications.find((item) => item.applicationId === selectedId) ?? visibleApplications[0];
 
-  const renderApplicationDetail = (application: Application & { match?: ApplicationMatch | null; matchState?: MatchState }) => (
-    <article className="application-detail modern-app-card" key={application.applicationId}>
-      <div className="application-item modern-card-header">
-        <div className="candidate-meta-block">
-          <div className="candidate-avatar-circle">
-            {application.candidateName
-              ? application.candidateName.split(" ").slice(-1)[0]?.slice(0, 2).toUpperCase()
-              : application.candidateUserId.slice(0, 2).toUpperCase()}
-          </div>
-          <div className="candidate-profile-text">
-            <strong>{application.candidateName || `Ứng viên ${application.candidateUserId.slice(0, 8)}…`}</strong>
-            {application.candidateHeadline && <p className="candidate-headline-text">{application.candidateHeadline}</p>}
-            <div className="candidate-contact-tags">
-              <small>Nộp ngày {new Date(application.appliedAt).toLocaleString("vi-VN")}</small>
-              {application.candidateEmail && <span className="contact-tag">✉️ {application.candidateEmail}</span>}
-              {application.candidatePhone && <span className="contact-tag">📞 {application.candidatePhone}</span>}
-              <small className="muted"> · Mã: {application.applicationId.slice(0, 8)}</small>
-            </div>
-          </div>
-        </div>
-
-        <div className="header-badge-group">
-          <span className={`status-pill ${
-            application.status === "SHORTLISTED" ? "success" :
-            application.status === "UNDER_REVIEW" ? "warning" :
-            application.status === "REJECTED" ? "danger" : "muted"
-          }`}>
-            {translateApplicationStatus(application.status)}
-          </span>
-        </div>
-      </div>
-
-      {application.coverLetter && (
-        <div className="cover-letter modern-cover-letter">
-          <strong>Thư ứng tuyển:</strong>
-          <p>{application.coverLetter}</p>
-        </div>
-      )}
-
-      {application.match ? (
-        <div className="match-section-wrap">
-          <MatchBreakdown match={application.match} onViewCv={(page) => void viewCvEvidence(application.applicationId, page)} />
-        </div>
-      ) : (
-        <p className="muted">{application.cvAccessGranted === false ? "Ứng viên đã thu hồi quyền xem CV và điểm." : application.matchingSupported === false ? "Ngành này chưa hỗ trợ AI; xem xét hồ sơ thủ công." : matchSummary(application)}</p>
-      )}
-
-      {application.matchState === "error" && <p className="error-message" role="alert">Không tải được kết quả đối chiếu. <button type="button" className="secondary-button" onClick={results.refresh}>Thử lại điểm</button></p>}
-
-      {/* Actions row */}
-      <div className="button-row application-actions modern-app-actions">
-        <button
-          className="primary-action-btn prominent-cv-btn"
-          type="button"
-          disabled={workingApplicationId === application.applicationId || application.cvAccessGranted === false}
-          onClick={() => setPreviewCvTarget({
-            path: `/api/v2/recruiter/applications/${application.applicationId}/cv`,
-            filename: `ung-vien-${application.candidateUserId.slice(0, 8)}.pdf`,
-            title: `CV ${application.candidateName || `Ứng viên ${application.candidateUserId.slice(0, 8)}…`}`
-          })}
-        >
-          📄 Xem CV trực tiếp
-        </button>
-
-        <button
-          className="secondary-button"
-          type="button"
-          disabled={workingApplicationId === application.applicationId || application.cvAccessGranted === false}
-          onClick={() => void downloadCv(application.applicationId)}
-        >
-          Tải CV đã nộp
-        </button>
-
-        <button
-          className="secondary-button"
-          type="button"
-          disabled={workingApplicationId === application.applicationId}
-          onClick={() => void loadHistory(application.applicationId)}
-        >
-          Xem tiến trình
-        </button>
-
-        {canTransition && application.status === "SUBMITTED" && (
-          <button
-            type="button"
-            className="primary-action-btn"
-            disabled={workingApplicationId === application.applicationId}
-            onClick={() => void transition(application, "UNDER_REVIEW")}
-          >
-            Bắt đầu xem xét
-          </button>
-        )}
-
-        {canTransition && application.status === "UNDER_REVIEW" && (
-          <button
-            type="button"
-            className="success-action-btn"
-            disabled={workingApplicationId === application.applicationId}
-            onClick={() => void transition(application, "SHORTLISTED")}
-          >
-            Đưa vào shortlist
-          </button>
-        )}
-
-        {canTransition && ["SUBMITTED", "UNDER_REVIEW", "SHORTLISTED"].includes(application.status) && (
-          <button
-            className="danger-button"
-            type="button"
-            disabled={workingApplicationId === application.applicationId}
-            onClick={() => setRejectTarget(application)}
-          >
-            Từ chối
-          </button>
-        )}
-      </div>
-
-      {histories[application.applicationId] && (
-        <ol className="status-timeline modern-timeline">
-          {histories[application.applicationId].map((change) => (
-            <li key={change.statusChangeId}>
-              <strong>{translateApplicationStatus(change.toStatus)}</strong>
-              <span>{new Date(change.occurredAt).toLocaleString("vi-VN")}</span>
-              {change.reason && <small>Lý do: {change.reason}</small>}
-            </li>
-          ))}
-        </ol>
-      )}
-    </article>
+  const renderDetail = (application: ApplicationWithMatch) => (
+    <RecruiterApplicationDetail
+      application={application}
+      history={histories[application.applicationId]}
+      canTransition={canTransition}
+      workingApplicationId={workingApplicationId}
+      onPreviewCv={setPreviewCvTarget}
+      onDownloadCv={(id) => void downloadCv(id)}
+      onViewCvEvidence={viewCvEvidence}
+      onLoadHistory={(id) => void loadHistory(id)}
+      onRefreshMatches={results.refresh}
+      onTransition={(app, status) => void transition(app, status)}
+      onRequestReject={setRejectTarget}
+    />
   );
 
   return (
-    <div className="workspace-panel recruiter-applications modern-pipeline-panel">
-      {/* Heading */}
-      <div className="section-heading">
+    <Card padding="lg" className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle pb-4">
         <div>
-          <p className="eyebrow">SÀNG LỌC HỒ SƠ</p>
-          <h3>Ứng viên</h3>
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-brand-700 m-0">SÀNG LỌC HỒ SƠ</p>
+          <h3 className="text-lg font-bold text-ink-900 m-0 mt-0.5">Ứng viên</h3>
         </div>
-        <div className="button-row" style={{ alignItems: "center", gap: "10px" }}>
-          {/* View Mode Toggle */}
-          <div className="view-mode-toggle" role="group" aria-label="Chế độ xem">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <div
+            className="inline-flex rounded-xl border border-border-subtle bg-slate-100 p-1"
+            role="group"
+            aria-label="Chế độ xem"
+          >
             <button
               type="button"
-              className={`view-toggle-btn ${viewMode === "table" ? "active" : ""}`}
+              className={cn(
+                "rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer",
+                viewMode === "table" ? "bg-white text-ink-900 shadow-xs" : "text-ink-600 hover:text-ink-900"
+              )}
               onClick={() => setViewMode("table")}
             >
               📋 Danh sách
             </button>
             <button
               type="button"
-              className={`view-toggle-btn ${viewMode === "kanban" ? "active" : ""}`}
+              className={cn(
+                "rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer",
+                viewMode === "kanban" ? "bg-white text-ink-900 shadow-xs" : "text-ink-600 hover:text-ink-900"
+              )}
               onClick={() => setViewMode("kanban")}
             >
               📊 Bảng Kanban
             </button>
           </div>
 
-          <span className="count-badge">{results.total} hồ sơ</span>
-          <button className="secondary-button compact-btn" type="button" onClick={results.refresh}>
+          <Badge tone="brand">{results.total} hồ sơ</Badge>
+          {linkedApplicationId && <Button variant="secondary" size="sm" onClick={() => {
+            setLinkedApplicationId(null);
+            const url = new URL(window.location.href);
+            url.searchParams.delete("application");
+            window.history.replaceState(null, "", url);
+          }}>Xem tất cả ứng viên</Button>}
+          <Button variant="secondary" size="sm" onClick={results.refresh}>
             Làm mới
-          </button>
+          </Button>
         </div>
       </div>
 
-      {/* Modern Stage Tabs (for Table View filtering) */}
       {viewMode === "table" && (
-        <div className="pipeline-stage-tabs">
-          <button
-            type="button"
-            className={`stage-tab-btn ${statusFilter === "" ? "active" : ""}`}
-            onClick={() => setStatusFilter("")}
-          >
-            Tất cả
-          </button>
-          <button
-            type="button"
-            className={`stage-tab-btn ${statusFilter === "SUBMITTED" ? "active" : ""}`}
-            onClick={() => setStatusFilter("SUBMITTED")}
-          >
-            Mới nộp
-          </button>
-          <button
-            type="button"
-            className={`stage-tab-btn ${statusFilter === "UNDER_REVIEW" ? "active" : ""}`}
-            onClick={() => setStatusFilter("UNDER_REVIEW")}
-          >
-            Đang xem xét
-          </button>
-          <button
-            type="button"
-            className={`stage-tab-btn ${statusFilter === "SHORTLISTED" ? "active" : ""}`}
-            onClick={() => setStatusFilter("SHORTLISTED")}
-          >
-            Shortlist
-          </button>
-          <button
-            type="button"
-            className={`stage-tab-btn ${statusFilter === "REJECTED" ? "active" : ""}`}
-            onClick={() => setStatusFilter("REJECTED")}
-          >
-            Đã từ chối
-          </button>
+        <div className="flex flex-wrap gap-2">
+          {STAGE_PILLS.map((pill) => {
+            const active = statusFilter === pill.value;
+            return (
+              <button
+                key={pill.value || "all"}
+                type="button"
+                onClick={() => setStatusFilter(pill.value)}
+                className={cn(
+                  "rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer",
+                  active
+                    ? "border-brand-600 bg-brand-50 text-brand-700"
+                    : "border-border-subtle bg-white text-ink-600 hover:border-border-strong hover:text-ink-900"
+                )}
+              >
+                {pill.label}
+              </button>
+            );
+          })}
         </div>
       )}
 
-      {/* Toolbar for Sorting & Backwards-compatible Filter */}
-      <div className="pipeline-toolbar">
-        <label>Tìm hồ sơ<input value={query} maxLength={200} onChange={(event) => setQuery(event.target.value)} placeholder="Mã ứng viên, vị trí hoặc thư ứng tuyển" /></label>
-        <label>
+      <div className="grid gap-3 md:grid-cols-[1.5fr_1fr_1fr]">
+        <label className="block text-xs font-semibold text-ink-700">
+          Tìm hồ sơ
+          <input
+            className={controlClass}
+            value={query}
+            maxLength={200}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Tên, email, mã ứng viên hoặc thư ứng tuyển"
+          />
+        </label>
+        <label className="block text-xs font-semibold text-ink-700">
           Trạng thái
-          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+          <select
+            className={controlClass}
+            value={viewMode === "kanban" ? "" : statusFilter}
+            disabled={viewMode === "kanban"}
+            onChange={(event) => setStatusFilter(event.target.value)}
+          >
             <option value="">Tất cả</option>
             <option value="SUBMITTED">Mới ứng tuyển</option>
             <option value="UNDER_REVIEW">Đang xem xét</option>
             <option value="SHORTLISTED">Danh sách rút gọn</option>
+            <option value="INTERVIEW">Đang phỏng vấn</option>
+            <option value="OFFERED">Đã gửi đề nghị tuyển dụng</option>
+            <option value="HIRED">Đã tuyển dụng</option>
             <option value="REJECTED">Đã từ chối</option>
             <option value="WITHDRAWN">Đã rút</option>
           </select>
         </label>
-        <label>
+        <label className="block text-xs font-semibold text-ink-700">
           Sắp xếp
-          <select value={sortBy} onChange={(event) => setSortBy(event.target.value as "newest" | "score")}>
+          <select
+            className={controlClass}
+            value={sortBy}
+            onChange={(event) => setSortBy(event.target.value as "newest" | "score")}
+          >
             <option value="newest">Mới nhất</option>
             <option value="score">Mức độ phù hợp</option>
           </select>
@@ -400,197 +334,68 @@ export function RecruiterApplicationsPanel({ session, jobId, canTransition }: {
       </div>
 
       <PageControls {...results} onPageChange={results.setPage} label="Phân trang ứng viên" />
-      {results.error && <p className="error-message" role="alert">{results.error}</p>}
+      {viewMode === "kanban" && <p className="text-xs text-ink-500">Bảng hiển thị các hồ sơ trên trang hiện tại, ở mọi trạng thái. Dùng phân trang để xem thêm.</p>}
+      {results.error && <ErrorBanner tone="error" message={results.error} />}
 
-      {/* AI Decision Transparent Notice */}
-      <div className="ai-decision-note-box">
-        <SparklesIcon size={16} />
-        <p className="ai-decision-note">
+      <div className="flex items-start gap-2.5 rounded-xl border border-brand-200/70 bg-brand-50/50 px-3.5 py-2.5 text-xs text-ink-700">
+        <SparklesIcon size={15} className="text-brand-700 shrink-0 mt-0.5" />
+        <p className="m-0 leading-relaxed">
           Mức độ phù hợp với vị trí trên thang 1–5 sao hỗ trợ xem hồ sơ, không phải xác suất trúng tuyển. Quyết định tuyển dụng do bạn thực hiện.
         </p>
       </div>
 
-      {loading && <p className="muted">Đang tải hồ sơ…</p>}
-      {error && <p className="error-message" role="alert">{error}</p>}
-      {message && <p className="success-message" role="status">{message}</p>}
+      {loading && <p className="text-sm text-ink-500 m-0">Đang tải hồ sơ…</p>}
+      {error && <ErrorBanner tone="error" message={error} />}
+      {message && <ErrorBanner tone="success" message={message} />}
       {!loading && !error && !results.error && results.total === 0 && (
-        <div className="empty-sub-state">
-          <CvIcon size={32} />
-          <p className="muted">Không có hồ sơ phù hợp bộ lọc hiện tại.</p>
-        </div>
+        <EmptyState
+          icon={<CvIcon size={24} />}
+          title="Không có hồ sơ phù hợp bộ lọc hiện tại."
+          description="Thử chọn trạng thái khác hoặc điều chỉnh từ khóa tìm kiếm."
+        />
       )}
 
-      {/* VIEW MODE 1: Table Master-Detail */}
       {viewMode === "table" && (
-        <div className="application-master-detail">
-          <div className="application-table-wrap">
-            <table className="application-table"><caption className="sr-only">Danh sách ứng viên</caption>
-              <thead><tr><th>Hồ sơ</th><th>Ngày nộp</th><th>Trạng thái</th><th>Mức độ phù hợp</th></tr></thead>
-              <tbody>{visibleApplications.map((application) => <tr key={application.applicationId}
-                className={(selectedId ?? visibleApplications[0]?.applicationId) === application.applicationId ? "selected" : ""}>
-                <td>
-                  <div className="candidate-cell-flex">
-                    <div className="candidate-avatar-circle mini">
-                      {application.candidateName
-                        ? application.candidateName.split(" ").slice(-1)[0]?.slice(0, 2).toUpperCase()
-                        : application.candidateUserId.slice(0, 2).toUpperCase()}
-                    </div>
-                    <div>
-                      <button type="button" className="text-button candidate-name-btn" aria-pressed={(selectedId ?? visibleApplications[0]?.applicationId) === application.applicationId}
-                        onClick={() => setSelectedId(application.applicationId)}>{application.candidateName || `Ứng viên ${application.candidateUserId.slice(0, 8)}…`}</button>
-                      <div className="candidate-submeta">
-                        {application.candidateHeadline && <span className="candidate-headline-pill">{application.candidateHeadline}</span>}
-                        <small>Hồ sơ {application.applicationId.slice(0, 8)}</small>
-                      </div>
-                    </div>
-                  </div>
-                </td>
-                <td>{new Date(application.appliedAt).toLocaleDateString("vi-VN")}</td>
-                <td><span className="status-pill">{translateApplicationStatus(application.status)}</span></td>
-                <td><MatchRating {...application} compact />{application.match?.status === "DEGRADED" && <small className="match-rating-quality">Cần kiểm tra thêm</small>}</td>
-              </tr>)}</tbody>
-            </table>
-          </div>
-          <div className="application-selected-panel" aria-label="Hồ sơ ứng viên đã chọn">
-            {activeSelectedApp && renderApplicationDetail(activeSelectedApp)}
+        <div className="grid gap-5 xl:grid-cols-[1.15fr_1fr] items-start">
+          <RecruiterApplicationsTable
+            applications={visibleApplications}
+            selectedId={selectedId}
+            onSelect={setSelectedId}
+          />
+          <div aria-label="Hồ sơ ứng viên đã chọn">
+            {activeSelectedApp && renderDetail(activeSelectedApp)}
           </div>
         </div>
       )}
 
-      {/* VIEW MODE 2: Kanban Pipeline Board */}
       {viewMode === "kanban" && (
-        <div className="kanban-pipeline-wrapper">
-          <div className="kanban-pipeline-board" role="region" aria-label="Bảng Kanban tuyển dụng">
-            {PIPELINE_STAGES.map((stage) => {
-              const stageApps = visibleApplications.filter((app) => app.status === stage.key);
-              const isOver = dragOverStage === stage.key;
-              return (
-                <div
-                  key={stage.key}
-                  className={`kanban-column ${isOver ? "drag-over" : ""}`}
-                  data-stage={stage.key}
-                  onDragOver={(e) => { e.preventDefault(); setDragOverStage(stage.key); }}
-                  onDragLeave={() => { if (dragOverStage === stage.key) setDragOverStage(null); }}
-                  onDrop={(e) => handleDrop(e, stage.key)}
-                >
-                  <div className="kanban-column-header" style={{ borderTopColor: stage.color }}>
-                    <div className="kanban-column-title">
-                      <span className="kanban-stage-icon">{stage.icon}</span>
-                      <h4>{stage.label}</h4>
-                    </div>
-                    <span className="kanban-stage-count" style={{ backgroundColor: stage.bgLight, color: stage.color }}>
-                      {stageApps.length}
-                    </span>
-                  </div>
-
-                  <div className="kanban-cards-container">
-                    {stageApps.length === 0 ? (
-                      <div className="kanban-empty-column">
-                        <small>Chưa có hồ sơ</small>
-                      </div>
-                    ) : (
-                      stageApps.map((application) => (
-                        <div
-                          key={application.applicationId}
-                          className={`kanban-card ${selectedId === application.applicationId ? "selected" : ""} ${workingApplicationId === application.applicationId ? "working" : ""}`}
-                          data-stage={stage.key}
-                          draggable={canTransition}
-                          onDragStart={(e) => handleDragStart(e, application)}
-                          onClick={() => setSelectedId(application.applicationId)}
-                        >
-                          <div className="kanban-card-top">
-                            <div className="candidate-avatar-circle small">
-                              {application.candidateName
-                                ? application.candidateName.split(" ").slice(-1)[0]?.slice(0, 2).toUpperCase()
-                                : application.candidateUserId.slice(0, 2).toUpperCase()}
-                            </div>
-                            <div className="kanban-card-info">
-                              <strong>{application.candidateName || `Ứng viên ${application.candidateUserId.slice(0, 8)}…`}</strong>
-                              {application.candidateHeadline && <span className="kanban-card-headline">{application.candidateHeadline}</span>}
-                              <small>{new Date(application.appliedAt).toLocaleDateString("vi-VN")}</small>
-                            </div>
-                          </div>
-
-                          <div className="kanban-card-score">
-                            <MatchRating {...application} compact />
-                            {application.match?.status === "DEGRADED" && <small className="match-rating-quality">Cần kiểm tra thêm</small>}
-                          </div>
-
-                          {application.coverLetter && (
-                            <p className="kanban-cover-preview">
-                              "{application.coverLetter.slice(0, 75)}{application.coverLetter.length > 75 ? "…" : ""}"
-                            </p>
-                          )}
-
-                          <div className="kanban-card-actions" onClick={(e) => e.stopPropagation()}>
-                            <button
-                              type="button"
-                              className="kanban-action-btn view-cv-btn"
-                              title="Xem CV PDF trực tiếp"
-                              disabled={workingApplicationId === application.applicationId || application.cvAccessGranted === false}
-                              onClick={() => setPreviewCvTarget({
-                                path: `/api/v2/recruiter/applications/${application.applicationId}/cv`,
-                                filename: `ung-vien-${application.candidateUserId.slice(0, 8)}.pdf`,
-                                title: `CV Ứng viên ${application.candidateUserId.slice(0, 8)}…`
-                              })}
-                            >
-                              👁️ CV
-                            </button>
-
-                            {canTransition && application.status === "SUBMITTED" && (
-                              <button
-                                type="button"
-                                className="kanban-action-btn transition-btn primary"
-                                disabled={workingApplicationId === application.applicationId}
-                                onClick={() => void transition(application, "UNDER_REVIEW")}
-                                title="Chuyển sang Đang xem xét"
-                              >
-                                ➡️ Xem xét
-                              </button>
-                            )}
-
-                            {canTransition && application.status === "UNDER_REVIEW" && (
-                              <button
-                                type="button"
-                                className="kanban-action-btn transition-btn success"
-                                disabled={workingApplicationId === application.applicationId}
-                                onClick={() => void transition(application, "SHORTLISTED")}
-                                title="Chuyển vào Danh sách rút gọn"
-                              >
-                                ⭐ Shortlist
-                              </button>
-                            )}
-
-                            {canTransition && ["SUBMITTED", "UNDER_REVIEW", "SHORTLISTED"].includes(application.status) && (
-                              <button
-                                type="button"
-                                className="kanban-action-btn transition-btn danger"
-                                disabled={workingApplicationId === application.applicationId}
-                                onClick={() => setRejectTarget(application)}
-                                title="Từ chối hồ sơ này"
-                              >
-                                ✖ Từ chối
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+        <div className="space-y-6">
+          <RecruiterKanbanBoard
+            applications={visibleApplications}
+            selectedId={selectedId}
+            dragOverStage={dragOverStage}
+            canTransition={canTransition}
+            workingApplicationId={workingApplicationId}
+            onSelect={setSelectedId}
+            onDragOverStageChange={setDragOverStage}
+            onDragStart={handleDragStart}
+            onDrop={handleDrop}
+            onPreviewCv={setPreviewCvTarget}
+            onTransition={(app, status) => void transition(app, status)}
+            onRequestReject={setRejectTarget}
+          />
 
           {activeSelectedApp && (
-            <div className="kanban-selected-detail">
-              <div className="section-heading" style={{ marginTop: "1.5rem" }}>
-                <div>
-                  <p className="eyebrow">CHI TIẾT HỒ SƠ ĐÃ CHỌN</p>
-                  <h4>{activeSelectedApp.candidateName || `Ứng viên ${activeSelectedApp.candidateUserId.slice(0, 8)}…`}</h4>
-                </div>
+            <div className="space-y-3 pt-2">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-brand-700 m-0">
+                  CHI TIẾT HỒ SƠ ĐÃ CHỌN
+                </p>
+                <h4 className="text-base font-bold text-ink-900 m-0 mt-0.5">
+                  {candidateDisplayName(activeSelectedApp)}
+                </h4>
               </div>
-              {renderApplicationDetail(activeSelectedApp)}
+              {renderDetail(activeSelectedApp)}
             </div>
           )}
         </div>
@@ -602,7 +407,9 @@ export function RecruiterApplicationsPanel({ session, jobId, canTransition }: {
         confirmLabel="Xác nhận từ chối"
         description="Lý do sẽ được lưu trong lịch sử và hiển thị cho ứng viên."
         onCancel={() => setRejectTarget(null)}
-        onConfirm={(reason) => { if (rejectTarget) void transition(rejectTarget, "REJECTED", reason); }}
+        onConfirm={(reason) => {
+          if (rejectTarget) void transition(rejectTarget, "REJECTED", reason);
+        }}
       />
 
       <CvPreviewModal
@@ -614,20 +421,6 @@ export function RecruiterApplicationsPanel({ session, jobId, canTransition }: {
         page={previewCvTarget?.page}
         accessToken={session.accessToken}
       />
-    </div>
+    </Card>
   );
-}
-
-function translateApplicationStatus(status: string): string {
-  return ({
-    SUBMITTED: "Mới ứng tuyển",
-    UNDER_REVIEW: "Đang xem xét",
-    SHORTLISTED: "Danh sách rút gọn",
-    REJECTED: "Đã từ chối",
-    WITHDRAWN: "Đã rút"
-  } as Record<string, string>)[status] ?? status;
-}
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof ApiClientError ? error.error.message : "Không thể tải danh sách ứng viên.";
 }

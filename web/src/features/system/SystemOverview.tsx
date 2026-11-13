@@ -1,5 +1,6 @@
 import { FC } from "react";
-import { LayersIcon, SecurityIcon, SparklesIcon, JobsIcon } from "../../shared/components/Icon";
+import { JobsIcon, LayersIcon, SecurityIcon, SparklesIcon } from "../../shared/components/Icon";
+import { Badge, Card } from "../../shared/ui";
 
 type BoundaryItem = {
   name: string;
@@ -42,37 +43,54 @@ const boundaries: BoundaryItem[] = [
 
 export function SystemOverview() {
   return (
-    <section className="architecture-showcase" aria-labelledby="architecture-title">
-      <div className="section-heading">
+    <section
+      className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-12 space-y-6"
+      aria-labelledby="architecture-title"
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between border-t border-border-subtle pt-8">
         <div>
-          <span className="tech-tag-accent">MICROSERVICES ARCHITECTURE</span>
-          <h2 id="architecture-title">Service boundaries</h2>
+          <span className="text-[11px] font-bold uppercase tracking-wider text-brand-700">
+            MICROSERVICES ARCHITECTURE
+          </span>
+          <h2 id="architecture-title" className="text-xl font-bold tracking-tight text-ink-900 mt-1 mb-0">
+            Service boundaries
+          </h2>
         </div>
-        <span className="contract-pill">Contract v1 · Event-Driven (Kafka)</span>
+        <Badge tone="brand">Contract v2 · Event-Driven (Kafka)</Badge>
       </div>
-      <div className="grid architecture-grid">
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {boundaries.map((boundary) => {
           const IconComp = boundary.icon;
           return (
-            <article key={boundary.name} className="service-card">
-              <div className="service-card-header">
-                <span className="service-icon-box">
-                  <IconComp size={20} />
-                </span>
-                <div>
-                  <h3>{boundary.name}</h3>
-                  <small className="service-tech">{boundary.tech}</small>
+            <Card key={boundary.name} as="article" padding="md" className="flex flex-col justify-between gap-3">
+              <div className="space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+                      <IconComp size={18} />
+                    </span>
+                    <div className="min-w-0">
+                      <h3 className="text-base font-bold text-ink-900 m-0">{boundary.name}</h3>
+                      <small className="block text-[11px] text-ink-500 truncate">{boundary.tech}</small>
+                    </div>
+                  </div>
                 </div>
-                <span className="service-badge">{boundary.badge}</span>
+                <Badge tone="neutral">{boundary.badge}</Badge>
+                <p className="text-xs sm:text-sm text-ink-600 leading-relaxed m-0">
+                  {boundary.responsibility}
+                </p>
               </div>
-              <p className="service-desc">{boundary.responsibility}</p>
-            </article>
+            </Card>
           );
         })}
       </div>
-      <div className="architecture-footer-note">
-        <LayersIcon size={16} />
-        <span>Hệ thống phân tán: 3 Database PostgreSQL độc lập, giao tiếp bất đồng bộ qua Kafka KRaft và Transactional Outbox Pattern.</span>
+
+      <div className="flex items-center gap-2.5 rounded-xl border border-border-subtle bg-slate-50 px-4 py-3 text-xs sm:text-sm text-ink-600">
+        <LayersIcon size={16} aria-hidden="true" />
+        <span>
+          Hệ thống phân tán: 3 Database PostgreSQL độc lập, giao tiếp bất đồng bộ qua Kafka KRaft và Transactional Outbox Pattern.
+        </span>
       </div>
     </section>
   );

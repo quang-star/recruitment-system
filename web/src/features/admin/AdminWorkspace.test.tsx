@@ -1,4 +1,5 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { MemoryRouter, useNavigate } from "react-router-dom";
 import { beforeEach, expect, it, vi } from "vitest";
 import { AdminWorkspace } from "./AdminWorkspace";
 import { ApiClientError, apiRequest } from "../../shared/api/client";
@@ -28,12 +29,27 @@ function reason(value = "Đã kiểm tra đề xuất") {
 }
 async function selectSkill(id = "skill") {
   fireEvent.click(screen.getByRole("button", { name: "Kỹ năng / tên gọi khác" }));
-  await screen.findByRole("option", { name: "NewX · PENDING" });
+  await screen.findByRole("option", { name: "NewX · Chờ duyệt" });
   fireEvent.change(screen.getByLabelText("Danh mục", { exact: true }), { target: { value: id } });
 }
 function mutationBody() {
   const call = [...vi.mocked(apiRequest).mock.calls].reverse().find(([, options]) => options?.method);
   return call?.[1]?.body ? JSON.parse(String(call[1].body)) : null;
+}
+
+function ExternalNavigation() {
+  const navigate = useNavigate();
+  return <>
+    <button onClick={() => navigate("/admin/skills")}>External skills route</button>
+    <button onClick={() => navigate("/admin")}>External categories route</button>
+  </>;
+}
+
+function renderWithRoute() {
+  return render(<MemoryRouter initialEntries={["/admin"]}>
+    <AdminWorkspace session={session} onLogout={vi.fn()} />
+    <ExternalNavigation />
+  </MemoryRouter>);
 }
 
 beforeEach(() => {
@@ -47,9 +63,81 @@ beforeEach(() => {
   });
 });
 
+it("scopes editor selection and drafts to the route even when category and skill IDs overlap", async () => {
+  vi.mocked(apiRequest).mockImplementation(async (path, options) => {
+    if (options?.method) return {};
+    const ledger = emptyLedger(path); if (ledger) return ledger;
+    return path === "/api/v2/dashboard/catalog"
+      ? [{ id: "skill", kind: "INDUSTRY", parentId: null, name: "Ngành mới", status: "PENDING", version: 3 }]
+      : catalog;
+  });
+  renderWithRoute();
+  await screen.findByRole("option", { name: "Ngành mới · Chờ duyệt" });
+  fireEvent.change(screen.getByLabelText("Danh mục", { exact: true }), { target: { value: "skill" } });
+  fireEvent.change(screen.getByLabelText("Tên", { exact: true }), { target: { value: "Category-only draft" } });
+  reason("Category-only reason");
+  fireEvent.click(screen.getByRole("button", { name: "External skills route" }));
+  await screen.findByRole("option", { name: "NewX · Chờ duyệt" });
+  expect(screen.getByLabelText("Danh mục", { exact: true })).toHaveValue("");
+  expect(screen.getByLabelText("Tên", { exact: true })).toHaveValue("");
+  expect(screen.getByLabelText("Lý do thay đổi")).toHaveValue("");
+  expect(mutationBody()).toBeNull();
+});
+
+it("ignores a late category-history response after navigating to the skill editor", async () => {
+  let finishHistory!: (value: unknown) => void;
+  vi.mocked(apiRequest).mockImplementation(async (path, options) => {
+    if (options?.method) return {};
+    if (path === "/api/v2/dashboard/catalog/pending/history") {
+      return new Promise(resolve => { finishHistory = resolve; });
+    }
+    const ledger = emptyLedger(path); if (ledger) return ledger;
+    return path === "/api/v2/dashboard/catalog"
+      ? [{ id: "pending", kind: "INDUSTRY", parentId: null, name: "Ngành mới", status: "PENDING", version: 3 }]
+      : catalog;
+  });
+  renderWithRoute();
+  await screen.findByRole("option", { name: "Ngành mới · Chờ duyệt" });
+  fireEvent.change(screen.getByLabelText("Danh mục", { exact: true }), { target: { value: "pending" } });
+  fireEvent.click(screen.getByRole("button", { name: "Xem lịch sử thay đổi" }));
+  await waitFor(() => expect(finishHistory).toBeTypeOf("function"));
+  fireEvent.click(screen.getByRole("button", { name: "External skills route" }));
+  await screen.findByRole("option", { name: "NewX · Chờ duyệt" });
+  await act(async () => finishHistory([{ action: "EDIT", reason: "Old category history must not cross routes",
+    actorUserId: "1", version: 3, afterState: '{"name":"Old category"}' }]));
+  expect(screen.queryByText("Old category history must not cross routes")).not.toBeInTheDocument();
+  expect(screen.getByLabelText("Danh mục", { exact: true })).toBeEnabled();
+});
+
+it("does not let a late category write clear a draft on a different route", async () => {
+  let finishWrite!: (value: unknown) => void;
+  vi.mocked(apiRequest).mockImplementation(async (path, options) => {
+    if (options?.method) return new Promise(resolve => { finishWrite = resolve; });
+    const ledger = emptyLedger(path); if (ledger) return ledger;
+    return path === "/api/v2/dashboard/catalog"
+      ? [{ id: "pending", kind: "INDUSTRY", parentId: null, name: "Ngành mới", status: "PENDING", version: 3 }]
+      : catalog;
+  });
+  renderWithRoute();
+  await screen.findByRole("option", { name: "Ngành mới · Chờ duyệt" });
+  fireEvent.change(screen.getByLabelText("Danh mục", { exact: true }), { target: { value: "pending" } });
+  reason();
+  fireEvent.click(screen.getByRole("button", { name: "Lưu sửa đổi" }));
+  await waitFor(() => expect(finishWrite).toBeTypeOf("function"));
+  fireEvent.click(screen.getByRole("button", { name: "External skills route" }));
+  await screen.findByRole("option", { name: "NewX · Chờ duyệt" });
+  fireEvent.change(screen.getByLabelText("Danh mục", { exact: true }), { target: { value: "skill" } });
+  fireEvent.change(screen.getByLabelText("Tên", { exact: true }), { target: { value: "Current skill draft" } });
+  reason("Current skill reason");
+  await act(async () => finishWrite({}));
+  expect(screen.getByLabelText("Danh mục", { exact: true })).toHaveValue("skill");
+  expect(screen.getByLabelText("Tên", { exact: true })).toHaveValue("Current skill draft");
+  expect(screen.getByLabelText("Lý do thay đổi")).toHaveValue("Current skill reason");
+});
+
 it("approves a pending category using its shown version", async () => {
   render(<AdminWorkspace session={session} onLogout={vi.fn()} />);
-  await screen.findByRole("option", { name: "Ngành mới · PENDING" });
+  await screen.findByRole("option", { name: "Ngành mới · Chờ duyệt" });
   fireEvent.change(screen.getByLabelText("Danh mục", { exact: true }), { target: { value: "pending" } });
   fireEvent.change(screen.getByLabelText("Tên", { exact: true }), { target: { value: "Tên đã kiểm tra" } });
   reason("  Chuẩn hóa tên trước khi duyệt  ");
@@ -57,6 +145,15 @@ it("approves a pending category using its shown version", async () => {
   await waitFor(() => expect(apiRequest).toHaveBeenCalledWith("/api/v2/dashboard/catalog/pending", expect.objectContaining({
     method: "PUT", body: JSON.stringify({ version: 3, action: "APPROVE", reason: "Chuẩn hóa tên trước khi duyệt", name: "Tên đã kiểm tra", mergeTargetId: null })
   })));
+});
+
+it("opens the company review route without loading a taxonomy catalog", async () => {
+  window.history.replaceState(null, "", "/admin/companies");
+  vi.mocked(apiRequest).mockImplementation(async () => ({ items: [], total: 0, page: 0, size: 20 }));
+  render(<AdminWorkspace session={session} onLogout={vi.fn()} />);
+  expect(await screen.findByText("Không có công ty phù hợp")).toBeVisible();
+  expect(apiRequest).toHaveBeenCalledWith(expect.stringContaining("/api/v2/dashboard/companies?status=PENDING"), expect.anything());
+  expect(vi.mocked(apiRequest).mock.calls.some(([path]) => path.includes("/taxonomy/") || path === "/api/v2/dashboard/catalog")).toBe(false);
 });
 
 it("edits aliases with the current catalog version and displays a conflict without losing input", async () => {
@@ -78,9 +175,15 @@ it("edits aliases with the current catalog version and displays a conflict witho
   vi.mocked(apiRequest).mockImplementation(async (path, options) => {
     if (options?.method) return {};
     const ledger = emptyLedger(path); if (ledger) return ledger;
-    return { ...catalog, version: 5 };
+    return { ...catalog, version: 5, skills: catalog.skills.map(entry => entry.stableId === "skill"
+      ? { ...entry, aliases: [{ value: "Concurrent alias" }] } : entry) };
   });
   fireEvent.click(screen.getByRole("button", { name: "Tải lại" }));
+  await screen.findByRole("region", { name: "Đối chiếu phiên bản mới" });
+  expect(screen.getByRole("button", { name: "Lưu sửa đổi" })).toBeDisabled();
+  expect(screen.getByText("Concurrent alias")).toBeVisible();
+  expect(screen.getByLabelText("Tên gọi khác (mỗi dòng một tên)")).toHaveValue("NFX");
+  fireEvent.click(screen.getByRole("button", { name: "Giữ bản nháp sau đối chiếu" }));
   await waitFor(() => expect(screen.getByRole("button", { name: "Lưu sửa đổi" })).toBeEnabled());
   expect(screen.getByLabelText("Tên gọi khác (mỗi dòng một tên)")).toHaveValue("NFX");
   fireEvent.click(screen.getByRole("button", { name: "Lưu sửa đổi" }));
@@ -90,7 +193,7 @@ it("edits aliases with the current catalog version and displays a conflict witho
 
 it("opens audit search without loading either catalog and keeps the services separate", async () => {
   render(<AdminWorkspace session={session} onLogout={vi.fn()} />);
-  await screen.findByRole("option", { name: "Ngành mới · PENDING" });
+  await screen.findByRole("option", { name: "Ngành mới · Chờ duyệt" });
   vi.mocked(apiRequest).mockClear();
   fireEvent.click(screen.getByRole("button", { name: "Nhật ký thay đổi" }));
   await screen.findByText("Không có thay đổi phù hợp bộ lọc.");
@@ -103,9 +206,15 @@ it("keeps one source and candidate panel while switching skills repeatedly", asy
   await selectSkill();
   for (const id of ["active", "skill", "deferred", "skill"]) {
     fireEvent.change(screen.getByLabelText("Danh mục", { exact: true }), { target: { value: id } });
+    fireEvent.change(screen.getByLabelText("Tên", { exact: true }), { target: { value: "Bản nháp kỹ năng" } });
+    fireEvent.click(screen.getByRole("tab", { name: "Nguồn kỹ năng" }));
     await waitFor(() => expect(screen.getAllByRole("region", { name: "Nguồn kỹ năng" })).toHaveLength(1));
     expect(screen.getAllByRole("button", { name: "Làm mới nguồn kỹ năng" })).toHaveLength(1);
+    expect(screen.queryByRole("button", { name: "Lưu sửa đổi" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: "Gợi ý chuẩn hóa" }));
     expect(screen.getAllByRole("region", { name: "Gợi ý chuẩn hóa kỹ năng" })).toHaveLength(1);
+    fireEvent.click(screen.getByRole("tab", { name: "Thông tin và duyệt" }));
+    expect(screen.getByLabelText("Tên", { exact: true })).toHaveValue("Bản nháp kỹ năng");
   }
 });
 
@@ -135,7 +244,7 @@ it("waits for the skill catalog version before allowing a write", async () => {
 
 it("requires a meaningful reason before deferring and sends no editor changes", async () => {
   render(<AdminWorkspace session={session} onLogout={vi.fn()} />);
-  await screen.findByRole("option", { name: "Ngành mới · PENDING" });
+  await screen.findByRole("option", { name: "Ngành mới · Chờ duyệt" });
   fireEvent.change(screen.getByLabelText("Danh mục", { exact: true }), { target: { value: "pending" } });
   reason("   ");
   fireEvent.click(screen.getByRole("button", { name: "Tạm hoãn" }));
@@ -200,7 +309,7 @@ it("shows auditable category history while explicitly identifying missing legacy
   }, { id: 2, action: "PROPOSE", afterState: '{"name":"Ngành mới","status":"PENDING","version":0}' }]
     : [{ id: "pending", kind: "INDUSTRY", parentId: null, name: "Ngành mới", status: "DEFERRED", version: 4 }]);
   render(<AdminWorkspace session={session} onLogout={vi.fn()} />);
-  await screen.findByRole("option", { name: "Ngành mới · DEFERRED" });
+  await screen.findByRole("option", { name: "Ngành mới · Tạm hoãn" });
   fireEvent.change(screen.getByLabelText("Danh mục", { exact: true }), { target: { value: "pending" } });
   fireEvent.click(screen.getByRole("button", { name: "Xem lịch sử thay đổi" }));
   const history = within(await screen.findByRole("region", { name: "Lịch sử thay đổi" }));
@@ -267,7 +376,7 @@ it("requires clean replacement of masked skill values while retaining reason-onl
   });
   render(<AdminWorkspace session={session} onLogout={vi.fn()} />);
   fireEvent.click(screen.getByRole("button", { name: "Kỹ năng / tên gọi khác" }));
-  await screen.findByRole("option", { name: "Legacy ████ · PENDING" });
+  await screen.findByRole("option", { name: "Legacy ████ · Chờ duyệt" });
   fireEvent.change(screen.getByLabelText("Danh mục", { exact: true }), { target: { value: "skill" } });
   expect(screen.getByText(/Tên hoặc tên gọi khác có thông tin liên hệ đã được che/)).toBeInTheDocument();
   reason("Cần kiểm tra tên kỹ năng");
