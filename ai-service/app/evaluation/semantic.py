@@ -7,7 +7,7 @@ import math
 from pathlib import Path
 
 from app.evaluation.kit import _csv, load_inputs
-from app.evaluation.validation import record_predictions
+from app.evaluation.validation import digest, input_snapshot_digest, record_predictions
 from app.matching.algorithm import ALGORITHM_VERSION, compute_match
 
 MODEL_ID = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
@@ -15,6 +15,7 @@ MODEL_REVISION = "e8f8c211226b894fcb81acc59f3b34ba3efd5f42"
 SEMANTIC_VERSION = "minilm-mean-chunks-v1"
 HYBRID_VERSION = "hybrid-baseline-v5-minilm-v1"
 SEMANTIC_WEIGHT = 0.2  # Prespecified research hypothesis, not tuned on test labels.
+MISSING_TEXT_POLICY = "semantic=0; hybrid=baseline"
 
 
 def cv_text(payload: dict) -> str:
@@ -127,10 +128,15 @@ def run(kit: Path, cache: Path, local_only: bool = False):
     _csv(output / "comparison.csv", comparison,
          ["pair_id", "candidate_id", "job_id", "split", "baseline", "semantic", "hybrid", "missing_text"])
     metadata = {"model": MODEL_ID, "revision": MODEL_REVISION, "semanticWeight": SEMANTIC_WEIGHT,
+                "implementationSha256": {
+                    "semantic": digest(Path(__file__)),
+                    "baseline": digest(Path(__file__).resolve().parents[1] / "matching/algorithm.py")},
                 "versions": {p: version(p) for p in ("sentence-transformers", "torch", "transformers", "numpy")},
                 "asOfMonth": manifest["as_of_month"], "manifestSha256": hashlib.sha256((kit / "manifest.json").read_bytes()).hexdigest(),
+                "inputSnapshotSha256": input_snapshot_digest(kit, manifest),
+                "inputMode": "FROZEN_PARSED" if "inputSnapshot" in manifest else "LEGACY_TEXT_ONLY",
                 "chunkCounts": counts, "missingTextPairs": missing,
-                "missingTextPolicy": "semantic=0; hybrid=baseline", "pairs": len(manifest["pairs"]),
+                "missingTextPolicy": MISSING_TEXT_POLICY, "pairs": len(manifest["pairs"]),
                 "limitation": "Uncalibrated cosine similarity; not a probability or validated hiring score. No human-label metrics yet."}
     (output / "experiment.json").write_text(json.dumps(metadata, indent=2), encoding="utf-8")
     return {"pairs": len(manifest["pairs"]), "variants": list(rows), "missingTextPairs": len(missing)}

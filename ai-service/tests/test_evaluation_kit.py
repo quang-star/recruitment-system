@@ -67,6 +67,95 @@ def ready_kit(tmp_path):
     return kit
 
 
+@pytest.fixture
+def single_rater_kit(tmp_path):
+    """Synthetic regression data, not human research observations."""
+    source = tmp_path / "single-pdfs"
+    source.mkdir()
+    for index in range(4):
+        (source / f"{index}.pdf").write_bytes(f"single-fixture-{index}".encode())
+    jobs = tmp_path / "single-jobs.json"
+    jobs.write_text(json.dumps([{"id": "java"}, {"id": "react"}]))
+    kit = tmp_path / "single-kit"
+    prepare(source, jobs, kit, 4, 42, annotation_provenance="HUMAN_SINGLE_RATER")
+    manifest = read_manifest(kit)
+    with (kit / "rater-1.csv").open() as stream:
+        labels = list(csv.DictReader(stream))
+    for row in labels:
+        row.update(label="3", reason="Synthetic fixture evidence")
+    _csv(kit / "rater-1.csv", labels, list(labels[0]))
+    (kit / "model-only").mkdir()
+    _csv(kit / "model-only" / "predictions.csv",
+         [{"pair_id": pair["pair_id"], "predicted_score": 75, "algorithm_version": "fixture-v1"}
+          for pair in manifest["pairs"]], ["pair_id", "predicted_score", "algorithm_version"])
+    record_predictions(kit, "baseline")
+    return kit
+
+
+def test_single_rater_metrics_need_no_fictitious_second_rater_or_adjudication(single_rater_kit):
+    kit = single_rater_kit
+    labels_before = (kit / "rater-1.csv").read_bytes()
+    assert not (kit / "rater-2.csv").exists()
+    assert not (kit / "adjudication.csv").exists()
+    assert "single-rater study" in (kit / "INSTRUCTIONS.md").read_text()
+    progress = status(kit)
+    assert progress["readyForMetrics"] is True
+    assert progress["disagreements"] is None
+    assert set(progress["annotations"]) == {"rater-1.csv"}
+    result = evaluate_kit(kit, "test")
+    assert result["pairCount"] == 6
+    assert result["scoreMetrics"]["maeOnLabelScale0To4"] == 0
+    assert result["annotationProvenance"] == "HUMAN_SINGLE_RATER"
+    assert result["annotationDesign"] == "single_rater"
+    assert result["interRaterAgreement"] is None
+    assert "SINGLE_RATER_REFERENCE_LABELS" in result["warnings"]
+    assert set(result["annotationSha256"]) == {"rater-1.csv"}
+    assert (kit / "rater-1.csv").read_bytes() == labels_before
+
+
+@pytest.mark.parametrize("invalid", ["", "5"])
+def test_single_rater_incomplete_or_invalid_labels_block_metrics(single_rater_kit, invalid):
+    labels = single_rater_kit / "rater-1.csv"
+    labels.write_text(labels.read_text().replace(",3,Synthetic fixture evidence", f",{invalid},Synthetic fixture evidence", 1))
+    assert status(single_rater_kit)["readyForMetrics"] is False
+    with pytest.raises(ValueError, match="Complete independent labels"):
+        evaluate_kit(single_rater_kit, "test")
+
+
+def test_single_rater_comparison_preserves_labels_and_reports_limitations(single_rater_kit, tmp_path, monkeypatch):
+    from app.evaluation import comparison
+
+    source = single_rater_kit
+    before = {name: (source / name).read_bytes() for name in ("manifest.json", "rater-1.csv")}
+
+    def fake_score(output):
+        (output / "model-only").mkdir()
+        for name in ("predictions.csv", "predictions.metadata.json"):
+            (output / "model-only" / name).write_bytes((source / "model-only" / name).read_bytes())
+
+    monkeypatch.setattr(comparison, "score", fake_score)
+    output = tmp_path / "single-comparison"
+    result = comparison.compare(source, output, provenance="HUMAN_SINGLE_RATER")
+    assert result["status"] == "COMPLETED"
+    assert result["qualityClaim"] == "SINGLE_RATER_LIMITATIONS"
+    assert result["annotationProgress"] == {"rater-1.csv": {"total": 8, "complete": 8, "remaining": 0}}
+    assert result["sourceUnchanged"] is True
+    assert len(result["metrics"]) == 2
+    assert not (output / "rater-2.csv").exists()
+    assert not (output / "adjudication.csv").exists()
+    assert before == {name: (source / name).read_bytes() for name in before}
+
+
+@pytest.mark.parametrize("provenance", ["HUMAN_INDEPENDENT", "MODEL_GENERATED", "UNKNOWN"])
+def test_single_rater_kit_cannot_be_relabelled_as_another_design(single_rater_kit, tmp_path, provenance):
+    from app.evaluation.comparison import compare
+
+    output = tmp_path / "invalid-comparison"
+    with pytest.raises(ValueError, match="single-rater kit"):
+        compare(single_rater_kit, output, provenance=provenance)
+    assert not output.exists()
+
+
 def test_metrics_are_split_specific_and_traceable_without_changing_labels(ready_kit):
     before = {name: (ready_kit / name).read_bytes() for name in LABEL_FILES}
     progress = status(ready_kit)

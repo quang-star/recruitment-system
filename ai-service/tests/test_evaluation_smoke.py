@@ -2,7 +2,6 @@ from identity_fixtures import legacy_id
 from copy import deepcopy
 from io import BytesIO
 import json
-from pathlib import Path
 from types import SimpleNamespace
 
 from pydantic import SecretStr, ValidationError
@@ -93,16 +92,12 @@ def test_ocr_smoke_summary_and_expected_ocr_failures(monkeypatch, capsys, tmp_pa
     monkeypatch.setattr("sys.argv", ["ocr-smoke", "--source", str(source),
                                     "--expect-skill", expected_skill])
     monkeypatch.setattr(ocr_smoke, "_image_only_pdf", lambda source: scanned)
-    monkeypatch.setattr(ocr_smoke, "parse_pdf", lambda *args, **kwargs: payload)
-    schema_path = Path(__file__).parents[2] / "contracts/schemas/parsed-cv-v2.schema.json"
-    read_text = Path.read_text
+    def parse_fixture(cv_version_id, *args, **kwargs):
+        result = deepcopy(payload)
+        result["document"]["cvVersionId"] = cv_version_id
+        return result
 
-    def local_schema_read(path, *args, **kwargs):
-        if path.as_posix() == "/app/contracts/schemas/parsed-cv-v2.schema.json":
-            return read_text(schema_path, *args, **kwargs)
-        return read_text(path, *args, **kwargs)
-
-    monkeypatch.setattr(Path, "read_text", local_schema_read)
+    monkeypatch.setattr(ocr_smoke, "parse_pdf", parse_fixture)
     if case != "summary":
         message = ("OCR did not recover expected skills" if case == "missing_skill"
                    else "Parser did not record OCR")

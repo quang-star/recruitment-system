@@ -1,4 +1,4 @@
-"""Build a blind annotation kit, then score and evaluate only adjudicated labels."""
+"""Build blind annotation kits with an explicit single- or two-rater design."""
 import argparse
 import csv
 from datetime import date
@@ -8,13 +8,12 @@ from pathlib import Path
 import random
 from typing import cast
 
-from app.cv.parser import parse_pdf
-from app.jd.parser import parse_jd
+from app.evaluation.inputs import freeze, load_inputs
 from app.matching.algorithm import ALGORITHM_VERSION, compute_match
 from app.evaluation.metrics import EvaluationRow, evaluate
 from app.evaluation.validation import (
-    LABEL_FILES, VARIANTS, annotation_rows, complete_label, digest,
-    prediction_path, read_manifest, read_predictions, record_predictions,
+    LABEL_FILES, PROVENANCES, VARIANTS, annotation_files, annotation_rows, complete_label, digest,
+    input_snapshot_digest, prediction_path, read_manifest, read_predictions, record_predictions,
 )
 
 
@@ -26,7 +25,10 @@ def _csv(path, rows, fields):
 
 
 def prepare(cv_dir: Path, jobs_path: Path, output: Path, count: int, seed: int,
-            source: str = "Unspecified; document provenance before reporting results"):
+            source: str = "Unspecified; document provenance before reporting results", *,
+            annotation_provenance: str = "UNKNOWN"):
+    if annotation_provenance not in PROVENANCES:
+        raise ValueError("Unknown annotation provenance")
     jobs = json.loads(jobs_path.read_text(encoding="utf-8"))
     if not jobs or len({job["id"] for job in jobs}) != len(jobs):
         raise ValueError("Jobs must have unique IDs")
@@ -48,41 +50,36 @@ def prepare(cv_dir: Path, jobs_path: Path, output: Path, count: int, seed: int,
         raise ValueError("Duplicate PDF content: select unique CVs before splitting")
     manifest = {"seed": seed, "as_of_month": date.today().strftime("%Y-%m"),
                 "source": source,
-                "anonymization_verified": False, "cvs": cv_manifest, "jobs": jobs, "pairs": pairs}
+                "anonymization_verified": False, "annotation_provenance": annotation_provenance,
+                "cvs": cv_manifest, "jobs": jobs, "pairs": pairs}
     output.mkdir(parents=True, exist_ok=False)
     (output / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
-    for name in ("rater-1.csv", "rater-2.csv"):
+    single_rater = annotation_provenance == "HUMAN_SINGLE_RATER"
+    for name in (("rater-1.csv",) if single_rater else LABEL_FILES[:2]):
         _csv(output / name, [{**pair, "label": "", "reason": ""} for pair in pairs],
              ["pair_id", "candidate_id", "job_id", "split", "label", "reason"])
-    _csv(output / "adjudication.csv", [{"pair_id": pair["pair_id"], "label": "", "reason": ""} for pair in pairs],
-         ["pair_id", "label", "reason"])
+    if not single_rater:
+        _csv(output / "adjudication.csv", [{"pair_id": pair["pair_id"], "label": "", "reason": ""} for pair in pairs],
+             ["pair_id", "label", "reason"])
+    annotation_instructions = (
+        "One person reads the source PDF and job description in manifest.json. "
+        "This is a single-rater study: no second-rater agreement or independent adjudication is available. "
+        "Do not copy these labels into a fictitious second-rater file. "
+        if single_rater else
+        "Two people independently read the source PDF and job description in manifest.json. "
+        "Adjudicate disagreements only after both finish. "
+    )
     (output / "INSTRUCTIONS.md").write_text(
-        "# Blind annotation\n\nTwo people independently read the source PDF and job description in manifest.json. "
+        "# Blind annotation\n\n" + annotation_instructions +
         "Do not show model scores to raters. Labels: 0 unrelated; 1 weak fit; 2 partial fit; "
         "3 strong fit with limited gaps; 4 meets the stated requirements with clear evidence. "
-        "Record a reason, including missing/uncertain evidence. Adjudicate disagreements only after both finish.\n\n"
+        "Record a reason, including missing/uncertain evidence.\n\n"
         "Document source provenance; do not assume these are verified applicants. Supplied example JDs are explicitly synthetic. "
         "Inspect personal information before sharing; anonymization is not verified. Keep raw files local. "
         "Candidate splits are disjoint. Tune on dev only and report test separately. "
         "Treat Current dates relative to the fixed manifest month, and disclose that the source snapshot date is unknown.\n",
         encoding="utf-8")
     return {"cv_count": count, "job_count": len(jobs), "pairs": len(pairs), "labels": "pending"}
-
-
-def load_inputs(kit: Path):
-    manifest = read_manifest(kit)
-    cvs = {}
-    for cv in manifest["cvs"]:
-        content = Path(cv["path"]).read_bytes()
-        if hashlib.sha256(content).hexdigest() != cv["sha256"]:
-            raise ValueError("Source PDF changed after annotation kit creation")
-        cvs[cv["id"]] = parse_pdf(str((int(cv["sha256"][:16], 16) & ((1 << 63) - 1)) or 1), cv["sha256"], content, ocr_enabled=False)
-    jobs = {}
-    for job in manifest["jobs"]:
-        digest = hashlib.sha256(json.dumps(job, sort_keys=True).encode()).hexdigest()
-        jobs[job["id"]] = parse_jd(str((int(digest[:16], 16) & ((1 << 63) - 1)) or 1), digest,
-                                    job["title"], job["description"], job["requirements"])
-    return manifest, cvs, jobs
 
 
 def score(kit: Path):
@@ -119,23 +116,33 @@ def evaluate_kit(kit: Path, split: str, variant: str = "baseline"):
         raise ValueError("Split must be dev or test")
     manifest = read_manifest(kit)
     expected = {pair["pair_id"] for pair in manifest["pairs"]}
-    for name in LABEL_FILES:
+    label_files = annotation_files(manifest)
+    for name in label_files:
         annotation_rows(kit / name, manifest)
-    first, second, gold = [_labels(kit / name, expected) for name in LABEL_FILES]
+    single_rater = manifest.get("annotation_provenance") == "HUMAN_SINGLE_RATER"
+    first = _labels(kit / label_files[0], expected)
+    second = {} if single_rater else _labels(kit / "rater-2.csv", expected)
+    gold = first if single_rater else _labels(kit / "adjudication.csv", expected)
     predictions = read_predictions(kit, manifest, variant)
     scores = {row["pair_id"]: float(row["predicted_score"]) for row in predictions}
     rows = [EvaluationRow(pair["pair_id"], pair["job_id"], gold[pair["pair_id"]], scores[pair["pair_id"]],
-                          first[pair["pair_id"]], second[pair["pair_id"]])
+                          None if single_rater else first[pair["pair_id"]],
+                          None if single_rater else second[pair["pair_id"]])
             for pair in manifest["pairs"] if pair["split"] == split]
     result = evaluate(rows)
     result.update(split=split, variant=variant, asOfMonth=manifest["as_of_month"],
                   algorithmVersions=sorted({row["algorithm_version"] for row in predictions}),
                   manifestSha256=digest(kit / "manifest.json"),
                   predictionsSha256=digest(prediction_path(kit, variant)),
-                  annotationSha256={name: digest(kit / name) for name in LABEL_FILES})
+                  annotationSha256={name: digest(kit / name) for name in label_files},
+                  inputSnapshotSha256=input_snapshot_digest(kit, manifest),
+                  inputMode="FROZEN_PARSED" if "inputSnapshot" in manifest else "LEGACY_TEXT_ONLY")
     provenance = manifest.get("annotation_provenance", "UNKNOWN")
     result["annotationProvenance"] = provenance
-    if provenance != "HUMAN_INDEPENDENT":
+    result["annotationDesign"] = "single_rater" if single_rater else "two_rater_adjudicated"
+    if single_rater:
+        cast(list[str], result["warnings"]).append("SINGLE_RATER_REFERENCE_LABELS")
+    elif provenance != "HUMAN_INDEPENDENT":
         # Model-authored reference files are useful for diagnostics, but their
         # agreement must not be presented as agreement between human raters.
         result["interRaterAgreement"] = None
@@ -144,6 +151,8 @@ def evaluate_kit(kit: Path, split: str, variant: str = "baseline"):
             else "LABEL_PROVENANCE_UNVERIFIED")
     if manifest.get("anonymization_verified") is not True:
         cast(list[str], result["warnings"]).append("ANONYMIZATION_NOT_VERIFIED")
+    if "inputSnapshot" not in manifest:
+        cast(list[str], result["warnings"]).append("INPUTS_NOT_FROZEN")
     (kit / f"metrics-{variant}-{split}.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
     return result
 
@@ -152,12 +161,15 @@ def status(kit: Path):
     """Read-only progress; never prints source paths, scores or human reasons."""
     manifest = read_manifest(kit)
     annotations, completed = {}, {}
-    for name in LABEL_FILES:
+    label_files = annotation_files(manifest)
+    for name in label_files:
         rows = annotation_rows(kit / name, manifest)
         completed[name] = {row["pair_id"]: int(row["label"]) for row in rows if complete_label(row)}
         annotations[name] = {"total": len(rows), "complete": len(completed[name]),
                              "remaining": len(rows) - len(completed[name])}
-    first, second = (completed[name] for name in LABEL_FILES[:2])
+    single_rater = manifest.get("annotation_provenance") == "HUMAN_SINGLE_RATER"
+    first = completed[label_files[0]]
+    second = {} if single_rater else completed["rater-2.csv"]
     common = first.keys() & second.keys()
     predictions = {}
     for variant in sorted(VARIANTS):
@@ -173,11 +185,12 @@ def status(kit: Path):
             "splits": {split: sum(pair["split"] == split for pair in manifest["pairs"])
                        for split in ("dev", "test")},
             "annotations": annotations,
-            "disagreements": sum(first[pair] != second[pair] for pair in common),
+            "disagreements": None if single_rater else sum(first[pair] != second[pair] for pair in common),
             "predictions": predictions,
             "readyForMetrics": all(item["remaining"] == 0 for item in annotations.values())
                                and any(value == "ready" for value in predictions.values()),
             "annotationProvenance": manifest.get("annotation_provenance", "UNKNOWN"),
+            "annotationDesign": "single_rater" if single_rater else "two_rater_adjudicated",
             "anonymizationVerified": manifest.get("anonymization_verified") is True}
 
 
@@ -191,6 +204,13 @@ def main():
     create.add_argument("--count", type=int, default=30)
     create.add_argument("--seed", type=int, default=20260928)
     create.add_argument("--source", default="Unspecified; document provenance before reporting results")
+    create.add_argument("--annotation-provenance", choices=PROVENANCES, default="UNKNOWN")
+    frozen = sub.add_parser("freeze")
+    frozen.add_argument("--source-kit", type=Path, required=True)
+    frozen.add_argument("--output", type=Path, required=True)
+    frozen.add_argument("--ocr-enabled", action="store_true")
+    frozen.add_argument("--ocr-max-pages", type=int, default=5)
+    frozen.add_argument("--ocr-timeout-seconds", type=float, default=60.0)
     for name in ("score", "evaluate", "status"):
         command = sub.add_parser(name)
         command.add_argument("--kit", type=Path, required=True)
@@ -199,7 +219,11 @@ def main():
             command.add_argument("--variant", choices=["baseline", "semantic", "hybrid"], default="baseline")
     args = parser.parse_args()
     if args.command == "prepare":
-        result = prepare(args.cv_dir, args.jobs, args.output, args.count, args.seed, args.source)
+        result = prepare(args.cv_dir, args.jobs, args.output, args.count, args.seed, args.source,
+                         annotation_provenance=args.annotation_provenance)
+    elif args.command == "freeze":
+        result = freeze(args.source_kit, args.output, ocr_enabled=args.ocr_enabled,
+                        ocr_max_pages=args.ocr_max_pages, ocr_timeout_seconds=args.ocr_timeout_seconds)
     elif args.command == "score":
         result = score(args.kit)
     elif args.command == "status":

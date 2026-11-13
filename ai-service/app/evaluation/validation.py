@@ -9,10 +9,55 @@ from pathlib import Path
 
 LABEL_FILES = ("rater-1.csv", "rater-2.csv", "adjudication.csv")
 VARIANTS = {"baseline", "semantic", "hybrid"}
+PROVENANCES = ("HUMAN_INDEPENDENT", "HUMAN_SINGLE_RATER", "MODEL_GENERATED", "UNKNOWN")
+INPUT_SNAPSHOT_PATH = "model-only/inputs.json"
+INPUT_SNAPSHOT_VERSION = "evaluation-inputs/1.0"
+
+
+def annotation_files(manifest: dict) -> tuple[str, ...]:
+    """Select real annotation inputs without inventing a second rater."""
+    if manifest.get("annotation_provenance") == "HUMAN_SINGLE_RATER":
+        return ("rater-1.csv",)
+    return LABEL_FILES
 
 
 def digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def dataset_digest(manifest: dict) -> str:
+    """Bind parsed inputs to document content, pairs, splits and calculation month."""
+    value = {key: manifest[key] for key in ("as_of_month", "jobs", "pairs")}
+    value["cvs"] = [{key: cv[key] for key in ("id", "sha256", "split")} for cv in manifest["cvs"]]
+    return hashlib.sha256(json.dumps(value, sort_keys=True, ensure_ascii=False,
+                                     allow_nan=False).encode("utf-8")).hexdigest()
+
+
+def read_input_snapshot(kit: Path, manifest: dict) -> dict | None:
+    if "inputSnapshot" not in manifest:
+        return None
+    reference = manifest["inputSnapshot"]
+    if (not isinstance(reference, dict) or reference.get("path") != INPUT_SNAPSHOT_PATH
+            or reference.get("schemaVersion") != INPUT_SNAPSHOT_VERSION
+            or not re.fullmatch(r"[0-9a-f]{64}", str(reference.get("sha256", "")))):
+        raise ValueError("Invalid frozen input snapshot reference")
+    path = kit / INPUT_SNAPSHOT_PATH
+    if path.resolve() != kit.resolve() / INPUT_SNAPSHOT_PATH or not path.is_file():
+        raise ValueError("Frozen input snapshot is missing or outside the kit")
+    content = path.read_bytes()
+    if hashlib.sha256(content).hexdigest() != reference["sha256"]:
+        raise ValueError("Frozen input snapshot changed; create a new frozen kit")
+    snapshot = json.loads(content)
+    if (not isinstance(snapshot, dict) or snapshot.get("schemaVersion") != INPUT_SNAPSHOT_VERSION
+            or snapshot.get("datasetSha256") != dataset_digest(manifest)):
+        raise ValueError("Frozen input snapshot does not match the dataset")
+    return snapshot
+
+
+def input_snapshot_digest(kit: Path, manifest: dict) -> str | None:
+    if read_input_snapshot(kit, manifest) is None:
+        return None
+    return str(manifest["inputSnapshot"]["sha256"])
 
 
 def read_manifest(kit: Path) -> dict:
@@ -81,7 +126,8 @@ def prediction_path(kit: Path, variant: str) -> Path:
 def record_predictions(kit: Path, variant: str) -> None:
     path = prediction_path(kit, variant)
     metadata = {"manifestSha256": digest(kit / "manifest.json"), "predictionsSha256": digest(path),
-                "variant": variant}
+                "variant": variant,
+                "inputSnapshotSha256": input_snapshot_digest(kit, read_manifest(kit))}
     path.with_suffix(".metadata.json").write_text(json.dumps(metadata, indent=2), encoding="utf-8")
 
 
@@ -93,7 +139,8 @@ def read_predictions(kit: Path, manifest: dict, variant: str) -> list[dict]:
     metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
     if (metadata.get("manifestSha256") != digest(kit / "manifest.json")
             or metadata.get("predictionsSha256") != digest(path)
-            or metadata.get("variant") != variant):
+            or metadata.get("variant") != variant
+            or metadata.get("inputSnapshotSha256") != input_snapshot_digest(kit, manifest)):
         raise ValueError("Stale or changed predictions; rerun scoring for this variant")
     with path.open(encoding="utf-8", newline="") as stream:
         rows = list(csv.DictReader(stream))

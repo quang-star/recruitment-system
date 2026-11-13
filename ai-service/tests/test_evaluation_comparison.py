@@ -28,6 +28,7 @@ def test_comparison_keeps_historical_predictions_and_annotations(ready_kit, tmp_
     result = comparison.compare(ready_kit, output, provenance="MODEL_GENERATED")
     assert result["status"] == "COMPLETED"
     assert result["sourceUnchanged"] is True
+    assert result["componentArtifacts"] == []  # Legacy text-only inputs are not silently frozen.
     assert result["qualityClaim"] == "DIAGNOSTIC_ONLY"
     assert len(result["metrics"]) == 2
     assert before == {name: digest(ready_kit / name) for name in before}
