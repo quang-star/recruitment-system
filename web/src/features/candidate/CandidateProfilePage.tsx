@@ -1,40 +1,48 @@
-import { useUrlParams, useUrlView } from "../../shared/navigation";
 import { FormEvent, useEffect, useState } from "react";
-
-import { CandidateCvPanel } from "./CandidateCvPanel";
-import { CandidateJobsPanel } from "./CandidateJobsPanel";
+import { useLocation } from "react-router-dom";
 import { ApiClientError, apiRequest } from "../../shared/api/client";
 import { AuthSession } from "../../shared/auth/session";
+import { CheckCircleIcon, CvIcon, DashboardIcon, JobsIcon, NotificationIcon, ProfileIcon, SecurityIcon } from "../../shared/components/Icon";
+import { BRAND_CONFIG } from "../../shared/config/brand";
+import { WorkspaceNavItem, WorkspaceShell } from "../../shared/layout/WorkspaceShell";
+import { EnsureRouter, routes, useSafeNavigate } from "../../shared/router";
+import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, ErrorBanner, Skeleton } from "../../shared/ui";
 import { AccountSecurityPanel } from "../auth/AccountSecurityPanel";
 import { NotificationCenter } from "../notification/NotificationCenter";
-import { CandidateDashboard } from "./CandidateDashboard";
+import { CandidateAccountMenu } from "../public/CandidateAccountMenu";
 import { PublicHomePage } from "../public/PublicHomePage";
-import { CandidateView } from "./navigation";
-
-type ProfileVisibility = "PRIVATE" | "APPLICATION_ONLY";
+import { CandidateCvPanel } from "./CandidateCvPanel";
+import { CandidateDashboard } from "./CandidateDashboard";
+import { CandidateJobsPanel } from "./CandidateJobsPanel";
+import { CandidateView, candidateAccountLinks } from "./navigation";
 
 export type CandidateProfile = {
-  candidateProfileId: string;
-  userId: string;
+  candidateProfileId?: string;
+  userId?: string;
   displayName: string;
   headline: string | null;
   locationText: string | null;
-  visibility: ProfileVisibility;
+  visibility: "PRIVATE" | "APPLICATION_ONLY";
   version: number;
-  phoneNumber?: string | null;
-  contactEmail?: string | null;
-  linkedinUrl?: string | null;
-  githubUrl?: string | null;
-  portfolioUrl?: string | null;
-  avatarUrl?: string | null;
-  bio?: string | null;
+  phoneNumber: string | null;
+  contactEmail: string | null;
+  linkedinUrl: string | null;
+  githubUrl: string | null;
+  portfolioUrl: string | null;
+  avatarUrl: string | null;
+  bio: string | null;
 };
 
-type ProfileForm = {
+type CandidateProfilePageProps = {
+  session: AuthSession;
+  onLogout: () => void;
+};
+
+type ProfileFormState = {
   displayName: string;
   headline: string;
   locationText: string;
-  visibility: ProfileVisibility;
+  visibility: "PRIVATE" | "APPLICATION_ONLY";
   phoneNumber: string;
   contactEmail: string;
   linkedinUrl: string;
@@ -44,12 +52,17 @@ type ProfileForm = {
   bio: string;
 };
 
-type CandidateProfilePageProps = {
-  session: AuthSession;
-  onLogout: () => void;
-};
+const ALLOWED_VIEWS: readonly CandidateView[] = [
+  "dashboard",
+  "profile",
+  "cv",
+  "jobs",
+  "applications",
+  "notifications",
+  "security",
+];
 
-const emptyForm: ProfileForm = {
+const emptyForm: ProfileFormState = {
   displayName: "",
   headline: "",
   locationText: "",
@@ -60,236 +73,534 @@ const emptyForm: ProfileForm = {
   githubUrl: "",
   portfolioUrl: "",
   avatarUrl: "",
-  bio: ""
+  bio: "",
 };
 
-export function CandidateProfilePage({ session, onLogout }: CandidateProfilePageProps) {
+const inputClass =
+  "mt-1.5 h-10 w-full rounded-xl border border-border-strong bg-white px-3.5 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20";
+
+function safeExternalUrl(raw: string | null | undefined): string | null {
+  if (!raw?.trim()) return null;
+  try {
+    const parsed = new URL(raw.trim());
+    return parsed.protocol === "https:" || parsed.protocol === "http:" ? parsed.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+function viewRoute(view: CandidateView): string {
+  switch (view) {
+    case "dashboard":
+      return routes.candidate.dashboard;
+    case "profile":
+      return routes.candidate.profile;
+    case "cv":
+      return routes.candidate.cv;
+    case "applications":
+      return routes.candidate.applications;
+    case "notifications":
+      return routes.candidate.notifications;
+    case "security":
+      return routes.candidate.security;
+    default:
+      return routes.home;
+  }
+}
+
+function viewTitle(view: CandidateView): string {
+  switch (view) {
+    case "dashboard":
+      return "Tổng quan";
+    case "profile":
+      return "Hồ sơ ứng viên";
+    case "cv":
+      return "Quản lý CV";
+    case "applications":
+      return "Việc làm đã ứng tuyển";
+    case "notifications":
+      return "Thông báo";
+    case "security":
+      return "Bảo mật";
+    default:
+      return "Tìm việc làm";
+  }
+}
+
+function CandidateProfilePageInner({ session, onLogout }: CandidateProfilePageProps) {
+  const location = useLocation();
+  const navigate = useSafeNavigate();
   const [profile, setProfile] = useState<CandidateProfile | null>(null);
-  const [form, setForm] = useState<ProfileForm>(emptyForm);
+  const [form, setForm] = useState<ProfileFormState>(emptyForm);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const { navigate } = useUrlParams();
-  const [activeView] = useUrlView<CandidateView>("candidate", ["dashboard", "profile", "cv", "jobs", "applications", "notifications", "security"], "jobs");
-  function setActiveView(view: CandidateView) { navigate({ candidate: view === "jobs" ? null : view, auth: null, job: null }); }
+  const [avatarError, setAvatarError] = useState(false);
+
+  const searchParams = new URLSearchParams(location.search);
+  const legacyView = searchParams.get("candidate");
+
+  const activeView: CandidateView = (() => {
+    if (legacyView && ALLOWED_VIEWS.includes(legacyView as CandidateView)) {
+      return legacyView as CandidateView;
+    }
+    const path = location.pathname.replace(/\/+$/, "") || "/";
+    if (path === "/candidate" || path === "/candidate/dashboard") return "dashboard";
+    if (path === "/candidate/profile") return "profile";
+    if (path === "/candidate/cv") return "cv";
+    if (path === "/candidate/applications") return "applications";
+    if (path === "/candidate/notifications") return "notifications";
+    if (path === "/candidate/security") return "security";
+    return "jobs";
+  })();
+
+  function navigateView(next: CandidateView) {
+    navigate(viewRoute(next));
+  }
 
   useEffect(() => {
-    let active = true;
-    async function loadProfile() {
-      try {
-        const current = await apiRequest<CandidateProfile>("/api/v2/candidates/me", {
-          accessToken: session.accessToken
-        });
-        if (!active) return;
-        setProfile(current);
-        setForm(toForm(current));
-      } catch (requestError) {
-        if (!active) return;
-        if (requestError instanceof ApiClientError && requestError.status === 404) {
-          setMessage("Chưa có hồ sơ. Điền thông tin để tạo hồ sơ đầu tiên.");
-        } else if (requestError instanceof ApiClientError && requestError.status === 401) {
-          onLogout();
-        } else {
-          setError(getErrorMessage(requestError));
-        }
-      } finally {
-        if (active) setLoading(false);
-      }
-    }
-    void loadProfile();
-    return () => { active = false; };
-  }, [onLogout, session.userId]);
-
-  async function save(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (saving) return;
-    setSaving(true);
+    const controller = new AbortController();
+    setLoading(true);
     setError(null);
-    setMessage(null);
+    void apiRequest<CandidateProfile>("/api/v2/candidates/me", {
+      accessToken: session.accessToken,
+      signal: controller.signal,
+    })
+      .then((loaded) => {
+        if (controller.signal.aborted) return;
+        setProfile(loaded);
+        setForm({
+          displayName: loaded.displayName ?? "",
+          headline: loaded.headline ?? "",
+          locationText: loaded.locationText ?? "",
+          visibility: loaded.visibility ?? "APPLICATION_ONLY",
+          phoneNumber: loaded.phoneNumber ?? "",
+          contactEmail: loaded.contactEmail ?? "",
+          linkedinUrl: loaded.linkedinUrl ?? "",
+          githubUrl: loaded.githubUrl ?? "",
+          portfolioUrl: loaded.portfolioUrl ?? "",
+          avatarUrl: loaded.avatarUrl ?? "",
+          bio: loaded.bio ?? "",
+        });
+        setAvatarError(false);
+      })
+      .catch((failure) => {
+        if (controller.signal.aborted) return;
+        if (failure instanceof ApiClientError && failure.status === 401) {
+          onLogout();
+          return;
+        }
+        setError(failure instanceof ApiClientError ? failure.error.message : "Không thể tải hồ sơ ứng viên.");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [session.accessToken, session.userId, onLogout]);
+
+  async function handleSubmitProfile(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true);
+    setSaveMessage(null);
+    setError(null);
     try {
       const updated = await apiRequest<CandidateProfile>("/api/v2/candidates/me", {
         method: "PUT",
         accessToken: session.accessToken,
         body: JSON.stringify({
-          displayName: form.displayName,
-          headline: form.headline || null,
-          locationText: form.locationText || null,
+          displayName: form.displayName.trim(),
+          headline: form.headline.trim() || null,
+          locationText: form.locationText.trim() || null,
           visibility: form.visibility,
-          phoneNumber: form.phoneNumber || null,
-          contactEmail: form.contactEmail || null,
-          linkedinUrl: form.linkedinUrl || null,
-          githubUrl: form.githubUrl || null,
-          portfolioUrl: form.portfolioUrl || null,
-          avatarUrl: form.avatarUrl || null,
-          bio: form.bio || null,
-          ...(profile ? { version: profile.version } : {})
-        })
+          phoneNumber: form.phoneNumber.trim() || null,
+          contactEmail: form.contactEmail.trim() || null,
+          linkedinUrl: form.linkedinUrl.trim() || null,
+          githubUrl: form.githubUrl.trim() || null,
+          portfolioUrl: form.portfolioUrl.trim() || null,
+          avatarUrl: form.avatarUrl.trim() || null,
+          bio: form.bio.trim() || null,
+          version: profile?.version ?? 0,
+        }),
       });
       setProfile(updated);
-      setForm(toForm(updated));
-      setMessage("Hồ sơ đã được lưu.");
-    } catch (requestError) {
-      if (requestError instanceof ApiClientError && requestError.status === 401) {
+      setAvatarError(false);
+      setSaveMessage("Hồ sơ đã được lưu.");
+    } catch (failure) {
+      if (failure instanceof ApiClientError && failure.status === 401) {
         onLogout();
-      } else {
-        setError(getErrorMessage(requestError));
+        return;
       }
+      setError(failure instanceof ApiClientError ? failure.error.message : "Không thể cập nhật hồ sơ. Vui lòng thử lại.");
     } finally {
       setSaving(false);
     }
   }
 
-  function updateField<K extends keyof ProfileForm>(field: K, value: ProfileForm[K]) {
-    setForm((current) => ({ ...current, [field]: value }));
+  const candidateDisplayName = profile?.displayName || form.displayName || "Ứng viên";
+
+  if (activeView === "jobs") {
+    return (
+      <PublicHomePage
+        session={session}
+        onLoginSuccess={() => {}}
+        candidate={{
+          name: candidateDisplayName,
+          activeView,
+          onNavigate: navigateView,
+          onLogout,
+        }}
+      >
+        {null}
+      </PublicHomePage>
+    );
   }
 
+  const navIcons: Record<string, typeof JobsIcon> = {
+    dashboard: DashboardIcon,
+    profile: ProfileIcon,
+    cv: CvIcon,
+    applications: CheckCircleIcon,
+    security: SecurityIcon,
+  };
+
+  const candidateShellNav: WorkspaceNavItem<CandidateView>[] = [
+    { id: "jobs", label: "Tìm việc làm", icon: <JobsIcon size={16} /> },
+    ...candidateAccountLinks.map((link) => {
+      const NavIcon = navIcons[link.id] ?? ProfileIcon;
+      return { id: link.id, label: link.label, icon: <NavIcon size={16} /> };
+    }),
+    { id: "notifications", label: "Thông báo", icon: <NotificationIcon size={16} /> },
+  ];
+
+  const safeAvatar = safeExternalUrl(form.avatarUrl);
+  const safeLinkedIn = safeExternalUrl(form.linkedinUrl);
+  const safeGitHub = safeExternalUrl(form.githubUrl);
+  const safePortfolio = safeExternalUrl(form.portfolioUrl);
+  const initials = candidateDisplayName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("") || "UV";
+
   return (
-    <PublicHomePage session={session} onLoginSuccess={() => {}}
-      candidate={{ name: profile?.displayName || "Ứng viên", activeView, onNavigate: setActiveView, onLogout }}>
+    <WorkspaceShell<CandidateView>
+      variant="candidate"
+      activeItem={activeView}
+      brandLabel={BRAND_CONFIG.name || BRAND_CONFIG.defaultCandidateLabel}
+      eyebrow="Không gian Ứng viên"
+      title={viewTitle(activeView)}
+      navItems={candidateShellNav}
+      onNavigate={navigateView}
+      onLogout={onLogout}
+      onBrandClick={() => navigateView("jobs")}
+      userLabel={candidateDisplayName}
+      hideDefaultAccountControls
+      headerActions={
+        <div className="flex items-center gap-2">
+          <Button type="button" variant="ghost" size="sm" onClick={() => navigateView("jobs")}>
+            Trang chủ
+          </Button>
+          <CandidateAccountMenu
+            name={candidateDisplayName}
+            activeView={activeView}
+            onNavigate={navigateView}
+            onLogout={onLogout}
+          />
+        </div>
+      }
+    >
       {activeView === "dashboard" && (
         <CandidateDashboard
           session={session}
           profile={profile}
-          onNavigate={setActiveView}
-          onOpenJob={(jobId) => navigate({ candidate: null, view: "search", job: jobId, auth: null })}
+          onNavigate={navigateView}
+          onOpenJob={(jobId) => navigate(routes.jobDetail(jobId))}
         />
       )}
-      {activeView === "profile" && <section className="workspace-panel" aria-labelledby="profile-title">
-        <div className="section-heading"><div><p className="eyebrow">Candidate profile</p><h2 id="profile-title">Hồ sơ ứng viên</h2></div><span>{profile ? `v${profile.version}` : "Mới"}</span></div>
-        {loading ? <p role="status">Đang tải hồ sơ…</p> : <form className="profile-form" onSubmit={save}>
 
-        {/* Avatar preview card */}
-        <div className="candidate-avatar-preview-wrap">
-          {form.avatarUrl ? (
-            <img src={form.avatarUrl} alt="Avatar" className="candidate-avatar-preview-img" onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }} />
+      {activeView === "profile" && (
+        <div className="space-y-6">
+          <p className="text-sm text-ink-600 m-0">
+            Cập nhật thông tin liên hệ, giới thiệu bản thân và kiểm soát mức độ hiển thị với nhà tuyển dụng.
+          </p>
+
+          {saveMessage && <ErrorBanner tone="success" message={saveMessage} />}
+          {error && <ErrorBanner tone="error" message={error} />}
+
+          {loading ? (
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
+              <Skeleton className="h-96" />
+              <Skeleton className="h-72" />
+            </div>
           ) : (
-            <div className="candidate-avatar-fallback">
-              {(form.displayName || "U").charAt(0).toUpperCase()}
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Thông tin cơ bản &amp; liên hệ</CardTitle>
+                  <CardDescription>
+                    Thông tin này chỉ chia sẻ khi bạn chủ động nộp hồ sơ ứng tuyển cho một vị trí.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleSubmitProfile} className="space-y-5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <label className="block text-sm font-medium text-ink-800">
+                        <span>Tên hiển thị</span>
+                        <input
+                          type="text"
+                          required
+                          maxLength={120}
+                          value={form.displayName}
+                          onChange={(event) => setForm((prev) => ({ ...prev, displayName: event.target.value }))}
+                          placeholder="Ví dụ: Nguyễn Văn An"
+                          className={inputClass}
+                        />
+                      </label>
+
+                      <label className="block text-sm font-medium text-ink-800">
+                        <span>Chức danh mục tiêu</span>
+                        <input
+                          type="text"
+                          maxLength={160}
+                          value={form.headline}
+                          onChange={(event) => setForm((prev) => ({ ...prev, headline: event.target.value }))}
+                          placeholder="Ví dụ: Senior Backend Engineer"
+                          className={inputClass}
+                        />
+                      </label>
+
+                      <label className="block text-sm font-medium text-ink-800">
+                        <span>Địa điểm</span>
+                        <input
+                          type="text"
+                          maxLength={160}
+                          value={form.locationText}
+                          onChange={(event) => setForm((prev) => ({ ...prev, locationText: event.target.value }))}
+                          placeholder="Ví dụ: TP. Hồ Chí Minh / Hà Nội"
+                          className={inputClass}
+                        />
+                      </label>
+
+                      <label className="block text-sm font-medium text-ink-800">
+                        <span>Mức độ hiển thị hồ sơ</span>
+                        <select
+                          value={form.visibility}
+                          onChange={(event) =>
+                            setForm((prev) => ({
+                              ...prev,
+                              visibility: event.target.value as "PRIVATE" | "APPLICATION_ONLY",
+                            }))
+                          }
+                          className={inputClass}
+                        >
+                          <option value="APPLICATION_ONLY">Chỉ chia sẻ khi ứng tuyển</option>
+                          <option value="PRIVATE">Riêng tư (chỉ mình tôi xem)</option>
+                        </select>
+                      </label>
+
+                      <label className="block text-sm font-medium text-ink-800">
+                        <span>Số điện thoại</span>
+                        <input
+                          type="tel"
+                          maxLength={40}
+                          value={form.phoneNumber}
+                          onChange={(event) => setForm((prev) => ({ ...prev, phoneNumber: event.target.value }))}
+                          placeholder="09xx xxx xxx"
+                          className={inputClass}
+                        />
+                      </label>
+
+                      <label className="block text-sm font-medium text-ink-800">
+                        <span>Email liên hệ</span>
+                        <input
+                          type="email"
+                          maxLength={160}
+                          value={form.contactEmail}
+                          onChange={(event) => setForm((prev) => ({ ...prev, contactEmail: event.target.value }))}
+                          placeholder="email@example.com"
+                          className={inputClass}
+                        />
+                      </label>
+                    </div>
+
+                    <div className="pt-2 border-t border-border-subtle space-y-4">
+                      <p className="text-xs font-bold uppercase tracking-wider text-ink-500 m-0">
+                        Liên kết chuyên môn &amp; ảnh đại diện
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <label className="block text-sm font-medium text-ink-800">
+                          <span>LinkedIn URL</span>
+                          <input
+                            type="url"
+                            maxLength={255}
+                            value={form.linkedinUrl}
+                            onChange={(event) => setForm((prev) => ({ ...prev, linkedinUrl: event.target.value }))}
+                            placeholder="https://linkedin.com/in/..."
+                            className={inputClass}
+                          />
+                        </label>
+
+                        <label className="block text-sm font-medium text-ink-800">
+                          <span>GitHub URL</span>
+                          <input
+                            type="url"
+                            maxLength={255}
+                            value={form.githubUrl}
+                            onChange={(event) => setForm((prev) => ({ ...prev, githubUrl: event.target.value }))}
+                            placeholder="https://github.com/..."
+                            className={inputClass}
+                          />
+                        </label>
+
+                        <label className="block text-sm font-medium text-ink-800">
+                          <span>Portfolio / Website cá nhân</span>
+                          <input
+                            type="url"
+                            maxLength={255}
+                            value={form.portfolioUrl}
+                            onChange={(event) => setForm((prev) => ({ ...prev, portfolioUrl: event.target.value }))}
+                            placeholder="https://..."
+                            className={inputClass}
+                          />
+                        </label>
+
+                        <label className="block text-sm font-medium text-ink-800">
+                          <span>URL ảnh đại diện</span>
+                          <input
+                            type="url"
+                            maxLength={255}
+                            value={form.avatarUrl}
+                            onChange={(event) => {
+                              setAvatarError(false);
+                              setForm((prev) => ({ ...prev, avatarUrl: event.target.value }));
+                            }}
+                            placeholder="https://..."
+                            className={inputClass}
+                          />
+                        </label>
+                      </div>
+                    </div>
+
+                    <label className="block text-sm font-medium text-ink-800">
+                      <span>Giới thiệu bản thân</span>
+                      <textarea
+                        rows={4}
+                        maxLength={2000}
+                        value={form.bio}
+                        onChange={(event) => setForm((prev) => ({ ...prev, bio: event.target.value }))}
+                        placeholder="Tóm tắt định hướng nghề nghiệp, thế mạnh nổi bật hoặc dự án tiêu biểu của bạn…"
+                        className="mt-1.5 w-full rounded-xl border border-border-strong bg-white px-3.5 py-2.5 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                      />
+                    </label>
+
+                    <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-border-subtle">
+                      <span className="text-xs text-ink-500">
+                        Phiên bản hồ sơ #{profile?.version ?? 0}
+                      </span>
+                      <Button type="submit" disabled={saving}>
+                        {saving ? "Đang lưu…" : "Cập nhật hồ sơ"}
+                      </Button>
+                    </div>
+                  </form>
+                </CardContent>
+              </Card>
+
+              <Card className="lg:sticky lg:top-20">
+                <CardHeader>
+                  <CardTitle>Xem trước thẻ hồ sơ</CardTitle>
+                  <CardDescription>Hiển thị tóm tắt thông tin cá nhân</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center gap-3.5">
+                    {safeAvatar && !avatarError ? (
+                      <img
+                        src={safeAvatar}
+                        alt={candidateDisplayName}
+                        onError={() => setAvatarError(true)}
+                        className="h-14 w-14 rounded-2xl object-cover border border-border-subtle shrink-0"
+                      />
+                    ) : (
+                      <div className="h-14 w-14 rounded-2xl bg-brand-100 text-brand-700 font-bold text-lg flex items-center justify-center shrink-0">
+                        {initials || <ProfileIcon size={22} />}
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <p className="text-base font-bold text-ink-900 truncate m-0">{candidateDisplayName}</p>
+                      <p className="text-xs text-ink-600 truncate m-0 mt-0.5">
+                        {form.headline.trim() || "Chưa thêm chức danh mục tiêu"}
+                      </p>
+                      {form.locationText.trim() && (
+                        <p className="text-xs text-ink-500 m-0 mt-0.5">{form.locationText.trim()}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <Badge tone={form.visibility === "PRIVATE" ? "neutral" : "info"}>
+                      {form.visibility === "PRIVATE" ? "Hồ sơ riêng tư" : "Chia sẻ khi ứng tuyển"}
+                    </Badge>
+                  </div>
+
+                  {form.bio.trim() && (
+                    <p className="text-xs text-ink-600 leading-relaxed m-0 line-clamp-4">{form.bio.trim()}</p>
+                  )}
+
+                  {(safeLinkedIn || safeGitHub || safePortfolio) && (
+                    <div className="pt-3 border-t border-border-subtle flex flex-wrap gap-2 text-xs">
+                      {safeLinkedIn && (
+                        <a
+                          href={safeLinkedIn}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-semibold text-brand-700 hover:underline"
+                        >
+                          LinkedIn
+                        </a>
+                      )}
+                      {safeGitHub && (
+                        <a
+                          href={safeGitHub}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-semibold text-brand-700 hover:underline"
+                        >
+                          GitHub
+                        </a>
+                      )}
+                      {safePortfolio && (
+                        <a
+                          href={safePortfolio}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-semibold text-brand-700 hover:underline"
+                        >
+                          Portfolio
+                        </a>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
           )}
-          <div>
-            <strong>{form.displayName || "Ứng viên"}</strong>
-            <p className="muted" style={{ margin: 0 }}>{form.headline || "Chưa có tiêu đề nghề nghiệp"}</p>
-          </div>
         </div>
+      )}
 
-        {/* Section 1: Thông tin cơ bản */}
-        <div className="candidate-profile-section">
-          <h3 className="candidate-profile-section-title">Thông tin cơ bản</h3>
-          <div className="profile-form-grid">
-            <label>
-              Tên hiển thị
-              <input value={form.displayName} onChange={(event) => updateField("displayName", event.target.value)}
-                maxLength={120} required placeholder="Ví dụ: Nguyễn Văn A" />
-            </label>
-            <label>
-              Ảnh đại diện (URL)
-              <input type="url" value={form.avatarUrl} onChange={(event) => updateField("avatarUrl", event.target.value)}
-                maxLength={500} placeholder="https://example.com/avatar.jpg" />
-            </label>
-            <label>
-              Tiêu đề nghề nghiệp
-              <input value={form.headline} onChange={(event) => updateField("headline", event.target.value)}
-                maxLength={200} placeholder="Ví dụ: Senior Backend Engineer" />
-            </label>
-            <label>
-              Địa điểm
-              <input value={form.locationText} onChange={(event) => updateField("locationText", event.target.value)}
-                maxLength={160} placeholder="Ví dụ: Thành phố Hồ Chí Minh" />
-            </label>
-          </div>
-          <label>
-            Giới thiệu bản thân
-            <textarea value={form.bio} onChange={(event) => updateField("bio", event.target.value)}
-              rows={4} maxLength={2000} placeholder="Tóm tắt ngắn về kinh nghiệm, định hướng nghề nghiệp và thế mạnh của bạn..." />
-          </label>
-        </div>
-
-        {/* Section 2: Thông tin liên hệ & Mạng xã hội */}
-        <div className="candidate-profile-section">
-          <h3 className="candidate-profile-section-title">Thông tin liên hệ & Mạng xã hội</h3>
-          <div className="profile-form-grid">
-            <label>
-              Số điện thoại
-              <input type="tel" value={form.phoneNumber} onChange={(event) => updateField("phoneNumber", event.target.value)}
-                maxLength={30} placeholder="Ví dụ: 0912345678" />
-            </label>
-            <label>
-              Email liên hệ
-              <input type="email" value={form.contactEmail} onChange={(event) => updateField("contactEmail", event.target.value)}
-                maxLength={255} placeholder="Ví dụ: candidate@example.com" />
-            </label>
-            <label>
-              LinkedIn URL
-              <input type="url" value={form.linkedinUrl} onChange={(event) => updateField("linkedinUrl", event.target.value)}
-                maxLength={300} placeholder="https://linkedin.com/in/username" />
-            </label>
-            <label>
-              GitHub URL
-              <input type="url" value={form.githubUrl} onChange={(event) => updateField("githubUrl", event.target.value)}
-                maxLength={300} placeholder="https://github.com/username" />
-            </label>
-            <label>
-              Portfolio / Website cá nhân
-              <input type="url" value={form.portfolioUrl} onChange={(event) => updateField("portfolioUrl", event.target.value)}
-                maxLength={300} placeholder="https://myportfolio.dev" />
-            </label>
-          </div>
-        </div>
-
-        {/* Section 3: Quyền riêng tư */}
-        <div className="candidate-profile-section">
-          <h3 className="candidate-profile-section-title">Quyền riêng tư</h3>
-          <label>
-            Quyền hiển thị
-            <select value={form.visibility}
-              onChange={(event) => setForm((current) => ({
-                ...current,
-                visibility: event.target.value as ProfileVisibility
-              }))}>
-              <option value="APPLICATION_ONLY">Chỉ hiển thị khi ứng tuyển</option>
-              <option value="PRIVATE">Riêng tư</option>
-            </select>
-          </label>
-          <small className="muted">
-            Khi chọn &quot;Chỉ hiển thị khi ứng tuyển&quot;, thông tin liên hệ và hồ sơ của bạn chỉ được chia sẻ tới nhà tuyển dụng khi bạn nộp đơn ứng tuyển.
-          </small>
-        </div>
-
-        {message && <p className="success-message" role="status">{message}</p>}
-        {error && <p className="error-message" role="alert">{error}</p>}
-        <button type="submit" disabled={saving}>
-          {saving ? "Đang lưu…" : profile ? "Cập nhật hồ sơ" : "Tạo hồ sơ"}
-        </button>
-        </form>}
-      </section>}
-      {activeView === "cv" && <CandidateCvPanel session={session} onFindJobs={() => setActiveView("jobs")} />}
+      {activeView === "cv" && <CandidateCvPanel session={session} onLogout={onLogout} />}
       {activeView === "applications" && <CandidateJobsPanel session={session} applicationsOnly />}
       {activeView === "notifications" && <NotificationCenter session={session} onLogout={onLogout} />}
       {activeView === "security" && <AccountSecurityPanel session={session} onLogout={onLogout} />}
-    </PublicHomePage>
+    </WorkspaceShell>
   );
 }
 
-function toForm(profile: CandidateProfile): ProfileForm {
-  return {
-    displayName: profile.displayName,
-    headline: profile.headline ?? "",
-    locationText: profile.locationText ?? "",
-    visibility: profile.visibility,
-    phoneNumber: profile.phoneNumber ?? "",
-    contactEmail: profile.contactEmail ?? "",
-    linkedinUrl: profile.linkedinUrl ?? "",
-    githubUrl: profile.githubUrl ?? "",
-    portfolioUrl: profile.portfolioUrl ?? "",
-    avatarUrl: profile.avatarUrl ?? "",
-    bio: profile.bio ?? ""
-  };
-}
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof ApiClientError
-    ? error.error.message
-    : "Không thể kết nối tới Gateway. Vui lòng thử lại.";
+export function CandidateProfilePage(props: CandidateProfilePageProps) {
+  return (
+    <EnsureRouter>
+      <CandidateProfilePageInner {...props} />
+    </EnsureRouter>
+  );
 }

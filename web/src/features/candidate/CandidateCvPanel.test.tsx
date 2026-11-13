@@ -24,6 +24,11 @@ it("requires saving edited content before confirming and sends the new revision"
   fireEvent.change(await screen.findByLabelText("Kỹ năng 1"), { target: { value: "TypeScript" } });
   expect(screen.getByRole("button", { name: "Xác nhận bản phân tích" })).toBeDisabled();
   fireEvent.click(screen.getByRole("button", { name: "Lưu thay đổi" }));
+  await waitFor(() => expect(vi.mocked(apiRequest).mock.calls.some(([, options]) => options?.method === "PUT")).toBe(true));
+  const saveCall = vi.mocked(apiRequest).mock.calls.find(([, options]) => options?.method === "PUT")!;
+  expect(JSON.parse(saveCall[1]!.body as string)).toEqual({
+    cvId: "cv", expectedRevisionId: "rev-1", payload: expect.objectContaining({ skills: [expect.objectContaining({ raw: "TypeScript" })] })
+  });
   await waitFor(() => expect(screen.getByRole("button", { name: "Xác nhận bản phân tích" })).toBeEnabled());
   fireEvent.click(screen.getByRole("button", { name: "Xác nhận bản phân tích" }));
   await waitFor(() => expect(vi.mocked(apiRequest)).toHaveBeenCalledWith("/api/v2/parsed-cvs/version/confirm", expect.objectContaining({ body: JSON.stringify({ expectedRevisionId: "rev-2" }) })));
