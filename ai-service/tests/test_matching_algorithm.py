@@ -98,7 +98,7 @@ def _metadata_component(result):
 
 
 def test_algorithm_version_changes_when_metadata_formula_changes() -> None:
-    assert ALGORITHM_VERSION == "baseline-v5"
+    assert ALGORITHM_VERSION == "baseline-v6"
 
 
 def test_education_only_requirement_uses_only_education_denominator() -> None:
@@ -199,3 +199,82 @@ def test_matching_evidence_only_copies_referenced_locations_not_private_text():
           "evidence": [location, {"id": "unrelated", "page": 5, "start": 1, "end": 2}]}
     jd = {"requirements": {"requiredSkills": [{"canonicalSkillId": JAVA, "raw": "Java"}]}}
     assert compute_match(cv, jd).claims[0]["cvLocations"] == [location]
+
+
+@pytest.mark.parametrize("actual,required,score", [
+    ("MASTER", "bachelor", 1.0), ("DOCTORATE", "master", 1.0), ("BACHELOR", "bachelor", 1.0),
+    ("ASSOCIATE", "bachelor", 0.0), ("BACHELOR", "master", 0.0),
+])
+def test_higher_degree_satisfies_lower_degree_requirement(actual, required, score):
+    result = _metadata_result(cv_education=[{"degreeLevel": actual, "fieldOfStudy": None}],
+                              jd_education=[{"raw": required, "normalizedValue": required}])
+    assert _metadata_component(result)["score"] == score
+
+
+def test_field_of_study_requirement_is_still_matched_as_text():
+    result = _metadata_result(cv_education=[{"degreeLevel": "MASTER", "fieldOfStudy": "Computer Science"}],
+                              jd_education=[{"raw": "Computer Science", "normalizedValue": "computer science"}])
+    assert _metadata_component(result)["score"] == 1.0
+
+
+def test_preferred_education_and_language_are_reported_but_not_penalised():
+    result = _metadata_result(
+        cv_education=[{"degreeLevel": "BACHELOR", "fieldOfStudy": None}],
+        cv_languages=[{"languageCode": "en", "proficiency": None}],
+        jd_education=[{"raw": "Ưu tiên thạc sĩ", "normalizedValue": "master", "required": False}],
+        jd_languages=[{"raw": "Ưu tiên tiếng Nhật N3", "normalizedValue": "ja", "required": False}],
+    )
+    component = _metadata_component(result)
+    assert component["weight"] == 0
+    assert component["details"]["education"]["preferredValues"] == ["master"]
+    assert component["details"]["education"]["preferredMatchedValues"] == []
+    assert component["details"]["languages"]["preferredCodes"] == ["ja"]
+    assert "LANGUAGE_PROFICIENCY_UNVERIFIED" not in result.quality_flags
+
+
+def test_preferred_item_does_not_dilute_required_item():
+    result = _metadata_result(
+        cv_languages=[{"languageCode": "en", "proficiency": "B2"}],
+        jd_languages=[{"raw": "English B2", "normalizedValue": "en"},
+                      {"raw": "Ưu tiên tiếng Nhật", "normalizedValue": "ja", "required": False}],
+    )
+    assert _metadata_component(result)["score"] == 1.0
+
+
+@pytest.mark.parametrize("sentence,code,actual,score", [
+    ("English B2 or Japanese N3 is required", "ja", "N2", 1),
+    ("English B2 or Japanese N3 is required", "ja", "N4", 0),
+    ("English B2 or Japanese N3 is required", "en", "B2", 1),
+    ("IELTS 6.5 English, Japanese N3", "en", "IELTS 7.0", 1),
+    ("IELTS 6.5 English, Japanese N3", "en", "IELTS 6.0", 0),
+    ("Tiếng Anh B2, tiếng Nhật N3", "ja", "N3", 1),
+])
+def test_each_language_reads_its_own_level_from_a_shared_sentence(sentence, code, actual, score):
+    result = _metadata_result(cv_languages=[{"languageCode": code, "proficiency": actual}],
+                              jd_languages=[{"raw": sentence, "normalizedValue": code}])
+    assert _metadata_component(result)["score"] == score
+
+
+def test_job_without_required_skills_is_degraded_even_with_a_perfect_title_score():
+    result = compute_match(
+        {"experiences": [{"titleRaw": "Backend Developer"}]},
+        {"title": {"canonicalFamily": "BACKEND"}, "requirements": {
+            "requiredSkills": [], "preferredSkills": [], "minimumRelevantExperienceMonths": None,
+            "education": [], "languages": [],
+        }, "responsibilities": []},
+    )
+    assert result.final_score == 100
+    assert result.status == "DEGRADED"
+    assert "NO_REQUIRED_SKILLS" in result.quality_flags
+
+
+def test_malformed_optional_fields_do_not_crash_matching():
+    cv = {"skills": [{"canonicalSkillId": JAVA, "normalizationStatus": "KNOWN", "evidenceIds": ["e1"]}],
+          "evidence": [{"page": 1}, {"id": "e1", "page": 1, "start": 0, "end": 4}],
+          "experiences": [{"titleRaw": "Developer", "skillIds": None, "startMonth": "2024-01", "isCurrent": True}]}
+    jd = {"requirements": {"requiredSkills": [{"canonicalSkillId": JAVA, "raw": "Java"}],
+                           "minimumRelevantExperienceMonths": 12},
+          "evidence": None}
+    result = compute_match(cv, jd, as_of_month="2026-01")
+    assert result.claims[0]["cvLocations"] == [{"id": "e1", "page": 1, "start": 0, "end": 4}]
+    assert result.claims[0]["jdLocations"] == []

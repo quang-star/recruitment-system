@@ -19,8 +19,13 @@ Thesis title confirmed by the author on 2026-10-19: **Phát triển hệ thống
 Implementation status as of the 2026-09-07 source review: `ai-service/start.sh`
 starts the worker and API as separate processes in the same container. Independent
 worker deployment/scaling is a proposed improvement, not a verified capability.
-As of 2026-10-02, public matching uses deterministic rule/keyword baseline-v5 with relevant,
+As of 2026-11-14, public matching uses deterministic rule/keyword baseline-v6 with relevant,
 non-overlapping experience intervals and conservative language proficiency checks.
+baseline-v6 ranks degrees (a higher degree satisfies a lower requirement), scores only
+required education/language items (preferred ones are reported, not penalised), reads
+each language's level from its own part of a shared sentence, shares one role-family
+classifier between CV and JD parsing, and reports DEGRADED when a JD has no required
+skills. Preview scores the confirmed CV revision, as the application worker does.
 Results record CV/JD revision IDs and the calculation month; skill claims carry source
 page/text offsets. Confirmed unfamiliar skills are scoped to the JobVersion and
 require exact names plus CV source evidence to count as hits. SYSTEM_ADMIN can

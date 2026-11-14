@@ -6,10 +6,11 @@ from typing import Any
 from uuid import UUID, uuid5
 
 from app.taxonomy.normalizer import extract_known_skills, taxonomy_version
+from app.taxonomy.roles import role_family
 from app.extraction.evidence import attach_source_evidence, skill_locations
 
 
-PARSER_VERSION = "rules-v0.4.1"
+PARSER_VERSION = "rules-v0.4.2"
 _EVIDENCE_NAMESPACE = UUID("6d3d1b4f-1d29-4eaa-8a8f-bcc2a66f7ce4")
 _PREFERRED_MARKERS = ("nice to have", "preferred", "ưu tiên", "lợi thế", "điểm cộng")
 
@@ -184,13 +185,7 @@ def _language_requirements(job_version_id: str, text: str) -> list[dict[str, obj
 
 
 def _family(title: str) -> str:
-    lowered = title.casefold()
-    for marker, family in (("backend", "BACKEND"), ("front-end", "FRONTEND"), ("frontend", "FRONTEND"),
-                           ("fullstack", "FULLSTACK"), ("full stack", "FULLSTACK"), ("mobile", "MOBILE"),
-                           ("devops", "DEVOPS"), ("data", "DATA_AI"), ("qa", "QA"), ("security", "SECURITY")):
-        if marker in lowered:
-            return family
-    return "OTHER"
+    return role_family(title)
 
 
 def _level(title: str) -> str | None:
