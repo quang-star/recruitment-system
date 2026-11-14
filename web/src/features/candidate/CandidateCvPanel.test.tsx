@@ -161,3 +161,103 @@ it("keeps the retry action available after a network failure", async () => {
   expect(await screen.findByRole("alert")).toHaveTextContent("Không thể kết nối");
   await waitFor(() => expect(screen.getByRole("button", { name: "Thử lại" })).toBeEnabled());
 });
+
+it("lists saved CV drafts, reopens one in the builder and deletes it with confirmation", async () => {
+  const serverDraft = {
+    draftId: "9007199254740993",
+    candidateUserId: "100",
+    title: "Bản nháp Backend",
+    templateId: "modern",
+    accentColor: "#0f766e",
+    sectionOrder: ["introduction", "skills", "experiences", "education", "projects", "certificates", "languages"],
+    payload: {
+      fullName: "Nguyễn Minh An",
+      headline: "Backend Engineer",
+      email: "an@example.invalid",
+      phone: "0901234567",
+      location: "TP. HCM",
+      links: "",
+      introduction: "Giới thiệu",
+      skills: "Java",
+      experiences: [],
+      education: [],
+      projects: [],
+      certificates: [],
+      languages: [],
+    },
+    createdAt: "2026-11-14T00:00:00Z",
+    updatedAt: "2026-11-14T00:00:00Z",
+    version: 2,
+  };
+  vi.mocked(apiRequest).mockImplementation(async (path, options) => {
+    if (path === "/api/v2/cvs/drafts") return [serverDraft];
+    if (path === "/api/v2/cvs/drafts/9007199254740993?version=2" && options?.method === "DELETE") return undefined;
+    return [cv];
+  });
+  render(<CandidateCvPanel session={{ ...session, userId: "100" }} />);
+  expect(await screen.findByText("Bản nháp Backend")).toBeInTheDocument();
+  expect(screen.getByText(/Mẫu Modern · Phiên bản 3/)).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "Chỉnh sửa tiếp" }));
+  expect(await screen.findByLabelText("Họ và tên")).toHaveValue("Nguyễn Minh An");
+  fireEvent.click(screen.getByRole("button", { name: "Đóng trình tạo CV" }));
+
+  fireEvent.click(screen.getByRole("button", { name: "Xóa bản nháp" }));
+  expect(screen.getByRole("dialog", { name: "Xóa bản nháp CV" })).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "Xác nhận xóa bản nháp" }));
+  await waitFor(() => expect(screen.queryByText("Bản nháp Backend")).not.toBeInTheDocument());
+  expect(vi.mocked(apiRequest)).toHaveBeenCalledWith(
+    "/api/v2/cvs/drafts/9007199254740993?version=2",
+    expect.objectContaining({ method: "DELETE" }),
+  );
+});
+
+it("duplicates a server draft and opens direct PDF overlay editor", async () => {
+  const serverDraft = {
+    draftId: "9007199254740993",
+    candidateUserId: "100",
+    title: "Bản nháp Backend",
+    templateId: "modern",
+    accentColor: "#0f766e",
+    sectionOrder: ["introduction", "skills", "experiences", "education", "projects", "certificates", "languages", "awards", "activities", "hobbies"],
+    payload: {
+      fullName: "Nguyễn Minh An",
+      headline: "Backend Engineer",
+      email: "an@example.invalid",
+      phone: "0901234567",
+      location: "TP. HCM",
+      links: "",
+      introduction: "Giới thiệu",
+      skills: "Java",
+      experiences: [],
+      education: [],
+      projects: [],
+      certificates: [],
+      languages: [],
+    },
+    createdAt: "2026-11-14T00:00:00Z",
+    updatedAt: "2026-11-14T00:00:00Z",
+    version: 2,
+  };
+  const duplicatedDraft = {
+    ...serverDraft,
+    draftId: "9007199254740994",
+    title: "Bản nháp Backend (Bản sao)",
+    version: 0,
+  };
+  vi.mocked(apiRequest).mockImplementation(async (path, options) => {
+    if (path === "/api/v2/cvs/drafts" && options?.method === "POST") return duplicatedDraft;
+    if (path === "/api/v2/cvs/drafts") return [serverDraft];
+    return [cv];
+  });
+  render(<CandidateCvPanel session={{ ...session, userId: "100" }} />);
+
+  expect(await screen.findByText("Bản nháp Backend")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Nhân bản" }));
+  expect(await screen.findByText("Bản nháp Backend (Bản sao)")).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "Sửa file PDF trực tiếp" }));
+  expect(
+    await screen.findByRole("heading", { name: "Sửa nhanh trực tiếp trên PDF gốc" }, { timeout: 4000 }),
+  ).toBeInTheDocument();
+});
