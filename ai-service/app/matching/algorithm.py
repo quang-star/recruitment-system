@@ -8,9 +8,14 @@ import re
 from typing import Any
 
 from app.extraction.skill_proposals import skill_name_key
+from app.taxonomy.roles import role_family
 
 
-ALGORITHM_VERSION = "baseline-v5"
+ALGORITHM_VERSION = "baseline-v6"
+
+# Higher degrees satisfy lower degree requirements; field-of-study values are matched as text.
+_DEGREE_RANK = {"high_school": 0, "vocational": 1, "associate": 2,
+                "bachelor": 3, "master": 4, "doctorate": 5}
 
 
 _LANGUAGE_ALIASES = {
@@ -21,6 +26,15 @@ _LANGUAGE_ALIASES = {
     "japanese": "ja", "tiếng nhật": "ja", "tieng nhat": "ja",
     "korean": "ko", "tiếng hàn": "ko", "tieng han": "ko",
     "chinese": "zh", "tiếng trung": "zh", "tieng trung": "zh",
+}
+_LANGUAGE_MENTIONS: dict[str, re.Pattern[str]] = {
+    code: re.compile(r"(?<!\w)(?:" + "|".join(
+        re.escape(alias) for alias in sorted(
+            (alias for alias, alias_code in _LANGUAGE_ALIASES.items() if alias_code == code),
+            key=len, reverse=True,
+        )
+    ) + r")(?!\w)")
+    for code in sorted(set(_LANGUAGE_ALIASES.values()))
 }
 
 
@@ -60,7 +74,7 @@ def compute_match(cv_payload: dict[str, Any], jd_payload: dict[str, Any], *,
             continue
         cv_items[skill_id] = candidate
         ids = candidate.get("evidenceIds", [])
-        grounded = any(location.get("id") in ids for location in cv_payload.get("evidence", []))
+        grounded = any(location.get("id") in ids for location in cv_payload.get("evidence") or [])
         if candidate.get("provenance") in {"EXTRACTED", "USER_CONFIRMED"} and ids and grounded:
             cv_skills.add(skill_id)
         else:
@@ -93,10 +107,10 @@ def compute_match(cv_payload: dict[str, Any], jd_payload: dict[str, Any], *,
             "cvEvidenceIds": sorted(set(cv_items.get(skill_id, {}).get("evidenceIds", []))),
             "jdEvidenceIds": sorted(set(jd_item.get("evidenceIds", []))),
             "jdConfirmedByRecruiter": bool(jd_item.get("confirmedByRecruiter")),
-            "cvLocations": [location for location in cv_payload.get("evidence", [])
-                            if location["id"] in cv_items.get(skill_id, {}).get("evidenceIds", [])],
-            "jdLocations": [location for location in jd_payload.get("evidence", [])
-                            if location["id"] in jd_item.get("evidenceIds", [])],
+            "cvLocations": [location for location in cv_payload.get("evidence") or []
+                            if location.get("id") in cv_items.get(skill_id, {}).get("evidenceIds", [])],
+            "jdLocations": [location for location in jd_payload.get("evidence") or []
+                            if location.get("id") in jd_item.get("evidenceIds", [])],
         })
 
     preferred_score = _ratio(preferred_hits, preferred)
@@ -168,10 +182,12 @@ def compute_match(cv_payload: dict[str, Any], jd_payload: dict[str, Any], *,
         flags.append("PARTIAL_REQUIREMENTS")
     if not applicable:
         flags.append("NO_APPLICABLE_COMPONENTS")
+    # Without required skills (or CV skills) the score rests on weak signals such as
+    # the title alone, so it must not be presented as a complete assessment.
     return MatchResult(
         status=("INSUFFICIENT_DATA" if not applicable
-                else "DEGRADED" if unresolved
-                else "COMPLETED" if cv_skills or not required else "DEGRADED"),
+                else "DEGRADED" if unresolved or not required or not cv_skills
+                else "COMPLETED"),
         final_score=max(0.0, min(100.0, final_score)),
         quality_flags=flags, components=components, claims=claims,
     )
@@ -199,15 +215,7 @@ def _skills(items: list[dict[str, Any]], job_version: str | None = None) -> dict
 
 
 def _role_family(item: dict[str, Any]) -> str:
-    title = str(item.get("titleCanonical") or item.get("titleRaw") or "").casefold()
-    compact = re.sub(r"[-_\s]+", "", title)
-    for marker, family in (("fullstack", "FULLSTACK"), ("backend", "BACKEND"),
-                           ("frontend", "FRONTEND"), ("mobile", "MOBILE"),
-                           ("devops", "DEVOPS"), ("data", "DATA_AI"),
-                           ("machinelearning", "DATA_AI"), ("security", "SECURITY")):
-        if marker in compact:
-            return family
-    return "QA" if re.search(r"\b(?:qa|tester|quality assurance)\b", title) else "OTHER"
+    return role_family(item.get("titleCanonical") or item.get("titleRaw"))
 
 
 def _month_index(value: Any) -> int | None:
@@ -226,7 +234,7 @@ def _relevant_experience(jobs, family: str, required: set[str], as_of_month: str
     relevant = 0
     for job in jobs:
         if not ((family != "OTHER" and _role_family(job) == family)
-                or required.intersection(job.get("skillIds", []))):
+                or required.intersection(job.get("skillIds") or [])):
             continue
         relevant += 1
         start = _month_index(job.get("startMonth"))
@@ -258,58 +266,104 @@ def _keyword_similarity(responsibilities: list[dict[str, Any]], cv_text: str) ->
     return len(jd_words & cv_words) / len(jd_words) if jd_words else 0.0
 
 
+def _is_required(item: dict[str, Any]) -> bool:
+    # Legacy payloads have no flag; only an explicit ``required: false`` marks a preference.
+    return item.get("required") is not False
+
+
 def _education_fact(requirements: list[dict[str, Any]], education: list[dict[str, Any]]) -> dict[str, Any]:
-    required_values = {_normalized_requirement(item) for item in requirements}
+    required_values = {_normalized_requirement(item) for item in requirements if _is_required(item)}
     required_values.discard("")
+    preferred_values = {_normalized_requirement(item) for item in requirements
+                        if not _is_required(item)} - required_values
+    preferred_values.discard("")
     actual_values = {
         normalized
         for item in education
         for normalized in (_normalize_text(item.get("degreeLevel")), _normalize_text(item.get("fieldOfStudy")))
         if normalized
     }
-    matched = sorted(required for required in required_values
-                     if any(_values_match(required, actual) for actual in actual_values))
+    actual_rank = max((_DEGREE_RANK[value] for value in actual_values if value in _DEGREE_RANK), default=None)
+
+    def satisfied(required: str) -> bool:
+        rank = _DEGREE_RANK.get(required)
+        if rank is not None:
+            return actual_rank is not None and actual_rank >= rank
+        return any(_values_match(required, actual) for actual in actual_values)
+
+    matched = sorted(value for value in required_values if satisfied(value))
     return {
-        "applicable": bool(requirements),
-        "score": _ratio(set(matched), required_values) if requirements else 0.0,
+        "applicable": bool(required_values),
+        "score": _ratio(set(matched), required_values),
         "requiredValues": sorted(required_values),
+        "preferredValues": sorted(preferred_values),
+        "preferredMatchedValues": sorted(value for value in preferred_values if satisfied(value)),
         "actualValues": sorted(actual_values),
         "matchedValues": matched,
         "dataAvailable": bool(actual_values),
+        "degreeOrderEvaluated": True,
     }
 
 
 def _language_fact(requirements: list[dict[str, Any]], languages: list[dict[str, Any]]) -> dict[str, Any]:
-    required_codes = {_language_code(_normalized_requirement(item)) for item in requirements}
-    required_codes.discard("")
     actual_codes = {_language_code(item.get("languageCode")) for item in languages}
     actual_codes.discard("")
-    matched = set()
-    satisfied = 0
-    unverified = 0
+    outcomes: list[tuple[bool, str, str]] = []
     for requirement in requirements:
         code = _language_code(_normalized_requirement(requirement))
-        minimum = _proficiency(str(requirement.get("raw", "")))
-        candidates = [item for item in languages if _language_code(item.get("languageCode")) == code]
-        levels = [_proficiency(str(item.get("proficiency") or "")) for item in candidates]
-        if candidates and (minimum is None or any(
-            level is not None and level[0] == minimum[0] and level[1] >= minimum[1]
-            for level in levels
-        )):
-            satisfied += 1
-            matched.add(code)
-        elif minimum is not None and not any(level and level[0] == minimum[0] for level in levels):
-            unverified += 1
+        if code:
+            outcomes.append((_is_required(requirement), code,
+                             _language_outcome(requirement, code, languages)))
+    required = [(code, outcome) for is_required, code, outcome in outcomes if is_required]
+    preferred = [(code, outcome) for is_required, code, outcome in outcomes if not is_required]
+    satisfied = sum(outcome == "SATISFIED" for _, outcome in required)
     return {
-        "applicable": bool(requirements),
-        "score": satisfied / len(requirements) if requirements else 0.0,
-        "requiredCodes": sorted(required_codes),
+        "applicable": bool(required),
+        "score": satisfied / len(required) if required else 0.0,
+        "requiredCodes": sorted({code for code, _ in required}),
+        "preferredCodes": sorted({code for code, _ in preferred}),
+        "preferredMatchedCodes": sorted({code for code, outcome in preferred if outcome == "SATISFIED"}),
         "actualCodes": sorted(actual_codes),
-        "matchedCodes": sorted(matched),
+        "matchedCodes": sorted({code for code, outcome in required if outcome == "SATISFIED"}),
         "dataAvailable": bool(actual_codes),
         "proficiencyEvaluated": True,
-        "unverifiedRequirements": unverified,
+        "unverifiedRequirements": sum(outcome == "UNVERIFIED" for _, outcome in required),
     }
+
+
+def _language_outcome(requirement: dict[str, Any], code: str, languages: list[dict[str, Any]]) -> str:
+    minimum = _proficiency(_language_segment(str(requirement.get("raw", "")), code))
+    candidates = [item for item in languages if _language_code(item.get("languageCode")) == code]
+    levels = [_proficiency(str(item.get("proficiency") or "")) for item in candidates]
+    if candidates and (minimum is None or any(
+        level is not None and level[0] == minimum[0] and level[1] >= minimum[1] for level in levels
+    )):
+        return "SATISFIED"
+    if minimum is not None and not any(level and level[0] == minimum[0] for level in levels):
+        return "UNVERIFIED"
+    return "UNMET"
+
+
+def _language_segment(raw: str, code: str) -> str:
+    """Return the part of a requirement sentence that states this language's level.
+
+    A sentence such as "English B2 or Japanese N3" yields one requirement per
+    language; each must read the level next to its own language, not the first one.
+    """
+    text = raw.casefold()
+    mentions = sorted((match.start(), match.end(), mention_code)
+                      for mention_code, pattern in _LANGUAGE_MENTIONS.items()
+                      for match in pattern.finditer(text))
+    if len({mention_code for *_, mention_code in mentions}) < 2:
+        return raw
+    own = next((index for index, item in enumerate(mentions) if item[2] == code), None)
+    if own is None:
+        return raw
+    start = mentions[own][0]
+    following = next((begin for begin, _, other in mentions[own + 1:] if other != code), len(text))
+    preceding = next((end for _, end, other in reversed(mentions[:own]) if other != code), 0)
+    after = text[start:following]
+    return after if _proficiency(after) is not None else text[preceding:start]
 
 
 def _proficiency(value: str) -> tuple[str, float] | None:
