@@ -18,7 +18,7 @@ def test_parser_returns_contract_compatible_canonical_skills() -> None:
 
     schema = json.loads((Path(__file__).parents[2] / "contracts/schemas/parsed-jd-v2.schema.json").read_text())
     Draft202012Validator(schema, format_checker=FormatChecker()).validate(payload)
-    assert payload["document"]["parserVersion"] == "rules-v0.4.1+taxonomy-1.0.0"
+    assert payload["document"]["parserVersion"] == "rules-v0.4.2+taxonomy-1.0.0"
     assert {skill["raw"] for skill in payload["requirements"]["requiredSkills"]} == {"Java", "Kafka"}
     assert payload["requirements"]["minimumRelevantExperienceMonths"] == 36
     assert payload["responsibilities"]

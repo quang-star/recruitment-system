@@ -187,7 +187,49 @@ def test_matching_preview_counts_uncertain_required_skills(test_setup, monkeypat
     assert summary["totalRequiredSkills"] == 3
     assert summary["matchedRequiredSkills"] == 1
     assert summary["missingSkills"] == ["Docker"]
+    assert summary["uncertainSkills"] == ["Kafka"]
     assert response.json()["explanation"]["claims"][1]["type"] == "UNCERTAIN"
+
+
+@pytest.mark.parametrize("confirmed_owner", [None, "other"])
+def test_matching_preview_requires_the_users_confirmed_cv_revision(test_setup, monkeypatch, confirmed_owner):
+    from dataclasses import replace
+    from app.cv.repository import ParsedCvRevisionRepository
+
+    client, _, cv_version_id, job_version_id = test_setup
+    original = ParsedCvRevisionRepository.find_confirmed
+
+    def find_confirmed(self, version_id):
+        revision = original(self, version_id)
+        return None if confirmed_owner is None else replace(revision, owner_user_id=new_id())
+
+    monkeypatch.setattr(ParsedCvRevisionRepository, "find_confirmed", find_confirmed)
+    response = client.post("/api/v2/matching-requests/preview", json={
+        "cvVersionId": str(cv_version_id), "jobVersionId": str(job_version_id),
+    })
+    assert response.status_code == 409
+    assert response.json()["code"] == "CV_NOT_CONFIRMED"
+
+
+def test_matching_preview_without_required_skills_uses_cautious_headline(test_setup, monkeypatch):
+    from dataclasses import replace
+
+    client, _, cv_version_id, job_version_id = test_setup
+    from app.matching import api
+
+    original = api.compute_match
+
+    def compute(*args, **kwargs):
+        return replace(original(*args, **kwargs), final_score=100.0, status="DEGRADED",
+                       quality_flags=["NO_REQUIRED_SKILLS"], claims=[])
+
+    monkeypatch.setattr(api, "compute_match", compute)
+    response = client.post("/api/v2/matching-requests/preview", json={
+        "cvVersionId": str(cv_version_id), "jobVersionId": str(job_version_id),
+    })
+    summary = response.json()["summary"]
+    assert summary["matchLevel"] == "EXCELLENT"
+    assert "chỉ mang tính tham khảo" in summary["headline"]
 
 
 def test_matching_preview_rejects_nonexistent_jd(test_setup):

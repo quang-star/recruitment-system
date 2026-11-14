@@ -166,7 +166,7 @@ def test_shadow_persists_candidate_and_lineage_but_publishes_baseline_then_erase
         result = MatchingResultRepository(session).find_latest(case.app_id)
         comparison = session.get(MatchingShadowResult, result.id)
         assert comparison.semantic_score == 100 and comparison.status == "SHADOW"
-        assert result.algorithm_version == "baseline-v5" and result.final_score == compute_match(cv, jd).final_score
+        assert result.algorithm_version == "baseline-v6" and result.final_score == compute_match(cv, jd).final_score
         assert result.taxonomy_version == "1.0.3"
         assert result.input_taxonomy_versions == {"cv": "1.0.2", "jd": "1.0.3"}
         assert result.cv_revision_id == cv_rev.id and result.jd_revision_id == jd_rev.id

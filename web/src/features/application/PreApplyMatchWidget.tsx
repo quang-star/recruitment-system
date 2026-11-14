@@ -23,6 +23,8 @@ export type MatchPreviewSummary = {
   advice: string;
   supportedSkills: string[];
   missingSkills: string[];
+  /** Required skills the CV states without source evidence; absent from older AI responses. */
+  uncertainSkills?: string[];
   totalRequiredSkills: number;
   matchedRequiredSkills: number;
 };
@@ -45,7 +47,8 @@ function previewErrorMessage(error: unknown): string {
   if (!(error instanceof ApiClientError)) return "Không thể kiểm tra độ phù hợp lúc này. Vui lòng thử lại sau.";
   const messages: Record<string, string> = {
     JD_NOT_FOUND: "Tin tuyển dụng này chưa có dữ liệu JD đã xác nhận để đối chiếu. Vui lòng thử lại sau hoặc chọn tin khác.",
-    CV_NOT_FOUND: "Không tìm thấy dữ liệu phân tích của CV đã chọn. Vui lòng kiểm tra CV trong thư viện rồi thử lại."
+    CV_NOT_FOUND: "Không tìm thấy dữ liệu phân tích của CV đã chọn. Vui lòng kiểm tra CV trong thư viện rồi thử lại.",
+    CV_NOT_CONFIRMED: "CV đã chọn chưa được xác nhận kết quả phân tích. Vui lòng xác nhận CV trong thư viện rồi thử lại."
   };
   return `${messages[error.error.code] ?? error.error.message} (Mã lỗi: ${error.error.code})`;
 }
@@ -355,6 +358,21 @@ export const PreApplyMatchWidget: FC<Props> = ({
                     <div className="flex flex-wrap gap-1.5">
                       {previewResult.summary.missingSkills.map((skill) => (
                         <span key={skill} className="rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-900">
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {(previewResult.summary.uncertainSkills?.length ?? 0) > 0 && (
+                  <div className="space-y-2">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-700">
+                      Kỹ năng cần thêm minh chứng:
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {previewResult.summary.uncertainSkills?.map((skill) => (
+                        <span key={skill} className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-800">
                           {skill}
                         </span>
                       ))}
