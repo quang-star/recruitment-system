@@ -1,5 +1,5 @@
 import { FormEvent, lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
-import { ApiClientError, apiRequest } from "../../shared/api/client";
+import { ApiClientError, apiDownload, apiRequest } from "../../shared/api/client";
 import { AuthSession } from "../../shared/auth/session";
 import { ConfirmDialog } from "../../shared/components/ConfirmDialog";
 import { CvPreviewModal } from "../../shared/components/CvPreviewModal";
@@ -12,6 +12,17 @@ import { CvIcon, EyeIcon, TrashIcon, UploadIcon } from "../../shared/components/
 import { PdfSource } from "../../shared/components/PdfSource";
 import { Badge, Button, Card, EmptyState, ErrorBanner } from "../../shared/ui";
 import { useUnsavedChanges } from "../../shared/useUnsavedChanges";
+import {
+  createCvDocument,
+  fromServerDraft,
+  toServerDraftRequest,
+  type CvDocument,
+  type CvDraftRecord,
+  type TemplateId,
+} from "./cv-builder/cvDocument";
+import { importParsedCv } from "./cv-builder/cvImport";
+import { CvTemplateGallery } from "./cv-builder/CvTemplateGallery";
+import { CvTemplatePreviewModal } from "./cv-builder/CvTemplatePreviewModal";
 import {
   canRetryCv,
   cvFailureInstruction,
@@ -41,6 +52,9 @@ type Props = { session: AuthSession; onLogout?: () => void };
 
 const MAX_CV_BYTES = 10 * 1024 * 1024;
 const CvBuilder = lazy(() => import("./cv-builder/CvBuilder"));
+const PdfOverlayEditor = lazy(() =>
+  import("./cv-builder/PdfOverlayEditor").then((module) => ({ default: module.PdfOverlayEditor }))
+);
 
 function statusBadgeTone(status: string): "success" | "warning" | "danger" | "info" | "neutral" {
   if (status === "CONFIRMED") return "success";
@@ -60,8 +74,36 @@ function getErrorMessage(error: unknown): string {
     : "Không thể kết nối tới Gateway. Vui lòng thử lại.";
 }
 
+function isCvDraftRecord(value: unknown): value is CvDraftRecord {
+  return Boolean(
+    value &&
+    typeof value === "object" &&
+    "draftId" in value &&
+    typeof (value as CvDraftRecord).draftId === "string" &&
+    "templateId" in value &&
+    "payload" in value
+  );
+}
+
+const templateLabels: Record<string, string> = {
+  classic: "Classic",
+  modern: "Modern",
+  minimal: "Minimal",
+  executive: "Executive"
+};
+
 export function CandidateCvPanel({ session, onLogout }: Props) {
+  const [workspaceTab, setWorkspaceTab] = useState<"library" | "templates">("library");
   const [builderOpen, setBuilderOpen] = useState(false);
+  const [editingDraft, setEditingDraft] = useState<CvDraftRecord | null>(null);
+  const [initialBuilderDoc, setInitialBuilderDoc] = useState<CvDocument | null>(null);
+  const [referencePdf, setReferencePdf] = useState<{ bytes: Uint8Array; title: string } | null>(null);
+  const [overlayEditor, setOverlayEditor] = useState<{ initialBytes: Uint8Array | null; initialTitle: string } | null>(null);
+  const [openingActionKey, setOpeningActionKey] = useState<string | null>(null);
+  const [previewTemplate, setPreviewTemplate] = useState<{ templateId: TemplateId; accentColor: string } | null>(null);
+  const [serverDrafts, setServerDrafts] = useState<CvDraftRecord[]>([]);
+  const [deletingDraft, setDeletingDraft] = useState<CvDraftRecord | null>(null);
+  const [deletingDraftBusy, setDeletingDraftBusy] = useState(false);
   const [cvs, setCvs] = useState<CandidateCvRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState("");
@@ -129,9 +171,23 @@ export function CandidateCvPanel({ session, onLogout }: Props) {
     }
   }, [onLogout, session.accessToken]);
 
+  const loadDrafts = useCallback(async () => {
+    try {
+      const items = await apiRequest<unknown>("/api/v2/cvs/drafts", {
+        accessToken: session.accessToken
+      });
+      if (Array.isArray(items)) {
+        setServerDrafts(items.filter(isCvDraftRecord));
+      }
+    } catch {
+      // Keep CV library functional even if draft listing is unavailable.
+    }
+  }, [session.accessToken]);
+
   useEffect(() => {
     void loadCvs();
-  }, [loadCvs]);
+    void loadDrafts();
+  }, [loadCvs, loadDrafts]);
 
   useEffect(() => {
     if (!cvs.some((cv) => pendingCvStatuses.includes(cv.activeVersion.processingStatus))) return;
@@ -332,6 +388,103 @@ export function CandidateCvPanel({ session, onLogout }: Props) {
     }
   }
 
+  async function confirmDeleteDraft() {
+    if (!deletingDraft || deletingDraftBusy) return;
+    setDeletingDraftBusy(true);
+    setError(null);
+    try {
+      await apiRequest<void>(
+        `/api/v2/cvs/drafts/${deletingDraft.draftId}?version=${deletingDraft.version}`,
+        { method: "DELETE", accessToken: session.accessToken }
+      );
+      setServerDrafts((current) => current.filter((item) => item.draftId !== deletingDraft.draftId));
+      setDeletingDraft(null);
+    } catch (requestError) {
+      if (requestError instanceof ApiClientError && requestError.status === 401) onLogout?.();
+      else setError(getErrorMessage(requestError));
+    } finally {
+      setDeletingDraftBusy(false);
+    }
+  }
+
+  async function fetchCvPdfBytes(cv: CandidateCvRecord): Promise<Uint8Array> {
+    const { blob } = await apiDownload(
+      `/api/v2/cvs/${cv.cvId}/file?cvVersionId=${cv.activeVersion.cvVersionId}`,
+      { accessToken: session.accessToken }
+    );
+    return new Uint8Array(await blob.arrayBuffer());
+  }
+
+  async function openCvInBuilder(cv: CandidateCvRecord) {
+    if (openingActionKey) return;
+    setOpeningActionKey(`builder:${cv.cvId}`);
+    setError(null);
+    try {
+      const reviewData = await apiRequest<ParsedCvReviewData>(
+        `/api/v2/cvs/${cv.cvId}/parsed-review?cvVersionId=${cv.activeVersion.cvVersionId}`,
+        { accessToken: session.accessToken }
+      );
+      const base = createCvDocument();
+      base.title = (cv.title || cv.activeVersion.originalFilename.replace(/\.pdf$/i, "") || "CV của tôi").slice(0, 120);
+      const imported = importParsedCv(base, reviewData.payload);
+      let pdfRef: { bytes: Uint8Array; title: string } | null = null;
+      try {
+        const bytes = await fetchCvPdfBytes(cv);
+        pdfRef = { bytes, title: cv.title || cv.activeVersion.originalFilename };
+      } catch {
+        // Still allow structured editing if binary download is temporarily unavailable.
+      }
+      setEditingDraft(null);
+      setInitialBuilderDoc(imported);
+      setReferencePdf(pdfRef);
+      setBuilderOpen(true);
+    } catch (requestError) {
+      if (requestError instanceof ApiClientError && requestError.status === 401) onLogout?.();
+      else setError(getErrorMessage(requestError));
+    } finally {
+      setOpeningActionKey(null);
+    }
+  }
+
+  async function openCvInOverlayEditor(cv: CandidateCvRecord) {
+    if (openingActionKey) return;
+    setOpeningActionKey(`overlay:${cv.cvId}`);
+    setError(null);
+    try {
+      const bytes = await fetchCvPdfBytes(cv);
+      setOverlayEditor({
+        initialBytes: bytes,
+        initialTitle: cv.title || cv.activeVersion.originalFilename.replace(/\.pdf$/i, "") || "CV chỉnh sửa trực tiếp",
+      });
+    } catch (requestError) {
+      if (requestError instanceof ApiClientError && requestError.status === 401) onLogout?.();
+      else setError(getErrorMessage(requestError));
+    } finally {
+      setOpeningActionKey(null);
+    }
+  }
+
+  async function duplicateServerDraft(item: CvDraftRecord) {
+    if (openingActionKey) return;
+    setOpeningActionKey(`dup:${item.draftId}`);
+    setError(null);
+    try {
+      const sourceDoc = fromServerDraft(item);
+      sourceDoc.title = `${item.title} (Bản sao)`.slice(0, 120);
+      const saved = await apiRequest<CvDraftRecord>("/api/v2/cvs/drafts", {
+        method: "POST",
+        accessToken: session.accessToken,
+        body: JSON.stringify(toServerDraftRequest(sourceDoc, 0)),
+      });
+      setServerDrafts((current) => [saved, ...current]);
+    } catch (requestError) {
+      if (requestError instanceof ApiClientError && requestError.status === 401) onLogout?.();
+      else setError(getErrorMessage(requestError));
+    } finally {
+      setOpeningActionKey(null);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -342,8 +495,40 @@ export function CandidateCvPanel({ session, onLogout }: Props) {
           <h2 className="text-xl font-bold text-ink-900 m-0 mt-0.5">CV của tôi</h2>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button type="button" size="sm" disabled={dirty} onClick={() => setBuilderOpen(true)}>Tạo CV theo mẫu</Button>
-          <Button type="button" variant="secondary" size="sm" onClick={() => void loadCvs()} disabled={loading}>
+          <Button
+            type="button"
+            size="sm"
+            disabled={dirty}
+            onClick={() => {
+              setEditingDraft(null);
+              setInitialBuilderDoc(null);
+              setReferencePdf(null);
+              setBuilderOpen(true);
+            }}
+          >
+            Tạo CV theo mẫu
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled={dirty}
+            onClick={() => {
+              setOverlayEditor({ initialBytes: null, initialTitle: "CV chỉnh sửa PDF trực tiếp" });
+            }}
+          >
+            Sửa file PDF trực tiếp
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              void loadCvs();
+              void loadDrafts();
+            }}
+            disabled={loading}
+          >
             Làm mới
           </Button>
         </div>
@@ -359,7 +544,122 @@ export function CandidateCvPanel({ session, onLogout }: Props) {
         </p>
       )}
 
-      <Card padding="lg" className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-subtle pb-2" role="tablist" aria-label="Phân khu quản lý CV">
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={workspaceTab === "library"}
+            onClick={() => setWorkspaceTab("library")}
+            className={`cursor-pointer rounded-lg px-3.5 py-2 text-xs font-semibold transition ${
+              workspaceTab === "library"
+                ? "bg-brand-600 text-white"
+                : "bg-slate-100 text-ink-700 hover:bg-slate-200"
+            }`}
+          >
+            CV &amp; Bản nháp của tôi ({cvs.length + serverDrafts.length})
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={workspaceTab === "templates"}
+            onClick={() => setWorkspaceTab("templates")}
+            className={`cursor-pointer rounded-lg px-3.5 py-2 text-xs font-semibold transition ${
+              workspaceTab === "templates"
+                ? "bg-brand-600 text-white"
+                : "bg-slate-100 text-ink-700 hover:bg-slate-200"
+            }`}
+          >
+            Kho mẫu CV TopCV
+          </button>
+        </div>
+      </div>
+
+      {workspaceTab === "templates" ? (
+        <Card padding="lg">
+          <CvTemplateGallery
+            onSelectTemplate={(templateId, accentColor) => setPreviewTemplate({ templateId, accentColor })}
+          />
+        </Card>
+      ) : (
+        <>
+          {serverDrafts.length > 0 && (
+            <section aria-label="Bản nháp CV đã lưu" className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-base font-bold text-ink-900 m-0">Bản nháp CV tự tạo</h3>
+                  <p className="text-xs text-ink-500 m-0">Mở lại để chỉnh sửa trực tiếp trên CV hoặc xuất PDF mới.</p>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setWorkspaceTab("templates")}
+                >
+                  Đổi mẫu trong kho mẫu
+                </Button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {serverDrafts.map((item) => (
+                  <Card key={item.draftId} as="article" padding="md" className="flex flex-col justify-between gap-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h4 className="text-sm font-bold text-ink-900 m-0 truncate">{item.title}</h4>
+                        <p className="text-xs text-ink-500 m-0 mt-0.5">
+                          Mẫu {templateLabels[item.templateId] ?? item.templateId} · Phiên bản {item.version + 1}
+                        </p>
+                      </div>
+                      <span
+                        aria-hidden="true"
+                        className="flex h-6 w-5 shrink-0 flex-col gap-0.5 rounded border border-slate-200 bg-white p-0.5"
+                      >
+                        <span className="h-1 w-full rounded-[1px]" style={{ backgroundColor: item.accentColor }} />
+                        <span className="h-0.5 w-3/4 rounded-[1px] bg-slate-200" />
+                        <span className="h-0.5 w-full rounded-[1px] bg-slate-200" />
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border-subtle">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          disabled={dirty}
+                          onClick={() => {
+                            setEditingDraft(item);
+                            setInitialBuilderDoc(null);
+                            setReferencePdf(null);
+                            setBuilderOpen(true);
+                          }}
+                        >
+                          Chỉnh sửa tiếp
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          disabled={dirty || openingActionKey !== null}
+                          onClick={() => void duplicateServerDraft(item)}
+                        >
+                          {openingActionKey === `dup:${item.draftId}` ? "Đang nhân bản…" : "Nhân bản"}
+                        </Button>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="danger"
+                        onClick={() => setDeletingDraft(item)}
+                      >
+                        Xóa bản nháp
+                      </Button>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <Card padding="lg" className="space-y-4">
         <div className="flex items-center gap-2.5">
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
             <UploadIcon size={18} aria-hidden="true" />
@@ -458,8 +758,31 @@ export function CandidateCvPanel({ session, onLogout }: Props) {
                     </Button>
 
                     {reviewable && (
-                      <Button type="button" size="sm" onClick={() => void openReview(cv)}>
-                        Xem bản phân tích
+                      <>
+                        <Button type="button" size="sm" onClick={() => void openReview(cv)}>
+                          Xem bản phân tích
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          disabled={dirty || openingActionKey !== null}
+                          onClick={() => void openCvInBuilder(cv)}
+                        >
+                          {openingActionKey === `builder:${cv.cvId}` ? "Đang mở…" : "Tinh chỉnh bằng CV Builder"}
+                        </Button>
+                      </>
+                    )}
+
+                    {st !== "FAILED" && st !== "REJECTED" && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        disabled={dirty || openingActionKey !== null}
+                        onClick={() => void openCvInOverlayEditor(cv)}
+                      >
+                        {openingActionKey === `overlay:${cv.cvId}` ? "Đang tải PDF…" : "Sửa trực tiếp trên PDF"}
                       </Button>
                     )}
 
@@ -551,8 +874,83 @@ export function CandidateCvPanel({ session, onLogout }: Props) {
         }}
         onConfirm={() => void confirmDeleteCv()}
       />
+
+      <ConfirmDialog
+        open={Boolean(deletingDraft)}
+        title="Xóa bản nháp CV"
+        description={
+          deletingDraft
+            ? `Bạn chắc chắn muốn xóa bản nháp "${deletingDraft.title}"? Thao tác này không ảnh hưởng các CV PDF đã tải lên thư viện.`
+            : ""
+        }
+        confirmLabel={deletingDraftBusy ? "Đang xóa…" : "Xác nhận xóa bản nháp"}
+        busy={deletingDraftBusy}
+        onCancel={() => {
+          if (!deletingDraftBusy) setDeletingDraft(null);
+        }}
+        onConfirm={() => void confirmDeleteDraft()}
+      />
+        </>
+      )}
+
+      <CvTemplatePreviewModal
+        open={Boolean(previewTemplate)}
+        templateId={previewTemplate?.templateId ?? null}
+        initialAccentColor={previewTemplate?.accentColor ?? "#0f766e"}
+        session={session}
+        cvs={cvs}
+        serverDrafts={serverDrafts}
+        onClose={() => setPreviewTemplate(null)}
+        onCreate={(doc) => {
+          setPreviewTemplate(null);
+          setEditingDraft(null);
+          setInitialBuilderDoc(doc);
+          setReferencePdf(null);
+          setBuilderOpen(true);
+        }}
+        onLogout={onLogout}
+      />
+
       {builderOpen && <Suspense fallback={<p role="status">Đang mở trình tạo CV…</p>}>
-        <CvBuilder key={session.userId} session={session} cvs={cvs} onClose={() => setBuilderOpen(false)} onLogout={onLogout} />
+        <CvBuilder
+          key={session.userId}
+          session={session}
+          cvs={cvs}
+          initialDraft={editingDraft}
+          initialDoc={initialBuilderDoc}
+          initialReferencePdfBytes={referencePdf?.bytes ?? null}
+          initialReferencePdfTitle={referencePdf?.title}
+          onDraftSaved={(saved) => {
+            setEditingDraft(saved);
+            setInitialBuilderDoc(null);
+            setServerDrafts((current) => [saved, ...current.filter((item) => item.draftId !== saved.draftId)]);
+          }}
+          onCvUploaded={() => void loadCvs()}
+          onSwitchToOverlayEditor={(bytes, docTitle) => {
+            setBuilderOpen(false);
+            setOverlayEditor({ initialBytes: bytes, initialTitle: docTitle || "CV chỉnh sửa PDF trực tiếp" });
+          }}
+          onClose={() => {
+            setBuilderOpen(false);
+            setInitialBuilderDoc(null);
+            setReferencePdf(null);
+          }}
+          onLogout={onLogout}
+        />
+      </Suspense>}
+
+      {overlayEditor && <Suspense fallback={<p role="status">Đang mở trình sửa file PDF…</p>}>
+        <PdfOverlayEditor
+          session={session}
+          initialBytes={overlayEditor.initialBytes}
+          initialTitle={overlayEditor.initialTitle}
+          onCvUploaded={() => {
+            void loadCvs();
+            setUploadMessage("Đã lưu phiên bản CV PDF chỉnh sửa vào thư viện.");
+          }}
+          onClose={() => setOverlayEditor(null)}
+          onLogout={onLogout}
+        />
       </Suspense>}
     </div>
   );
