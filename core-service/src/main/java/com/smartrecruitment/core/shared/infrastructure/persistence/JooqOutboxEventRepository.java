@@ -11,6 +11,7 @@ import org.jooq.JSON;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -151,7 +152,7 @@ public class JooqOutboxEventRepository implements OutboxEventRepository {
         return records.map(record -> new PendingOutboxEvent(
                 record.getId(), record.getEventId(), record.getAggregateId(), record.getEventType(),
                 record.getSchemaVersion(), record.getIdempotencyKey(), record.getCorrelationId(),
-                record.getOccurredAt(), record.getPayload().data()));
+                record.getOccurredAt(), record.getPayload().data(), record.getAttemptCount() + 1));
     }
 
     @Transactional
@@ -169,10 +170,11 @@ public class JooqOutboxEventRepository implements OutboxEventRepository {
     }
 
     @Transactional
-    public void markFailed(long id, String workerId, String errorCode) {
+    public void markFailed(long id, String workerId, String errorCode, Duration retryDelay) {
+        if (retryDelay == null || retryDelay.isNegative()) throw new IllegalArgumentException("Invalid outbox retry delay");
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         dsl.update(OUTBOX_EVENTS)
-                .set(OUTBOX_EVENTS.AVAILABLE_AT, now.plusSeconds(5))
+                .set(OUTBOX_EVENTS.AVAILABLE_AT, now.plus(retryDelay))
                 .set(OUTBOX_EVENTS.LOCKED_BY, (String) null)
                 .set(OUTBOX_EVENTS.LOCKED_AT, (OffsetDateTime) null)
                 .set(OUTBOX_EVENTS.LAST_ERROR_CODE, errorCode)
@@ -180,6 +182,17 @@ public class JooqOutboxEventRepository implements OutboxEventRepository {
                 .where(OUTBOX_EVENTS.ID.eq(id))
                 .and(OUTBOX_EVENTS.LOCKED_BY.eq(workerId))
                 .and(OUTBOX_EVENTS.PUBLISHED_AT.isNull())
+                .execute();
+    }
+
+    /** Removes delivered events in bounded batches; unpublished events are never deleted. */
+    @Transactional
+    public int deletePublishedBefore(OffsetDateTime cutoff, int limit) {
+        return dsl.deleteFrom(OUTBOX_EVENTS)
+                .where(OUTBOX_EVENTS.ID.in(dsl.select(OUTBOX_EVENTS.ID).from(OUTBOX_EVENTS)
+                        .where(OUTBOX_EVENTS.PUBLISHED_AT.lt(cutoff))
+                        .orderBy(OUTBOX_EVENTS.PUBLISHED_AT.asc())
+                        .limit(limit)))
                 .execute();
     }
 
@@ -198,6 +211,6 @@ public class JooqOutboxEventRepository implements OutboxEventRepository {
 
     public record PendingOutboxEvent(long id, UUID eventId, Long aggregateId, String eventType,
                                      short schemaVersion, String idempotencyKey, UUID correlationId,
-                                     OffsetDateTime occurredAt, String payload) {
+                                     OffsetDateTime occurredAt, String payload, int attemptCount) {
     }
 }

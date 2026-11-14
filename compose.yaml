@@ -68,6 +68,8 @@ services:
         --topic matching.completed.v2 --partitions 3 --replication-factor 1
         && /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists
         --topic ai.processing.dlq.v2 --partitions 3 --replication-factor 1
+        && /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists
+        --topic core.consumer.dlq.v2 --partitions 3 --replication-factor 1
 
   minio:
     image: minio/minio:RELEASE.2025-07-23T15-54-02Z
