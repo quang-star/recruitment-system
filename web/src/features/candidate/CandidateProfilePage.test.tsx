@@ -44,8 +44,11 @@ it("defaults signed-in candidates to the same job-first homepage and puts person
   expect(window.location.pathname).toBe("/candidate/cv");
   expect(screen.getByRole("button", { name: /^Thông báo$/ })).toBeVisible();
   expect(screen.getByRole("button", { name: /^Tìm việc làm$/ })).toBeVisible();
+  expect(screen.getByRole("button", { name: /^Công ty$/ })).toBeVisible();
+  expect(screen.getByRole("button", { name: /^Công nghệ AI$/ })).toBeVisible();
+  expect(screen.queryByRole("navigation", { name: "Tài khoản cá nhân" })).not.toBeInTheDocument();
   expect(trigger).toHaveAttribute("aria-expanded", "false");
-  fireEvent.click(screen.getByRole("button", { name: /^Trang chủ$/ }));
+  fireEvent.click(screen.getByRole("button", { name: /Quay lại trang chủ việc làm/ }));
   expect(screen.getByRole("form", { name: "Tìm cơ hội nghề nghiệp" })).toBeInTheDocument();
 });
 
@@ -74,7 +77,7 @@ it("navigates from the homepage to CV management and keeps account data when ret
   await screen.findByRole("button", { name: "Tài khoản Nguyễn An" });
   fireEvent.click(screen.getByRole("button", { name: /Quản lý CV của tôi/ }));
   expect(screen.getByRole("heading", { name: "Thư viện CV cá nhân" })).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: /^Trang chủ$/ }));
+  fireEvent.click(screen.getByRole("button", { name: /Quay lại trang chủ việc làm/ }));
   await waitFor(() => expect(screen.getByRole("button", { name: "Tài khoản Nguyễn An" })).toBeInTheDocument());
   expect(vi.mocked(apiRequest).mock.calls.filter(([path]) => path === "/api/v2/candidates/me")).toHaveLength(1);
 });
@@ -156,4 +159,19 @@ it("renders /candidate/cv directly without fetching public portal endpoints", as
 
   expect(await screen.findByRole("heading", { name: "Thư viện CV cá nhân" })).toBeInTheDocument();
   expect(vi.mocked(apiRequest).mock.calls.some(([path]) => typeof path === "string" && path.startsWith("/api/v2/public/"))).toBe(false);
+});
+
+it("keeps the normal portal heading on candidate account pages instead of switching to a workspace header", async () => {
+  window.history.replaceState({}, "", "/candidate/profile");
+  render(<CandidateProfilePage session={session} onLogout={vi.fn()} />);
+
+  expect(await screen.findByRole("heading", { name: "Hồ sơ ứng viên", level: 1 })).toBeInTheDocument();
+  const headerNav = screen.getByRole("navigation", { name: "Điều hướng chính" });
+  expect(within(headerNav).getByRole("button", { name: "Tìm việc làm" })).toBeInTheDocument();
+  expect(within(headerNav).getByRole("button", { name: "Công ty" })).toBeInTheDocument();
+  expect(within(headerNav).getByRole("button", { name: "Công nghệ AI" })).toBeInTheDocument();
+  expect(within(headerNav).queryByRole("button", { name: "Tổng quan" })).not.toBeInTheDocument();
+  expect(within(headerNav).queryByRole("button", { name: "Hồ sơ" })).not.toBeInTheDocument();
+  expect(within(headerNav).queryByRole("button", { name: "Bảo mật" })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Tài khoản Nguyễn An" })).toBeInTheDocument();
 });
