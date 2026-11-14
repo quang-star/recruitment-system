@@ -1,0 +1,76 @@
+{
+  "draftId": "9007199254740993",
+  "candidateUserId": "1001",
+  "title": "CV Backend Java 2026",
+  "templateId": "modern",
+  "accentColor": "#0f766e",
+  "sectionOrder": [
+    "introduction",
+    "skills",
+    "experiences",
+    "projects",
+    "education",
+    "certificates",
+    "languages"
+  ],
+  "payload": {
+    "fullName": "Nguyễn Minh An",
+    "headline": "Kỹ sư phần mềm Backend",
+    "email": "an.nguyen@example.invalid",
+    "phone": "0901234567",
+    "location": "TP. Hồ Chí Minh",
+    "links": "https://github.com/example-candidate",
+    "introduction": "Kỹ sư phát triển dịch vụ Java Spring Boot và PostgreSQL.",
+    "skills": "Java, Spring Boot, PostgreSQL, Docker",
+    "experiences": [
+      {
+        "id": "entry-exp-1",
+        "title": "Backend Engineer",
+        "subtitle": "Công ty Công nghệ Mẫu",
+        "startMonth": "2023-01",
+        "endMonth": "",
+        "current": true,
+        "description": "Thiết kế API REST và tối ưu truy vấn jOOQ."
+      }
+    ],
+    "education": [
+      {
+        "id": "entry-edu-1",
+        "title": "Đại học - Công nghệ thông tin",
+        "subtitle": "Đại học Bách Khoa",
+        "startMonth": "2019-09",
+        "endMonth": "2023-06",
+        "current": false,
+        "description": ""
+      }
+    ],
+    "projects": [],
+    "certificates": [],
+    "languages": [
+      {
+        "id": "entry-lang-1",
+        "title": "Tiếng Anh",
+        "subtitle": "B2",
+        "startMonth": "",
+        "endMonth": "",
+        "current": false,
+        "description": ""
+      }
+    ],
+    "photoDataUrl": "",
+    "language": "vi",
+    "fontSize": "medium",
+    "lineSpacing": "normal",
+    "fontFamily": "sans",
+    "dateOfBirth": "1999-05-12",
+    "gender": "Nam",
+    "awards": [],
+    "activities": [],
+    "hobbies": [],
+    "sectionTitles": {},
+    "hiddenSections": []
+  },
+  "createdAt": "2026-11-14T02:00:00Z",
+  "updatedAt": "2026-11-14T02:15:00Z",
+  "version": 0
+}

@@ -7,7 +7,7 @@ from jsonschema import Draft202012Validator, FormatChecker, ValidationError
 ROOT = Path(__file__).resolve().parents[1]
 
 
-@pytest.mark.parametrize('kind', ['parsed-cv', 'parsed-jd', 'cv-response'])
+@pytest.mark.parametrize('kind', ['parsed-cv', 'parsed-jd', 'cv-response', 'cv-draft'])
 def test_v2_examples_validate(kind):
     schema = json.loads((ROOT / f'schemas/{kind}-v2.schema.json').read_text(encoding='utf-8'))
     payload = json.loads((ROOT / f'examples/{kind}-v2.example.json').read_text(encoding='utf-8'))
