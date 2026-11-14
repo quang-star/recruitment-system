@@ -53,3 +53,7 @@ Thumbs.db
 .env.*
 !.env.example
 .ast-graph/
+
+# Local shared project harness (existing local-only policy)
+/.harness/
+/.agents/skills/harness-datn/

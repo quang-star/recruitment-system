@@ -18,23 +18,15 @@ hướng cố định; màn hình hẹp sử dụng cuộn ngang thay vì menu/b
 
 Ứng viên có thể rút đơn, thu hồi quyền chia sẻ hoặc xóa CV. Quyền truy cập tài liệu được kiểm tra theo tài khoản và hồ sơ ứng tuyển.
 
-### Tạo CV theo mẫu (bản thử một template)
+### Tạo CV theo mẫu & Chỉnh sửa PDF trực tiếp
 
-Trong **CV của tôi**, chọn **Tạo CV theo mẫu** để soạn CV Classic một cột A4.
-Bạn có thể nhập tay, chọn lấy thông tin từ hồ sơ cá nhân hoặc nhập nội dung từ CV
-đã được phân tích và xác nhận trong thư viện. Thao tác import cần xác nhận trước
-khi thay thế nội dung; thông tin bị ẩn như tên công ty/trường học cần kiểm tra và
-bổ sung hoặc bỏ mục. Bố cục PDF cũ không được giữ lại.
+Trong **CV của tôi**, bạn có thể quản lý bản nháp/CV ở tab **CV & Bản nháp của tôi**, khám phá mẫu ở tab **Kho mẫu CV TopCV**, **Sửa file PDF trực tiếp**, hoặc chọn **Tạo CV theo mẫu** để mở trình soạn thảo WYSIWYG trực tiếp trên trang A4 với 4 mẫu bố cục (`Executive`, `Modern`, `Classic`, `Minimal`).
 
-Chọn **Tạo bản xem trước PDF**, sau đó tải đúng file đang xem. Sau mỗi lần sửa,
-cần tạo lại bản xem trước. Font Noto Sans được phục vụ từ asset ứng dụng, không
-gửi dữ liệu CV tới dịch vụ tạo PDF bên ngoài.
+- **Trình soạn thảo TopCV (`CvBuilder`)**: chỉnh sửa trực tiếp từng mục trên tờ CV (kèm thanh định dạng nhanh **In đậm**, *In nghiêng*, `• Bullet`), đổi tên tiêu đề từng mục tự do, bảng điều khiển 4 tab (**Thiết kế**, **Bố cục mục**, **Gợi ý & Nhập**, **Hoàn thiện**), chọn font chữ (`Noto Sans`, `Noto Serif`, `Mono`), bảng màu & mã màu nhấn tùy chỉnh, cỡ chữ, giãn dòng, ngôn ngữ tiêu đề (`Tiếng Việt` / `English`), ngày sinh / giới tính, các mục mở rộng (**Giải thưởng**, **Hoạt động**, **Sở thích**), gợi ý viết CV mẫu, chấm điểm mức độ hoàn thiện, **cắt/xoay ảnh đại diện 1:1** cục bộ trên Canvas trình duyệt, tự động lưu bản nháp khi chỉnh sửa bản nháp đã lưu, phím tắt `Ctrl+S` / `Ctrl+Z` / `Ctrl+Y`, và **Hoàn tác / Làm lại**.
+- **Nhập & đối chiếu PDF trong `CvBuilder`**: bạn có thể nhập tay, lấy thông tin từ hồ sơ cá nhân, chọn **Tinh chỉnh bằng CV Builder** từ CV đã phân tích trong thư viện, hoặc chọn **Nhập từ file PDF…** để đọc text PDF cục bộ ngay trên trình duyệt bằng `pdfjs-dist` kèm chế độ **PDF gốc đối chiếu** song song (lưu ý file ảnh scan chưa OCR cần dùng luồng phân tích AI hoặc **Sửa trực tiếp trên PDF**).
+- **Trình sửa file PDF trực tiếp (`PdfOverlayEditor`)**: nhấn **Sửa file PDF trực tiếp** hoặc **Sửa trực tiếp trên PDF** trên thẻ CV để mở canvas trang PDF thật, đặt vùng **Che trắng**, chèn **Chữ tiếng Việt** (font SIL OFL `Noto Sans` nhúng qua `@pdf-lib/fontkit`) hoặc **Chèn ảnh / Chữ ký** với lịch sử Hoàn tác / Làm lại, sau đó tải xuống PDF đã chỉnh sửa hoặc lưu thành phiên bản CV mới vào thư viện.
 
-Bản thử chưa lưu nháp trên server. Dùng **Tải file nháp** để giữ file `.cv.json`
-và **Mở file nháp** để tiếp tục lần sau; file chứa thông tin cá nhân nên cần tự
-bảo quản. Nội dung không được ghi vào localStorage. Để ứng tuyển, tải PDF vừa tạo
-lên thư viện, kiểm tra và xác nhận bản phân tích mới theo luồng hiện có. Bản CV
-gốc và hồ sơ ứng tuyển đã nộp không bị sửa bởi trình tạo CV.
+Trình soạn thảo hỗ trợ **Tải xuống PDF** một chạm trực tiếp hoặc tạo **Bản xem trước PDF** (font Noto Sans & Noto Serif được phục vụ từ asset ứng dụng, không gửi dữ liệu CV tới dịch vụ tạo PDF bên ngoài) và **Lưu vào thư viện CV** sau bước xác nhận đồng ý chia sẻ. Bản nháp được lưu trên server (**Lưu bản nháp**, **Nhân bản**, mở lại hoặc xóa từ danh sách bản nháp) với khóa lạc quan chống ghi đè, đồng thời giữ tùy chọn **Tải file nháp** (`.cv.json`) và **Mở file nháp** để sao lưu cục bộ (hỗ trợ cả định dạng v1.0 cũ). Nội dung CV không được ghi vào `localStorage`. Bản CV gốc và hồ sơ ứng tuyển đã nộp không bị sửa bởi trình tạo CV.
 
 ### Luồng tuyển dụng
 
