@@ -1,4 +1,4 @@
-import { FC, ReactNode, useEffect, useState } from "react";
+import { FC, ReactNode, useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { apiRequest } from "../../shared/api/client";
 import { PageResult } from "../../shared/api/pagination";
@@ -114,8 +114,11 @@ function PublicHomePageInner({ onLoginSuccess, session, candidate, children }: P
   );
   const [applicationMessage, setApplicationMessage] = useState<string | null>(null);
 
+  const loadedAttemptRef = useRef<number | null>(null);
+
   // Load real companies and published jobs from PostgreSQL via Gateway REST APIs
   useEffect(() => {
+    if (accountOpen || loadedAttemptRef.current === loadAttempt) return;
     let active = true;
     setLoadingJobs(true);
     setJobsError(false);
@@ -146,6 +149,7 @@ function PublicHomePageInner({ onLoginSuccess, session, candidate, children }: P
     ])
       .then(([compsData, jobsData, companyCounts, discoveryData]) => {
         if (!active) return;
+        loadedAttemptRef.current = loadAttempt;
         const rawJobs = jobsData.items;
         setTotalJobs(jobsData.total);
         setDiscovery(discoveryData);
@@ -182,7 +186,7 @@ function PublicHomePageInner({ onLoginSuccess, session, candidate, children }: P
     return () => {
       active = false;
     };
-  }, [loadAttempt]);
+  }, [loadAttempt, accountOpen]);
 
   function selectDemoAccount(role: "CANDIDATE" | "RECRUITER") {
     const email = role === "CANDIDATE" ? "candidate.demo@smart.local" : "recruiter.demo@smart.local";

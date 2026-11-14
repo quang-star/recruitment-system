@@ -2,19 +2,16 @@ import { FormEvent, useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { ApiClientError, apiRequest } from "../../shared/api/client";
 import { AuthSession } from "../../shared/auth/session";
-import { CheckCircleIcon, CvIcon, DashboardIcon, JobsIcon, NotificationIcon, ProfileIcon, SecurityIcon } from "../../shared/components/Icon";
-import { BRAND_CONFIG } from "../../shared/config/brand";
-import { WorkspaceNavItem, WorkspaceShell } from "../../shared/layout/WorkspaceShell";
+import { ProfileIcon } from "../../shared/components/Icon";
 import { EnsureRouter, routes, useSafeNavigate } from "../../shared/router";
-import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, ErrorBanner, Skeleton } from "../../shared/ui";
+import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, ErrorBanner, PageHeader, Skeleton } from "../../shared/ui";
 import { AccountSecurityPanel } from "../auth/AccountSecurityPanel";
 import { NotificationCenter } from "../notification/NotificationCenter";
-import { CandidateAccountMenu } from "../public/CandidateAccountMenu";
 import { PublicHomePage } from "../public/PublicHomePage";
 import { CandidateCvPanel } from "./CandidateCvPanel";
 import { CandidateDashboard } from "./CandidateDashboard";
 import { CandidateJobsPanel } from "./CandidateJobsPanel";
-import { CandidateView, candidateAccountLinks } from "./navigation";
+import { CandidateView } from "./navigation";
 
 export type CandidateProfile = {
   candidateProfileId?: string;
@@ -105,25 +102,6 @@ function viewRoute(view: CandidateView): string {
       return routes.candidate.security;
     default:
       return routes.home;
-  }
-}
-
-function viewTitle(view: CandidateView): string {
-  switch (view) {
-    case "dashboard":
-      return "Tổng quan";
-    case "profile":
-      return "Hồ sơ ứng viên";
-    case "cv":
-      return "Quản lý CV";
-    case "applications":
-      return "Việc làm đã ứng tuyển";
-    case "notifications":
-      return "Thông báo";
-    case "security":
-      return "Bảo mật";
-    default:
-      return "Tìm việc làm";
   }
 }
 
@@ -240,40 +218,6 @@ function CandidateProfilePageInner({ session, onLogout }: CandidateProfilePagePr
 
   const candidateDisplayName = profile?.displayName || form.displayName || "Ứng viên";
 
-  if (activeView === "jobs") {
-    return (
-      <PublicHomePage
-        session={session}
-        onLoginSuccess={() => {}}
-        candidate={{
-          name: candidateDisplayName,
-          activeView,
-          onNavigate: navigateView,
-          onLogout,
-        }}
-      >
-        {null}
-      </PublicHomePage>
-    );
-  }
-
-  const navIcons: Record<string, typeof JobsIcon> = {
-    dashboard: DashboardIcon,
-    profile: ProfileIcon,
-    cv: CvIcon,
-    applications: CheckCircleIcon,
-    security: SecurityIcon,
-  };
-
-  const candidateShellNav: WorkspaceNavItem<CandidateView>[] = [
-    { id: "jobs", label: "Tìm việc làm", icon: <JobsIcon size={16} /> },
-    ...candidateAccountLinks.map((link) => {
-      const NavIcon = navIcons[link.id] ?? ProfileIcon;
-      return { id: link.id, label: link.label, icon: <NavIcon size={16} /> };
-    }),
-    { id: "notifications", label: "Thông báo", icon: <NotificationIcon size={16} /> },
-  ];
-
   const safeAvatar = safeExternalUrl(form.avatarUrl);
   const safeLinkedIn = safeExternalUrl(form.linkedinUrl);
   const safeGitHub = safeExternalUrl(form.githubUrl);
@@ -286,31 +230,15 @@ function CandidateProfilePageInner({ session, onLogout }: CandidateProfilePagePr
     .join("") || "UV";
 
   return (
-    <WorkspaceShell<CandidateView>
-      variant="candidate"
-      activeItem={activeView}
-      brandLabel={BRAND_CONFIG.name || BRAND_CONFIG.defaultCandidateLabel}
-      eyebrow="Không gian Ứng viên"
-      title={viewTitle(activeView)}
-      navItems={candidateShellNav}
-      onNavigate={navigateView}
-      onLogout={onLogout}
-      onBrandClick={() => navigateView("jobs")}
-      userLabel={candidateDisplayName}
-      hideDefaultAccountControls
-      headerActions={
-        <div className="flex items-center gap-2">
-          <Button type="button" variant="ghost" size="sm" onClick={() => navigateView("jobs")}>
-            Trang chủ
-          </Button>
-          <CandidateAccountMenu
-            name={candidateDisplayName}
-            activeView={activeView}
-            onNavigate={navigateView}
-            onLogout={onLogout}
-          />
-        </div>
-      }
+    <PublicHomePage
+      session={session}
+      onLoginSuccess={() => {}}
+      candidate={{
+        name: candidateDisplayName,
+        activeView,
+        onNavigate: navigateView,
+        onLogout,
+      }}
     >
       {activeView === "dashboard" && (
         <CandidateDashboard
@@ -323,9 +251,11 @@ function CandidateProfilePageInner({ session, onLogout }: CandidateProfilePagePr
 
       {activeView === "profile" && (
         <div className="space-y-6">
-          <p className="text-sm text-ink-600 m-0">
-            Cập nhật thông tin liên hệ, giới thiệu bản thân và kiểm soát mức độ hiển thị với nhà tuyển dụng.
-          </p>
+          <PageHeader
+            eyebrow="Không gian Ứng viên"
+            title="Hồ sơ ứng viên"
+            subtitle="Cập nhật thông tin liên hệ, giới thiệu bản thân và kiểm soát mức độ hiển thị với nhà tuyển dụng."
+          />
 
           {saveMessage && <ErrorBanner tone="success" message={saveMessage} />}
           {error && <ErrorBanner tone="error" message={error} />}
@@ -593,7 +523,7 @@ function CandidateProfilePageInner({ session, onLogout }: CandidateProfilePagePr
       {activeView === "applications" && <CandidateJobsPanel session={session} applicationsOnly />}
       {activeView === "notifications" && <NotificationCenter session={session} onLogout={onLogout} />}
       {activeView === "security" && <AccountSecurityPanel session={session} onLogout={onLogout} />}
-    </WorkspaceShell>
+    </PublicHomePage>
   );
 }
 
