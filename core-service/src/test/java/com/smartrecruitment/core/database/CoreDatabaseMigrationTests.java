@@ -38,6 +38,14 @@ import com.smartrecruitment.core.catalog.application.CategoryAuditSearch;
 import com.smartrecruitment.core.catalog.domain.CategoryEntry;
 import com.smartrecruitment.core.catalog.domain.CategoryKind;
 import com.smartrecruitment.core.catalog.infrastructure.persistence.JooqCategoryRepository;
+import com.smartrecruitment.core.cv.application.CvDraftConflictException;
+import com.smartrecruitment.core.cv.application.CvDraftNotFoundException;
+import com.smartrecruitment.core.cv.application.CvDraftService;
+import com.smartrecruitment.core.cv.domain.CvDraftEntry;
+import com.smartrecruitment.core.cv.domain.CvDraftPayload;
+import com.smartrecruitment.core.cv.domain.CvDraftSection;
+import com.smartrecruitment.core.cv.domain.CvDraftTemplate;
+import com.smartrecruitment.core.cv.infrastructure.persistence.JooqCvDraftRepository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -111,7 +119,7 @@ class CoreDatabaseMigrationTests {
 
         assertThat(Arrays.stream(applied).map(info -> info.getVersion().getVersion()))
                 .containsExactly(
-                        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31");
+                        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33");
     }
 
     @Test
@@ -574,5 +582,54 @@ class CoreDatabaseMigrationTests {
             assertThat(category.name()).isEqualTo("Discovery Specialization");
             assertThat(category.jobCount()).isEqualTo(8);
         });
+    }
+
+    @Test
+    void cvDraftsSupportCrudOwnershipAndOptimisticLockingOnPostgres() {
+        var dataSource = new PGSimpleDataSource();
+        dataSource.setURL(POSTGRES.getJdbcUrl());
+        dataSource.setUser(POSTGRES.getUsername());
+        dataSource.setPassword(POSTGRES.getPassword());
+        var dsl = DSL.using(dataSource, SQLDialect.POSTGRES);
+        var clock = java.time.Clock.fixed(java.time.Instant.parse("2026-11-14T02:00:00Z"), ZoneOffset.UTC);
+        var service = new CvDraftService(
+                new JooqCvDraftRepository(dsl, new tools.jackson.databind.ObjectMapper()),
+                clock);
+        Long owner = com.smartrecruitment.core.support.TestIds.next();
+        Long other = com.smartrecruitment.core.support.TestIds.next();
+        var payload = new CvDraftPayload(
+                "Nguyen Van A",
+                "Backend Engineer",
+                "a@example.com",
+                "0901234567",
+                "Ho Chi Minh",
+                "https://github.com/example",
+                "Build resilient services.",
+                "Java, PostgreSQL",
+                List.of(new CvDraftEntry("exp-1", "Senior Engineer", "Acme", "2023-01", "", true, "Core APIs")),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of());
+
+        var created = service.create(owner, "Backend CV", CvDraftTemplate.MODERN, "#0f766e",
+                CvDraftSection.defaultOrder(), payload);
+        assertThat(created.version()).isZero();
+        assertThat(created.templateId()).isEqualTo(CvDraftTemplate.MODERN);
+        assertThat(service.listMine(owner)).extracting(draft -> draft.id()).contains(created.id());
+        assertThatThrownBy(() -> service.getMine(other, created.id()))
+                .isInstanceOf(CvDraftNotFoundException.class);
+
+        var updated = service.update(owner, created.id(), 0L, "Backend CV v2", CvDraftTemplate.MINIMAL, "#1d4ed8",
+                CvDraftSection.defaultOrder(), payload);
+        assertThat(updated.version()).isEqualTo(1L);
+        assertThat(updated.templateId()).isEqualTo(CvDraftTemplate.MINIMAL);
+        assertThatThrownBy(() -> service.update(owner, created.id(), 0L, "Stale", CvDraftTemplate.CLASSIC, "#0f172a",
+                CvDraftSection.defaultOrder(), payload))
+                .isInstanceOf(CvDraftConflictException.class);
+
+        service.delete(owner, created.id(), 1L);
+        assertThatThrownBy(() -> service.getMine(owner, created.id()))
+                .isInstanceOf(CvDraftNotFoundException.class);
     }
 }
