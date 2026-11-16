@@ -31,3 +31,36 @@ def role_family(title: str | None) -> str:
         if pattern.search(text):
             return family
     return "OTHER"
+
+
+SENIORITY_ORDER: dict[str, int] = {
+    "INTERN": 1,
+    "FRESHER": 2,
+    "JUNIOR": 3,
+    "MIDDLE": 4,
+    "SENIOR": 5,
+    "LEAD": 6,
+    "MANAGER": 7,
+}
+
+_LEVEL_MARKERS: tuple[tuple[str, re.Pattern[str]], ...] = tuple(
+    (level, re.compile(rf"(?<![a-z0-9]){pattern}(?![a-z0-9])", re.I))
+    for pattern, level in (
+        ("intern", "INTERN"),
+        ("fresher", "FRESHER"),
+        ("junior", "JUNIOR"),
+        (r"mid(?:dle|[-\s]+level)", "MIDDLE"),
+        (r"senior|sr\.?", "SENIOR"),
+        (r"lead|principal|staff", "LEAD"),
+        ("manager", "MANAGER"),
+    )
+)
+
+
+def role_level(title: str | None) -> str | None:
+    """Return the canonical IT seniority level for a title, or ``None``."""
+    text = str(title or "").casefold()
+    for level, pattern in _LEVEL_MARKERS:
+        if pattern.search(text):
+            return level
+    return None

@@ -206,7 +206,8 @@ class ReprocessingService:
             cv_revision_id=parse_id(claim.snapshot["cvRevisionId"]), jd_revision_id=parse_id(claim.snapshot["jdRevisionId"]),
             as_of_month=claim.target["asOfMonth"], input_taxonomy_version=claim.snapshot["jdTaxonomyVersion"],
             input_taxonomy_versions={"cv": claim.snapshot["cvTaxonomyVersion"], "jd": claim.snapshot["jdTaxonomyVersion"]},
-            reprocess_effect_key=claim.effect_key, expected_result_id=parse_id(claim.snapshot["priorResultId"]))
+            reprocess_effect_key=claim.effect_key, expected_result_id=parse_id(claim.snapshot["priorResultId"]),
+            penalty=computed.penalty, penalty_version=computed.penalty_version, confidence=computed.confidence)
         if prepared.shadow is not None:
             save_comparison(session, result, prepared.shadow)
         from app.worker import _matching_event

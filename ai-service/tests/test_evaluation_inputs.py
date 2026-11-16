@@ -97,9 +97,9 @@ def test_component_export_matches_predictions_and_keeps_source_text_private(froz
         parts = pair["components"]
         assert len(parts) == 6
         assert all(set(part) == {"name", "score", "weight", "contribution"} for part in parts)
-        assert pair["finalScore"] == pytest.approx(
-            round(sum(part["contribution"] for part in parts) / (sum(part["weight"] for part in parts) or 1) * 100, 2),
-            abs=0.01)
+        base_score = round(sum(part["contribution"] for part in parts) / (sum(part["weight"] for part in parts) or 1) * 100, 2)
+        expected_score = round(max(0.0, min(100.0, base_score - pair.get("penalty", 0.0))), 2)
+        assert pair["finalScore"] == pytest.approx(expected_score, abs=0.01)
     assert labels == (frozen_kit / "rater-1.csv").read_bytes()
     with pytest.raises(FileExistsError):
         export_components(frozen_kit, output)

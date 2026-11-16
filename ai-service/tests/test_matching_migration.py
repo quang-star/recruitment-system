@@ -20,3 +20,19 @@ def test_input_revision_migration_preserves_existing_results():
         result = connection.execute(text("SELECT * FROM matching_results")).mappings().one()
         assert dict(result) == {"id": 1, "score": 75, "cv_revision_id": None,
                                 "jd_revision_id": None, "as_of_month": None}
+
+
+def test_penalty_and_confidence_migration_preserves_existing_results():
+    path = Path(__file__).parents[1] / "migrations/versions/0021_matching_penalty_confidence.py"
+    spec = importlib.util.spec_from_file_location("matching_penalty_migration", path)
+    migration = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(migration)
+    engine = create_engine("sqlite:///:memory:")
+    with engine.begin() as connection:
+        connection.execute(text("CREATE TABLE matching_results (id INTEGER PRIMARY KEY, final_score FLOAT)"))
+        connection.execute(text("INSERT INTO matching_results VALUES (1, 80.5)"))
+        with Operations.context(MigrationContext.configure(connection)):
+            migration.upgrade()
+        result = connection.execute(text("SELECT * FROM matching_results")).mappings().one()
+        assert dict(result) == {"id": 1, "final_score": 80.5, "penalty": None,
+                                "penalty_version": None, "confidence": None}

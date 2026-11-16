@@ -48,6 +48,9 @@ public class MatchingCompletedListener {
             explanationNode.set("components", payload.path("components"));
             explanationNode.set("claims", payload.path("claims"));
             explanationNode.set("inputRevisions", payload.path("inputRevisions"));
+            copyOptionalField(payload, explanationNode, "penalty");
+            copyOptionalField(payload, explanationNode, "penaltyVersion");
+            copyOptionalField(payload, explanationNode, "confidence");
             String explanation = objectMapper.writeValueAsString(explanationNode);
             if (projections.update(applicationId, cvVersionId, jobVersionId, matchingResultId, status, score, flags,
                     explanation, algorithmVersion, taxonomyVersion, resultGeneration, supersedesMatchingResultId)) {
@@ -78,5 +81,12 @@ public class MatchingCompletedListener {
         if (value == null || value.isNull()) return null;
         if (!value.isString()) throw new IllegalArgumentException("Invalid " + field);
         return com.smartrecruitment.core.shared.domain.BusinessIds.parse(value.asText());
+    }
+
+    private static void copyOptionalField(JsonNode payload, tools.jackson.databind.node.ObjectNode target, String field) {
+        JsonNode value = payload.get(field);
+        if (value != null && !value.isMissingNode() && !value.isNull()) {
+            target.set(field, value);
+        }
     }
 }
