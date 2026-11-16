@@ -187,3 +187,20 @@ def test_external_ai_consent_is_optional_for_legacy_events_but_requires_policy_w
     ]:
         with pytest.raises(ValidationError):
             contract.validate({**event, **fields})
+
+
+def test_matching_completed_v2_supports_legacy_and_v7_penalty_confidence_fields() -> None:
+    identifier = "123456789012345678"
+    legacy = {
+        "applicationId": identifier, "cvVersionId": identifier, "jobVersionId": identifier,
+        "matchingResultId": identifier, "status": "COMPLETED", "finalScore": 70,
+        "algorithmVersion": "baseline-v6", "taxonomyVersion": "1.0.0",
+    }
+    schema = event_validator("matching-completed-v2.schema.json")
+    schema.validate(legacy)
+    schema.validate({**legacy, "algorithmVersion": "baseline-v7",
+                     "penalty": 7.5, "penaltyVersion": "penalty-v1", "confidence": 0.88})
+    schema.validate({**legacy, "penalty": None, "penaltyVersion": None, "confidence": None})
+    for bad in ({"confidence": 1.2}, {"confidence": -0.1}, {"penalty": -1}, {"penaltyVersion": ""}):
+        with pytest.raises(ValidationError):
+            schema.validate({**legacy, **bad})

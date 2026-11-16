@@ -10,7 +10,8 @@ export type MatchComponent = {
 };
 
 export type MatchClaim = {
-  type: "SUPPORTED" | "MISSING" | "UNCERTAIN";
+  type: "SUPPORTED" | "MISSING" | "UNCERTAIN" | "COMPONENT_SUPPORTED" | "COMPONENT_PARTIAL" | "COMPONENT_MISSING" | string;
+  component?: string;
   subject: string;
   skillId?: string;
   label?: string;
@@ -19,6 +20,7 @@ export type MatchClaim = {
   jdConfirmedByRecruiter?: boolean;
   cvLocations?: Array<{ id: string; page: number | null; start: number; end: number }>;
   jdLocations?: Array<{ id: string; page: number | null; start: number; end: number }>;
+  limitationCode?: string | null;
 };
 
 export type ApplicationMatch = {
@@ -30,6 +32,9 @@ export type ApplicationMatch = {
   explanation: {
     components: MatchComponent[];
     claims: MatchClaim[];
+    penalty?: number;
+    penaltyVersion?: string;
+    confidence?: number;
     inputRevisions?: {
       cv: string | null;
       jd: string | null;
@@ -43,7 +48,7 @@ const componentLabels: Record<string, string> = {
   REQUIRED_SKILLS: "Kỹ năng bắt buộc",
   PREFERRED_SKILLS: "Kỹ năng ưu tiên",
   EXPERIENCE: "Kinh nghiệm",
-  TITLE_SENIORITY: "Nhóm chức danh",
+  TITLE_SENIORITY: "Chức danh & cấp bậc",
   EDUCATION_LANGUAGE: "Học vấn/ngôn ngữ",
   RESPONSIBILITY_SIMILARITY: "Trách nhiệm tương đồng"
 };
@@ -58,9 +63,18 @@ const statusConfig: Record<ApplicationMatch["status"], { label: string; tone: "s
 export function MatchBreakdown({ match, onViewCv }: { match: ApplicationMatch; onViewCv?: (page: number) => void }) {
   const components = match.explanation?.components ?? [];
   const claims = match.explanation?.claims ?? [];
-  const supportedClaims = claims.filter((c) => c.type === "SUPPORTED");
-  const missingClaims = claims.filter((c) => c.type === "MISSING");
-  const uncertainClaims = claims.filter((c) => c.type === "UNCERTAIN" || (c.type !== "SUPPORTED" && c.type !== "MISSING"));
+  const requiredSkillClaims = claims.filter((c) => !c.component || c.component === "REQUIRED_SKILLS");
+  const componentClaims = claims.filter((c) => c.component && c.component !== "REQUIRED_SKILLS");
+  const supportedClaims = requiredSkillClaims.filter((c) => c.type === "SUPPORTED");
+  const missingClaims = requiredSkillClaims.filter((c) => c.type === "MISSING");
+  const uncertainClaims = requiredSkillClaims.filter(
+    (c) => c.type === "UNCERTAIN" || (c.type !== "SUPPORTED" && c.type !== "MISSING")
+  );
+  const confidencePct =
+    typeof match.explanation?.confidence === "number"
+      ? Math.round(Math.max(0, Math.min(1, match.explanation.confidence)) * 100)
+      : null;
+  const penaltyValue = typeof match.explanation?.penalty === "number" ? match.explanation.penalty : 0;
   const badge = statusConfig[match.status];
 
   const claimGroups = [
@@ -99,14 +113,26 @@ export function MatchBreakdown({ match, onViewCv }: { match: ApplicationMatch; o
           ) : (
             <MatchRating match={match} />
           )}
-          <Badge tone={badge.tone}>{badge.label}</Badge>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {confidencePct !== null && match.status !== "INSUFFICIENT_DATA" && (
+              <Badge tone={confidencePct >= 80 ? "success" : confidencePct >= 55 ? "neutral" : "warning"}>
+                Độ tin cậy rubric: {confidencePct}%
+              </Badge>
+            )}
+            <Badge tone={badge.tone}>{badge.label}</Badge>
+          </div>
         </div>
         <p className="text-xs text-ink-500 m-0 leading-relaxed">
           Mức độ phù hợp với vị trí trên thang 1–5 sao, không phải xác suất trúng tuyển. Nhà tuyển dụng quyết định sau khi xem hồ sơ.
         </p>
+        {penaltyValue > 0 && (
+          <p className="text-xs text-amber-800 bg-amber-50/80 border border-amber-200 rounded-lg px-2.5 py-1.5 m-0">
+            Giảm trừ thiếu tiêu chí trọng yếu ({match.explanation.penaltyVersion ?? "penalty-v1"}): −{penaltyValue.toFixed(1)} điểm rubric (chỉ hỗ trợ ưu tiên xem xét, không tự động loại).
+          </p>
+        )}
       </div>
 
-      {claims.length > 0 && (
+      {requiredSkillClaims.length > 0 && (
         <div className="flex flex-wrap gap-1.5" aria-label="Tóm tắt kỹ năng nhanh">
           {supportedClaims.map((claim, idx) => (
             <span
@@ -170,7 +196,7 @@ export function MatchBreakdown({ match, onViewCv }: { match: ApplicationMatch; o
         </div>
       )}
 
-      {claims.length > 0 && (
+      {requiredSkillClaims.length > 0 && (
         <div className="match-claims space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <strong className="text-sm font-bold text-ink-900">Đối chiếu kỹ năng bắt buộc</strong>
@@ -230,6 +256,40 @@ export function MatchBreakdown({ match, onViewCv }: { match: ApplicationMatch; o
                 </div>
               )
           )}
+        </div>
+      )}
+
+      {componentClaims.length > 0 && (
+        <div className="rounded-xl border border-border-subtle bg-slate-50/50 p-3.5 space-y-2">
+          <strong className="block text-xs font-bold uppercase tracking-wide text-ink-700">
+            Căn cứ từng tiêu chí &amp; giới hạn đánh giá
+          </strong>
+          <ul className="space-y-1.5 pl-4 m-0 text-xs text-ink-700 list-disc">
+            {componentClaims.map((claim, idx) => (
+              <li key={`comp-claim-${claim.component ?? idx}-${idx}`} className="leading-relaxed">
+                <span className="font-medium text-ink-900">
+                  {componentLabels[claim.component ?? ""] ?? claim.component}:
+                </span>{" "}
+                <span>{claim.label ?? claim.subject}</span>
+                {claim.limitationCode && (
+                  <small className="text-amber-700"> · giới hạn: {claim.limitationCode}</small>
+                )}
+                {claim.cvLocations?.slice(0, 2).map((location) => (
+                  <span key={location.id} className="inline-flex items-center ml-1.5">
+                    {location.page && onViewCv ? (
+                      <Button variant="secondary" size="sm" onClick={() => onViewCv(location.page!)}>
+                        Xem CV trang {location.page}
+                      </Button>
+                    ) : (
+                      <small className="text-ink-500">
+                        · CV {location.page ? `trang ${location.page}` : "vị trí ký tự"} {location.start}–{location.end}
+                      </small>
+                    )}
+                  </span>
+                ))}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 

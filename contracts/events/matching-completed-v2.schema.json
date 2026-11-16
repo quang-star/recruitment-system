@@ -92,6 +92,30 @@
       "minLength": 1,
       "maxLength": 32
     },
+    "penalty": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 100
+    },
+    "penaltyVersion": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1,
+      "maxLength": 32
+    },
+    "confidence": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 1
+    },
     "inputRevisions": {
       "type": "object",
       "additionalProperties": false,

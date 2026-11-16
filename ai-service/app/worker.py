@@ -456,6 +456,35 @@ async def _process_job(envelope: dict, factory, storage: Minio,
 
 def _matching_event(envelope: dict, result, application_id: int,
                     cv_version_id: int, job_version_id: int) -> dict:
+    payload: dict[str, object] = {
+        "applicationId": str(application_id),
+        "cvVersionId": str(cv_version_id),
+        "jobVersionId": str(job_version_id),
+        "matchingResultId": str(result.id),
+        "status": result.status,
+        "finalScore": result.final_score,
+        "qualityFlags": result.quality_flags,
+        "components": result.components,
+        "claims": result.claims,
+        "algorithmVersion": result.algorithm_version,
+        "taxonomyVersion": result.taxonomy_version,
+        "resultGeneration": getattr(result, "result_generation", None),
+        "supersedesMatchingResultId": (
+            str(result.supersedes_matching_result_id) if getattr(result, "supersedes_matching_result_id", None) else None
+        ),
+        "inputRevisions": {
+            "cv": str(result.cv_revision_id) if getattr(result, "cv_revision_id", None) else None,
+            "jd": str(result.jd_revision_id) if getattr(result, "jd_revision_id", None) else None,
+            "asOfMonth": getattr(result, "as_of_month", None),
+            "taxonomyVersions": getattr(result, "input_taxonomy_versions", None),
+        },
+    }
+    if getattr(result, "penalty", None) is not None:
+        payload["penalty"] = float(result.penalty)
+    if getattr(result, "penalty_version", None) is not None:
+        payload["penaltyVersion"] = result.penalty_version
+    if getattr(result, "confidence", None) is not None:
+        payload["confidence"] = float(result.confidence)
     return {
         "eventId": str(uuid4()),
         "eventType": "matching.completed.v2",
@@ -466,29 +495,7 @@ def _matching_event(envelope: dict, result, application_id: int,
             f"{result.algorithm_version}:{result.taxonomy_version}:{result.id}"
         ),
         "occurredAt": datetime.now(UTC).isoformat(),
-        "payload": {
-            "applicationId": str(application_id),
-            "cvVersionId": str(cv_version_id),
-            "jobVersionId": str(job_version_id),
-            "matchingResultId": str(result.id),
-            "status": result.status,
-            "finalScore": result.final_score,
-            "qualityFlags": result.quality_flags,
-            "components": result.components,
-            "claims": result.claims,
-            "algorithmVersion": result.algorithm_version,
-            "taxonomyVersion": result.taxonomy_version,
-            "resultGeneration": getattr(result, "result_generation", None),
-            "supersedesMatchingResultId": (
-                str(result.supersedes_matching_result_id) if getattr(result, "supersedes_matching_result_id", None) else None
-            ),
-            "inputRevisions": {
-                "cv": str(result.cv_revision_id) if getattr(result, "cv_revision_id", None) else None,
-                "jd": str(result.jd_revision_id) if getattr(result, "jd_revision_id", None) else None,
-                "asOfMonth": getattr(result, "as_of_month", None),
-                "taxonomyVersions": getattr(result, "input_taxonomy_versions", None),
-            },
-        },
+        "payload": payload,
     }
 
 
@@ -534,6 +541,8 @@ async def _process_application(envelope: dict, factory,
                     input_taxonomy_version=_input_taxonomy(cv_revision.payload, jd_revision.payload),
                     input_taxonomy_versions={"cv": cv_revision.payload.get("document", {}).get("taxonomyVersion", "1.0.0"),
                                              "jd": jd_revision.payload.get("document", {}).get("taxonomyVersion", "1.0.0")},
+                    penalty=computed.penalty, penalty_version=computed.penalty_version,
+                    confidence=computed.confidence,
                 )
         await _save_shadow(session, result, settings)
         event = _matching_event(envelope, result, application_id, cv_version_id, job_version_id)
@@ -574,6 +583,8 @@ async def _retry_waiting_matches(envelope: dict, factory,
                 input_taxonomy_version=_input_taxonomy(cv_revision.payload, jd_revision.payload),
                 input_taxonomy_versions={"cv": cv_revision.payload.get("document", {}).get("taxonomyVersion", "1.0.0"),
                                          "jd": jd_revision.payload.get("document", {}).get("taxonomyVersion", "1.0.0")},
+                penalty=computed.penalty, penalty_version=computed.penalty_version,
+                confidence=computed.confidence,
             )
             await _save_shadow(session, result, settings)
             event = _matching_event(

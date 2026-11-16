@@ -94,8 +94,9 @@ def export_components(kit: Path, output: Path, *, variant: str = "baseline") -> 
         components = [{name: component[name] for name in ("name", "weight", "score", "contribution")}
                       for component in result.components]
         identity = {name: pair[name] for name in ("pair_id", "candidate_id", "job_id", "split")}
-        row = {**identity, "finalScore": result.final_score, "status": result.status,
-               "qualityFlags": result.quality_flags, "components": components}
+        row = {**identity, "finalScore": result.final_score, "penalty": result.penalty,
+               "penaltyVersion": result.penalty_version, "confidence": result.confidence,
+               "status": result.status, "qualityFlags": result.quality_flags, "components": components}
         if variant != "baseline":
             pair_id = pair["pair_id"]
             semantic = float(method_predictions["semantic"][pair_id]["predicted_score"])

@@ -51,6 +51,22 @@ class MatchingCompletedGenerationTests {
         verifyNoInteractions(notifications);
     }
 
+    @Test
+    void copiesOptionalPenaltyAndConfidenceIntoExplanationJson() {
+        var repository = mock(JooqApplicationMatchingProjectionRepository.class);
+        var notifications = mock(NotificationService.class);
+        var listener = new MatchingCompletedListener(repository, new ObjectMapper(), notifications);
+        when(repository.update(any(), any(), any(), any(), anyString(), anyDouble(), anyString(), anyString(), anyString(), anyString(), any(), any()))
+                .thenReturn(true);
+        listener.onMessage(event("\"penalty\":7.5,\"penaltyVersion\":\"penalty-v1\",\"confidence\":0.88,"));
+        var explanationCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(repository).update(eq(ID), eq(ID), eq(ID), eq(ID), eq("COMPLETED"), eq(80.0), eq("[]"),
+                explanationCaptor.capture(), eq("baseline-v3"), eq("1.0.0"), isNull(), isNull());
+        var explanation = explanationCaptor.getValue();
+        org.assertj.core.api.Assertions.assertThat(explanation).contains("\"penalty\":7.5", "\"penaltyVersion\":\"penalty-v1\"", "\"confidence\":0.88");
+        verify(notifications).matchingCompleted(ID, ID, 80.0);
+    }
+
     private static String event(String metadata) {
         return """
                 {"eventType":"matching.completed.v2","payload":{%s

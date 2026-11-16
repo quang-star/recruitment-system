@@ -6,7 +6,7 @@ from typing import Any
 from uuid import UUID, uuid5
 
 from app.taxonomy.normalizer import extract_known_skills, taxonomy_version
-from app.taxonomy.roles import role_family
+from app.taxonomy.roles import role_family, role_level
 from app.extraction.evidence import attach_source_evidence, skill_locations
 
 
@@ -189,10 +189,4 @@ def _family(title: str) -> str:
 
 
 def _level(title: str) -> str | None:
-    lowered = title.casefold()
-    for marker, level in (("intern", "INTERN"), ("fresher", "FRESHER"), ("junior", "JUNIOR"),
-                          ("middle", "MIDDLE"), ("mid-level", "MIDDLE"), ("senior", "SENIOR"),
-                          ("lead", "LEAD"), ("manager", "MANAGER")):
-        if marker in lowered:
-            return level
-    return None
+    return role_level(title)

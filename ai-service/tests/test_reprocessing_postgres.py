@@ -43,7 +43,7 @@ def pg_case():
     parsed = parse_pdf(str(version), source_hash, raw, ocr_enabled=False)
     parsed["document"]["parserVersion"] = "synthetic-previous-processor"
     with factory() as session:
-        assert session.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0020"
+        assert session.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "0021"
         revision = ParsedCvRevisionRepository(session).create(version, owner, source_hash, parsed)
         old = ParsedCvRevisionRepository(session).confirm(version, owner, revision.id, owner)
         tasks = SqlAlchemyProcessingTaskRepository(session)

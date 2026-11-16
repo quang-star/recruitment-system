@@ -77,6 +77,8 @@ def preview_match(
     skills_by_type: dict[str, list[str]] = {"SUPPORTED": [], "MISSING": [], "UNCERTAIN": []}
     total_required = 0
     for claim in computed.claims:
+        if claim.get("component", "REQUIRED_SKILLS") != "REQUIRED_SKILLS":
+            continue
         claim_type = claim.get("type")
         if claim_type not in skills_by_type:
             continue
@@ -86,7 +88,10 @@ def preview_match(
             skills_by_type[claim_type].append(label)
     supported_skills = skills_by_type["SUPPORTED"]
     missing_skills = skills_by_type["MISSING"]
-    matched_required = sum(claim.get("type") == "SUPPORTED" for claim in computed.claims)
+    matched_required = sum(
+        claim.get("component", "REQUIRED_SKILLS") == "REQUIRED_SKILLS" and claim.get("type") == "SUPPORTED"
+        for claim in computed.claims
+    )
 
     score = computed.final_score
     if score >= 80.0:
@@ -132,6 +137,9 @@ def preview_match(
         explanation={
             "components": computed.components,
             "claims": computed.claims,
+            "penalty": computed.penalty,
+            "penaltyVersion": computed.penalty_version,
+            "confidence": computed.confidence,
             "inputRevisions": {
                 "cv": str(cv_revision.id),
                 "jd": str(jd_revision.id),

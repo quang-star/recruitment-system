@@ -80,4 +80,29 @@ describe("MatchBreakdown", () => {
     expect(screen.getByText("Chưa tìm thấy trong CV")).toBeInTheDocument();
     expect(screen.getByText("Chưa chắc chắn · Cần phỏng vấn hoặc kiểm tra thêm")).toBeInTheDocument();
   });
+  it("renders v7 confidence, penalty banner, and component claims separately from required skill counts", () => {
+    render(<MatchBreakdown match={{
+      status: "COMPLETED",
+      finalScore: 68.5,
+      algorithmVersion: "baseline-v7",
+      taxonomyVersion: "1.0.0",
+      qualityFlags: ["CRITICAL_REQUIREMENT_PENALTY"],
+      explanation: {
+        confidence: 0.86,
+        penalty: 7.5,
+        penaltyVersion: "penalty-v1",
+        components: [{ name: "TITLE_SENIORITY", weight: 10, score: 1, contribution: 10, details: { seniorityEvaluated: true } }],
+        claims: [
+          { type: "SUPPORTED", component: "REQUIRED_SKILLS", subject: "REQUIRED_SKILL", label: "Java" },
+          { type: "COMPONENT_SUPPORTED", component: "TITLE_SENIORITY", subject: "COMPONENT_CRITERION", label: "Chức danh nhóm BACKEND · cấp SENIOR" },
+          { type: "COMPONENT_PARTIAL", component: "RESPONSIBILITY_SIMILARITY", subject: "COMPONENT_CRITERION", label: "Tương đồng trách nhiệm công việc", limitationCode: "LEXICAL_NGRAM_SIMILARITY_ONLY" }
+        ]
+      }
+    }} />);
+    expect(screen.getByText("Độ tin cậy rubric: 86%")).toBeInTheDocument();
+    expect(screen.getByText(/Giảm trừ thiếu tiêu chí trọng yếu \(penalty-v1\): −7\.5/)).toBeInTheDocument();
+    expect(screen.getByText("1 đáp ứng")).toBeInTheDocument();
+    expect(screen.getByText(/Chức danh nhóm BACKEND · cấp SENIOR/)).toBeInTheDocument();
+    expect(screen.getByText(/LEXICAL_NGRAM_SIMILARITY_ONLY/)).toBeInTheDocument();
+  });
 });
