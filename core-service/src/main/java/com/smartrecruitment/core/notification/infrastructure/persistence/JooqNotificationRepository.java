@@ -2,6 +2,7 @@ package com.smartrecruitment.core.notification.infrastructure.persistence;
 
 import com.smartrecruitment.core.notification.application.port.NotificationRepository;
 import com.smartrecruitment.core.notification.domain.Notification;
+import com.smartrecruitment.core.shared.infrastructure.persistence.TimestampGuards;
 import org.jooq.DSLContext;
 import org.springframework.stereotype.Repository;
 
@@ -79,7 +80,8 @@ public class JooqNotificationRepository implements NotificationRepository {
 
     @Override
     public boolean markRead(Long userId, Long notificationId, long expectedVersion, OffsetDateTime now) {
-        return dsl.update(NOTIFICATIONS).set(NOTIFICATIONS.READ_AT, now)
+        return dsl.update(NOTIFICATIONS)
+                .set(NOTIFICATIONS.READ_AT, TimestampGuards.atLeast(NOTIFICATIONS.CREATED_AT, now))
                 .set(NOTIFICATIONS.VERSION, NOTIFICATIONS.VERSION.plus(1L))
                 .where(NOTIFICATIONS.ID.eq(notificationId)).and(NOTIFICATIONS.USER_ID.eq(userId))
                 .and(NOTIFICATIONS.READ_AT.isNull()).and(NOTIFICATIONS.VERSION.eq(expectedVersion)).execute() == 1;
@@ -87,7 +89,8 @@ public class JooqNotificationRepository implements NotificationRepository {
 
     @Override
     public int markAllRead(Long userId, OffsetDateTime now) {
-        return dsl.update(NOTIFICATIONS).set(NOTIFICATIONS.READ_AT, now)
+        return dsl.update(NOTIFICATIONS)
+                .set(NOTIFICATIONS.READ_AT, TimestampGuards.atLeast(NOTIFICATIONS.CREATED_AT, now))
                 .set(NOTIFICATIONS.VERSION, NOTIFICATIONS.VERSION.plus(1L))
                 .where(NOTIFICATIONS.USER_ID.eq(userId)).and(NOTIFICATIONS.READ_AT.isNull()).execute();
     }

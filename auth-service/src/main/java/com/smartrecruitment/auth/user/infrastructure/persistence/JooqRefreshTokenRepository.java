@@ -34,7 +34,8 @@ public class JooqRefreshTokenRepository implements RefreshTokenRepository {
     }
     @Override
     public boolean markUsedAndReplaced(Long id, Instant usedAt, Long replacementId) {
-        return dsl.update(REFRESH_TOKENS).set(REFRESH_TOKENS.USED_AT, utc(usedAt))
+        return dsl.update(REFRESH_TOKENS)
+                .set(REFRESH_TOKENS.USED_AT, TimestampGuards.atLeast(REFRESH_TOKENS.ISSUED_AT, usedAt))
                 .set(REFRESH_TOKENS.REPLACED_BY_TOKEN_ID, replacementId).where(REFRESH_TOKENS.ID.eq(id))
                 .and(REFRESH_TOKENS.USED_AT.isNull()).and(REFRESH_TOKENS.REVOKED_AT.isNull()).execute() == 1;
     }

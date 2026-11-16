@@ -7,6 +7,7 @@ import com.smartrecruitment.core.cv.domain.CandidateCv;
 import com.smartrecruitment.core.cv.domain.CvProcessingStatus;
 import com.smartrecruitment.core.cv.domain.CvStatus;
 import com.smartrecruitment.core.cv.domain.CvVersion;
+import com.smartrecruitment.core.shared.infrastructure.persistence.TimestampGuards;
 import org.jooq.DSLContext;
 import org.jooq.SelectOnConditionStep;
 import org.springframework.stereotype.Repository;
@@ -98,8 +99,10 @@ public class JooqCandidateCvRepository implements CandidateCvRepository {
                 .set(CV_VERSIONS.PROCESSING_STATUS, status.name())
                 .set(CV_VERSIONS.FAILURE_CODE, failureCode)
                 .set(CV_VERSIONS.CONFIRMED_AT,
-                        status == CvProcessingStatus.CONFIRMED ? now : null)
-                .set(CV_VERSIONS.UPDATED_AT, now)
+                        status == CvProcessingStatus.CONFIRMED
+                                ? TimestampGuards.atLeast(CV_VERSIONS.CREATED_AT, now)
+                                : org.jooq.impl.DSL.val((OffsetDateTime) null, CV_VERSIONS.CONFIRMED_AT))
+                .set(CV_VERSIONS.UPDATED_AT, TimestampGuards.atLeast(CV_VERSIONS.CREATED_AT, CV_VERSIONS.UPDATED_AT, now))
                 .set(CV_VERSIONS.VERSION, CV_VERSIONS.VERSION.add(1L))
                 .where(CV_VERSIONS.ID.eq(cvVersionId))
                 .and(CV_VERSIONS.PROCESSING_STATUS.ne("DELETED"))
@@ -120,7 +123,7 @@ public class JooqCandidateCvRepository implements CandidateCvRepository {
         int updated = dsl.update(CV_VERSIONS)
                 .set(CV_VERSIONS.PROCESSING_STATUS, CvProcessingStatus.QUEUED.name())
                 .set(CV_VERSIONS.FAILURE_CODE, (String) null)
-                .set(CV_VERSIONS.UPDATED_AT, OffsetDateTime.now(ZoneOffset.UTC))
+                .set(CV_VERSIONS.UPDATED_AT, TimestampGuards.atLeast(CV_VERSIONS.CREATED_AT, OffsetDateTime.now(ZoneOffset.UTC)))
                 .set(CV_VERSIONS.VERSION, CV_VERSIONS.VERSION.add(1L))
                 .set(CV_VERSIONS.PROCESSING_GENERATION, CV_VERSIONS.VERSION.add(1L))
                 .where(CV_VERSIONS.ID.eq(cvVersionId))

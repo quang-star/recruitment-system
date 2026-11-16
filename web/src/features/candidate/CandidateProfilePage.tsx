@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { ApiClientError, apiRequest } from "../../shared/api/client";
 import { AuthSession } from "../../shared/auth/session";
@@ -115,6 +115,7 @@ function CandidateProfilePageInner({ session, onLogout }: CandidateProfilePagePr
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [avatarError, setAvatarError] = useState(false);
+  const loadedUserIdRef = useRef<string | null>(null);
 
   const searchParams = new URLSearchParams(location.search);
   const legacyView = searchParams.get("candidate");
@@ -138,6 +139,7 @@ function CandidateProfilePageInner({ session, onLogout }: CandidateProfilePagePr
   }
 
   useEffect(() => {
+    if (loadedUserIdRef.current === session.userId) return;
     const controller = new AbortController();
     setLoading(true);
     setError(null);
@@ -147,6 +149,7 @@ function CandidateProfilePageInner({ session, onLogout }: CandidateProfilePagePr
     })
       .then((loaded) => {
         if (controller.signal.aborted) return;
+        loadedUserIdRef.current = session.userId;
         setProfile(loaded);
         setForm({
           displayName: loaded.displayName ?? "",

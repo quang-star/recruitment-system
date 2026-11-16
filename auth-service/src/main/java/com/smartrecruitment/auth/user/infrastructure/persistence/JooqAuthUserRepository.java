@@ -40,14 +40,17 @@ public class JooqAuthUserRepository implements AuthUserRepository {
     @Override
     public Optional<AuthUser> activateById(Long id, Instant verifiedAt) {
         return dsl.update(AUTH_USERS).set(AUTH_USERS.STATUS, UserStatus.ACTIVE.name())
-                .set(AUTH_USERS.EMAIL_VERIFIED_AT, utc(verifiedAt)).set(AUTH_USERS.UPDATED_AT, utc(verifiedAt))
+                .set(AUTH_USERS.EMAIL_VERIFIED_AT, TimestampGuards.atLeast(AUTH_USERS.CREATED_AT, verifiedAt))
+                .set(AUTH_USERS.UPDATED_AT, TimestampGuards.atLeast(AUTH_USERS.CREATED_AT, verifiedAt))
                 .set(AUTH_USERS.VERSION, AUTH_USERS.VERSION.plus(1L)).where(AUTH_USERS.ID.eq(id))
                 .and(AUTH_USERS.STATUS.eq(UserStatus.PENDING.name())).returning().fetchOptional(this::toDomain);
     }
     @Override
     public Optional<AuthUser> updateLastLogin(Long id, Instant lastLoginAt) {
-        return dsl.update(AUTH_USERS).set(AUTH_USERS.LAST_LOGIN_AT, utc(lastLoginAt))
-                .set(AUTH_USERS.UPDATED_AT, utc(lastLoginAt)).set(AUTH_USERS.VERSION, AUTH_USERS.VERSION.plus(1L))
+        return dsl.update(AUTH_USERS)
+                .set(AUTH_USERS.LAST_LOGIN_AT, TimestampGuards.atLeast(AUTH_USERS.CREATED_AT, lastLoginAt))
+                .set(AUTH_USERS.UPDATED_AT, TimestampGuards.atLeast(AUTH_USERS.CREATED_AT, lastLoginAt))
+                .set(AUTH_USERS.VERSION, AUTH_USERS.VERSION.plus(1L))
                 .where(AUTH_USERS.ID.eq(id)).and(AUTH_USERS.STATUS.eq(UserStatus.ACTIVE.name()))
                 .returning().fetchOptional(this::toDomain);
     }

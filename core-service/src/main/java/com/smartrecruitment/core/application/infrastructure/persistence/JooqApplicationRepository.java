@@ -11,6 +11,7 @@ import com.smartrecruitment.core.application.domain.ApplicationStatus;
 import com.smartrecruitment.core.application.domain.ApplicationStatusChange;
 import com.smartrecruitment.core.shared.application.PageResult;
 import com.smartrecruitment.core.shared.infrastructure.SearchText;
+import com.smartrecruitment.core.shared.infrastructure.persistence.TimestampGuards;
 
 import org.jooq.Condition;
 import org.jooq.DSLContext;
@@ -195,7 +196,7 @@ public class JooqApplicationRepository implements ApplicationRepository {
         if (current.isEmpty()) return Optional.empty();
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         int updated = dsl.update(APPLICATIONS).set(APPLICATIONS.STATUS, status.name())
-                .set(APPLICATIONS.UPDATED_AT, now).set(APPLICATIONS.VERSION, APPLICATIONS.VERSION.plus(1L))
+                .set(APPLICATIONS.UPDATED_AT, TimestampGuards.atLeast(APPLICATIONS.APPLIED_AT, APPLICATIONS.UPDATED_AT, now)).set(APPLICATIONS.VERSION, APPLICATIONS.VERSION.plus(1L))
                 .where(APPLICATIONS.ID.eq(applicationId)).and(APPLICATIONS.VERSION.eq(expectedVersion))
                 .execute();
         if (updated != 1) return Optional.empty();
@@ -211,7 +212,7 @@ public class JooqApplicationRepository implements ApplicationRepository {
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         int updated = dsl.update(APPLICATIONS)
                 .set(APPLICATIONS.STATUS, ApplicationStatus.WITHDRAWN.name())
-                .set(APPLICATIONS.UPDATED_AT, now)
+                .set(APPLICATIONS.UPDATED_AT, TimestampGuards.atLeast(APPLICATIONS.APPLIED_AT, APPLICATIONS.UPDATED_AT, now))
                 .set(APPLICATIONS.VERSION, APPLICATIONS.VERSION.plus(1L))
                 .where(APPLICATIONS.ID.eq(applicationId))
                 .and(APPLICATIONS.CANDIDATE_USER_ID.eq(candidateUserId))
@@ -238,12 +239,12 @@ public class JooqApplicationRepository implements ApplicationRepository {
         var now = OffsetDateTime.now(ZoneOffset.UTC);
         revokeGrant(applicationId, now);
         dsl.update(APPLICATIONS).set(APPLICATIONS.VERSION, APPLICATIONS.VERSION.plus(1L))
-                .set(APPLICATIONS.UPDATED_AT, now).where(APPLICATIONS.ID.eq(row.getId())).execute();
+                .set(APPLICATIONS.UPDATED_AT, TimestampGuards.atLeast(APPLICATIONS.APPLIED_AT, APPLICATIONS.UPDATED_AT, now)).where(APPLICATIONS.ID.eq(row.getId())).execute();
         return true;
     }
 
     private void revokeGrant(Long applicationId, OffsetDateTime now) {
-        dsl.update(APPLICATION_CV_ACCESS_GRANTS).set(APPLICATION_CV_ACCESS_GRANTS.REVOKED_AT, now)
+        dsl.update(APPLICATION_CV_ACCESS_GRANTS).set(APPLICATION_CV_ACCESS_GRANTS.REVOKED_AT, TimestampGuards.atLeast(APPLICATION_CV_ACCESS_GRANTS.GRANTED_AT, now))
                 .where(APPLICATION_CV_ACCESS_GRANTS.APPLICATION_ID.eq(internalId(applicationId)))
                 .and(APPLICATION_CV_ACCESS_GRANTS.REVOKED_AT.isNull()).execute();
         dsl.update(APPLICATIONS).set(APPLICATIONS.COVER_LETTER, (String) null)

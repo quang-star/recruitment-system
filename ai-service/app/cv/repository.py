@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from app.shared.database import BUSINESS_ID
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, Integer, JSON, String, func, select, update
+from sqlalchemy import DateTime, Integer, JSON, String, func, select
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
-from app.shared.database import Base
+from app.shared.database import BUSINESS_ID, Base, monotonic_update_time, stored_time
 
 
 class ParsedCvRevisionRecord(Base):
@@ -71,7 +70,7 @@ class ParsedCvRevisionRepository:
             select(func.coalesce(func.max(ParsedCvRevisionRecord.revision_number), 0) + 1)
             .where(ParsedCvRevisionRecord.cv_version_id == cv_version_id)
         ).scalar_one()
-        now = datetime.now().astimezone()
+        now = stored_time(self._session, datetime.now(UTC))
         record = ParsedCvRevisionRecord(
 
             cv_version_id=cv_version_id,
@@ -105,7 +104,7 @@ class ParsedCvRevisionRepository:
             raise ValueError("ParsedCV revision is stale; reload the latest revision")
 
         next_number = (latest.revision_number + 1) if latest else 1
-        now = datetime.now().astimezone()
+        now = stored_time(self._session, datetime.now(UTC))
         record = ParsedCvRevisionRecord(
 
             cv_version_id=cv_version_id,
@@ -177,7 +176,8 @@ class ParsedCvRevisionRepository:
             .where(ParsedCvHeadRecord.cv_version_id == cv_version_id)
             .with_for_update()
         )
-        now = datetime.now().astimezone()
+        now_utc = monotonic_update_time(record.created_at, record.updated_at)
+        now = stored_time(self._session, now_utc)
         if head is None:
             self._session.add(ParsedCvHeadRecord(
                 cv_version_id=cv_version_id,
@@ -187,12 +187,18 @@ class ParsedCvRevisionRepository:
                 version=0,
             ))
         elif head.revision_id != record.id:
-            self._session.execute(
-                update(ParsedCvRevisionRecord)
+            prior = self._session.scalar(
+                select(ParsedCvRevisionRecord)
                 .where(ParsedCvRevisionRecord.id == head.revision_id)
-                .values(status="SUPERSEDED", updated_at=now,
-                        version=ParsedCvRevisionRecord.version + 1)
+                .with_for_update()
             )
+            if prior is not None:
+                prior.status = "SUPERSEDED"
+                prior.updated_at = stored_time(
+                    self._session,
+                    monotonic_update_time(prior.created_at, prior.updated_at, candidate=now_utc),
+                )
+                prior.version += 1
             head.revision_id = record.id
             head.confirmed_by = confirmed_by
             head.confirmed_at = now

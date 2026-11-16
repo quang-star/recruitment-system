@@ -52,7 +52,7 @@ public class JooqOneTimeTokenRepository implements OneTimeTokenRepository {
     @Override
     public boolean invalidateActiveTokens(Long userId, String tokenType, Instant invalidatedAt) {
         return dsl.update(ONE_TIME_TOKENS)
-                .set(ONE_TIME_TOKENS.INVALIDATED_AT, toOffsetDateTime(invalidatedAt))
+                .set(ONE_TIME_TOKENS.INVALIDATED_AT, TimestampGuards.atLeast(ONE_TIME_TOKENS.CREATED_AT, invalidatedAt))
                 .where(ONE_TIME_TOKENS.USER_ID.eq(userId))
                 .and(ONE_TIME_TOKENS.TOKEN_TYPE.eq(tokenType))
                 .and(ONE_TIME_TOKENS.CONSUMED_AT.isNull())
@@ -100,7 +100,7 @@ public class JooqOneTimeTokenRepository implements OneTimeTokenRepository {
     @Override
     public boolean consume(Long id, Instant consumedAt) {
         return dsl.update(ONE_TIME_TOKENS)
-                .set(ONE_TIME_TOKENS.CONSUMED_AT, toOffsetDateTime(consumedAt))
+                .set(ONE_TIME_TOKENS.CONSUMED_AT, TimestampGuards.atLeast(ONE_TIME_TOKENS.CREATED_AT, consumedAt))
                 .where(ONE_TIME_TOKENS.ID.eq(id))
                 .and(ONE_TIME_TOKENS.CONSUMED_AT.isNull())
                 .and(ONE_TIME_TOKENS.INVALIDATED_AT.isNull())

@@ -48,7 +48,7 @@ public class JooqSessionRepository implements SessionRepository {
     public boolean touch(Long id, String lastSeenIp, Instant lastSeenAt, Instant idleExpiresAt) {
         return dsl.update(AUTH_SESSIONS)
                 .set(AUTH_SESSIONS.LAST_SEEN_IP, lastSeenIp)
-                .set(AUTH_SESSIONS.LAST_SEEN_AT, utc(lastSeenAt))
+                .set(AUTH_SESSIONS.LAST_SEEN_AT, TimestampGuards.atLeast(AUTH_SESSIONS.AUTHENTICATED_AT, lastSeenAt))
                 .set(AUTH_SESSIONS.IDLE_EXPIRES_AT, utc(idleExpiresAt))
                 .set(AUTH_SESSIONS.VERSION, AUTH_SESSIONS.VERSION.plus(1L))
                 .where(AUTH_SESSIONS.ID.eq(id))
@@ -60,7 +60,7 @@ public class JooqSessionRepository implements SessionRepository {
     @Override
     public boolean revoke(Long id, String reason, Instant revokedAt) {
         return dsl.update(AUTH_SESSIONS)
-                .set(AUTH_SESSIONS.REVOKED_AT, utc(revokedAt))
+                .set(AUTH_SESSIONS.REVOKED_AT, TimestampGuards.atLeast(AUTH_SESSIONS.AUTHENTICATED_AT, revokedAt))
                 .set(AUTH_SESSIONS.REVOKE_REASON, reason)
                 .set(AUTH_SESSIONS.VERSION, AUTH_SESSIONS.VERSION.plus(1L))
                 .where(AUTH_SESSIONS.ID.eq(id))
@@ -71,7 +71,7 @@ public class JooqSessionRepository implements SessionRepository {
     @Override
     public int revokeAllByUserId(Long userId, String reason, Instant revokedAt) {
         return dsl.update(AUTH_SESSIONS)
-                .set(AUTH_SESSIONS.REVOKED_AT, utc(revokedAt))
+                .set(AUTH_SESSIONS.REVOKED_AT, TimestampGuards.atLeast(AUTH_SESSIONS.AUTHENTICATED_AT, revokedAt))
                 .set(AUTH_SESSIONS.REVOKE_REASON, reason)
                 .set(AUTH_SESSIONS.VERSION, AUTH_SESSIONS.VERSION.plus(1L))
                 .where(AUTH_SESSIONS.USER_ID.eq(userId))
@@ -82,7 +82,7 @@ public class JooqSessionRepository implements SessionRepository {
     @Override
     public boolean revokeByIdAndUserId(Long id, Long userId, String reason, Instant revokedAt) {
         return dsl.update(AUTH_SESSIONS)
-                .set(AUTH_SESSIONS.REVOKED_AT, utc(revokedAt))
+                .set(AUTH_SESSIONS.REVOKED_AT, TimestampGuards.atLeast(AUTH_SESSIONS.AUTHENTICATED_AT, revokedAt))
                 .set(AUTH_SESSIONS.REVOKE_REASON, reason)
                 .set(AUTH_SESSIONS.VERSION, AUTH_SESSIONS.VERSION.plus(1L))
                 .where(AUTH_SESSIONS.ID.eq(id))

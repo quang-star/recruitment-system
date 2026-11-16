@@ -7,6 +7,7 @@ import com.smartrecruitment.core.cv.domain.CvDraftPayload;
 import com.smartrecruitment.core.cv.domain.CvDraftSection;
 import com.smartrecruitment.core.cv.domain.CvDraftTemplate;
 import com.smartrecruitment.core.infrastructure.jooq.generated.tables.records.CvDraftsRecord;
+import com.smartrecruitment.core.shared.infrastructure.persistence.TimestampGuards;
 import org.jooq.DSLContext;
 import org.jooq.JSON;
 import org.springframework.stereotype.Repository;
@@ -86,7 +87,7 @@ public class JooqCvDraftRepository implements CvDraftRepository {
                 .set(CV_DRAFTS.ACCENT_COLOR, draft.accentColor())
                 .set(CV_DRAFTS.SECTION_ORDER, JSON.json(sectionOrderJson))
                 .set(CV_DRAFTS.CONTENT_JSON, JSON.json(contentJson))
-                .set(CV_DRAFTS.UPDATED_AT, draft.updatedAt())
+                .set(CV_DRAFTS.UPDATED_AT, TimestampGuards.atLeast(CV_DRAFTS.CREATED_AT, draft.updatedAt()))
                 .set(CV_DRAFTS.VERSION, CV_DRAFTS.VERSION.plus(1L))
                 .where(CV_DRAFTS.ID.eq(draft.id()))
                 .and(CV_DRAFTS.CANDIDATE_USER_ID.eq(draft.candidateUserId()))

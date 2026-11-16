@@ -1,10 +1,15 @@
-from app.shared.database import BUSINESS_ID
+from app.shared.database import (
+    BUSINESS_ID,
+    Base,
+    monotonic_update_time,
+    stored_time,
+    utc_time,
+)
 from datetime import UTC, datetime
 
 from sqlalchemy import DateTime, Integer, JSON, String, UniqueConstraint, select
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
-from app.shared.database import Base
 from app.task.application import ProcessingTaskRepository
 from app.task.domain import ProcessingTask, TaskState, TaskType
 
@@ -133,20 +138,11 @@ class SqlAlchemyProcessingTaskRepository(ProcessingTaskRepository):
 
 def _update_time(record: ProcessingTaskRecord) -> datetime:
     # Wall-clock corrections must not violate the persisted timestamp invariant.
-    return max(datetime.now(UTC), _utc_time(record.submitted_at), _utc_time(record.updated_at))
+    return monotonic_update_time(record.submitted_at, record.updated_at)
 
 
-def _utc_time(value: datetime) -> datetime:
-    # Legacy SQLite rows store local wall time without an offset. astimezone
-    # interprets those naive values locally; PostgreSQL TIMESTAMPTZ stays aware.
-    return value.astimezone(UTC)
-
-
-def _stored_time(session: Session, value: datetime) -> datetime:
-    if session.get_bind().dialect.name == "sqlite":
-        # Keep the legacy SQLite convention so old and new rows remain readable.
-        return value.astimezone().replace(tzinfo=None)
-    return value.astimezone(UTC)
+_utc_time = utc_time
+_stored_time = stored_time
 
 
 def _to_domain(record: ProcessingTaskRecord) -> ProcessingTask:

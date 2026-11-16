@@ -103,6 +103,48 @@ def test_confirmation_rejects_a_stale_revision() -> None:
         repository.confirm(JOB_VERSION_ID, owner_id, new_id(), owner_id)
 
 
+def test_confirmation_and_supersede_respect_timestamp_constraint_under_clock_rollback() -> None:
+    from sqlalchemy import CheckConstraint, MetaData, create_engine
+    from sqlalchemy.orm import Session
+    from app.jd.repository import ParsedJdHeadRecord
+
+    engine = create_engine("sqlite://")
+    metadata = MetaData()
+    rev_table = ParsedJdRevisionRecord.__table__.to_metadata(metadata)
+    rev_table.append_constraint(CheckConstraint("updated_at >= created_at", name="ck_parsed_jd_revisions_timestamps"))
+    ParsedJdHeadRecord.__table__.to_metadata(metadata)
+    metadata.create_all(engine)
+    future = datetime(2100, 1, 2, 9)
+    owner = new_id()
+    job_id = new_id()
+    try:
+        with Session(engine) as session:
+            rev1 = ParsedJdRevisionRecord(
+                id=1, job_id=job_id, job_version_id=JOB_VERSION_ID, owner_user_id=owner,
+                revision_number=1, source_hash=SOURCE_HASH, payload=payload(),
+                status="PARSED", created_at=future, updated_at=future, version=0,
+            )
+            session.add(rev1)
+            session.commit()
+            confirmed1 = ParsedJdRevisionRepository(session).confirm(JOB_VERSION_ID, owner, rev1.id, owner)
+            session.commit()
+            assert confirmed1.confirmed_at is not None
+            assert confirmed1.confirmed_at.astimezone(UTC) >= future.astimezone(UTC)
+            rev2 = ParsedJdRevisionRecord(
+                id=2, job_id=job_id, job_version_id=JOB_VERSION_ID, owner_user_id=owner,
+                revision_number=2, source_hash="b" * 64, payload=payload(),
+                status="PARSED", created_at=future, updated_at=future, version=0,
+            )
+            session.add(rev2)
+            session.commit()
+            confirmed2 = ParsedJdRevisionRepository(session).confirm(JOB_VERSION_ID, owner, rev2.id, owner)
+            session.commit()
+            assert confirmed2.confirmed_at is not None
+            assert confirmed2.confirmed_at.astimezone(UTC) >= future.astimezone(UTC)
+    finally:
+        engine.dispose()
+
+
 class _ScalarSession:
     def __init__(self, value) -> None:
         self.value = value
