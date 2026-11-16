@@ -5,6 +5,7 @@ import com.smartrecruitment.core.recruiter.domain.Company;
 import com.smartrecruitment.core.recruiter.domain.CompanyStatus;
 import com.smartrecruitment.core.recruiter.domain.CompanyVerificationStatus;
 import com.smartrecruitment.core.recruiter.domain.CompanyMember;
+import com.smartrecruitment.core.shared.infrastructure.persistence.TimestampGuards;
 import org.jooq.DSLContext;
 import org.springframework.stereotype.Repository;
 
@@ -148,7 +149,7 @@ public class JooqCompanyRepository implements CompanyRepository {
         var update = dsl.update(COMPANY_MEMBERS)
                 .set(COMPANY_MEMBERS.ROLE, role)
                 .set(COMPANY_MEMBERS.STATUS, status)
-                .set(COMPANY_MEMBERS.UPDATED_AT, now)
+                .set(COMPANY_MEMBERS.UPDATED_AT, TimestampGuards.atLeast(COMPANY_MEMBERS.CREATED_AT, now))
                 .set(COMPANY_MEMBERS.VERSION, COMPANY_MEMBERS.VERSION.plus(1L));
         if ("LEFT".equals(status)) update.set(COMPANY_MEMBERS.LEFT_AT, now);
         return update.where(COMPANY_MEMBERS.COMPANY_ID.eq(internalCompanyId))
@@ -184,7 +185,7 @@ public class JooqCompanyRepository implements CompanyRepository {
                 .set(COMPANIES.SIZE_RANGE, company.sizeRange())
                 .set(COMPANIES.LOGO_URL, company.logoUrl())
                 .set(COMPANIES.COVER_IMAGE_URL, company.coverImageUrl())
-                .set(COMPANIES.UPDATED_AT, OffsetDateTime.now(ZoneOffset.UTC))
+                .set(COMPANIES.UPDATED_AT, TimestampGuards.atLeast(COMPANIES.CREATED_AT, OffsetDateTime.now(ZoneOffset.UTC)))
                 .set(COMPANIES.VERSION, COMPANIES.VERSION.plus(1L))
                 .where(COMPANIES.ID.eq(company.id()))
                 .and(COMPANIES.VERSION.eq(expectedVersion))

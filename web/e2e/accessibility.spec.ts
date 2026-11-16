@@ -23,6 +23,7 @@ test("public login modal traps keyboard focus and the unverified salary tool sta
 test("mobile job review stays within the viewport and returns to results", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
+  await page.getByRole("button", { name: "Mở menu điều hướng" }).click();
   await page.getByRole("button", { name: "Tìm việc làm", exact: true }).click();
   const firstJob = page.locator(".public-job-list-card").first();
   await expect(firstJob).toBeVisible();

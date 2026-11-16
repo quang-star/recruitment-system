@@ -96,3 +96,62 @@ def test_verifier_rejects_wrong_audience() -> None:
 
     assert captured.value.status_code == 401
     assert captured.value.code == "INVALID_ACCESS_TOKEN"
+
+
+def test_verifier_tolerates_small_clock_skew_on_iat() -> None:
+    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    subject = new_id()
+    now = datetime.now(UTC)
+    token = jwt.encode(
+        {
+            "iss": "https://issuer.test",
+            "aud": ["smart-recruitment-api"],
+            "sub": str(subject),
+            "roles": ["RECRUITER"],
+            "iat": now + timedelta(seconds=5),
+            "exp": now + timedelta(minutes=5),
+        },
+        private_key,
+        algorithm="RS256",
+        headers={"kid": "test-key"},
+    )
+    verifier = JwtVerifier(
+        "https://issuer.test/jwks.json",
+        "https://issuer.test",
+        "smart-recruitment-api",
+        jwks_client=StaticJwksClient(private_key.public_key()),
+    )
+
+    principal = verifier.verify(token)
+
+    assert principal.subject == subject
+    assert principal.roles == ("RECRUITER",)
+
+
+def test_verifier_rejects_expired_token_beyond_clock_skew() -> None:
+    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    now = datetime.now(UTC)
+    token = jwt.encode(
+        {
+            "iss": "https://issuer.test",
+            "aud": ["smart-recruitment-api"],
+            "sub": str(new_id()),
+            "roles": ["CANDIDATE"],
+            "iat": now - timedelta(minutes=10),
+            "exp": now - timedelta(seconds=60),
+        },
+        private_key,
+        algorithm="RS256",
+    )
+    verifier = JwtVerifier(
+        "https://issuer.test/jwks.json",
+        "https://issuer.test",
+        "smart-recruitment-api",
+        jwks_client=StaticJwksClient(private_key.public_key()),
+    )
+
+    with pytest.raises(ApiContractError) as captured:
+        verifier.verify(token)
+
+    assert captured.value.status_code == 401
+    assert captured.value.code == "INVALID_ACCESS_TOKEN"

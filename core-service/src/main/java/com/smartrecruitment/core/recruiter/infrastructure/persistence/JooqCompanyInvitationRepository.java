@@ -3,6 +3,7 @@ package com.smartrecruitment.core.recruiter.infrastructure.persistence;
 import com.smartrecruitment.core.recruiter.application.port.CompanyInvitationRepository;
 import com.smartrecruitment.core.recruiter.domain.CompanyInvitation;
 import com.smartrecruitment.core.recruiter.domain.CompanyMember;
+import com.smartrecruitment.core.shared.infrastructure.persistence.TimestampGuards;
 import org.jooq.DSLContext;
 import org.jooq.Record;
 import org.springframework.stereotype.Repository;
@@ -86,8 +87,8 @@ public class JooqCompanyInvitationRepository implements CompanyInvitationReposit
         Long internalCompanyId = internalCompanyId(companyId);
         if (internalCompanyId == null) return 0;
         return dsl.update(COMPANY_INVITATIONS)
-                .set(COMPANY_INVITATIONS.REVOKED_AT, now)
-                .set(COMPANY_INVITATIONS.UPDATED_AT, now)
+                .set(COMPANY_INVITATIONS.REVOKED_AT, TimestampGuards.atLeast(COMPANY_INVITATIONS.CREATED_AT, now))
+                .set(COMPANY_INVITATIONS.UPDATED_AT, TimestampGuards.atLeast(COMPANY_INVITATIONS.CREATED_AT, now))
                 .set(COMPANY_INVITATIONS.VERSION, COMPANY_INVITATIONS.VERSION.plus(1L))
                 .where(COMPANY_INVITATIONS.COMPANY_ID.eq(internalCompanyId))
                 .and(COMPANY_INVITATIONS.NORMALIZED_EMAIL.eq(normalizedEmail))
@@ -102,8 +103,8 @@ public class JooqCompanyInvitationRepository implements CompanyInvitationReposit
         Long internalCompanyId = internalCompanyId(companyId);
         if (internalCompanyId == null) return false;
         return dsl.update(COMPANY_INVITATIONS)
-                .set(COMPANY_INVITATIONS.REVOKED_AT, now)
-                .set(COMPANY_INVITATIONS.UPDATED_AT, now)
+                .set(COMPANY_INVITATIONS.REVOKED_AT, TimestampGuards.atLeast(COMPANY_INVITATIONS.CREATED_AT, now))
+                .set(COMPANY_INVITATIONS.UPDATED_AT, TimestampGuards.atLeast(COMPANY_INVITATIONS.CREATED_AT, now))
                 .set(COMPANY_INVITATIONS.VERSION, COMPANY_INVITATIONS.VERSION.plus(1L))
                 .where(COMPANY_INVITATIONS.COMPANY_ID.eq(internalCompanyId))
                 .and(COMPANY_INVITATIONS.ID.eq(invitationId))
@@ -127,8 +128,8 @@ public class JooqCompanyInvitationRepository implements CompanyInvitationReposit
 
         var accepted = dsl.update(COMPANY_INVITATIONS)
                 .set(COMPANY_INVITATIONS.ACCEPTED_BY_USER_ID, userId)
-                .set(COMPANY_INVITATIONS.ACCEPTED_AT, now)
-                .set(COMPANY_INVITATIONS.UPDATED_AT, now)
+                .set(COMPANY_INVITATIONS.ACCEPTED_AT, TimestampGuards.atLeast(COMPANY_INVITATIONS.CREATED_AT, now))
+                .set(COMPANY_INVITATIONS.UPDATED_AT, TimestampGuards.atLeast(COMPANY_INVITATIONS.CREATED_AT, now))
                 .set(COMPANY_INVITATIONS.VERSION, COMPANY_INVITATIONS.VERSION.plus(1L))
                 .where(COMPANY_INVITATIONS.COMPANY_ID.eq(internalCompanyId))
                 .and(COMPANY_INVITATIONS.ID.eq(invitation.id()))
@@ -162,7 +163,7 @@ public class JooqCompanyInvitationRepository implements CompanyInvitationReposit
                 .set(COMPANY_MEMBERS.INVITED_BY_USER_ID, invitation.invitedByUserId())
                 .set(COMPANY_MEMBERS.JOINED_AT, now)
                 .setNull(COMPANY_MEMBERS.LEFT_AT)
-                .set(COMPANY_MEMBERS.UPDATED_AT, now)
+                .set(COMPANY_MEMBERS.UPDATED_AT, TimestampGuards.atLeast(COMPANY_MEMBERS.CREATED_AT, now))
                 .set(COMPANY_MEMBERS.VERSION, COMPANY_MEMBERS.VERSION.plus(1L))
                 .where(COMPANY_MEMBERS.ID.eq(existingMember.getId()))
                 .and(COMPANY_MEMBERS.STATUS.eq("LEFT"))

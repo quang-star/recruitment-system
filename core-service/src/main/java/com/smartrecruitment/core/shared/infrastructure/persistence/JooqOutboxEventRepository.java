@@ -33,7 +33,7 @@ public class JooqOutboxEventRepository implements OutboxEventRepository {
     public void append(CvUploadedEvent event) {
         try {
             String payload = objectMapper.writeValueAsString(eventPayload(event));
-            OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+            OffsetDateTime availableAt = TimestampGuards.laterOf(event.occurredAt(), OffsetDateTime.now(ZoneOffset.UTC));
             dsl.insertInto(OUTBOX_EVENTS)
                     .set(OUTBOX_EVENTS.EVENT_ID, UUID.randomUUID())
                     .set(OUTBOX_EVENTS.AGGREGATE_TYPE, "CV")
@@ -46,7 +46,7 @@ public class JooqOutboxEventRepository implements OutboxEventRepository {
                     .set(OUTBOX_EVENTS.CORRELATION_ID, event.correlationId())
                     .set(OUTBOX_EVENTS.PAYLOAD, JSON.json(payload))
                     .set(OUTBOX_EVENTS.OCCURRED_AT, event.occurredAt())
-                    .set(OUTBOX_EVENTS.AVAILABLE_AT, now)
+                    .set(OUTBOX_EVENTS.AVAILABLE_AT, availableAt)
                     .set(OUTBOX_EVENTS.ATTEMPT_COUNT, 0)
                     .execute();
         } catch (JacksonException exception) {
@@ -75,7 +75,7 @@ public class JooqOutboxEventRepository implements OutboxEventRepository {
                 public final Long cvVersionId = event.cvVersionId();
                 public final Long jobVersionId = event.jobVersionId();
             });
-            OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+            OffsetDateTime availableAt = TimestampGuards.laterOf(event.occurredAt(), OffsetDateTime.now(ZoneOffset.UTC));
             dsl.insertInto(OUTBOX_EVENTS)
                     .set(OUTBOX_EVENTS.EVENT_ID, UUID.randomUUID())
                     .set(OUTBOX_EVENTS.AGGREGATE_TYPE, "APPLICATION")
@@ -87,7 +87,7 @@ public class JooqOutboxEventRepository implements OutboxEventRepository {
                     .set(OUTBOX_EVENTS.CORRELATION_ID, event.correlationId())
                     .set(OUTBOX_EVENTS.PAYLOAD, JSON.json(payload))
                     .set(OUTBOX_EVENTS.OCCURRED_AT, event.occurredAt())
-                    .set(OUTBOX_EVENTS.AVAILABLE_AT, now)
+                    .set(OUTBOX_EVENTS.AVAILABLE_AT, availableAt)
                     .set(OUTBOX_EVENTS.ATTEMPT_COUNT, 0)
                     .execute();
         } catch (JacksonException exception) {
@@ -108,7 +108,7 @@ public class JooqOutboxEventRepository implements OutboxEventRepository {
                 public final String sourceHash = event.sourceHash();
                 public final String objectRef = event.objectRef();
             });
-            OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+            OffsetDateTime availableAt = TimestampGuards.laterOf(event.occurredAt(), OffsetDateTime.now(ZoneOffset.UTC));
             dsl.insertInto(OUTBOX_EVENTS)
                     .set(OUTBOX_EVENTS.EVENT_ID, UUID.randomUUID())
                     .set(OUTBOX_EVENTS.AGGREGATE_TYPE, "JOB")
@@ -120,7 +120,7 @@ public class JooqOutboxEventRepository implements OutboxEventRepository {
                     .set(OUTBOX_EVENTS.CORRELATION_ID, event.correlationId())
                     .set(OUTBOX_EVENTS.PAYLOAD, JSON.json(payload))
                     .set(OUTBOX_EVENTS.OCCURRED_AT, event.occurredAt())
-                    .set(OUTBOX_EVENTS.AVAILABLE_AT, now)
+                    .set(OUTBOX_EVENTS.AVAILABLE_AT, availableAt)
                     .set(OUTBOX_EVENTS.ATTEMPT_COUNT, 0)
                     .execute();
         } catch (JacksonException exception) {
@@ -158,7 +158,8 @@ public class JooqOutboxEventRepository implements OutboxEventRepository {
     @Transactional
     public void markPublished(long id, String workerId) {
         dsl.update(OUTBOX_EVENTS)
-                .set(OUTBOX_EVENTS.PUBLISHED_AT, OffsetDateTime.now(ZoneOffset.UTC))
+                .set(OUTBOX_EVENTS.PUBLISHED_AT,
+                        TimestampGuards.atLeast(OUTBOX_EVENTS.OCCURRED_AT, OffsetDateTime.now(ZoneOffset.UTC)))
                 .set(OUTBOX_EVENTS.LOCKED_BY, (String) null)
                 .set(OUTBOX_EVENTS.LOCKED_AT, (OffsetDateTime) null)
                 .set(OUTBOX_EVENTS.LAST_ERROR_CODE, (String) null)
@@ -174,7 +175,8 @@ public class JooqOutboxEventRepository implements OutboxEventRepository {
         if (retryDelay == null || retryDelay.isNegative()) throw new IllegalArgumentException("Invalid outbox retry delay");
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         dsl.update(OUTBOX_EVENTS)
-                .set(OUTBOX_EVENTS.AVAILABLE_AT, now.plus(retryDelay))
+                .set(OUTBOX_EVENTS.AVAILABLE_AT,
+                        TimestampGuards.atLeast(OUTBOX_EVENTS.OCCURRED_AT, now.plus(retryDelay)))
                 .set(OUTBOX_EVENTS.LOCKED_BY, (String) null)
                 .set(OUTBOX_EVENTS.LOCKED_AT, (OffsetDateTime) null)
                 .set(OUTBOX_EVENTS.LAST_ERROR_CODE, errorCode)

@@ -175,3 +175,24 @@ it("keeps the normal portal heading on candidate account pages instead of switch
   expect(within(headerNav).queryByRole("button", { name: "Bảo mật" })).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Tài khoản Nguyễn An" })).toBeInTheDocument();
 });
+
+it("preserves unsaved profile edits when the access token refreshes for the same user", async () => {
+  window.history.replaceState({}, "", "/candidate/profile");
+  const onLogout = vi.fn();
+  const { rerender } = render(<CandidateProfilePage session={session} onLogout={onLogout} />);
+
+  const input = await screen.findByLabelText("Tên hiển thị");
+  fireEvent.change(input, { target: { value: "Unsaved refresh draft" } });
+
+  rerender(
+    <CandidateProfilePage
+      session={{ ...session, accessToken: "rotated-token" }}
+      onLogout={onLogout}
+    />
+  );
+
+  await waitFor(() => {
+    expect(screen.getByLabelText("Tên hiển thị")).toHaveValue("Unsaved refresh draft");
+  });
+  expect(vi.mocked(apiRequest).mock.calls.filter(([path]) => path === "/api/v2/candidates/me")).toHaveLength(1);
+});

@@ -7,6 +7,7 @@ import com.smartrecruitment.core.recruiter.domain.CompanyReviewChange;
 import com.smartrecruitment.core.recruiter.domain.CompanyStatus;
 import com.smartrecruitment.core.shared.application.PageResult;
 import com.smartrecruitment.core.shared.infrastructure.SearchText;
+import com.smartrecruitment.core.shared.infrastructure.persistence.TimestampGuards;
 import org.jooq.Condition;
 import org.jooq.DSLContext;
 import org.jooq.impl.DSL;
@@ -48,7 +49,8 @@ public class JooqCompanyReviewRepository implements CompanyReviewRepository {
     public Optional<Company> approvePending(Long companyId, long expectedVersion, Long actorUserId,
                                            String reason, UUID correlationId, OffsetDateTime now) {
         var updated = dsl.update(COMPANIES).set(COMPANIES.STATUS, CompanyStatus.ACTIVE.name())
-                .set(COMPANIES.UPDATED_AT, now).set(COMPANIES.VERSION, COMPANIES.VERSION.plus(1L))
+                .set(COMPANIES.UPDATED_AT, TimestampGuards.atLeast(COMPANIES.CREATED_AT, COMPANIES.UPDATED_AT, now))
+                .set(COMPANIES.VERSION, COMPANIES.VERSION.plus(1L))
                 .where(COMPANIES.ID.eq(companyId)).and(COMPANIES.STATUS.eq(CompanyStatus.PENDING.name()))
                 .and(COMPANIES.VERSION.eq(expectedVersion)).returning().fetchOptional();
         if (updated.isEmpty()) return Optional.empty();

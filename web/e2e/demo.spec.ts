@@ -20,7 +20,7 @@ test("candidate can open the complete demo workspace", async ({ page }) => {
   await openCandidateSection(page, "CV của tôi");
   await expect(page.getByRole("heading", { name: "CV của tôi", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Tìm việc làm", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Tìm công việc phù hợp với bạn" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Tìm việc làm đang tuyển" })).toBeVisible();
   await openCandidateMenu(page);
   await expect(page.getByRole("button", { name: /Đăng xuất$/ })).toBeEnabled();
 });
@@ -127,7 +127,7 @@ test("corrupted PDF reaches failed status with an actionable recovery instructio
   await login(page, candidate.email, candidate.password);
   await openCandidateSection(page, "CV của tôi");
   await page.getByLabel("Tên CV (tuỳ chọn)").fill(unique);
-  await page.locator("#cv-file").setInputFiles({
+  await page.getByLabel("File PDF (tối đa 10 MiB)").setInputFiles({
     name: "synthetic-corrupted.pdf", mimeType: "application/pdf",
     buffer: Buffer.from("%PDF-1.7\nsynthetic corrupted document without cross-reference table\n%%EOF"),
   });
@@ -216,7 +216,7 @@ test("complete recruitment workflow through UI with editable CV and evidence", a
     await openCandidateSection(candidatePage, "CV của tôi");
     await candidatePage.getByLabel("Tên CV (tuỳ chọn)").fill(unique);
     // Regression: real exporters can prepend a newline before the PDF header.
-    await candidatePage.locator("#cv-file").setInputFiles({
+    await candidatePage.getByLabel("File PDF (tối đa 10 MiB)").setInputFiles({
       name: "leading-newline-cv.pdf", mimeType: "application/pdf",
       buffer: Buffer.concat([Buffer.from("\n"), readFileSync(path.resolve("e2e/fixtures/job-scoped-skills-cv.pdf"))])
     });
@@ -229,10 +229,11 @@ test("complete recruitment workflow through UI with editable CV and evidence", a
     await candidatePage.getByRole("button", { name: "Thêm ngoại ngữ" }).click();
     await candidatePage.getByLabel("Trình độ 1").fill("B2");
     await candidatePage.getByRole("button", { name: "Lưu thay đổi", exact: true }).click();
-    const cvFeedback = candidatePage.locator(".success-message[role='status']");
-    await expect(cvFeedback).toContainText("Đã lưu thay đổi.");
+    await expect(candidatePage.getByText("Bạn có thay đổi chưa lưu. Lưu thay đổi trước khi xác nhận.")).toHaveCount(0);
+    await expect(candidatePage.getByRole("button", { name: "Xác nhận bản phân tích", exact: true })).toBeEnabled();
     await candidatePage.getByRole("button", { name: "Xác nhận bản phân tích", exact: true }).click();
-    await expect(cvFeedback).toContainText("CV đã được xác nhận và sẵn sàng ứng tuyển.");
+    await expect(candidatePage.getByText("Bản phân tích đã khóa", { exact: true })).toBeVisible();
+    await expect(candidatePage.getByText("Đã xác nhận", { exact: true })).toBeVisible();
     // Core receives confirmation asynchronously; revisit the panel until it projects the CV.
     await expect(async () => {
       await openCandidateSection(candidatePage, "CV của tôi");

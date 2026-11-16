@@ -21,6 +21,9 @@ class AuthenticatedPrincipal:
     roles: tuple[str, ...]
 
 
+_DEFAULT_CLOCK_SKEW_SECONDS = 30
+
+
 class JwtVerifier:
     def __init__(
         self,
@@ -29,9 +32,11 @@ class JwtVerifier:
         audience: str,
         cache_seconds: int = 300,
         jwks_client: Any | None = None,
+        clock_skew_seconds: int = _DEFAULT_CLOCK_SKEW_SECONDS,
     ):
         self._issuer = issuer
         self._audience = audience
+        self._clock_skew_seconds = max(0, clock_skew_seconds)
         self._jwks_client = jwks_client or PyJWKClient(
             jwks_uri,
             cache_jwk_set=True,
@@ -47,6 +52,8 @@ class JwtVerifier:
                 algorithms=["RS256"],
                 audience=self._audience,
                 issuer=self._issuer,
+                # Match Gateway/Auth clock-skew tolerance across containers on virtualized clocks.
+                leeway=self._clock_skew_seconds,
                 options={"require": ["exp", "iat", "iss", "aud", "sub"]},
             )
             subject = parse_id(claims["sub"])
