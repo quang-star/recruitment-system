@@ -34,6 +34,9 @@ class MatchingResultRecord(Base):
     result_generation: Mapped[int | None] = mapped_column(BigInteger)
     supersedes_matching_result_id: Mapped[int | None] = mapped_column(BUSINESS_ID)
     reprocess_effect_key: Mapped[str | None] = mapped_column(String(64), unique=True)
+    penalty: Mapped[float | None] = mapped_column(Numeric(5, 2), nullable=True)
+    penalty_version: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    confidence: Mapped[float | None] = mapped_column(Numeric(4, 2), nullable=True)
 
 
 class MatchingHeadRecord(Base):
@@ -66,6 +69,9 @@ class MatchingResult:
     result_generation: int | None = None
     supersedes_matching_result_id: int | None = None
     reprocess_effect_key: str | None = None
+    penalty: float | None = None
+    penalty_version: str | None = None
+    confidence: float | None = None
 
 
 class MatchingResultRepository:
@@ -77,7 +83,9 @@ class MatchingResultRepository:
              components: list, claims: list, *, cv_revision_id: int | None = None,
              jd_revision_id: int | None = None, as_of_month: str | None = None,
              input_taxonomy_version: str | None = None, input_taxonomy_versions: dict | None = None,
-             reprocess_effect_key: str | None = None, expected_result_id: int | None = None) -> MatchingResult:
+             reprocess_effect_key: str | None = None, expected_result_id: int | None = None,
+             penalty: float | None = None, penalty_version: str | None = None,
+             confidence: float | None = None) -> MatchingResult:
         existing_head = self._session.scalar(
             select(MatchingHeadRecord)
             .where(MatchingHeadRecord.application_id == application_id)
@@ -118,6 +126,7 @@ class MatchingResultRepository:
             input_taxonomy_versions=input_taxonomy_versions,
             result_generation=generation, supersedes_matching_result_id=prior.id if prior else None,
             reprocess_effect_key=reprocess_effect_key,
+            penalty=penalty, penalty_version=penalty_version, confidence=confidence,
         )
         self._session.add(record)
         self._session.flush()
@@ -168,6 +177,9 @@ class MatchingResultRepository:
             result_generation=record.result_generation,
             supersedes_matching_result_id=record.supersedes_matching_result_id,
             reprocess_effect_key=record.reprocess_effect_key,
+            penalty=float(record.penalty) if record.penalty is not None else None,
+            penalty_version=record.penalty_version,
+            confidence=float(record.confidence) if record.confidence is not None else None,
         )
 
 

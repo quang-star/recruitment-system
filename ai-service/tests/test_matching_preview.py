@@ -242,3 +242,20 @@ def test_matching_preview_rejects_nonexistent_jd(test_setup):
     )
     assert resp.status_code == 404
     assert resp.json()["code"] == "JD_NOT_FOUND"
+
+
+def test_matching_preview_exposes_v7_penalty_confidence_without_inflating_required_skill_counts(test_setup):
+    client, _, cv_version_id, job_version_id = test_setup
+    resp = client.post(
+        "/api/v2/matching-requests/preview",
+        json={"cvVersionId": str(cv_version_id), "jobVersionId": str(job_version_id)},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["algorithmVersion"] == "baseline-v7"
+    assert body["summary"]["totalRequiredSkills"] == 2
+    assert body["summary"]["matchedRequiredSkills"] == 1
+    assert body["explanation"]["penaltyVersion"] == "penalty-v1"
+    assert body["explanation"]["penalty"] == 7.5
+    assert 0 < body["explanation"]["confidence"] <= 1.0
+    assert any(c.get("component") == "EXPERIENCE" for c in body["explanation"]["claims"])

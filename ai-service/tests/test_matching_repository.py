@@ -88,6 +88,11 @@ def test_matching_persists_exact_input_revisions_and_keeps_previous_results():
         assert replay.id == first.id
         assert replay.as_of_month == "2026-09"
         changed = repo.save(application, cv, jd, "COMPLETED", 90, [], [], [],
-                            cv_revision_id=new_id(), jd_revision_id=jd_revision, as_of_month="2026-10")
+                            cv_revision_id=new_id(), jd_revision_id=jd_revision, as_of_month="2026-10",
+                            penalty=7.5, penalty_version="penalty-v1", confidence=0.88)
         assert changed.id != first.id
-        assert repo.find_latest(application).id == changed.id
+        latest = repo.find_latest(application)
+        assert latest.id == changed.id
+        assert latest.penalty == 7.5
+        assert latest.penalty_version == "penalty-v1"
+        assert latest.confidence == 0.88

@@ -13,7 +13,7 @@ from app.matching.algorithm import ALGORITHM_VERSION, compute_match
 MODEL_ID = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 MODEL_REVISION = "e8f8c211226b894fcb81acc59f3b34ba3efd5f42"
 SEMANTIC_VERSION = "minilm-mean-chunks-v1"
-HYBRID_VERSION = "hybrid-baseline-v6-minilm-v1"
+HYBRID_VERSION = "hybrid-baseline-v7-minilm-v1"
 SEMANTIC_WEIGHT = 0.2  # Prespecified research hypothesis, not tuned on test labels.
 MISSING_TEXT_POLICY = "semantic=0; hybrid=baseline"
 

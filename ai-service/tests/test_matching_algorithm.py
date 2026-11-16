@@ -98,7 +98,7 @@ def _metadata_component(result):
 
 
 def test_algorithm_version_changes_when_metadata_formula_changes() -> None:
-    assert ALGORITHM_VERSION == "baseline-v6"
+    assert ALGORITHM_VERSION == "baseline-v7"
 
 
 def test_education_only_requirement_uses_only_education_denominator() -> None:
@@ -278,3 +278,109 @@ def test_malformed_optional_fields_do_not_crash_matching():
     result = compute_match(cv, jd, as_of_month="2026-01")
     assert result.claims[0]["cvLocations"] == [{"id": "e1", "page": 1, "start": 0, "end": 4}]
     assert result.claims[0]["jdLocations"] == []
+
+
+def test_title_seniority_evaluates_jd_level_against_cv_experiences() -> None:
+    jd = {
+        "title": {"raw": "Senior Backend Engineer", "canonicalFamily": "BACKEND", "level": "SENIOR"},
+        "requirements": {"requiredSkills": [], "preferredSkills": [], "minimumRelevantExperienceMonths": None,
+                         "education": [], "languages": []},
+        "responsibilities": [],
+    }
+    senior = compute_match({"experiences": [{"titleRaw": "Senior Backend Engineer"}]}, jd)
+    junior = compute_match({"experiences": [{"titleRaw": "Junior Backend Engineer"}]}, jd)
+    unleveled = compute_match({"experiences": [{"titleRaw": "Backend Developer"}]}, jd)
+    senior_comp = next(c for c in senior.components if c["name"] == "TITLE_SENIORITY")
+    junior_comp = next(c for c in junior.components if c["name"] == "TITLE_SENIORITY")
+    unleveled_comp = next(c for c in unleveled.components if c["name"] == "TITLE_SENIORITY")
+
+    assert senior_comp["details"]["seniorityEvaluated"] is True
+    assert senior_comp["score"] == 1.0
+    assert senior_comp["details"]["cvLevel"] == "SENIOR"
+    assert junior_comp["score"] == 0.7
+    assert junior_comp["details"]["cvLevel"] == "JUNIOR"
+    assert unleveled_comp["score"] == 0.8
+    assert "CV_SENIORITY_UNVERIFIED" in unleveled.quality_flags
+    assert "SENIORITY_NOT_EVALUATED" not in unleveled.quality_flags
+
+
+def test_responsibility_similarity_uses_ngram_cosine_and_optional_local_hook() -> None:
+    jd = {
+        "title": {"canonicalFamily": "OTHER"},
+        "requirements": {"requiredSkills": [], "preferredSkills": [], "minimumRelevantExperienceMonths": None,
+                         "education": [], "languages": []},
+        "responsibilities": [{"raw": "Design backend REST APIs with PostgreSQL caching"}],
+    }
+    cv = {"experiences": [{"titleRaw": "Dev", "responsibilities": ["Develop scalable backend REST APIs using PostgreSQL"]}]}
+    lexical = compute_match(cv, jd)
+    lexical_comp = next(c for c in lexical.components if c["name"] == "RESPONSIBILITY_SIMILARITY")
+    assert lexical_comp["details"]["method"] == "tfidf-ngram-cosine-v1"
+    assert 0.3 < lexical_comp["score"] < 1.0
+
+    hooked = compute_match(cv, jd, responsibility_similarity_fn=lambda _j, _c: 0.91)
+    hooked_comp = next(c for c in hooked.components if c["name"] == "RESPONSIBILITY_SIMILARITY")
+    assert hooked_comp["details"]["method"] == "local-embedding-cosine-v1"
+    assert hooked_comp["score"] == 0.91
+
+
+def test_missing_critical_skill_applies_versioned_penalty_without_auto_rejecting() -> None:
+    cv = {
+        "skills": [{"canonicalSkillId": JAVA, "normalizationStatus": "KNOWN",
+                    "provenance": "EXTRACTED", "evidenceIds": ["e-java"]}],
+        "experiences": [{"titleRaw": "Backend Developer", "startMonth": "2023-01", "endMonth": "2026-01", "evidenceIds": ["e-exp"]}],
+    }
+    jd = {
+        "title": {"canonicalFamily": "BACKEND"},
+        "requirements": {
+            "requiredSkills": [
+                {"canonicalSkillId": JAVA, "raw": "Java", "criticality": "CRITICAL", "confirmedByRecruiter": True},
+                {"canonicalSkillId": KAFKA, "raw": "Kafka", "criticality": "CRITICAL", "confirmedByRecruiter": True},
+            ],
+            "preferredSkills": [], "minimumRelevantExperienceMonths": 24, "education": [], "languages": [],
+        },
+        "responsibilities": [],
+    }
+    res = compute_match(cv, jd, as_of_month="2026-02")
+    assert res.status == "COMPLETED"
+    assert res.penalty_version == "penalty-v1"
+    assert res.penalty == 7.5
+    assert "CRITICAL_REQUIREMENT_PENALTY" in res.quality_flags
+    # Base score = (45*0.5 + 15*1 + 10*1) / 70 * 100 = 67.86; after 7.5 penalty = 60.36
+    assert res.final_score == pytest.approx(60.36, abs=0.05)
+
+
+def test_confidence_and_component_claims_reflect_evidence_and_limitations() -> None:
+    full = compute_match(
+        {
+            "skills": [
+                {"canonicalSkillId": JAVA, "normalizationStatus": "KNOWN", "provenance": "EXTRACTED", "evidenceIds": ["ev1"]},
+                {"canonicalSkillId": KAFKA, "normalizationStatus": "KNOWN", "provenance": "EXTRACTED", "evidenceIds": ["ev2"]},
+            ],
+            "experiences": [
+                {"titleRaw": "Senior Backend Engineer", "startMonth": "2022-01", "endMonth": "2026-01",
+                 "responsibilities": ["Build backend API"], "evidenceIds": ["ev3"]},
+            ],
+            "evidence": [{"id": "ev1", "page": 1, "start": 0, "end": 4}, {"id": "ev3", "page": 1, "start": 10, "end": 40}],
+        },
+        {
+            "title": {"raw": "Senior Backend Engineer", "canonicalFamily": "BACKEND", "level": "SENIOR"},
+            "requirements": {
+                "requiredSkills": [{"canonicalSkillId": JAVA, "raw": "Java", "confirmedByRecruiter": True}],
+                "preferredSkills": [{"canonicalSkillId": KAFKA, "raw": "Kafka", "confirmedByRecruiter": True}],
+                "minimumRelevantExperienceMonths": 24, "education": [], "languages": [],
+            },
+            "responsibilities": [{"raw": "Build backend API", "evidenceIds": ["jd-r1"]}],
+            "evidence": [{"id": "jd-r1", "page": 1, "start": 5, "end": 22}],
+        },
+        as_of_month="2026-01",
+    )
+    degraded = compute_match(
+        {"experiences": [{"titleRaw": "Backend Developer"}]},
+        {"title": {"canonicalFamily": "BACKEND"}, "requirements": {"requiredSkills": []}},
+    )
+    assert full.confidence >= 0.85
+    assert degraded.confidence <= 0.55
+    claims_by_comp = {c["component"]: c for c in full.claims if c["component"] != "REQUIRED_SKILLS"}
+    assert set(claims_by_comp) == {"PREFERRED_SKILLS", "EXPERIENCE", "TITLE_SENIORITY", "RESPONSIBILITY_SIMILARITY"}
+    assert claims_by_comp["EXPERIENCE"]["cvLocations"] == [{"id": "ev3", "page": 1, "start": 10, "end": 40}]
+    assert claims_by_comp["RESPONSIBILITY_SIMILARITY"]["limitationCode"] == "LEXICAL_NGRAM_SIMILARITY_ONLY"
