@@ -1,6 +1,6 @@
 from identity_fixtures import new_id
 from copy import deepcopy
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 import pytest
 from sqlalchemy import create_engine, select
@@ -8,10 +8,12 @@ from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+import app.shared.database as database_module
 from app.shared.api import install_api_conventions
 from app.shared.database import get_session
 from app.shared.security import require_access_token
 from app.taxonomy.api import router
+from app.taxonomy.audit import search_history
 from app.taxonomy.occurrences import SkillSourceOccurrence, SkillOccurrenceRevision
 from app.taxonomy.catalog import (SkillCatalogRecord, SkillCatalogHistory, seed_skills, change,
                                   snapshot, propose_from_jd, head, TaxonomyVersionRecord, publish_version)
@@ -329,3 +331,52 @@ def test_api_validates_reason_metadata_and_exposes_correlation_without_touching_
         assert client.get("/api/v2/taxonomy/skills").status_code == 403
         assert client.post("/api/v2/taxonomy/skills", json={"version": 1, "action": "CREATE", "name": "OtherX",
                                                          "reason": "Verified source"}).status_code == 403
+
+
+def test_taxonomy_history_order_survives_backward_clock_skew(session, monkeypatch):
+    times = iter([
+        datetime(2026, 11, 16, 12, 0, 5, tzinfo=UTC),
+        datetime(2026, 11, 16, 12, 0, 2, tzinfo=UTC),
+        datetime(2026, 11, 16, 12, 0, 1, tzinfo=UTC),
+        datetime(2026, 11, 16, 12, 0, 0, tzinfo=UTC),
+    ])
+
+    class SteppingClock:
+        @classmethod
+        def now(cls, tz=None):
+            return next(times)
+
+    monkeypatch.setattr(database_module, "datetime", SteppingClock)
+    actor = new_id()
+    proposed = change(session, actor, 0, action="PROPOSE", name="SkewSkillX", reason="Skew check")
+    skill_id = proposed["skill"]["stableId"]
+    app = FastAPI()
+    install_api_conventions(app)
+    app.include_router(router)
+    app.dependency_overrides[get_session] = lambda: session
+    app.dependency_overrides[require_access_token] = lambda: AuthenticatedPrincipal(actor, ("SYSTEM_ADMIN",))
+    with TestClient(app) as client:
+        assert client.post(
+            "/api/v2/taxonomy/skills",
+            json={"version": 1, "action": "DEFER", "skillId": skill_id, "reason": "Defer check"},
+        ).status_code == 200
+        assert client.post(
+            "/api/v2/taxonomy/skills",
+            json={"version": 2, "action": "REOPEN", "skillId": skill_id, "reason": "Reopen check"},
+        ).status_code == 200
+        assert client.post(
+            "/api/v2/taxonomy/skills",
+            json={"version": 3, "action": "APPROVE", "skillId": skill_id, "reason": "Approve check"},
+        ).status_code == 200
+        api_history = client.get(f"/api/v2/taxonomy/skills/{skill_id}/history").json()
+        assert [item["action"] for item in api_history] == ["APPROVE", "REOPEN", "DEFER", "PROPOSE"]
+        audit_payload = search_history(session, resource_id=int(skill_id))
+        assert [item["action"] for item in audit_payload["items"]] == ["APPROVE", "REOPEN", "DEFER", "PROPOSE"]
+        rows = session.scalars(
+            select(SkillCatalogHistory)
+            .where(SkillCatalogHistory.skill_id == int(skill_id))
+            .order_by(SkillCatalogHistory.catalog_version.asc())
+        ).all()
+        timestamps = [row.created_at for row in rows]
+        assert timestamps == sorted(timestamps)
+        assert timestamps[-1] - timestamps[0] == timedelta(0)

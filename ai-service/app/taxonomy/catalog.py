@@ -1,6 +1,6 @@
 """Published catalog snapshots are immutable for the duration of a parse/review."""
 from app.shared.identities import JOB_SKILL_ID_MIN, parse_id
-from app.shared.database import BUSINESS_ID
+from app.shared.database import BUSINESS_ID, monotonic_update_time, stored_time
 from copy import deepcopy
 from datetime import UTC, datetime
 import json
@@ -349,9 +349,13 @@ def change(session: Session, actor: int, expected_version: int, *, action: str,
                              and old.get("relations", []) != new.get("relations", [])]
         if changed_relations:
             after["relationChanges"] = changed_relations
+    prior_time = session.scalar(
+        select(SkillCatalogHistory.created_at).order_by(SkillCatalogHistory.created_at.desc()).limit(1)
+    )
     session.add(SkillCatalogHistory(skill_id=parse_id(entry["stableId"]), actor_id=actor,
                 action=action, catalog_version=next_version, before_state=before, after_state=after,
-                created_at=datetime.now(UTC), reason=clean_reason, correlation_id=correlation_id))
+                created_at=stored_time(session, monotonic_update_time(prior_time)),
+                reason=clean_reason, correlation_id=correlation_id))
     session.flush()
     return {"version": next_version, "taxonomyVersion": f"1.0.{published_version}", "skill": compatible_skill(entry)}
 

@@ -3,6 +3,7 @@ package com.smartrecruitment.core.candidate.infrastructure.persistence;
 import com.smartrecruitment.core.candidate.application.port.CandidateProfileRepository;
 import com.smartrecruitment.core.candidate.domain.CandidateProfile;
 import com.smartrecruitment.core.candidate.domain.ProfileVisibility;
+import com.smartrecruitment.core.shared.infrastructure.persistence.TimestampGuards;
 import org.jooq.DSLContext;
 import org.springframework.stereotype.Repository;
 
@@ -67,7 +68,7 @@ public class JooqCandidateProfileRepository implements CandidateProfileRepositor
                 .set(CANDIDATE_PROFILES.PORTFOLIO_URL, profile.portfolioUrl())
                 .set(CANDIDATE_PROFILES.AVATAR_URL, profile.avatarUrl())
                 .set(CANDIDATE_PROFILES.BIO, profile.bio())
-                .set(CANDIDATE_PROFILES.UPDATED_AT, OffsetDateTime.now(ZoneOffset.UTC))
+                .set(CANDIDATE_PROFILES.UPDATED_AT, TimestampGuards.atLeast(CANDIDATE_PROFILES.CREATED_AT, OffsetDateTime.now(ZoneOffset.UTC)))
                 .set(CANDIDATE_PROFILES.VERSION, CANDIDATE_PROFILES.VERSION.plus(1L))
                 .where(CANDIDATE_PROFILES.USER_ID.eq(profile.userId()))
                 .and(CANDIDATE_PROFILES.VERSION.eq(expectedVersion))

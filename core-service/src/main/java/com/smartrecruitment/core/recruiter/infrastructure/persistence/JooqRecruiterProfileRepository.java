@@ -2,6 +2,7 @@ package com.smartrecruitment.core.recruiter.infrastructure.persistence;
 
 import com.smartrecruitment.core.recruiter.application.port.RecruiterProfileRepository;
 import com.smartrecruitment.core.recruiter.domain.RecruiterProfile;
+import com.smartrecruitment.core.shared.infrastructure.persistence.TimestampGuards;
 import org.jooq.DSLContext;
 import org.springframework.stereotype.Repository;
 
@@ -51,7 +52,7 @@ public class JooqRecruiterProfileRepository implements RecruiterProfileRepositor
                 .set(RECRUITER_PROFILES.DISPLAY_NAME, profile.displayName())
                 .set(RECRUITER_PROFILES.BUSINESS_TITLE, profile.businessTitle())
                 .set(RECRUITER_PROFILES.BUSINESS_PHONE, profile.businessPhone())
-                .set(RECRUITER_PROFILES.UPDATED_AT, OffsetDateTime.now(ZoneOffset.UTC))
+                .set(RECRUITER_PROFILES.UPDATED_AT, TimestampGuards.atLeast(RECRUITER_PROFILES.CREATED_AT, OffsetDateTime.now(ZoneOffset.UTC)))
                 .set(RECRUITER_PROFILES.VERSION, RECRUITER_PROFILES.VERSION.plus(1L))
                 .where(RECRUITER_PROFILES.USER_ID.eq(profile.userId()))
                 .and(RECRUITER_PROFILES.VERSION.eq(expectedVersion))

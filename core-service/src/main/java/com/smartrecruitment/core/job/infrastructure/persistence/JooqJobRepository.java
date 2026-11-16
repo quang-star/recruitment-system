@@ -13,6 +13,7 @@ import com.smartrecruitment.core.job.domain.JobVersion;
 import com.smartrecruitment.core.job.domain.WorkMode;
 import com.smartrecruitment.core.shared.application.PageResult;
 import com.smartrecruitment.core.shared.infrastructure.SearchText;
+import com.smartrecruitment.core.shared.infrastructure.persistence.TimestampGuards;
 
 import org.jooq.Condition;
 import org.jooq.DSLContext;
@@ -224,7 +225,7 @@ public class JooqJobRepository implements JobRepository {
         Long internalId = internalId(job.id());
         if (internalId == null) return Optional.empty();
         var updated = dsl.update(JOBS)
-                .set(JOBS.UPDATED_AT, OffsetDateTime.now(ZoneOffset.UTC))
+                .set(JOBS.UPDATED_AT, TimestampGuards.atLeast(JOBS.CREATED_AT, OffsetDateTime.now(ZoneOffset.UTC)))
                 .set(JOBS.VERSION, JOBS.VERSION.plus(1L))
                 .where(JOBS.ID.eq(internalId)).and(JOBS.STATUS.eq(JobStatus.DRAFT.name()))
                 .and(JOBS.VERSION.eq(expectedVersion)).execute();
@@ -251,11 +252,14 @@ public class JooqJobRepository implements JobRepository {
                                            JobStatus to, OffsetDateTime publishedAt, OffsetDateTime closedAt) {
         Long internalId = internalIdForMember(jobId, userId);
         if (internalId == null) return Optional.empty();
+        var closedField = closedAt == null
+                ? DSL.val((OffsetDateTime) null, JOBS.CLOSED_AT)
+                : TimestampGuards.atLeast(JOBS.PUBLISHED_AT, closedAt);
         var update = dsl.update(JOBS).set(JOBS.STATUS, to.name())
-                .set(JOBS.UPDATED_AT, OffsetDateTime.now(ZoneOffset.UTC))
+                .set(JOBS.UPDATED_AT, TimestampGuards.atLeast(JOBS.CREATED_AT, OffsetDateTime.now(ZoneOffset.UTC)))
                 .set(JOBS.VERSION, JOBS.VERSION.plus(1L))
                 .set(JOBS.PUBLISHED_AT, publishedAt)
-                .set(JOBS.CLOSED_AT, closedAt)
+                .set(JOBS.CLOSED_AT, closedField)
                 .where(JOBS.ID.eq(internalId)).and(JOBS.STATUS.eq(from.name()))
                 .and(to == JobStatus.PUBLISHED ? DSL.exists(dsl.selectOne().from(COMPANIES)
                         .where(COMPANIES.ID.eq(JOBS.COMPANY_ID)).and(COMPANIES.STATUS.eq("ACTIVE"))) : DSL.trueCondition())

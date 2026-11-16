@@ -68,7 +68,9 @@ def act(body: SkillAction, request: Request, principal=Depends(require_admin), s
 @router.get("/skills/{skill_id}/history")
 def history(skill_id: BusinessId, principal=Depends(require_admin), session: Session = Depends(get_session)):
     rows = session.scalars(select(SkillCatalogHistory).where(SkillCatalogHistory.skill_id == skill_id)
-                           .order_by(SkillCatalogHistory.created_at.desc()).limit(100)).all()
+                           .order_by(SkillCatalogHistory.created_at.desc(),
+                                     SkillCatalogHistory.catalog_version.desc(),
+                                     SkillCatalogHistory.id.desc()).limit(100)).all()
     return [history_entry(row) for row in rows]
 
 

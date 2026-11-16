@@ -74,6 +74,8 @@ def search_history(session: Session, *, page: int = 0, size: int = 20,
     if to_time is not None:
         query = query.where(SkillCatalogHistory.created_at <= to_time.astimezone(UTC))
     total = session.execute(select(func.count()).select_from(query.subquery())).scalar_one()
-    rows = session.scalars(query.order_by(SkillCatalogHistory.created_at.desc(), SkillCatalogHistory.id.desc())
+    rows = session.scalars(query.order_by(SkillCatalogHistory.created_at.desc(),
+                                          SkillCatalogHistory.catalog_version.desc(),
+                                          SkillCatalogHistory.id.desc())
                            .offset(page * size).limit(size)).all()
     return {"items": [history_entry(row) for row in rows], "total": total, "page": page, "size": size}

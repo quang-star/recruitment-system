@@ -78,7 +78,7 @@ test("Admin reviews deferred proposals with reasons, versioned definitions and i
   await call(recruiter, `/api/v2/jobs/${job.jobId}/publish?version=${job.version}`, "POST");
   const admin = await browser.newPage();
   await login(admin, adminAccount.email, adminAccount.password);
-  await expect(admin.getByRole("heading", { name: "Ngành, nhóm chuyên môn và vị trí" })).toBeVisible();
+  await expect(admin.getByRole("heading", { name: "Ngành nghề và vị trí" })).toBeVisible();
   const categories = await call(admin, "/api/v2/dashboard/catalog");
   const proposed = categories.find((entry: { name: string }) => entry.name === industryName);
   expect(proposed.status).toBe("PENDING");
@@ -285,6 +285,7 @@ test("Admin skill sources deduplicate JD revisions and confirmations and disappe
     await expect(queue).toContainText("1 lần ghi nhận · 1 phiên bản nguồn");
     await queue.getByLabel("Nguồn đề xuất", { exact: true }).selectOption("");
     await queue.getByRole("button", { name: term, exact: true }).click();
+    await admin.getByRole("tab", { name: "Nguồn kỹ năng" }).click();
     const sourceRegion = admin.getByRole("region", { name: "Nguồn kỹ năng", exact: true });
     const cvSources = sourceRegion.getByRole("listitem").filter({ has: admin.locator("p").filter({ hasText: /^CV ·/ }) });
     const jdSourceRows = sourceRegion.getByRole("listitem").filter({ has: admin.locator("p").filter({ hasText: /^JD ·/ }) });
@@ -296,6 +297,7 @@ test("Admin skill sources deduplicate JD revisions and confirmations and disappe
     await expect(cvSources).toHaveCount(0);
     await sourceRegion.getByLabel("Lọc nguồn ghi nhận", { exact: true }).selectOption("");
     await expect(cvSources.locator("dd").first()).toHaveText(cvVersionId);
+    await admin.getByRole("tab", { name: "Thông tin và duyệt" }).click();
     await admin.getByLabel("Lý do thay đổi", { exact: true }).fill("Synthetic review draft survives source refresh");
 
     await expect.poll(async () => (await call(candidate, "/api/v2/cvs")).find((entry: { cvId: string }) => entry.cvId === cv.cvId)?.activeVersion.processingStatus,
@@ -307,10 +309,12 @@ test("Admin skill sources deduplicate JD revisions and confirmations and disappe
     const remaining = await call(admin, `/api/v2/taxonomy/pending-skills/${proposed.skillId}/occurrences`);
     expect(remaining.totalElements).toBe(1);
     expect(remaining.items).toEqual([expect.objectContaining({ sourceKind: "JD", sourceVersionId: job.jobVersionId })]);
+    await admin.getByRole("tab", { name: "Nguồn kỹ năng" }).click();
     await sourceRegion.getByRole("button", { name: "Làm mới nguồn kỹ năng", exact: true }).click();
     await expect(sourceRegion).toContainText("1 lần ghi nhận · 1 phiên bản nguồn");
     await expect(cvSources).toHaveCount(0);
     await expect(jdSourceRows.locator("dd").first()).toHaveText(job.jobVersionId);
+    await admin.getByRole("tab", { name: "Thông tin và duyệt" }).click();
     await expect(admin.getByRole("textbox", { name: "Lý do thay đổi", exact: true })).toHaveValue("Synthetic review draft survives source refresh");
     await queue.getByRole("button", { name: "Làm mới hàng chờ", exact: true }).click();
     await expect(queue).toContainText("1 lần ghi nhận · 1 phiên bản nguồn");
@@ -396,15 +400,18 @@ test("Admin reviews read-only skill rankings and searches separate Core and AI a
     await admin.getByRole("button", { name: "Kỹ năng / tên gọi khác" }).click();
     await expect(admin.getByRole("option", { name: `${term} · Chờ duyệt`, exact: true })).toHaveCount(1);
     await admin.getByLabel("Danh mục", { exact: true }).selectOption(pending.stableId);
+    await admin.getByRole("tab", { name: "Gợi ý chuẩn hóa" }).click();
     const suggestions = admin.getByRole("region", { name: "Gợi ý chuẩn hóa kỹ năng" });
     await expect(suggestions.getByText(canonicalName, { exact: true })).toBeVisible();
     await expect(suggestions).toContainText("Độ giống chữ");
     await expect(suggestions).toContainText("Cosine semantic");
     await expect(suggestions).toContainText("Chưa tính");
     await expect(suggestions.getByLabel("Tính thêm độ tương đồng semantic")).not.toBeChecked();
+    await admin.getByRole("tab", { name: "Thông tin và duyệt" }).click();
     await expect(admin.getByLabel("Tên", { exact: true })).toHaveValue(term);
     await expect(admin.getByLabel("Gộp vào danh mục đã có", { exact: true })).toHaveValue("");
     await admin.getByLabel("Lý do thay đổi").fill("Synthetic ranking reviewed without applying changes");
+    await admin.getByRole("tab", { name: "Gợi ý chuẩn hóa" }).click();
     const semanticResponse = admin.waitForResponse((response) => {
       const url = new URL(response.url());
       return url.pathname === candidatePath && url.searchParams.get("semantic") === "true";
@@ -424,6 +431,7 @@ test("Admin reviews read-only skill rankings and searches separate Core and AI a
       await expect(suggestions).toContainText("Gợi ý so chữ vẫn dùng được");
     }
     expect(await call(admin, "/api/v2/taxonomy/skills")).toEqual(beforeRanking);
+    await admin.getByRole("tab", { name: "Thông tin và duyệt" }).click();
     await expect(admin.getByLabel("Tên", { exact: true })).toHaveValue(term);
     await expect(admin.getByLabel("Gộp vào danh mục đã có", { exact: true })).toHaveValue("");
     await expect(admin.getByLabel("Lý do thay đổi")).toHaveValue("Synthetic ranking reviewed without applying changes");

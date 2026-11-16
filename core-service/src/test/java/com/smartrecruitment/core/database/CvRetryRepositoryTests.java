@@ -43,6 +43,39 @@ class CvRetryRepositoryTests {
         assertThat(payload.path("externalAiConsent").asBoolean()).isTrue();
         assertThat(payload.path("externalAiPolicyVersion").asText()).isEqualTo(consent.policyVersion());
     }
+
+    @Test
+    void outboxAppendAndPublicationTolerateBackwardClockSkew() {
+        var repository = new JooqCandidateCvRepository(dsl);
+        Long owner = com.smartrecruitment.core.support.TestIds.next();
+        var cv = repository.insert(CandidateCv.uploaded(owner, "Clock skew CV",
+                CvVersion.uploaded(com.smartrecruitment.core.support.TestIds.next(), "test-bucket",
+                        com.smartrecruitment.core.support.TestIds.next() + ".pdf", "skew.pdf",
+                        100, "b".repeat(64), owner)));
+        OffsetDateTime skewedOccurredAt = OffsetDateTime.now(java.time.ZoneOffset.UTC).plusSeconds(15);
+        var outbox = new JooqOutboxEventRepository(dsl, new ObjectMapper());
+        outbox.append(CvUploadedEvent.from(cv, java.util.UUID.randomUUID(), skewedOccurredAt));
+        var row = dsl.selectFrom(OUTBOX_EVENTS)
+                .where(OUTBOX_EVENTS.AGGREGATE_ID.eq(cv.id()))
+                .fetchOne();
+        assertThat(row).isNotNull();
+        assertThat(row.getAvailableAt()).isAfterOrEqualTo(row.getOccurredAt());
+        dsl.update(OUTBOX_EVENTS)
+                .set(OUTBOX_EVENTS.LOCKED_BY, "skew-worker")
+                .set(OUTBOX_EVENTS.LOCKED_AT, OffsetDateTime.now(java.time.ZoneOffset.UTC))
+                .where(OUTBOX_EVENTS.ID.eq(row.getId()))
+                .execute();
+        outbox.markFailed(row.getId(), "skew-worker", "TRANSIENT_ERR", java.time.Duration.ZERO);
+        dsl.update(OUTBOX_EVENTS)
+                .set(OUTBOX_EVENTS.LOCKED_BY, "skew-worker")
+                .set(OUTBOX_EVENTS.LOCKED_AT, OffsetDateTime.now(java.time.ZoneOffset.UTC))
+                .where(OUTBOX_EVENTS.ID.eq(row.getId()))
+                .execute();
+        outbox.markPublished(row.getId(), "skew-worker");
+        var updated = dsl.selectFrom(OUTBOX_EVENTS).where(OUTBOX_EVENTS.ID.eq(row.getId())).fetchOne();
+        assertThat(updated.getPublishedAt()).isAfterOrEqualTo(updated.getOccurredAt());
+        assertThat(updated.getAvailableAt()).isAfterOrEqualTo(updated.getOccurredAt());
+    }
     private static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17.10-alpine");
     private static DSLContext dsl;
 
