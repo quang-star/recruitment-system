@@ -187,6 +187,37 @@ Với bộ seed mở rộng, thêm `--draft-only` ở lượt đầu, duyệt c�
 
 Các tài khoản trên chỉ dành cho demo local. Có thể đổi bằng biến `DEMO_CANDIDATE_EMAIL`, `DEMO_CANDIDATE_PASSWORD`, `DEMO_RECRUITER_EMAIL` và `DEMO_RECRUITER_PASSWORD`. Seed không tạo tài khoản quản trị.
 
+## Chuẩn bị Coolify trên Ubuntu
+
+Dùng **Docker Compose từ Git**, nhánh muốn triển khai, base directory là root repo và
+Compose location là `compose.yaml`. Gán domain HTTPS cho service `web` ở cổng nội bộ
+`80`; Nginx của Web chuyển `/api/` tới Gateway trong cùng Compose network. Hai cổng
+host `5173`/`8080` chỉ bind vào loopback để không mở HTTP trực tiếp ra Internet.
+Không dùng `compose.dev.yaml` trên server. `kafka-init` là tác vụ một lần với
+`restart: "no"`.
+
+Điền các biến sau trong **Environment Variables** của ứng dụng Compose trên Coolify,
+không đưa giá trị thật vào Git hoặc file mẫu:
+
+| Nhóm | Biến cần đặt |
+| --- | --- |
+| Database và object storage | `POSTGRES_ADMIN_PASSWORD`, `AUTH_DB_PASSWORD`, `CORE_DB_PASSWORD`, `AI_DB_PASSWORD`, `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`; chọn `POSTGRES_VOLUME_NAME` riêng nếu cùng server có stack khác. |
+| URL công khai | `WEB_ORIGIN=https://app.example.com`, `AUTH_JWT_ISSUER` (một HTTPS issuer ổn định). Ba link xác minh email, đặt lại mật khẩu và lời mời công ty mặc định lấy từ `WEB_ORIGIN`; chỉ đặt `AUTH_EMAIL_VERIFICATION_BASE_URL`, `AUTH_EMAIL_PASSWORD_RESET_BASE_URL`, `CORE_EMAIL_COMPANY_INVITATION_BASE_URL` khi cần đường dẫn khác. |
+| Email gửi đi | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `AUTH_EMAIL_FROM`, `CORE_EMAIL_FROM`; với SMTP cổng 587 thường đặt `SMTP_AUTH=true`, `SMTP_STARTTLS=true`, `SMTP_STARTTLS_REQUIRED=true`, `SMTP_SSL=false`. Với SMTP SSL cổng 465, dùng `SMTP_SSL=true` và `SMTP_STARTTLS=false` theo hướng dẫn nhà cung cấp. |
+| Khóa JWT | `AUTH_JWT_PRIVATE_KEY_FILE`, `AUTH_JWT_PUBLIC_KEY_FILE`: đường dẫn tuyệt đối tới hai file PEM bền vững trên host Ubuntu. Tạo file trên server trước khi deploy, giữ khóa riêng tư ngoài repo và mount chỉ đọc. Không sinh lại khóa khi redeploy. |
+
+Đánh dấu các mật khẩu/credential là **secret** trong Coolify. `SMTP_HOST` mặc định là
+`mailpit` để chạy local; trên Coolify phải thay bằng SMTP thật nếu muốn người dùng
+nhận email. Mailpit vẫn tồn tại nội bộ trong Compose nhưng không dùng cho gửi mail
+khi `SMTP_HOST` đã đổi. `WEB_ORIGIN` phải dùng đúng domain HTTPS; không giữ giá trị
+`localhost` của `.env.example`. Nếu các biến URL email đã có giá trị trong Coolify,
+cập nhật chúng theo domain thật vì giá trị đã đặt sẽ ghi đè mặc định từ `WEB_ORIGIN`.
+
+Trước khi mở cho người dùng: kiểm tra backup của PostgreSQL/MinIO, các migration,
+trạng thái container và luồng đăng ký → nhận mail → xác minh → đăng nhập trên domain
+thật. Nếu server có dữ liệu từ bản UUID cũ, làm quy trình nâng cấp ID ở phần kiến trúc
+trước khi chạy migration bản mới; không khởi động trực tiếp lên database đó.
+
 ## Dữ liệu hiển thị trên portal
 
 Portal đọc công ty và việc làm qua Gateway API v2. `GET /api/v2/public/jobs/discovery`
