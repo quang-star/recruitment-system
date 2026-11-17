@@ -1,6 +1,6 @@
 import { Dispatch, FormEvent, SetStateAction } from "react";
 
-import { Button, Card } from "../../shared/ui";
+import { Badge, Button, Card } from "../../shared/ui";
 import { CategoryEntry } from "../recruiter/JobCategoryFields";
 import { SkillDefinitionFields } from "./SkillDefinitionFields";
 import {
@@ -88,6 +88,39 @@ export function AdminCatalogForm({
 }) {
   return (
     <Card padding="md" className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-subtle pb-3">
+        <div className="min-w-0">
+          <p className="text-[11px] font-bold uppercase tracking-wider text-ink-500 m-0">
+            {selected ? (tab === "skills" ? "Chỉnh sửa & duyệt kỹ năng" : "Chỉnh sửa & duyệt danh mục") : tab === "skills" ? "Thêm kỹ năng mới" : "Thêm danh mục mới"}
+          </p>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <h3 className="text-base font-bold text-ink-900 m-0 truncate">
+              {current ? current.name : tab === "skills" ? "Tạo kỹ năng chuẩn hóa" : "Tạo danh mục nghề"}
+            </h3>
+            {current && (
+              <Badge
+                tone={
+                  current.status === "ACTIVE"
+                    ? "success"
+                    : current.status === "PENDING"
+                      ? "warning"
+                      : current.status === "REJECTED"
+                        ? "danger"
+                        : "neutral"
+                }
+              >
+                {catalogStatusLabel[current.status] ?? current.status}
+              </Badge>
+            )}
+          </div>
+        </div>
+        {selected && (
+          <Button type="button" variant="secondary" size="sm" disabled={busy} onClick={() => onSelect("")}>
+            + Thêm mới
+          </Button>
+        )}
+      </div>
+
       <label className={labelClass}>
         Danh mục
         <select
@@ -97,7 +130,7 @@ export function AdminCatalogForm({
           value={selected}
           onChange={(e) => onSelect(e.target.value)}
         >
-          <option value="">Thêm danh mục</option>
+          <option value="">{tab === "skills" ? "Thêm kỹ năng mới" : "Thêm danh mục"}</option>
           {entries.map((entry) => (
             <option key={entry.id} value={entry.id}>
               {entry.name} · {catalogStatusLabel[entry.status] ?? entry.status}

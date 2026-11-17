@@ -362,7 +362,7 @@ function PublicHomePageInner({ onLoginSuccess, session, candidate, children }: P
         {accountOpen ? (
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 space-y-5">
             <div>
-              <Button type="button" variant="secondary" size="sm" onClick={() => candidate?.onNavigate("jobs")}>
+              <Button type="button" variant="secondary" size="md" onClick={() => candidate?.onNavigate("jobs")}>
                 <span aria-hidden="true">←</span> Quay lại trang chủ việc làm
               </Button>
             </div>

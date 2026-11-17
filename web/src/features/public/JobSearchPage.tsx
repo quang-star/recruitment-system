@@ -8,6 +8,8 @@ import { SALARY_FILTER_OPTIONS } from "./jobSearchFilters";
 import { PublicJobListCard } from "./PublicJobListCard";
 import { JobDiscovery, PublicJob } from "./types";
 
+const QUICK_KEYWORDS = ["Java", "React", "TypeScript", "Kubernetes", "Python"];
+
 type Props = {
   discovery: JobDiscovery;
   onSelectJob: (job: PublicJob) => void;
@@ -20,6 +22,7 @@ export function JobSearchPage({ discovery, onSelectJob, restoreFocusJobId, onFoc
   const { params, navigate } = useUrlParams();
   const keyword = params.get("q") ?? "";
   const [draftKeyword, setDraftKeyword] = useState(keyword);
+  const [showAdvancedMobile, setShowAdvancedMobile] = useState(false);
   useEffect(() => { setDraftKeyword(keyword); }, [keyword]);
 
   const location = params.get("location") ?? "";
@@ -95,8 +98,19 @@ export function JobSearchPage({ discovery, onSelectJob, restoreFocusJobId, onFoc
     ...(type ? [{ key: "type", name: "bộ lọc hình thức làm việc", label: `Hình thức: ${type}` }] : [])
   ];
 
-  const selectClass =
-    "h-9 w-full rounded-xl border border-border-strong bg-white px-3 text-xs sm:text-sm text-ink-900 focus:border-brand-600 focus:outline-none";
+  const activeAdvancedCount = [salary, level, mode, type].filter(Boolean).length;
+
+  const selectClass = (active = false, tall = false) =>
+    `${tall ? "h-10" : "h-9"} w-full rounded-xl border px-3 text-xs sm:text-sm transition-colors focus:border-brand-600 focus:outline-none ${
+      active
+        ? "border-brand-500 bg-brand-50/70 font-semibold text-brand-800"
+        : "border-border-strong bg-white text-ink-900"
+    }`;
+
+  const clearKeyword = () => {
+    setDraftKeyword("");
+    updateFilter("q", "");
+  };
 
   return (
     <div ref={pageRef} className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
@@ -117,66 +131,129 @@ export function JobSearchPage({ discovery, onSelectJob, restoreFocusJobId, onFoc
           )}
         </div>
 
-        <Card padding="md" className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <Card padding="md" className="space-y-3.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3">
             <form
               role="search"
               onSubmit={(event) => {
                 event.preventDefault();
                 updateFilter("q", draftKeyword);
               }}
-              className="sm:col-span-2 relative"
+              className="sm:col-span-2 lg:col-span-6 flex items-center gap-2"
             >
-              <SearchIcon size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-400 pointer-events-none" aria-hidden="true" />
-              <input
-                aria-label="Tìm kiếm việc làm"
-                placeholder="Vị trí, kỹ năng hoặc tên công ty"
-                value={draftKeyword}
-                maxLength={200}
-                onChange={(event) => setDraftKeyword(event.target.value)}
-                className="h-9 w-full rounded-xl border border-border-strong bg-white pl-10 pr-3 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-600 focus:outline-none"
-              />
+              <div className="relative flex-1 min-w-0">
+                <SearchIcon size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-400 pointer-events-none" aria-hidden="true" />
+                <input
+                  aria-label="Tìm kiếm việc làm"
+                  placeholder="Vị trí, kỹ năng hoặc tên công ty"
+                  value={draftKeyword}
+                  maxLength={200}
+                  onChange={(event) => setDraftKeyword(event.target.value)}
+                  className="h-10 w-full rounded-xl border border-border-strong bg-white pl-10 pr-8 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-600 focus:outline-none"
+                />
+                {draftKeyword && (
+                  <button
+                    type="button"
+                    aria-label="Xóa từ khóa"
+                    onClick={clearKeyword}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 inline-flex h-5 w-5 items-center justify-center rounded-full text-ink-400 hover:bg-slate-100 hover:text-ink-700 cursor-pointer bg-transparent border-0 p-0 text-sm leading-none"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+              <Button type="submit" variant="primary" size="md" className="h-10 shrink-0 px-4">
+                Tìm kiếm
+              </Button>
             </form>
 
-            <select
-              aria-label="Lọc theo nhóm nghề"
-              value={categoryValue}
-              onChange={(event) => {
-                const category = categories.find((item) => item.value === event.target.value);
-                navigate({
-                  industry: category?.industryId ?? null,
-                  specialization: category?.specializationId ?? null,
-                  page: null,
-                  job: null
-                });
-              }}
-              className={selectClass}
-            >
-              <option value="">Tất cả nhóm nghề</option>
-              {categories.map((category) => (
-                <option key={category.value} value={category.value}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
+            <div className="lg:col-span-3">
+              <select
+                aria-label="Lọc theo nhóm nghề"
+                value={categoryValue}
+                onChange={(event) => {
+                  const category = categories.find((item) => item.value === event.target.value);
+                  navigate({
+                    industry: category?.industryId ?? null,
+                    specialization: category?.specializationId ?? null,
+                    page: null,
+                    job: null
+                  });
+                }}
+                className={selectClass(Boolean(categoryValue), true)}
+              >
+                <option value="">Tất cả nhóm nghề</option>
+                {categories.map((category) => (
+                  <option key={category.value} value={category.value}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-            <select
-              aria-label="Địa điểm"
-              value={location}
-              onChange={(event) => updateFilter("location", event.target.value)}
-              className={selectClass}
-            >
-              <option value="">Tất cả địa điểm</option>
-              {discovery.locations.map((item) => (
-                <option key={item} value={item}>{item}</option>
-              ))}
-            </select>
+            <div className="lg:col-span-3">
+              <select
+                aria-label="Địa điểm"
+                value={location}
+                onChange={(event) => updateFilter("location", event.target.value)}
+                className={selectClass(Boolean(location), true)}
+              >
+                <option value="">Tất cả địa điểm</option>
+                {discovery.locations.map((item) => (
+                  <option key={item} value={item}>{item}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-1.5" aria-label="Gợi ý từ khóa nhanh">
+              <span className="text-[11px] font-medium text-ink-500 mr-0.5">Phổ biến:</span>
+              {QUICK_KEYWORDS.map((tag) => {
+                const isSelected = keyword.trim().toLowerCase() === tag.toLowerCase();
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => {
+                      if (isSelected) {
+                        clearKeyword();
+                      } else {
+                        setDraftKeyword(tag);
+                        updateFilter("q", tag);
+                      }
+                    }}
+                    className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors cursor-pointer ${
+                      isSelected
+                        ? "border-brand-500 bg-brand-600 text-white"
+                        : "border-border-subtle bg-slate-50 text-ink-600 hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700"
+                    }`}
+                  >
+                    {tag}
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              type="button"
+              aria-expanded={showAdvancedMobile}
+              onClick={() => setShowAdvancedMobile((prev) => !prev)}
+              className="sm:hidden inline-flex items-center gap-1.5 rounded-lg border border-border-strong bg-white px-3 py-1.5 text-xs font-semibold text-ink-700 cursor-pointer"
+            >
+              <span>{showAdvancedMobile ? "Ẩn bộ lọc" : "Bộ lọc nâng cao"}</span>
+              {activeAdvancedCount > 0 && (
+                <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-600 px-1 text-[10px] font-bold text-white">
+                  {activeAdvancedCount}
+                </span>
+              )}
+            </button>
+          </div>
+
+          <div className={`${showAdvancedMobile ? "grid" : "hidden sm:grid"} grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-border-subtle/70`}>
             <label data-active={Boolean(salary)} className="block space-y-1 text-xs font-medium text-ink-600">
               <span>Mức lương</span>
-              <select aria-label="Lọc theo mức lương" value={salary} onChange={(event) => updateFilter("salary", event.target.value)} className={selectClass}>
+              <select aria-label="Lọc theo mức lương" value={salary} onChange={(event) => updateFilter("salary", event.target.value)} className={selectClass(Boolean(salary))}>
                 <option value="">Tất cả</option>
                 {Object.entries(SALARY_FILTER_OPTIONS).map(([key, item]) => (
                   <option key={key} value={key}>{item.label}</option>
@@ -186,7 +263,7 @@ export function JobSearchPage({ discovery, onSelectJob, restoreFocusJobId, onFoc
 
             <label data-active={Boolean(level)} className="block space-y-1 text-xs font-medium text-ink-600">
               <span>Cấp bậc</span>
-              <select aria-label="Lọc theo cấp bậc" value={level} onChange={(event) => updateFilter("level", event.target.value)} className={selectClass}>
+              <select aria-label="Lọc theo cấp bậc" value={level} onChange={(event) => updateFilter("level", event.target.value)} className={selectClass(Boolean(level))}>
                 <option value="">Tất cả</option>
                 <option value="INTERN">Thực tập</option>
                 <option value="FRESHER">Fresher</option>
@@ -200,7 +277,7 @@ export function JobSearchPage({ discovery, onSelectJob, restoreFocusJobId, onFoc
 
             <label data-active={Boolean(mode)} className="block space-y-1 text-xs font-medium text-ink-600">
               <span>Chế độ làm việc</span>
-              <select aria-label="Lọc theo chế độ làm việc" value={mode} onChange={(event) => updateFilter("mode", event.target.value)} className={selectClass}>
+              <select aria-label="Lọc theo chế độ làm việc" value={mode} onChange={(event) => updateFilter("mode", event.target.value)} className={selectClass(Boolean(mode))}>
                 <option value="">Tất cả</option>
                 <option value="ONSITE">Tại văn phòng</option>
                 <option value="HYBRID">Hybrid</option>
@@ -210,7 +287,7 @@ export function JobSearchPage({ discovery, onSelectJob, restoreFocusJobId, onFoc
 
             <label data-active={Boolean(type)} className="block space-y-1 text-xs font-medium text-ink-600">
               <span>Hình thức</span>
-              <select aria-label="Lọc theo hình thức làm việc" value={type} onChange={(event) => updateFilter("type", event.target.value)} className={selectClass}>
+              <select aria-label="Lọc theo hình thức làm việc" value={type} onChange={(event) => updateFilter("type", event.target.value)} className={selectClass(Boolean(type))}>
                 <option value="">Tất cả</option>
                 <option value="FULL_TIME">Toàn thời gian</option>
                 <option value="PART_TIME">Bán thời gian</option>
@@ -278,8 +355,23 @@ export function JobSearchPage({ discovery, onSelectJob, restoreFocusJobId, onFoc
             action={<Button type="button" size="sm" variant="secondary" onClick={results.refresh}>Thử lại</Button>}
           />
         ) : results.loading ? (
-          <div className="space-y-3" role="status">
-            <p className="text-sm text-ink-500 m-0">Đang tải danh sách việc làm…</p>
+          <div className="space-y-3" role="status" aria-label="Đang tải danh sách việc làm">
+            <span className="sr-only">Đang tải danh sách việc làm…</span>
+            {[0, 1, 2].map((item) => (
+              <div
+                key={item}
+                className="h-28 rounded-xl border border-border-subtle bg-white p-4 animate-pulse"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="h-12 w-12 rounded-lg bg-slate-200 shrink-0" />
+                  <div className="flex-1 space-y-2.5">
+                    <div className="h-4 w-2/5 rounded bg-slate-200" />
+                    <div className="h-3 w-1/4 rounded bg-slate-100" />
+                    <div className="h-3 w-3/5 rounded bg-slate-100" />
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         ) : results.items.length === 0 ? (
           <EmptyState
@@ -295,7 +387,15 @@ export function JobSearchPage({ discovery, onSelectJob, restoreFocusJobId, onFoc
         ) : (
           <div className="space-y-3">
             {results.items.map((job) => (
-              <PublicJobListCard key={job.jobId} job={job} onSelectJob={onSelectJob} />
+              <PublicJobListCard
+                key={job.jobId}
+                job={job}
+                onSelectJob={onSelectJob}
+                onSelectSkill={(skill) => {
+                  setDraftKeyword(skill);
+                  updateFilter("q", skill);
+                }}
+              />
             ))}
           </div>
         )}

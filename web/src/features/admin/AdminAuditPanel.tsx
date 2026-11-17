@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { apiRequest } from "../../shared/api/client";
 import { Badge, Button, Card, EmptyState, ErrorBanner, cn } from "../../shared/ui";
-import { historyTime } from "./adminTypes";
+import { historyTime, skillCategoryLabel, skillTypeLabel } from "./adminTypes";
 
 type Service = "CORE" | "AI";
 type Filters = { actor: string; resourceId: string; action: string; correlationId: string; from: string; to: string };
@@ -260,12 +260,12 @@ export function AdminAuditPanel({ accessToken }: { accessToken: string }) {
           </div>
 
           {result.items.length ? (
-            <div className="grid grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] gap-5 items-start">
-              <div className="min-w-0 max-h-[calc(100vh-420px)] overflow-auto rounded-xl border border-border-subtle bg-white">
+            <div className="grid gap-5 items-start lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+              <div className="min-w-0 max-h-[540px] overflow-auto rounded-xl border border-border-subtle bg-white">
                 <table className="w-full border-collapse text-left text-sm">
                   <caption className="sr-only">Các thay đổi được ghi nhận</caption>
-                  <thead>
-                    <tr className="border-b border-border-subtle bg-slate-50/90 text-[11px] font-semibold uppercase tracking-wider text-ink-500">
+                  <thead className="sticky top-0 z-10 bg-slate-50 shadow-[0_1px_0_0_var(--color-border-subtle)]">
+                    <tr className="text-[11px] font-semibold uppercase tracking-wider text-ink-500">
                       <th className="px-4 py-2.5">Hành động</th>
                       <th className="px-3 py-2.5">Danh mục / kỹ năng</th>
                       <th className="px-4 py-2.5">Thời điểm</th>
@@ -277,9 +277,12 @@ export function AdminAuditPanel({ accessToken }: { accessToken: string }) {
                       return (
                         <tr
                           key={item.id}
-                          className={cn("transition-colors hover:bg-slate-50/80", isSelected && "bg-brand-50/50")}
+                          className={cn(
+                            "transition-colors hover:bg-slate-50/80",
+                            isSelected && "bg-brand-50/50 border-l-4 border-l-brand-600"
+                          )}
                         >
-                          <td className="px-4 py-2.5">
+                          <td className="px-4 py-2.5 align-top">
                             <button
                               type="button"
                               aria-pressed={isSelected}
@@ -289,10 +292,11 @@ export function AdminAuditPanel({ accessToken }: { accessToken: string }) {
                               {actions[item.action] ?? item.action}
                             </button>
                           </td>
-                          <td className="px-3 py-2.5 text-sm font-medium text-ink-900 break-words">
-                            {name(state(item.after ?? item.afterState))}
+                          <td className="px-3 py-2.5 align-top text-sm font-medium text-ink-900 break-words">
+                            <span className="block">{name(state(item.after ?? item.afterState))}</span>
+                            <span className="mt-0.5 block font-mono text-[11px] text-ink-500">#{item.resourceId}</span>
                           </td>
-                          <td className="px-3 py-2.5 text-xs text-ink-600">
+                          <td className="px-4 py-2.5 align-top text-xs text-ink-600 whitespace-nowrap">
                             {historyTime(item.createdAt ?? item.occurredAt)}
                           </td>
                         </tr>
@@ -356,6 +360,21 @@ function AuditRecord({ item, service }: { item: AuditEntry; service: Service }) 
         {name(before)} → {name(after)}
         {typeof after?.status === "string" ? ` · ${after.status}` : ""}
       </p>
+      {typeof after?.type === "string" && (
+        <p className="text-xs text-ink-700 m-0">
+          Loại: {skillTypeLabel[after.type] ?? after.type}
+          {typeof after.category === "string" ? ` · Nhóm: ${skillCategoryLabel[after.category] ?? after.category}` : ""}
+        </p>
+      )}
+      {Array.isArray(after?.aliases) && (
+        <p className="text-xs text-ink-600 m-0">
+          Tên gọi khác:{" "}
+          {after.aliases
+            .map((alias: unknown) => (typeof alias === "object" && alias !== null && "value" in alias ? String(alias.value) : ""))
+            .filter(Boolean)
+            .join(", ") || "Không có"}
+        </p>
+      )}
       {service === "AI" && item.redacted && (
         <p className="text-xs font-medium text-amber-800 m-0">Thông tin liên hệ đã được che trong bản ghi này.</p>
       )}

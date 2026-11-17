@@ -126,7 +126,7 @@ export function PendingSkillQueue({
           </Button>
         </div>
 
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
           <label className="block text-xs font-semibold text-ink-700">
             Trạng thái đề xuất
             <select
@@ -191,7 +191,7 @@ export function PendingSkillQueue({
             </select>
           </label>
 
-          <label className="block text-xs font-semibold text-ink-700">
+          <label className="block col-span-2 lg:col-span-4 text-xs font-semibold text-ink-700">
             Sắp xếp đề xuất
             <select
               aria-label="Sắp xếp đề xuất"
@@ -205,6 +205,26 @@ export function PendingSkillQueue({
             </select>
           </label>
         </div>
+        {(filters.status !== initialFilters.status ||
+          filters.sourceKind ||
+          filters.type ||
+          filters.category ||
+          filters.q ||
+          filters.sort !== initialFilters.sort) && (
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => {
+                setSearch("");
+                setFilters(initialFilters);
+                setPage(0);
+              }}
+              className="text-xs font-semibold text-brand-700 hover:underline cursor-pointer bg-transparent border-0 p-0"
+            >
+              Đặt lại bộ lọc
+            </button>
+          </div>
+        )}
       </form>
 
       {error && (
@@ -260,11 +280,11 @@ export function PendingSkillQueue({
           </div>
 
           {result.items.length ? (
-            <div className="overflow-x-auto rounded-xl border border-border-subtle bg-white">
+            <div className="max-h-[540px] overflow-auto rounded-xl border border-border-subtle bg-white">
               <table className="w-full border-collapse text-left text-sm">
                 <caption className="sr-only">Đề xuất kỹ năng</caption>
-                <thead>
-                  <tr className="border-b border-border-subtle bg-slate-50/90 text-[11px] font-semibold uppercase tracking-wider text-ink-500">
+                <thead className="sticky top-0 z-10 bg-slate-50 shadow-[0_1px_0_0_var(--color-border-subtle)]">
+                  <tr className="text-[11px] font-semibold uppercase tracking-wider text-ink-500">
                     <th className="px-4 py-2.5">Thuật ngữ</th>
                     <th className="px-3 py-2.5">Trạng thái</th>
                     <th className="px-4 py-2.5">Ghi nhận / nguồn</th>
@@ -274,10 +294,15 @@ export function PendingSkillQueue({
                   {result.items.map((item) => {
                     const isSelected = selected === item.skillId;
                     const statusLabel = statuses.find((status) => status.value === item.status)?.label ?? item.status;
+                    const typeLabel = types.find((t) => t.value === item.type)?.label ?? item.type;
+                    const catLabel = categories.find((c) => c.value === item.category)?.label ?? item.category;
                     return (
                       <tr
                         key={item.skillId}
-                        className={cn("transition-colors hover:bg-slate-50/80", isSelected && "bg-brand-50/50")}
+                        className={cn(
+                          "transition-colors hover:bg-slate-50/80",
+                          isSelected && "bg-brand-50/60 border-l-4 border-l-brand-600"
+                        )}
                       >
                         <td className="px-4 py-3 align-top">
                           <button
@@ -289,7 +314,10 @@ export function PendingSkillQueue({
                           >
                             {item.name}
                           </button>
-                          <small className="mt-0.5 block text-xs text-ink-500">
+                          <small className="mt-0.5 block text-xs text-ink-600">
+                            {typeLabel} · {catLabel}
+                          </small>
+                          <small className="mt-0.5 block text-[11px] text-ink-500">
                             Đầu tiên: {dateLabel(item.firstSeen)} · Gần nhất: {dateLabel(item.lastSeen)}
                           </small>
                         </td>

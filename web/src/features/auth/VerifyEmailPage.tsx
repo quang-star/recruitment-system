@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ApiClientError, apiRequest } from "../../shared/api/client";
-import { CheckCircleIcon, SparklesIcon } from "../../shared/components/Icon";
+import { CheckCircleIcon } from "../../shared/components/Icon";
 import { Card, ErrorBanner } from "../../shared/ui";
 
 export function VerifyEmailPage() {
@@ -38,9 +38,7 @@ export function VerifyEmailPage() {
     <main className="min-h-screen flex items-center justify-center bg-canvas px-4 py-12">
       <Card padding="lg" className="w-full max-w-md space-y-5">
         <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 text-white shadow-xs">
-            <SparklesIcon size={20} />
-          </span>
+          <img src="/logo.png" alt="" aria-hidden="true" className="h-10 w-10 shrink-0 object-contain" />
           <div>
             <p className="text-[11px] font-bold uppercase tracking-wider text-brand-700 m-0">Xác thực tài khoản</p>
             <h1 className="text-xl font-bold text-ink-900 m-0">Xác minh email</h1>

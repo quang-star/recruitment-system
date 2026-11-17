@@ -1,5 +1,6 @@
 import { ArrowRightIcon, MapPinIcon } from "../../shared/components/Icon";
-import { Badge, Card } from "../../shared/ui";
+import { Card } from "../../shared/ui";
+import { CompanyLogo } from "./CompanyLogo";
 import { CompanyInfo, FEATURED_COMPANIES } from "./companyData";
 
 type FeaturedEmployersProps = {
@@ -26,11 +27,10 @@ export function FeaturedEmployers({ companies, onSelectCompany }: FeaturedEmploy
         {employers.slice(0, 6).map((company) => (
           <Card key={company.id} as="article" interactive padding="md" className="flex flex-col justify-between gap-4">
             <div className="flex items-start gap-3.5">
-              <img
+              <CompanyLogo
                 src={company.logo}
-                alt=""
-                className="h-12 w-12 shrink-0 rounded-xl border border-border-subtle bg-white object-contain p-1.5"
-                onError={(e) => { e.currentTarget.src = "/logos/smartrecruitment.svg"; }}
+                name={company.shortName || company.name}
+                className="h-12 w-12 rounded-lg"
               />
               <div className="min-w-0 flex-1">
                 <h3 className="text-base font-bold text-ink-900 m-0 truncate">{company.shortName || company.name}</h3>
@@ -39,9 +39,9 @@ export function FeaturedEmployers({ companies, onSelectCompany }: FeaturedEmploy
                   <span className="truncate">{company.location}</span>
                 </p>
                 {company.openJobsCount != null && (
-                  <div className="mt-2">
-                    <Badge tone="neutral">{company.openJobsCount} vị trí đang mở</Badge>
-                  </div>
+                  <p className="text-xs font-semibold text-emerald-700 m-0 mt-1.5">
+                    {company.openJobsCount} vị trí đang mở
+                  </p>
                 )}
               </div>
             </div>

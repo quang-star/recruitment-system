@@ -1,6 +1,6 @@
 import { FC, useState } from "react";
 import { CandidateView } from "../candidate/navigation";
-import { CloseIcon, MenuIcon, NotificationIcon, ProfileIcon, SparklesIcon } from "../../shared/components/Icon";
+import { CloseIcon, MenuIcon, NotificationIcon, ProfileIcon } from "../../shared/components/Icon";
 import { BRAND_CONFIG } from "../../shared/config/brand";
 import { cn } from "../../shared/ui";
 import { CandidateAccountMenu } from "./CandidateAccountMenu";
@@ -8,6 +8,7 @@ import { ActiveNavTab } from "./types";
 
 export type CandidateNavigation = {
   name: string;
+  avatarUrl?: string | null;
   activeView: CandidateView;
   onNavigate: (view: CandidateView) => void;
   onLogout: () => void;
@@ -45,9 +46,12 @@ export const PublicNavbar: FC<Props> = ({
             onClick={() => selectTab("home")}
             className="flex items-center gap-2.5 text-left cursor-pointer group shrink-0 bg-transparent border-0 p-0"
           >
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600 text-white shadow-xs transition-colors group-hover:bg-brand-700">
-              <SparklesIcon size={18} aria-hidden="true" />
-            </span>
+            <img
+              src="/logo.png"
+              alt=""
+              aria-hidden="true"
+              className="h-9 w-9 shrink-0 object-contain transition-transform group-hover:scale-105"
+            />
             {BRAND_CONFIG.name && (
               <strong className="text-base font-extrabold tracking-tight text-ink-900">
                 {BRAND_CONFIG.name}
@@ -117,6 +121,7 @@ export const PublicNavbar: FC<Props> = ({
               </button>
               <CandidateAccountMenu
                 name={candidate.name}
+                avatarUrl={candidate.avatarUrl}
                 activeView={candidate.activeView}
                 onNavigate={candidate.onNavigate}
                 onLogout={candidate.onLogout}

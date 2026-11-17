@@ -1,5 +1,5 @@
 import { ReactNode, useState } from "react";
-import { CloseIcon, LogoutIcon, MenuIcon, SparklesIcon } from "../components/Icon";
+import { CloseIcon, LogoutIcon, MenuIcon } from "../components/Icon";
 import { BRAND_CONFIG } from "../config/brand";
 import { cn } from "../ui";
 
@@ -62,9 +62,7 @@ export function WorkspaceShell<T extends string>({
                 onClick={onBrandClick}
                 className="flex items-center gap-3 min-w-0 bg-transparent border-0 p-0 cursor-pointer text-left"
               >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-600 text-white shadow-xs">
-                  <SparklesIcon size={18} />
-                </span>
+                <img src="/logo.png" alt="" aria-hidden="true" className="h-9 w-9 shrink-0 object-contain" />
                 {displayBrand && (
                   <span className="truncate text-sm font-bold tracking-tight text-ink-900">
                     {displayBrand}
@@ -73,9 +71,7 @@ export function WorkspaceShell<T extends string>({
               </button>
             ) : (
               <div className="flex items-center gap-3 min-w-0">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-600 text-white shadow-xs">
-                  <SparklesIcon size={18} />
-                </span>
+                <img src="/logo.png" alt="" aria-hidden="true" className="h-9 w-9 shrink-0 object-contain" />
                 {displayBrand && (
                   <span className="truncate text-sm font-bold tracking-tight text-ink-900">
                     {displayBrand}
@@ -205,9 +201,7 @@ export function WorkspaceShell<T extends string>({
         <div className="space-y-6">
           <div className="flex items-center justify-between px-2 pt-1">
             <div className="flex items-center gap-3 min-w-0">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-600 text-white shadow-xs">
-                <SparklesIcon size={18} />
-              </span>
+              <img src="/logo.png" alt="" aria-hidden="true" className="h-9 w-9 shrink-0 object-contain" />
               <div className="min-w-0">
                 {BRAND_CONFIG.name ? (
                   <>
