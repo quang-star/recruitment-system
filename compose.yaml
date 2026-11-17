@@ -44,6 +44,7 @@ services:
 
   kafka-init:
     image: apache/kafka:4.2.1
+    restart: "no"
     depends_on:
       kafka:
         condition: service_healthy
@@ -107,18 +108,24 @@ services:
       AUTH_JWT_AUDIENCE: smart-recruitment-api
       AUTH_JWT_PRIVATE_KEY_PATH: /run/secrets/auth-jwt-private.pem
       AUTH_JWT_PUBLIC_KEY_PATH: /run/secrets/auth-jwt-public.pem
-      AUTH_SMTP_HOST: mailpit
-      AUTH_SMTP_PORT: 1025
+      AUTH_SMTP_HOST: ${SMTP_HOST:-mailpit}
+      AUTH_SMTP_PORT: ${SMTP_PORT:-1025}
+      AUTH_SMTP_USERNAME: ${SMTP_USERNAME:-}
+      AUTH_SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      AUTH_SMTP_AUTH: ${SMTP_AUTH:-false}
+      AUTH_SMTP_STARTTLS: ${SMTP_STARTTLS:-false}
+      AUTH_SMTP_STARTTLS_REQUIRED: ${SMTP_STARTTLS_REQUIRED:-false}
+      AUTH_SMTP_SSL: ${SMTP_SSL:-false}
       AUTH_EMAIL_FROM: ${AUTH_EMAIL_FROM:-no-reply@smart-recruitment.local}
-      AUTH_EMAIL_VERIFICATION_BASE_URL: ${AUTH_EMAIL_VERIFICATION_BASE_URL:-http://localhost:5173/verify-email}
-      AUTH_EMAIL_PASSWORD_RESET_BASE_URL: ${AUTH_EMAIL_PASSWORD_RESET_BASE_URL:-http://localhost:5173/reset-password}
+      AUTH_EMAIL_VERIFICATION_BASE_URL: ${AUTH_EMAIL_VERIFICATION_BASE_URL:-${WEB_ORIGIN:-http://localhost:5173}/verify-email}
+      AUTH_EMAIL_PASSWORD_RESET_BASE_URL: ${AUTH_EMAIL_PASSWORD_RESET_BASE_URL:-${WEB_ORIGIN:-http://localhost:5173}/reset-password}
     volumes:
       - type: bind
-        source: ${AUTH_JWT_PRIVATE_KEY_FILE:-./.local/secrets/auth-jwt-private.pem}
+        source: ${AUTH_JWT_PRIVATE_KEY_FILE:?Set the persistent private key file path}
         target: /run/secrets/auth-jwt-private.pem
         read_only: true
       - type: bind
-        source: ${AUTH_JWT_PUBLIC_KEY_FILE:-./.local/secrets/auth-jwt-public.pem}
+        source: ${AUTH_JWT_PUBLIC_KEY_FILE:?Set the persistent public key file path}
         target: /run/secrets/auth-jwt-public.pem
         read_only: true
     depends_on:
@@ -135,10 +142,16 @@ services:
       CORE_DB_URL: jdbc:postgresql://postgres:5432/core_db
       CORE_DB_USERNAME: core_service
       CORE_DB_PASSWORD: ${CORE_DB_PASSWORD}
-      CORE_SMTP_HOST: mailpit
-      CORE_SMTP_PORT: 1025
+      CORE_SMTP_HOST: ${SMTP_HOST:-mailpit}
+      CORE_SMTP_PORT: ${SMTP_PORT:-1025}
+      CORE_SMTP_USERNAME: ${SMTP_USERNAME:-}
+      CORE_SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      CORE_SMTP_AUTH: ${SMTP_AUTH:-false}
+      CORE_SMTP_STARTTLS: ${SMTP_STARTTLS:-false}
+      CORE_SMTP_STARTTLS_REQUIRED: ${SMTP_STARTTLS_REQUIRED:-false}
+      CORE_SMTP_SSL: ${SMTP_SSL:-false}
       CORE_EMAIL_FROM: ${CORE_EMAIL_FROM:-no-reply@smart-recruitment.local}
-      CORE_EMAIL_COMPANY_INVITATION_BASE_URL: ${CORE_EMAIL_COMPANY_INVITATION_BASE_URL:-http://localhost:5173/accept-invitation}
+      CORE_EMAIL_COMPANY_INVITATION_BASE_URL: ${CORE_EMAIL_COMPANY_INVITATION_BASE_URL:-${WEB_ORIGIN:-http://localhost:5173}/accept-invitation}
       AUTH_JWKS_URI: http://auth-service:8081/.well-known/jwks.json
       AUTH_JWT_ISSUER: ${AUTH_JWT_ISSUER:-http://localhost:8080}
       AUTH_JWT_AUDIENCE: smart-recruitment-api
@@ -213,9 +226,9 @@ services:
       AUTH_JWKS_URI: http://auth-service:8081/.well-known/jwks.json
       AUTH_JWT_ISSUER: ${AUTH_JWT_ISSUER:-http://localhost:8080}
       AUTH_JWT_AUDIENCE: smart-recruitment-api
-      WEB_ORIGIN: http://localhost:5173
+      WEB_ORIGIN: ${WEB_ORIGIN:-http://localhost:5173}
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     depends_on:
       - auth-service
       - core-service
@@ -226,7 +239,7 @@ services:
       context: .
       dockerfile: web/Dockerfile
     ports:
-      - "5173:80"
+      - "127.0.0.1:5173:80"
     depends_on:
       - gateway-service
 
