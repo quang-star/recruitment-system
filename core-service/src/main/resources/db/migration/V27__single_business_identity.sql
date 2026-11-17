@@ -1,0 +1,54 @@
+-- V26 converts data transactionally using owner-exported legacy mappings.
+-- These explicit type declarations also keep offline jOOQ generation aligned.
+ALTER TABLE candidate_profiles ALTER COLUMN user_id TYPE BIGINT;
+ALTER TABLE recruiter_profiles ALTER COLUMN user_id TYPE BIGINT;
+ALTER TABLE companies ALTER COLUMN created_by_user_id TYPE BIGINT;
+ALTER TABLE companies ALTER COLUMN verification_reviewed_by_user_id TYPE BIGINT;
+ALTER TABLE company_members ALTER COLUMN user_id TYPE BIGINT;
+ALTER TABLE company_members ALTER COLUMN invited_by_user_id TYPE BIGINT;
+ALTER TABLE cvs ALTER COLUMN candidate_user_id TYPE BIGINT;
+ALTER TABLE cv_versions ALTER COLUMN created_by_user_id TYPE BIGINT;
+ALTER TABLE jobs ALTER COLUMN created_by_user_id TYPE BIGINT;
+ALTER TABLE job_versions ALTER COLUMN created_by_user_id TYPE BIGINT;
+ALTER TABLE job_versions ALTER COLUMN industry_id TYPE BIGINT;
+ALTER TABLE job_versions ALTER COLUMN specialization_id TYPE BIGINT;
+ALTER TABLE job_versions ALTER COLUMN position_id TYPE BIGINT;
+ALTER TABLE applications ALTER COLUMN candidate_user_id TYPE BIGINT;
+ALTER TABLE application_status_history ALTER COLUMN actor_user_id TYPE BIGINT;
+ALTER TABLE candidate_consents ALTER COLUMN candidate_user_id TYPE BIGINT;
+ALTER TABLE company_invitations ALTER COLUMN invited_by_user_id TYPE BIGINT;
+ALTER TABLE company_invitations ALTER COLUMN accepted_by_user_id TYPE BIGINT;
+ALTER TABLE notifications ALTER COLUMN user_id TYPE BIGINT;
+ALTER TABLE job_category_catalog ALTER COLUMN id TYPE BIGINT;
+ALTER TABLE job_category_catalog ALTER COLUMN parent_id TYPE BIGINT;
+ALTER TABLE job_category_catalog ALTER COLUMN merged_into_id TYPE BIGINT;
+ALTER TABLE job_category_history ALTER COLUMN category_id TYPE BIGINT;
+ALTER TABLE job_category_history ALTER COLUMN actor_user_id TYPE BIGINT;
+ALTER TABLE cv_erasure_queue ALTER COLUMN cv_version_id TYPE BIGINT;
+ALTER TABLE job_processing_projections ALTER COLUMN job_id TYPE BIGINT;
+ALTER TABLE job_processing_projections ALTER COLUMN job_version_id TYPE BIGINT;
+ALTER TABLE job_processing_projections ALTER COLUMN processing_task_id TYPE BIGINT;
+ALTER TABLE application_matching_projections ALTER COLUMN application_id TYPE BIGINT;
+ALTER TABLE application_matching_projections ALTER COLUMN cv_version_id TYPE BIGINT;
+ALTER TABLE application_matching_projections ALTER COLUMN job_version_id TYPE BIGINT;
+ALTER TABLE application_matching_projections ALTER COLUMN matching_result_id TYPE BIGINT;
+ALTER TABLE outbox_events ALTER COLUMN aggregate_id TYPE BIGINT;
+
+ALTER TABLE job_category_catalog ALTER COLUMN id SET DEFAULT nextval('job_category_catalog_id_seq');
+ALTER SEQUENCE job_category_catalog_id_seq OWNED BY job_category_catalog.id;
+
+ALTER TABLE candidate_profiles DROP COLUMN public_id;
+ALTER TABLE recruiter_profiles DROP COLUMN public_id;
+ALTER TABLE companies DROP COLUMN public_id;
+ALTER TABLE company_members DROP COLUMN public_id;
+ALTER TABLE cvs DROP COLUMN public_id;
+ALTER TABLE cv_versions DROP COLUMN public_id;
+ALTER TABLE jobs DROP COLUMN public_id;
+ALTER TABLE job_versions DROP COLUMN public_id;
+ALTER TABLE applications DROP COLUMN public_id;
+ALTER TABLE application_status_history DROP COLUMN public_id;
+ALTER TABLE candidate_consents DROP COLUMN public_id;
+ALTER TABLE application_cv_access_grants DROP COLUMN public_id;
+ALTER TABLE company_invitations DROP COLUMN public_id;
+ALTER TABLE notifications DROP COLUMN public_id;
+ALTER TABLE outbox_events RENAME COLUMN public_id TO event_id;

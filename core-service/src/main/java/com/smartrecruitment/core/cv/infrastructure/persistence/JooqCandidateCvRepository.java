@@ -7,6 +7,7 @@ import com.smartrecruitment.core.cv.domain.CandidateCv;
 import com.smartrecruitment.core.cv.domain.CvProcessingStatus;
 import com.smartrecruitment.core.cv.domain.CvStatus;
 import com.smartrecruitment.core.cv.domain.CvVersion;
+import com.smartrecruitment.core.shared.infrastructure.persistence.TimestampGuards;
 import org.jooq.DSLContext;
 import org.jooq.SelectOnConditionStep;
 import org.springframework.stereotype.Repository;
@@ -15,7 +16,6 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.CvVersions.CV_VERSIONS;
 import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.Cvs.CVS;
@@ -34,7 +34,7 @@ public class JooqCandidateCvRepository implements CandidateCvRepository {
     public CandidateCv insert(CandidateCv candidateCv) {
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         var cvRecord = dsl.insertInto(CVS)
-                .set(CVS.PUBLIC_ID, candidateCv.publicId())
+
                 .set(CVS.CANDIDATE_USER_ID, candidateCv.candidateUserId())
                 .set(CVS.TITLE, candidateCv.title())
                 .set(CVS.STATUS, candidateCv.status().name())
@@ -47,7 +47,7 @@ public class JooqCandidateCvRepository implements CandidateCvRepository {
 
         var version = candidateCv.activeVersion();
         var versionRecord = dsl.insertInto(CV_VERSIONS)
-                .set(CV_VERSIONS.PUBLIC_ID, version.publicId())
+
                 .set(CV_VERSIONS.CV_ID, cvRecord.getId())
                 .set(CV_VERSIONS.VERSION_NUMBER, version.versionNumber())
                 .set(CV_VERSIONS.OBJECT_BUCKET, version.objectBucket())
@@ -78,13 +78,13 @@ public class JooqCandidateCvRepository implements CandidateCvRepository {
     }
 
     @Override
-    public boolean updateProcessingStatus(UUID cvVersionId, String sourceHash,
+    public boolean updateProcessingStatus(Long cvVersionId, String sourceHash,
                                           CvProcessingStatus status, String failureCode) {
         return updateStatus(cvVersionId, sourceHash, status, failureCode, null);
     }
 
     @Override
-    public boolean updateProcessingAttemptStatus(UUID cvVersionId, String sourceHash,
+    public boolean updateProcessingAttemptStatus(Long cvVersionId, String sourceHash,
                                                  CvProcessingStatus status, String failureCode, long generation) {
         if (generation < 0 || (status != CvProcessingStatus.PARSED && status != CvProcessingStatus.FAILED)) {
             throw new IllegalArgumentException("Invalid CV processing attempt result");
@@ -92,17 +92,19 @@ public class JooqCandidateCvRepository implements CandidateCvRepository {
         return updateStatus(cvVersionId, sourceHash, status, failureCode, generation);
     }
 
-    private boolean updateStatus(UUID cvVersionId, String sourceHash, CvProcessingStatus status,
+    private boolean updateStatus(Long cvVersionId, String sourceHash, CvProcessingStatus status,
                                  String failureCode, Long generation) {
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         return dsl.update(CV_VERSIONS)
                 .set(CV_VERSIONS.PROCESSING_STATUS, status.name())
                 .set(CV_VERSIONS.FAILURE_CODE, failureCode)
                 .set(CV_VERSIONS.CONFIRMED_AT,
-                        status == CvProcessingStatus.CONFIRMED ? now : null)
-                .set(CV_VERSIONS.UPDATED_AT, now)
+                        status == CvProcessingStatus.CONFIRMED
+                                ? TimestampGuards.atLeast(CV_VERSIONS.CREATED_AT, now)
+                                : org.jooq.impl.DSL.val((OffsetDateTime) null, CV_VERSIONS.CONFIRMED_AT))
+                .set(CV_VERSIONS.UPDATED_AT, TimestampGuards.atLeast(CV_VERSIONS.CREATED_AT, CV_VERSIONS.UPDATED_AT, now))
                 .set(CV_VERSIONS.VERSION, CV_VERSIONS.VERSION.add(1L))
-                .where(CV_VERSIONS.PUBLIC_ID.eq(cvVersionId))
+                .where(CV_VERSIONS.ID.eq(cvVersionId))
                 .and(CV_VERSIONS.PROCESSING_STATUS.ne("DELETED"))
                 .and(CV_VERSIONS.SHA256.eq(sourceHash))
                 .and(generation == null ? org.jooq.impl.DSL.noCondition()
@@ -117,26 +119,26 @@ public class JooqCandidateCvRepository implements CandidateCvRepository {
     }
 
     @Override
-    public Optional<CandidateCv> queueRetry(UUID candidateUserId, UUID cvId, UUID cvVersionId, long expectedVersion) {
+    public Optional<CandidateCv> queueRetry(Long candidateUserId, Long cvId, Long cvVersionId, long expectedVersion) {
         int updated = dsl.update(CV_VERSIONS)
                 .set(CV_VERSIONS.PROCESSING_STATUS, CvProcessingStatus.QUEUED.name())
                 .set(CV_VERSIONS.FAILURE_CODE, (String) null)
-                .set(CV_VERSIONS.UPDATED_AT, OffsetDateTime.now(ZoneOffset.UTC))
+                .set(CV_VERSIONS.UPDATED_AT, TimestampGuards.atLeast(CV_VERSIONS.CREATED_AT, OffsetDateTime.now(ZoneOffset.UTC)))
                 .set(CV_VERSIONS.VERSION, CV_VERSIONS.VERSION.add(1L))
                 .set(CV_VERSIONS.PROCESSING_GENERATION, CV_VERSIONS.VERSION.add(1L))
-                .where(CV_VERSIONS.PUBLIC_ID.eq(cvVersionId))
+                .where(CV_VERSIONS.ID.eq(cvVersionId))
                 .and(CV_VERSIONS.VERSION.eq(expectedVersion))
                 .and(CV_VERSIONS.PROCESSING_STATUS.eq(CvProcessingStatus.FAILED.name()))
                 .and(CV_VERSIONS.FAILURE_CODE.eq("SOURCE_STORAGE_UNAVAILABLE"))
                 .and(CV_VERSIONS.ID.in(dsl.select(CVS.ACTIVE_VERSION_ID).from(CVS)
-                        .where(CVS.PUBLIC_ID.eq(cvId)).and(CVS.CANDIDATE_USER_ID.eq(candidateUserId))
+                        .where(CVS.ID.eq(cvId)).and(CVS.CANDIDATE_USER_ID.eq(candidateUserId))
                         .and(CVS.STATUS.eq(CvStatus.ACTIVE.name()))))
                 .execute();
-        return updated == 1 ? findByPublicId(candidateUserId, cvId) : Optional.empty();
+        return updated == 1 ? findById(candidateUserId, cvId) : Optional.empty();
     }
 
     @Override
-    public List<CandidateCv> findByCandidateUserId(UUID candidateUserId) {
+    public List<CandidateCv> findByCandidateUserId(Long candidateUserId) {
         return baseSelect()
                 .where(CVS.CANDIDATE_USER_ID.eq(candidateUserId))
                 .and(CVS.STATUS.ne(CvStatus.DELETED.name()))
@@ -145,10 +147,10 @@ public class JooqCandidateCvRepository implements CandidateCvRepository {
     }
 
     @Override
-    public Optional<CandidateCv> findByPublicId(UUID candidateUserId, UUID cvId) {
+    public Optional<CandidateCv> findById(Long candidateUserId, Long cvId) {
         return baseSelect()
                 .where(CVS.CANDIDATE_USER_ID.eq(candidateUserId))
-                .and(CVS.PUBLIC_ID.eq(cvId))
+                .and(CVS.ID.eq(cvId))
                 .and(CVS.STATUS.ne(CvStatus.DELETED.name()))
                 .fetchOptional(this::toDomain);
     }
@@ -167,12 +169,12 @@ public class JooqCandidateCvRepository implements CandidateCvRepository {
 
     private CandidateCv toDomain(CvsRecord cvRecord, CvVersionsRecord versionRecord) {
         return new CandidateCv(
-                cvRecord.getPublicId(),
+                cvRecord.getId(),
                 cvRecord.getCandidateUserId(),
                 cvRecord.getTitle(),
                 CvStatus.valueOf(cvRecord.getStatus()),
                 new CvVersion(
-                        versionRecord.getPublicId(),
+                        versionRecord.getId(),
                         versionRecord.getVersionNumber(),
                         versionRecord.getObjectBucket(),
                         versionRecord.getObjectKey(),

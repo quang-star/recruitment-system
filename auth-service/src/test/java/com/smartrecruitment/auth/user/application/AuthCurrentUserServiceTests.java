@@ -8,13 +8,12 @@ import org.junit.jupiter.api.Test;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class AuthCurrentUserServiceTests {
-    private static final UUID USER_ID = UUID.fromString("b605d1b4-f751-46c4-8b33-bb5e921fc701");
+    private static final Long USER_ID = 1L;
 
     @Test
     void returnsActiveUserWithCurrentRoles() {
@@ -52,8 +51,8 @@ class AuthCurrentUserServiceTests {
             }
 
             @Override
-            public Optional<AuthUser> findByPublicId(UUID publicId) {
-                return USER_ID.equals(publicId) ? Optional.of(user) : Optional.empty();
+            public Optional<AuthUser> findById(Long id) {
+                return USER_ID.equals(id) ? Optional.of(user) : Optional.empty();
             }
 
             @Override
@@ -70,7 +69,7 @@ class AuthCurrentUserServiceTests {
 
     private static AuthUser user(UserStatus status, Instant verifiedAt) {
         Instant createdAt = Instant.parse("2026-08-01T00:00:00Z");
-        return new AuthUser(1L, USER_ID, "candidate@example.com", "candidate@example.com",
+        return new AuthUser(USER_ID, "candidate@example.com", "candidate@example.com",
                 status, verifiedAt, null, createdAt, createdAt, 0);
     }
 }

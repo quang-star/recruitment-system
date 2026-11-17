@@ -100,7 +100,7 @@
                             <outputSchema>public</outputSchema>
                             <includes>.*</includes>
                             <properties>
-                                <property><key>scripts</key><value>src/main/resources/db/migration/*.sql</value></property>
+                                <property><key>scripts</key><value>src/main/resources/db/codegen/core-schema.sql</value></property>
                                 <property><key>sort</key><value>flyway</value></property>
                                 <property><key>unqualifiedSchema</key><value>none</value></property>
                                 <property><key>defaultNameCase</key><value>lower</value></property>

@@ -1,0 +1,315 @@
+openapi: 3.1.0
+info:
+  title: Controlled reprocessing and Core admission
+  version: 1.0.0
+  description: Admin metadata APIs. Steps use local parsing and require live Core admission; no raw source or credentials are returned.
+security:
+  - bearerAuth: []
+paths:
+  /api/v1/taxonomy/reprocessing/impact:
+    post:
+      summary: Preview at most 1000 source versions or Applications
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ImpactRequest'}
+      responses:
+        '200':
+          description: Metadata preview with pinned target and preview hash
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ImpactPreview'}
+        '403': {description: SYSTEM_ADMIN role required}
+        '404': {description: A selected source is unavailable}
+        '409': {description: Immutable target snapshot unavailable}
+        '422': {description: Invalid, unsupported, or excessive selection}
+  /api/v1/taxonomy/reprocessing/batches:
+    post:
+      summary: Create a batch from a still-current reviewed preview
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema: {type: string, minLength: 1, maxLength: 200}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CreateBatchRequest'}
+      responses:
+        '200':
+          description: Created batch or identical idempotent replay
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/BatchPage'}
+        '403': {description: SYSTEM_ADMIN role required}
+        '409': {description: Stale preview or conflicting idempotency key}
+        '422': {description: Invalid command}
+  /api/v1/taxonomy/reprocessing/batches/{batchId}:
+    parameters:
+      - {$ref: '#/components/parameters/BatchId'}
+    get:
+      parameters:
+        - {$ref: '#/components/parameters/Page'}
+        - {$ref: '#/components/parameters/Size'}
+      responses:
+        '200':
+          description: Checkpoint, state and bounded metadata items
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/BatchPage'}
+        '403': {description: SYSTEM_ADMIN role required}
+        '404': {description: Batch not found}
+  /api/v1/taxonomy/reprocessing/batches/{batchId}/control:
+    parameters:
+      - {$ref: '#/components/parameters/BatchId'}
+    post:
+      summary: Pause or resume using batch CAS version and a reason
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ControlRequest'}
+      responses:
+        '200':
+          description: Updated batch; pause stops new claims and permits an in-flight item to finish
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/BatchPage'}
+        '403': {description: SYSTEM_ADMIN role required}
+        '404': {description: Batch not found}
+        '409': {description: Stale CAS or invalid state transition}
+  /api/v1/taxonomy/reprocessing/batches/{batchId}/step:
+    parameters:
+      - {$ref: '#/components/parameters/BatchId'}
+    post:
+      summary: Claim and execute at most one item with a lease and three-attempt bound
+      description: The current Admin bearer is forwarded to the fixed Core admission endpoint in memory. Parse creates a PARSED review revision and leaves the confirmed head/task unchanged. Matching creates an immutable numbered result and durable outbox event.
+      responses:
+        '200':
+          description: Claim outcome and latest batch checkpoint after the bounded step
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/StepResponse'}
+        '403': {description: SYSTEM_ADMIN role required}
+        '404': {description: Batch not found}
+  /api/v1/taxonomy/reprocessing/batches/{batchId}/history:
+    parameters:
+      - {$ref: '#/components/parameters/BatchId'}
+    get:
+      parameters:
+        - {$ref: '#/components/parameters/Page'}
+        - {$ref: '#/components/parameters/Size'}
+      responses:
+        '200':
+          description: Bounded actor, correlation, reason and action audit; legacy source data is never included
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/AuditPage'}
+        '403': {description: SYSTEM_ADMIN role required}
+        '404': {description: Batch not found}
+  /api/v1/taxonomy/reprocessing/batches/{batchId}/items/{itemId}/attempts:
+    parameters:
+      - {$ref: '#/components/parameters/BatchId'}
+      - name: itemId
+        in: path
+        required: true
+        schema: {type: string, format: uuid}
+    get:
+      responses:
+        '200':
+          description: At most three attempts, with safe fixed error codes
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 3
+                items: {$ref: '#/components/schemas/Attempt'}
+        '403': {description: SYSTEM_ADMIN role required}
+        '404': {description: Batch item not found}
+  /api/v1/dashboard/reprocessing/eligibility:
+    post:
+      summary: Core-owned live source and immutable Application snapshot admission
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/EligibilityRequest'}
+      responses:
+        '200':
+          description: Admission booleans/reason only; no owner, raw document or storage reference
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/EligibilityResponse'}
+        '400': {description: Malformed or incomplete operation-specific request}
+        '403': {description: SYSTEM_ADMIN role required}
+components:
+  securitySchemes:
+    bearerAuth: {type: http, scheme: bearer, bearerFormat: JWT}
+  parameters:
+    BatchId: {name: batchId, in: path, required: true, schema: {type: string, format: uuid}}
+    Page: {name: page, in: query, schema: {type: integer, minimum: 0, maximum: 100000, default: 0}}
+    Size: {name: size, in: query, schema: {type: integer, minimum: 1, maximum: 100, default: 20}}
+  schemas:
+    Operation: {type: string, enum: [PARSE_CV, PARSE_JD, MATCH_APPLICATION]}
+    Hash: {type: string, pattern: '^[0-9a-f]{64}$'}
+    ImpactRequest:
+      type: object
+      additionalProperties: false
+      required: [operation]
+      properties:
+        operation: {$ref: '#/components/schemas/Operation'}
+        resourceIds: {type: [array, 'null'], minItems: 1, maxItems: 1000, uniqueItems: true, items: {type: string, format: uuid}}
+        taxonomyVersion: {type: [string, 'null'], maxLength: 32}
+        asOfMonth: {type: [string, 'null'], pattern: '^\d{4}-(0[1-9]|1[0-2])$'}
+    CreateBatchRequest:
+      type: object
+      additionalProperties: false
+      required: [operation, reason, previewHash]
+      properties:
+        operation: {$ref: '#/components/schemas/Operation'}
+        resourceIds: {type: [array, 'null'], minItems: 1, maxItems: 1000, uniqueItems: true, items: {type: string, format: uuid}}
+        taxonomyVersion: {type: [string, 'null'], maxLength: 32}
+        asOfMonth: {type: [string, 'null'], pattern: '^\d{4}-(0[1-9]|1[0-2])$'}
+        reason: {type: string, minLength: 1, maxLength: 1000}
+        previewHash: {$ref: '#/components/schemas/Hash'}
+    ControlRequest:
+      type: object
+      additionalProperties: false
+      required: [version, action, reason]
+      properties:
+        version: {type: integer, minimum: 0}
+        action: {type: string, enum: [PAUSE, RESUME]}
+        reason: {type: string, minLength: 1, maxLength: 1000}
+    ImpactPreview:
+      type: object
+      additionalProperties: false
+      required: [operation, target, targetHash, items, total, limit, selectionComplete, externalAi, previewHash]
+      properties:
+        operation: {$ref: '#/components/schemas/Operation'}
+        target: {type: object}
+        targetHash: {$ref: '#/components/schemas/Hash'}
+        previewHash: {$ref: '#/components/schemas/Hash'}
+        total: {type: integer, minimum: 0, maximum: 1000}
+        limit: {const: 1000}
+        selectionComplete: {const: true}
+        externalAi: {const: false}
+        items:
+          type: array
+          maxItems: 1000
+          items:
+            type: object
+            additionalProperties: false
+            required: [operation, resourceId, currentHash, reasons, ready, requiresLiveCheck, before]
+            properties:
+              operation: {$ref: '#/components/schemas/Operation'}
+              resourceId: {type: string, format: uuid}
+              currentHash: {$ref: '#/components/schemas/Hash'}
+              reasons: {type: array, items: {type: string}}
+              ready: {type: boolean}
+              requiresLiveCheck: {type: boolean}
+              before: {type: object}
+    BatchPage:
+      type: object
+      additionalProperties: false
+      required: [batchId, operation, state, version, checkpoint, plannedCount, counts, target, targetHash, createdAt, updatedAt, page, size, total, items]
+      properties:
+        batchId: {type: string, format: uuid}
+        operation: {$ref: '#/components/schemas/Operation'}
+        state: {type: string, enum: [RUNNING, PAUSED, COMPLETED]}
+        version: {type: integer, minimum: 0}
+        checkpoint: {type: integer, minimum: 0, maximum: 1000}
+        plannedCount: {type: integer, minimum: 0, maximum: 1000}
+        counts: {type: object, additionalProperties: {type: integer, minimum: 0}}
+        target: {type: object}
+        targetHash: {$ref: '#/components/schemas/Hash'}
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
+        page: {type: integer, minimum: 0, maximum: 100000}
+        size: {type: integer, minimum: 1, maximum: 100}
+        total: {type: integer, minimum: 0, maximum: 1000}
+        items:
+          type: array
+          maxItems: 100
+          items:
+            type: object
+            additionalProperties: false
+            required: [itemId, resourceId, state, attempt, reasons, before, outputId, reviewRequired, safeErrorCode]
+            properties:
+              itemId: {type: string, format: uuid}
+              resourceId: {type: [string, 'null'], format: uuid}
+              state: {type: string, enum: [PENDING, PROCESSING, RETRYING, COMPLETED, SKIPPED, FAILED]}
+              attempt: {type: integer, minimum: 0, maximum: 3}
+              reasons: {type: array, items: {type: string}}
+              before: {type: object}
+              outputId: {type: [string, 'null'], format: uuid}
+              reviewRequired: {type: boolean}
+              safeErrorCode: {type: [string, 'null'], maxLength: 80}
+    StepResponse:
+      type: object
+      additionalProperties: false
+      required: [claimed, itemId, batch]
+      properties:
+        claimed: {type: boolean}
+        itemId: {type: [string, 'null'], format: uuid}
+        batch: {$ref: '#/components/schemas/BatchPage'}
+    AuditPage:
+      type: object
+      additionalProperties: false
+      required: [page, size, items]
+      properties:
+        page: {type: integer, minimum: 0, maximum: 100000}
+        size: {type: integer, minimum: 1, maximum: 100}
+        items:
+          type: array
+          maxItems: 100
+          items:
+            type: object
+            additionalProperties: false
+            required: [action, actorId, correlationId, reason, occurredAt]
+            properties:
+              action: {type: string, enum: [CREATE, PAUSE, RESUME]}
+              actorId: {type: string, format: uuid}
+              correlationId: {type: string, format: uuid}
+              reason: {type: string, minLength: 1, maxLength: 1000}
+              occurredAt: {type: string, format: date-time}
+    Attempt:
+      type: object
+      additionalProperties: false
+      required: [attempt, actorId, correlationId, startedAt, finishedAt, outcome, safeErrorCode]
+      properties:
+        attempt: {type: integer, minimum: 1, maximum: 3}
+        actorId: {type: string, format: uuid}
+        correlationId: {type: string, format: uuid}
+        startedAt: {type: string, format: date-time}
+        finishedAt: {type: [string, 'null'], format: date-time}
+        outcome: {type: [string, 'null']}
+        safeErrorCode: {type: [string, 'null'], maxLength: 80}
+    EligibilityRequest:
+      type: object
+      additionalProperties: false
+      required: [operation, resourceId]
+      properties:
+        operation: {$ref: '#/components/schemas/Operation'}
+        resourceId: {type: string, format: uuid}
+        sourceOwnerId: {type: [string, 'null'], format: uuid}
+        sourceHash: {type: [string, 'null'], pattern: '^[0-9a-f]{64}$'}
+        cvVersionId: {type: [string, 'null'], format: uuid}
+        jobVersionId: {type: [string, 'null'], format: uuid}
+      allOf:
+        - if: {properties: {operation: {enum: [PARSE_CV, PARSE_JD]}}}
+          then: {required: [sourceOwnerId, sourceHash], properties: {sourceOwnerId: {type: string}, sourceHash: {type: string}}}
+        - if: {properties: {operation: {const: MATCH_APPLICATION}}}
+          then: {required: [cvVersionId, jobVersionId], properties: {cvVersionId: {type: string}, jobVersionId: {type: string}}}
+    EligibilityResponse:
+      type: object
+      additionalProperties: false
+      required: [eligible, reasonCode]
+      properties:
+        eligible: {type: boolean}
+        reasonCode: {type: string, enum: [LIVE, SOURCE_NOT_AVAILABLE, SOURCE_CHANGED, ACCESS_REVOKED, OUTSIDE_IT]}
+      allOf:
+        - if: {properties: {reasonCode: {const: LIVE}}}
+          then: {properties: {eligible: {const: true}}}
+          else: {properties: {eligible: {const: false}}}

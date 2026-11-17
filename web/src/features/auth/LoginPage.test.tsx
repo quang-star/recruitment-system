@@ -4,6 +4,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import { LoginPage } from "./LoginPage";
 
+vi.mock("./GoogleSignIn", () => ({ GoogleSignIn: () => null }));
+
 describe("LoginPage account recovery", () => {
   it("submits a generic forgot-password request without exposing account existence", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(
@@ -19,7 +21,7 @@ describe("LoginPage account recovery", () => {
 
     expect(await screen.findByText(/Nếu tài khoản hợp lệ/)).toBeInTheDocument();
     const [path, init] = fetchMock.mock.calls[0];
-    expect(path).toBe("/api/v1/auth/forgot-password");
+    expect(path).toBe("/api/v2/auth/forgot-password");
     expect(JSON.parse(String(init?.body))).toEqual({ email: "candidate@example.com" });
   });
 
@@ -35,6 +37,6 @@ describe("LoginPage account recovery", () => {
     await user.click(screen.getByRole("button", { name: "Gửi lại email xác minh" }));
 
     expect(await screen.findByText(/đang chờ xác minh/)).toBeInTheDocument();
-    expect(fetchMock.mock.calls[0][0]).toBe("/api/v1/auth/resend-verification");
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/v2/auth/resend-verification");
   });
 });

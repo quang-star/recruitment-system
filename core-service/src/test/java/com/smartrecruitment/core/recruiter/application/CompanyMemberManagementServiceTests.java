@@ -9,7 +9,6 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -17,13 +16,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class CompanyMemberManagementServiceTests {
     @Test
     void ownerCannotBeDemotedOrSuspended() {
-        UUID actor = UUID.randomUUID();
-        UUID companyId = UUID.randomUUID();
+        Long actor = com.smartrecruitment.core.support.TestIds.next();
+        Long companyId = com.smartrecruitment.core.support.TestIds.next();
         CompanyMember owner = member(companyId, actor, "OWNER", "ACTIVE", 0);
         FakeCompanies repository = new FakeCompanies(actor, companyId, owner);
 
         assertThatThrownBy(() -> new CompanyService(repository).updateMember(actor, companyId,
-                owner.publicId(), "VIEWER", "SUSPENDED", 0L))
+                owner.id(), "VIEWER", "SUSPENDED", 0L))
                 .isInstanceOf(CompanyMemberConflictException.class)
                 .hasMessageContaining("owner");
         assertThat(repository.updateCalls).isZero();
@@ -31,13 +30,13 @@ class CompanyMemberManagementServiceTests {
 
     @Test
     void managerUpdatesNonOwnerWithOptimisticVersion() {
-        UUID actor = UUID.randomUUID();
-        UUID companyId = UUID.randomUUID();
-        CompanyMember recruiter = member(companyId, UUID.randomUUID(), "RECRUITER", "ACTIVE", 3);
+        Long actor = com.smartrecruitment.core.support.TestIds.next();
+        Long companyId = com.smartrecruitment.core.support.TestIds.next();
+        CompanyMember recruiter = member(companyId, com.smartrecruitment.core.support.TestIds.next(), "RECRUITER", "ACTIVE", 3);
         FakeCompanies repository = new FakeCompanies(actor, companyId, recruiter);
 
         CompanyMember updated = new CompanyService(repository).updateMember(actor, companyId,
-                recruiter.publicId(), "VIEWER", "SUSPENDED", 3L);
+                recruiter.id(), "VIEWER", "SUSPENDED", 3L);
 
         assertThat(updated.role()).isEqualTo("VIEWER");
         assertThat(updated.status()).isEqualTo("SUSPENDED");
@@ -45,37 +44,37 @@ class CompanyMemberManagementServiceTests {
         assertThat(repository.updateCalls).isOne();
     }
 
-    private static CompanyMember member(UUID companyId, UUID userId, String role, String status, long version) {
-        return new CompanyMember(UUID.randomUUID(), companyId, userId, role, status,
+    private static CompanyMember member(Long companyId, Long userId, String role, String status, long version) {
+        return new CompanyMember(com.smartrecruitment.core.support.TestIds.next(), companyId, userId, role, status,
                 OffsetDateTime.of(2026, 8, 25, 10, 0, 0, 0, ZoneOffset.UTC), version);
     }
 
     private static final class FakeCompanies implements CompanyRepository {
-        private final UUID manager;
-        private final UUID companyId;
+        private final Long manager;
+        private final Long companyId;
         private CompanyMember target;
         private int updateCalls;
 
-        private FakeCompanies(UUID manager, UUID companyId, CompanyMember target) {
+        private FakeCompanies(Long manager, Long companyId, CompanyMember target) {
             this.manager = manager;
             this.companyId = companyId;
             this.target = target;
         }
 
-        @Override public Company insertWithOwner(Company company, UUID owner) { return company; }
-        @Override public Optional<Company> findByPublicIdForMember(UUID company, UUID user) { return Optional.empty(); }
-        @Override public List<Company> findAllForMember(UUID user) { return List.of(); }
-        @Override public boolean isActiveMember(UUID company, UUID user) { return manager.equals(user); }
-        @Override public boolean canManage(UUID company, UUID user) {
+        @Override public Company insertWithOwner(Company company, Long owner) { return company; }
+        @Override public Optional<Company> findByIdForMember(Long company, Long user) { return Optional.empty(); }
+        @Override public List<Company> findAllForMember(Long user) { return List.of(); }
+        @Override public boolean isActiveMember(Long company, Long user) { return manager.equals(user); }
+        @Override public boolean canManage(Long company, Long user) {
             return companyId.equals(company) && manager.equals(user);
         }
-        @Override public Optional<CompanyMember> findMemberById(UUID company, UUID memberId) {
-            return companyId.equals(company) && target.publicId().equals(memberId) ? Optional.of(target) : Optional.empty();
+        @Override public Optional<CompanyMember> findMemberById(Long company, Long memberId) {
+            return companyId.equals(company) && target.id().equals(memberId) ? Optional.of(target) : Optional.empty();
         }
-        @Override public Optional<CompanyMember> updateMember(UUID company, UUID memberId, String role,
+        @Override public Optional<CompanyMember> updateMember(Long company, Long memberId, String role,
                                                               String status, long version, OffsetDateTime now) {
             updateCalls++;
-            target = new CompanyMember(target.publicId(), target.companyId(), target.userId(), role, status,
+            target = new CompanyMember(target.id(), target.companyId(), target.userId(), role, status,
                     target.joinedAt(), target.version() + 1);
             return Optional.of(target);
         }

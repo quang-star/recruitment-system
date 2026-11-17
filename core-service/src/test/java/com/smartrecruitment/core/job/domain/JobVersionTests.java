@@ -2,7 +2,6 @@ package com.smartrecruitment.core.job.domain;
 
 import org.junit.jupiter.api.Test;
 
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -10,9 +9,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class JobVersionTests {
     @Test
     void normalizesCountryAndCurrency() {
-        JobVersion version = new JobVersion(UUID.randomUUID(), 1, " Backend ", " Build APIs ", " Java ", null,
+        JobVersion version = new JobVersion(com.smartrecruitment.core.support.TestIds.next(), 1, " Backend ", " Build APIs ", " Java ", null,
                 null, "vn", WorkMode.REMOTE, EmploymentType.FULL_TIME, null, 1, null, null, "vnd", null,
-                false, null, "a".repeat(64), UUID.randomUUID());
+                false, null, "a".repeat(64), com.smartrecruitment.core.support.TestIds.next());
 
         assertThat(version.title()).isEqualTo("Backend");
         assertThat(version.countryCode()).isEqualTo("VN");
@@ -21,12 +20,12 @@ class JobVersionTests {
 
     @Test
     void rejectsInvalidHashAndSalaryRange() {
-        assertThatThrownBy(() -> new JobVersion(UUID.randomUUID(), 1, "Title", "Description", "Requirements",
-                null, null, null, null, null, null, 1, null, null, null, null, false, null, "bad", UUID.randomUUID()))
+        assertThatThrownBy(() -> new JobVersion(com.smartrecruitment.core.support.TestIds.next(), 1, "Title", "Description", "Requirements",
+                null, null, null, null, null, null, 1, null, null, null, null, false, null, "bad", com.smartrecruitment.core.support.TestIds.next()))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new JobVersion(UUID.randomUUID(), 1, "Title", "Description", "Requirements",
+        assertThatThrownBy(() -> new JobVersion(com.smartrecruitment.core.support.TestIds.next(), 1, "Title", "Description", "Requirements",
                 null, null, null, null, null, null, 1, java.math.BigDecimal.TEN, java.math.BigDecimal.ONE,
-                "VND", "MONTH", false, null, "a".repeat(64), UUID.randomUUID()))
+                "VND", "MONTH", false, null, "a".repeat(64), com.smartrecruitment.core.support.TestIds.next()))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 }

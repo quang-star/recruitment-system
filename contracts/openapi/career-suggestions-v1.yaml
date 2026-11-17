@@ -1,0 +1,105 @@
+openapi: 3.1.0
+info:
+  title: Recruiter draft career suggestions
+  version: 1.0.0
+paths:
+  /api/v1/parsed-jds/category-suggestions:
+    post:
+      summary: Suggest career classifications for an unsaved recruiter draft
+      description: >-
+        Requires a RECRUITER access token and explicit current external AI consent.
+        The server reads the public ACTIVE Core catalog, excludes unsafe labels and
+        orphaned descendants, and verifies IDs, names, hierarchy and grounded evidence.
+        Professional JD content is normalized and contact details are masked before
+        the provider call; filtering is best effort, not complete anonymization.
+        Suggestions never save a Job, approve categories or assign matching eligibility.
+        A null category ID denotes a proposed new name that remains subject to the
+        existing Core save and Admin review flow. The UI must apply explicitly to the
+        unsaved form and discard results when draft input, consent or context changes.
+        Provider, catalog, schema, quota and duplicate-admission failures return MANUAL.
+        Admission shares durable global/user daily counters with document extraction;
+        draft actor, input hash and catalog hash form a distinct request identity.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: common-v1.yaml#/components/parameters/CorrelationId
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CareerRequest' }
+      responses:
+        '200':
+          description: Safe suggestions or an explicit manual fallback
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CareerResponse' }
+        '401': { description: Valid access token required }
+        '403': { description: Recruiter role required }
+        '422': { description: Invalid or unbounded request fields }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  schemas:
+    CareerRequest:
+      type: object
+      additionalProperties: false
+      required: [title]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 240, pattern: '\S' }
+        description: { type: string, maxLength: 30000, default: '' }
+        requirementsText: { type: string, maxLength: 30000, default: '' }
+        externalAiConsent: { type: boolean, default: false }
+        externalAiPolicyVersion: { type: [string, 'null'], maxLength: 40, default: null }
+    CareerCategory:
+      type: object
+      additionalProperties: false
+      required: [industryId, industryName, specializationId, specializationName, positionId, positionName]
+      properties:
+        industryId: { type: [string, 'null'], format: uuid }
+        industryName: { type: string, minLength: 1, maxLength: 160 }
+        specializationId: { type: [string, 'null'], format: uuid }
+        specializationName: { type: string, minLength: 1, maxLength: 160 }
+        positionId: { type: [string, 'null'], format: uuid }
+        positionName: { type: string, minLength: 1, maxLength: 160 }
+    CareerSuggestion:
+      type: object
+      additionalProperties: false
+      required: [category, evidenceQuotes]
+      properties:
+        category: { $ref: '#/components/schemas/CareerCategory' }
+        evidenceQuotes:
+          type: array
+          minItems: 1
+          maxItems: 3
+          uniqueItems: true
+          items: { type: string, minLength: 1, maxLength: 240, pattern: '\S' }
+    CareerResponse:
+      type: object
+      additionalProperties: false
+      required: [status, reasonCode, inputHash, catalogHash, suggestions]
+      properties:
+        status: { enum: [SUGGESTED, MANUAL] }
+        reasonCode:
+          type: [string, 'null']
+          enum: [EXTERNAL_AI_NOT_CONSENTED, EXTERNAL_AI_NOT_CONFIGURED, EXTERNAL_AI_INPUT_SKIPPED,
+                 EXTERNAL_AI_NO_PROFESSIONAL_CONTENT, EXTERNAL_AI_BUDGET_UNAVAILABLE,
+                 EXTERNAL_AI_LIMIT_REACHED, EXTERNAL_AI_ALREADY_REQUESTED, CATALOG_UNAVAILABLE,
+                 PROVIDER_UNAVAILABLE, NO_SUGGESTION, INVALID_SUGGESTION, null]
+        inputHash: { type: string, pattern: '^[a-f0-9]{64}$' }
+        catalogHash: { type: [string, 'null'], pattern: '^[a-f0-9]{64}$' }
+        suggestions:
+          type: array
+          maxItems: 3
+          items: { $ref: '#/components/schemas/CareerSuggestion' }
+      allOf:
+        - if:
+            properties: { status: { const: SUGGESTED } }
+          then:
+            properties:
+              reasonCode: { type: 'null' }
+              catalogHash: { type: string }
+              suggestions: { minItems: 1 }
+          else:
+            properties:
+              reasonCode: { type: string }
+              suggestions: { maxItems: 0 }

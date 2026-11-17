@@ -31,7 +31,7 @@ describe("AcceptCompanyInvitationPage", () => {
 
     expect(await screen.findByText(/đã tham gia công ty/)).toBeInTheDocument();
     const [path, init] = fetchMock.mock.calls[0];
-    expect(path).toBe("/api/v1/companies/invitations/accept");
+    expect(path).toBe("/api/v2/companies/invitations/accept");
     expect(new Headers(init?.headers).get("Authorization")).toBe("Bearer access-token");
     expect(JSON.parse(String(init?.body))).toEqual({ token });
   });

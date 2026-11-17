@@ -1,10 +1,11 @@
 from __future__ import annotations
+from identity_fixtures import legacy_id, new_id
 
 import copy
 import json
 from datetime import UTC, datetime
 from pathlib import Path
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import pytest
 from pydantic import ValidationError
@@ -14,8 +15,8 @@ from app.cv.repository import ParsedCvRevisionRecord, ParsedCvRevisionRepository
 from app.shared.api import ApiContractError
 
 
-EXAMPLE = Path(__file__).resolve().parents[2] / "contracts" / "examples" / "parsed-cv-v1.example.json"
-CV_VERSION_ID = UUID("779494ac-c858-4570-a884-6e88423b8e2b")
+EXAMPLE = Path(__file__).resolve().parents[2] / "contracts" / "examples" / "parsed-cv-v2.example.json"
+CV_VERSION_ID = int(str(legacy_id('779494ac-c858-4570-a884-6e88423b8e2b')))
 
 
 def payload() -> dict:
@@ -107,7 +108,7 @@ def test_user_payload_normalizes_known_skill_and_preserves_unknown_as_pending() 
     validated = _validate_user_payload(CV_VERSION_ID, value)
 
     assert validated["skills"][0]["normalizationStatus"] == "KNOWN"
-    assert validated["skills"][0]["canonicalSkillId"] == "d4f49f3b-a28e-5fd3-b558-94beba4054c0"
+    assert validated["skills"][0]["canonicalSkillId"] == str(legacy_id('d4f49f3b-a28e-5fd3-b558-94beba4054c0'))
     assert validated["skills"][1]["normalizationStatus"] == "PENDING"
     assert validated["skills"][1]["canonicalSkillId"] is None
     assert all(skill["provenance"] == "USER_ASSERTED" for skill in validated["skills"])
@@ -119,7 +120,7 @@ def test_new_skill_cannot_forge_parser_evidence_or_provenance() -> None:
     value = payload()
     value["skills"] = [{
         "raw": "ReactJS",
-        "canonicalSkillId": "d4f49f3b-a28e-5fd3-b558-94beba4054c0",
+        "canonicalSkillId": str(legacy_id('d4f49f3b-a28e-5fd3-b558-94beba4054c0')),
         "normalizationStatus": "KNOWN",
         "evidenceIds": ["f851769d-9cdd-4dd2-a34a-157608f2432e"],
         "confidence": 1,
@@ -134,7 +135,7 @@ def test_new_skill_cannot_forge_parser_evidence_or_provenance() -> None:
 
 @pytest.mark.parametrize("mutation", [
     lambda value: value.update(schemaVersion="parsed-cv/0.9"),
-    lambda value: value["document"].update(cvVersionId="d1e9d7cb-15d0-4bc7-b6e4-bf5ce3e8ea89"),
+    lambda value: value["document"].update(cvVersionId=str(legacy_id('d1e9d7cb-15d0-4bc7-b6e4-bf5ce3e8ea89'))),
     lambda value: value.pop("summary"),
 ])
 def test_user_payload_rejects_inconsistent_payload(mutation) -> None:
@@ -148,18 +149,17 @@ def test_user_payload_rejects_inconsistent_payload(mutation) -> None:
 def test_update_requires_the_latest_owned_revision_id() -> None:
     with pytest.raises(ValidationError):
         UpdateParsedCvRequest.model_validate({
-            "cvId": str(uuid4()),
+            "cvId": str(new_id()),
             "payload": payload(),
         })
 
 
 def test_confirmation_rejects_a_stale_revision() -> None:
-    latest_id = uuid4()
+    latest_id = new_id()
     latest = ParsedCvRevisionRecord(
-        id=7,
-        public_id=latest_id,
+        id=latest_id,
         cv_version_id=CV_VERSION_ID,
-        owner_user_id=uuid4(),
+        owner_user_id=new_id(),
         revision_number=2,
         source_hash="a" * 64,
         payload=payload(),
@@ -171,7 +171,48 @@ def test_confirmation_rejects_a_stale_revision() -> None:
     repository = ParsedCvRevisionRepository(_ScalarSession(latest))
 
     with pytest.raises(ValueError, match="stale"):
-        repository.confirm(CV_VERSION_ID, latest.owner_user_id, uuid4(), latest.owner_user_id)
+        repository.confirm(CV_VERSION_ID, latest.owner_user_id, new_id(), latest.owner_user_id)
+
+
+def test_confirmation_and_supersede_respect_timestamp_constraint_under_clock_rollback() -> None:
+    from sqlalchemy import CheckConstraint, MetaData, create_engine
+    from sqlalchemy.orm import Session
+    from app.cv.repository import ParsedCvHeadRecord
+
+    engine = create_engine("sqlite://")
+    metadata = MetaData()
+    rev_table = ParsedCvRevisionRecord.__table__.to_metadata(metadata)
+    rev_table.append_constraint(CheckConstraint("updated_at >= created_at", name="ck_parsed_cv_revisions_timestamps"))
+    ParsedCvHeadRecord.__table__.to_metadata(metadata)
+    metadata.create_all(engine)
+    future = datetime(2100, 1, 2, 9)
+    owner = new_id()
+    try:
+        with Session(engine) as session:
+            rev1 = ParsedCvRevisionRecord(
+                id=1, cv_version_id=CV_VERSION_ID, owner_user_id=owner,
+                revision_number=1, source_hash="a" * 64, payload=payload(),
+                status="PARSED", created_at=future, updated_at=future, version=0,
+            )
+            session.add(rev1)
+            session.commit()
+            confirmed1 = ParsedCvRevisionRepository(session).confirm(CV_VERSION_ID, owner, rev1.id, owner)
+            session.commit()
+            assert confirmed1.confirmed_at is not None
+            assert confirmed1.confirmed_at.astimezone(UTC) >= future.astimezone(UTC)
+            rev2 = ParsedCvRevisionRecord(
+                id=2, cv_version_id=CV_VERSION_ID, owner_user_id=owner,
+                revision_number=2, source_hash="b" * 64, payload=payload(),
+                status="PARSED", created_at=future, updated_at=future, version=0,
+            )
+            session.add(rev2)
+            session.commit()
+            confirmed2 = ParsedCvRevisionRepository(session).confirm(CV_VERSION_ID, owner, rev2.id, owner)
+            session.commit()
+            assert confirmed2.confirmed_at is not None
+            assert confirmed2.confirmed_at.astimezone(UTC) >= future.astimezone(UTC)
+    finally:
+        engine.dispose()
 
 
 class _ScalarSession:

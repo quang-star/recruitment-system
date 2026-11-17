@@ -1,0 +1,337 @@
+openapi: 3.1.0
+info:
+  title: Candidate CV upload and retry contract
+  version: 2.0.0
+paths:
+  /api/v2/cvs:
+    post:
+      summary: Upload an owned CV with optional external AI assistance
+      description: Candidate role required. External assistance is optional and defaults
+        to declined. Granting it requires externalAiPolicyVersion=external-ai/1.0.
+        The choice belongs to this CV version and is retained on a storage retry.
+        Existing versions and legacy requests default to declined. Local parsing and
+        manual review remain available when assistance is declined or unavailable.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: common-v2.yaml#/components/parameters/CorrelationId
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: PDF up to 10 MiB
+                title:
+                  type: string
+                  maxLength: 160
+                externalAiConsent:
+                  type: boolean
+                  default: false
+                externalAiPolicyVersion:
+                  type: string
+                  maxLength: 40
+                  description: external-ai/1.0 is required when consent is true; omit
+                    when false
+      responses:
+        '201':
+          description: CV uploaded and asynchronous processing queued
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/cv-response-v2.schema.json
+        '400':
+          description: Invalid document
+          request or missing/outdated consent notice: null
+        '401':
+          description: Valid bearer token required
+        '403':
+          description: Candidate role required
+  /api/v2/cvs/{cvId}/retry:
+    post:
+      summary: Retry an owned active CV after a transient storage failure
+      description: Reuses the same file and CV version. Only SOURCE_STORAGE_UNAVAILABLE
+        failures are eligible. expectedVersion is activeVersion.version from the latest
+        CV response. Concurrent clicks queue one logical retry; repeat requests while
+        that retry is queued return the queued CV. Permanent file failures require
+        a new upload.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: cvId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^(?:[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$
+          maxLength: 19
+      - $ref: common-v2.yaml#/components/parameters/CorrelationId
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - cvVersionId
+              - expectedVersion
+              properties:
+                cvVersionId:
+                  type: string
+                  pattern: ^(?:[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$
+                  maxLength: 19
+                expectedVersion:
+                  type: integer
+                  minimum: 0
+      responses:
+        '202':
+          description: Retry queued or this request already queued it
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/cv-response-v2.schema.json
+        '400':
+          description: Invalid request fields
+        '401':
+          description: Valid bearer token required
+        '403':
+          description: Candidate role required
+        '404':
+          description: Owned CV not found
+        '409':
+          description: CV_RETRY_CONFLICT - stale or ineligible version/state
+  /api/v2/cvs/{cvId}/file:
+    get:
+      summary: Download the exact active version of an owned CV for review
+      description: Candidate role and ownership required. Deleted, superseded, inactive
+        or mismatched versions return 404 before object storage is accessed. No storage
+        key or presigned URL is exposed. Response is not cacheable.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: cvId
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: ^(?:[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$
+          maxLength: 19
+      - name: cvVersionId
+        in: query
+        required: true
+        schema:
+          type: string
+          pattern: ^(?:[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$
+          maxLength: 19
+      responses:
+        '200':
+          description: Original PDF, Cache-Control no-store
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Invalid identifiers
+        '401':
+          description: Valid bearer token required
+        '403':
+          description: Candidate role required
+        '404':
+          description: Owned active CV version not found
+        '503':
+          description: Source storage temporarily unavailable
+  /api/v2/cvs/drafts:
+    get:
+      summary: List CV authoring drafts owned by the current candidate
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: common-v2.yaml#/components/parameters/CorrelationId
+      responses:
+        '200':
+          description: Owned CV authoring drafts ordered by most recently updated
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: ../schemas/cv-draft-v2.schema.json
+        '401':
+          description: Valid bearer token required
+        '403':
+          description: Candidate role required
+    post:
+      summary: Create a new CV authoring draft owned by the current candidate
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: common-v2.yaml#/components/parameters/CorrelationId
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveCvDraftRequest'
+      responses:
+        '201':
+          description: Draft created
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/cv-draft-v2.schema.json
+        '400':
+          description: Invalid draft payload or template configuration
+        '401':
+          description: Valid bearer token required
+        '403':
+          description: Candidate role required
+  /api/v2/cvs/drafts/{draftId}:
+    get:
+      summary: Fetch one owned CV authoring draft
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/DraftId'
+      - $ref: common-v2.yaml#/components/parameters/CorrelationId
+      responses:
+        '200':
+          description: Owned CV authoring draft
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/cv-draft-v2.schema.json
+        '401':
+          description: Valid bearer token required
+        '403':
+          description: Candidate role required
+        '404':
+          description: Owned CV draft not found
+    put:
+      summary: Update an owned CV authoring draft with optimistic locking
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/DraftId'
+      - $ref: common-v2.yaml#/components/parameters/CorrelationId
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCvDraftRequest'
+      responses:
+        '200':
+          description: Draft updated
+          content:
+            application/json:
+              schema:
+                $ref: ../schemas/cv-draft-v2.schema.json
+        '400':
+          description: Invalid draft payload or template configuration
+        '401':
+          description: Valid bearer token required
+        '403':
+          description: Candidate role required
+        '404':
+          description: Owned CV draft not found
+        '409':
+          description: CV_DRAFT_CONFLICT - stale draft version
+    delete:
+      summary: Delete an owned CV authoring draft
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/DraftId'
+      - name: version
+        in: query
+        required: true
+        schema:
+          type: integer
+          minimum: 0
+      - $ref: common-v2.yaml#/components/parameters/CorrelationId
+      responses:
+        '204':
+          description: Draft deleted
+        '401':
+          description: Valid bearer token required
+        '403':
+          description: Candidate role required
+        '404':
+          description: Owned CV draft not found
+        '409':
+          description: CV_DRAFT_CONFLICT - stale draft version
+components:
+  parameters:
+    DraftId:
+      name: draftId
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: ^(?:[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$
+        maxLength: 19
+  schemas:
+    SaveCvDraftRequest:
+      type: object
+      additionalProperties: false
+      required:
+      - title
+      - templateId
+      - accentColor
+      - sectionOrder
+      - payload
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 160
+        templateId:
+          enum:
+          - classic
+          - modern
+          - minimal
+          - executive
+        accentColor:
+          type: string
+          pattern: ^#[0-9a-fA-F]{6}$
+        sectionOrder:
+          type: array
+          minItems: 7
+          maxItems: 10
+          uniqueItems: true
+          items:
+            enum:
+            - introduction
+            - skills
+            - experiences
+            - education
+            - projects
+            - certificates
+            - languages
+            - awards
+            - activities
+            - hobbies
+        payload:
+          $ref: ../schemas/cv-draft-v2.schema.json#/$defs/payload
+    UpdateCvDraftRequest:
+      allOf:
+      - $ref: '#/components/schemas/SaveCvDraftRequest'
+      - type: object
+        required:
+        - expectedVersion
+        properties:
+          expectedVersion:
+            type: integer
+            minimum: 0
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

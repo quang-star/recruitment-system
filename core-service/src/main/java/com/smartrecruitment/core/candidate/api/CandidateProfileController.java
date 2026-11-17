@@ -12,10 +12,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/candidates/me")
+@RequestMapping("/api/v2/candidates/me")
 public class CandidateProfileController {
     private final CandidateProfileService profiles;
 
@@ -25,14 +24,15 @@ public class CandidateProfileController {
 
     @GetMapping
     public CandidateProfileResponse getMine(@AuthenticationPrincipal Jwt jwt) {
-        return CandidateProfileResponse.from(profiles.getMine(UUID.fromString(jwt.getSubject())));
+        return CandidateProfileResponse.from(profiles.getMine(com.smartrecruitment.core.shared.api.SubjectId.parse(jwt.getSubject())));
     }
 
     @PutMapping
     public CandidateProfileResponse putMine(@AuthenticationPrincipal Jwt jwt,
                                             @Valid @RequestBody PutCandidateProfileRequest request) {
-        return CandidateProfileResponse.from(profiles.putMine(UUID.fromString(jwt.getSubject()),
+        return CandidateProfileResponse.from(profiles.putMine(com.smartrecruitment.core.shared.api.SubjectId.parse(jwt.getSubject()),
                 request.displayName(), request.headline(), request.locationText(), request.visibility(),
-                request.version()));
+                request.version(), request.phoneNumber(), request.contactEmail(), request.linkedinUrl(),
+                request.githubUrl(), request.portfolioUrl(), request.avatarUrl(), request.bio()));
     }
 }

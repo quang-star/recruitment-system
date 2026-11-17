@@ -1,0 +1,18 @@
+{
+  "cvId": "100025",
+  "candidateUserId": "100026",
+  "title": "Backend CV 2026",
+  "status": "ACTIVE",
+  "activeVersion": {
+    "cvVersionId": "100027",
+    "versionNumber": 1,
+    "originalFilename": "resume.pdf",
+    "mimeType": "application/pdf",
+    "sizeBytes": 58231,
+    "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "processingStatus": "UPLOADED",
+    "failureCode": null,
+    "version": 0
+  },
+  "version": 0
+}

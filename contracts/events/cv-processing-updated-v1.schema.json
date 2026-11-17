@@ -4,21 +4,76 @@
   "title": "cv.processing.updated.v1 payload",
   "type": "object",
   "additionalProperties": false,
-  "required": ["cvId", "cvVersionId", "processingTaskId", "sourceHash", "status", "failureCode"],
+  "required": [
+    "cvId",
+    "cvVersionId",
+    "processingTaskId",
+    "sourceHash",
+    "status",
+    "failureCode"
+  ],
   "properties": {
-    "cvId": { "type": "string", "format": "uuid" },
-    "cvVersionId": { "type": "string", "format": "uuid" },
-    "processingTaskId": { "type": "string", "format": "uuid" },
-    "sourceHash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-    "status": { "enum": ["PARSED", "FAILED"] },
-    "processingGeneration": {"type":"integer","minimum":0,"maximum":9223372036854775807},
-    "failureCode": { "type": ["string", "null"], "pattern": "^[A-Z][A-Z0-9_]{2,79}$" }
+    "cvId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "cvVersionId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "processingTaskId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "sourceHash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "status": {
+      "enum": [
+        "PARSED",
+        "FAILED"
+      ]
+    },
+    "failureCode": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[A-Z][A-Z0-9_]{2,79}$"
+    },
+    "processingGeneration": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9223372036854775807
+    }
   },
   "allOf": [
     {
-      "if": { "properties": { "status": { "const": "FAILED" } }, "required": ["status"] },
-      "then": { "properties": { "failureCode": { "type": "string" } } },
-      "else": { "properties": { "failureCode": { "type": "null" } } }
+      "if": {
+        "properties": {
+          "status": {
+            "const": "FAILED"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "failureCode": {
+            "type": "string"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "failureCode": {
+            "type": "null"
+          }
+        }
+      }
     }
   ]
 }

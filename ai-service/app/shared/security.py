@@ -1,7 +1,7 @@
+from app.shared.identities import parse_id
 from dataclasses import dataclass
 from functools import lru_cache
 from typing import Any
-from uuid import UUID
 
 import jwt
 from fastapi import Depends
@@ -17,8 +17,11 @@ _bearer = HTTPBearer(auto_error=False)
 
 @dataclass(frozen=True, slots=True)
 class AuthenticatedPrincipal:
-    subject: UUID
+    subject: int
     roles: tuple[str, ...]
+
+
+_DEFAULT_CLOCK_SKEW_SECONDS = 30
 
 
 class JwtVerifier:
@@ -29,9 +32,11 @@ class JwtVerifier:
         audience: str,
         cache_seconds: int = 300,
         jwks_client: Any | None = None,
+        clock_skew_seconds: int = _DEFAULT_CLOCK_SKEW_SECONDS,
     ):
         self._issuer = issuer
         self._audience = audience
+        self._clock_skew_seconds = max(0, clock_skew_seconds)
         self._jwks_client = jwks_client or PyJWKClient(
             jwks_uri,
             cache_jwk_set=True,
@@ -47,9 +52,11 @@ class JwtVerifier:
                 algorithms=["RS256"],
                 audience=self._audience,
                 issuer=self._issuer,
+                # Match Gateway/Auth clock-skew tolerance across containers on virtualized clocks.
+                leeway=self._clock_skew_seconds,
                 options={"require": ["exp", "iat", "iss", "aud", "sub"]},
             )
-            subject = UUID(claims["sub"])
+            subject = parse_id(claims["sub"])
             raw_roles = claims.get("roles", [])
             if not isinstance(raw_roles, list) or not all(isinstance(role, str) for role in raw_roles):
                 raise InvalidTokenError("roles claim must be a list of strings")

@@ -64,7 +64,7 @@ login_payload="$(python3 -c 'import json,sys; print(json.dumps({"email":sys.argv
 curl --fail --silent --show-error --max-time 10 \
   -H 'Content-Type: application/json' \
   --data "$login_payload" \
-  "$gateway_url/api/v1/auth/login" \
+  "$gateway_url/api/v2/auth/login" \
   -o "$login_file"
 
 access_token="$(python3 -c 'import json,sys; data=json.load(open(sys.argv[1], encoding="utf-8")); token=data.get("accessToken"); assert token; print(token)' "$login_file")"
@@ -74,14 +74,14 @@ correlation_id="$(python3 -c 'import uuid; print(uuid.uuid4())')"
 curl --fail --silent --show-error --max-time 10 \
   -H "Authorization: Bearer $access_token" \
   -H "X-Correlation-Id: $correlation_id" \
-  "$gateway_url/api/v1/auth/me" \
+  "$gateway_url/api/v2/auth/me" \
   -o "$me_file"
 python3 -c 'import json,sys; data=json.load(open(sys.argv[1], encoding="utf-8")); assert str(data.get("userId")) == sys.argv[2], data; assert "CANDIDATE" in data.get("roles", []), data' "$me_file" "$session_user_id"
 
 curl --fail --silent --show-error --max-time 10 \
   -H "Authorization: Bearer $access_token" \
   -H "X-Correlation-Id: $correlation_id" \
-  "$gateway_url/api/v1/candidate/jobs" \
+  "$gateway_url/api/v2/candidate/jobs" \
   -o "$jobs_file"
 job_count="$(python3 -c 'import json,sys; data=json.load(open(sys.argv[1], encoding="utf-8")); assert isinstance(data, list), data; print(len(data))' "$jobs_file")"
 

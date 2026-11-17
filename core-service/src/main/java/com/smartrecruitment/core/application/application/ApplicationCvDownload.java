@@ -2,9 +2,8 @@ package com.smartrecruitment.core.application.application;
 
 import java.io.InputStream;
 import java.util.Objects;
-import java.util.UUID;
 
-public record ApplicationCvDownload(UUID cvVersionId, String originalFilename, long sizeBytes,
+public record ApplicationCvDownload(Long cvVersionId, String originalFilename, long sizeBytes,
                                     InputStream content) {
     public ApplicationCvDownload {
         Objects.requireNonNull(cvVersionId, "cvVersionId");

@@ -1,106 +1,46 @@
 import { FormEvent, useEffect, useState } from "react";
-
 import { ApiClientError, apiRequest } from "../../shared/api/client";
+import { usePagedResource } from "../../shared/api/pagination";
 import { AuthSession } from "../../shared/auth/session";
+import { externalAiPolicyVersion } from "../../shared/components/ExternalAiConsent";
+import { useUnsavedChanges } from "../../shared/useUnsavedChanges";
+import { Badge, Button, ErrorBanner, cn } from "../../shared/ui";
+import { CategoryFilterValue, emptyCategoryFilter } from "./JobCategoryFilter";
 import { RecruiterApplicationsPanel } from "./RecruiterApplicationsPanel";
+import { RecruiterJdReview } from "./RecruiterJdReview";
+import { RecruiterJobAnalytics } from "./RecruiterJobAnalytics";
+import { RecruiterJobEditor } from "./RecruiterJobEditor";
+import { RecruiterJobList } from "./RecruiterJobList";
+import {
+  emptyJob,
+  formatJobSalary,
+  getJobErrorMessage,
+  JdSkill,
+  Job,
+  JobForm,
+  jobStatusLabel,
+  jobStatusTone,
+  ParsedJd,
+  toForm,
+  WorkspaceTab
+} from "./recruiterJobTypes";
 
-type Job = {
-  jobId: string;
-  companyId: string;
-  status: "DRAFT" | "PUBLISHED" | "CLOSED";
-  version: number;
-  jobVersionId: string;
-  jobVersionNumber: number;
-  title: string;
-  description: string;
-  requirementsText: string;
-  benefitsText: string | null;
-  locationText: string | null;
-  countryCode: string | null;
-  workMode: "ONSITE" | "HYBRID" | "REMOTE" | null;
-  employmentType: "FULL_TIME" | "PART_TIME" | "CONTRACT" | "INTERNSHIP" | null;
-  seniorityLevel: string | null;
-  openings: number;
-  salaryMin: number | null;
-  salaryMax: number | null;
-  salaryCurrency: string | null;
-  salaryPeriod: string | null;
-  salaryNegotiable: boolean;
-  applicationDeadline: string | null;
-  sourceHash: string;
-};
-
-type JobForm = {
-  title: string;
-  description: string;
-  requirementsText: string;
-  benefitsText: string;
-  locationText: string;
-  countryCode: string;
-  workMode: string;
-  employmentType: string;
-  seniorityLevel: string;
-  openings: number;
-  salaryMin: string;
-  salaryMax: string;
-  salaryCurrency: string;
-  salaryPeriod: string;
-  salaryNegotiable: boolean;
-  applicationDeadline: string;
-};
-
-type ParsedJd = {
-  revisionId: string;
-  jobId: string;
-  jobVersionId: string;
-  revisionNumber: number;
-  sourceHash: string;
-  status: "PARSED" | "CONFIRMED" | "SUPERSEDED";
-  payload: {
-    [key: string]: unknown;
-    document: { jobVersionId: string; language: string; sourceHash: string; parserVersion: string };
-    title: { raw: string; canonicalFamily: string | null; level: string | null; confidence: number; evidenceIds: string[] };
-    requirements: {
-      requiredSkills: JdSkill[];
-      preferredSkills: JdSkill[];
-      minimumRelevantExperienceMonths: number | null;
-      education: Array<Record<string, unknown>>;
-      languages: Array<Record<string, unknown>>;
-    };
-    responsibilities: Array<Record<string, unknown> & { raw: string }>;
-    overallConfidence: number;
-    qualityFlags: string[];
-  };
-  confirmedBy: string | null;
-  confirmedAt: string | null;
-  version: number;
-};
-
-type JdSkill = {
-  raw: string;
-  canonicalSkillId: string | null;
-  normalizationStatus: "KNOWN" | "PENDING" | "UNRESOLVED";
-  criticality: "CRITICAL" | "NORMAL";
-  minimumMonths: number | null;
-  evidenceIds: string[];
-  confidence: number;
-  confirmedByRecruiter: boolean;
-};
-
-const emptyJob: JobForm = {
-  title: "", description: "", requirementsText: "", benefitsText: "", locationText: "",
-  countryCode: "VN", workMode: "", employmentType: "FULL_TIME", seniorityLevel: "",
-  openings: 1, salaryMin: "", salaryMax: "", salaryCurrency: "VND", salaryPeriod: "MONTH",
-  salaryNegotiable: false, applicationDeadline: ""
-};
-
-export function RecruiterJobBoard({ session, companyId, canRecruit }: {
-  session: AuthSession; companyId: string | null; canRecruit: boolean;
+export function RecruiterJobBoard({
+  session,
+  companyId,
+  canRecruit,
+  companyStatus = "PENDING",
+  initialJobId
+}: {
+  session: AuthSession;
+  companyId: string | null;
+  canRecruit: boolean;
+  companyStatus?: "PENDING" | "ACTIVE" | "SUSPENDED" | "CLOSED";
+  initialJobId?: string | null;
 }) {
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [selectedRecord, setSelectedRecord] = useState<Job | null>(null);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(initialJobId ?? null);
   const [form, setForm] = useState<JobForm>(emptyJob);
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [parsedJd, setParsedJd] = useState<ParsedJd | null>(null);
   const [parsedJdDraft, setParsedJdDraft] = useState<ParsedJd["payload"] | null>(null);
@@ -108,59 +48,147 @@ export function RecruiterJobBoard({ session, companyId, canRecruit }: {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const [viewMode, setViewMode] = useState<"list" | "workspace">(initialJobId ? "workspace" : "list");
+  const [activeTab, setActiveTab] = useState<WorkspaceTab>(initialJobId ? "pipeline" : "editor");
+  const [jobSearch, setJobSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [sort, setSort] = useState("newest");
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilterValue>(emptyCategoryFilter);
+
+  const results = usePagedResource<Job>(
+    companyId ? `/api/v2/companies/${companyId}/jobs` : null,
+    { q: jobSearch, status: statusFilter === "ALL" ? "" : statusFilter, sort, ...categoryFilter },
+    session.accessToken
+  );
+  const jobs = results.items;
+
   useEffect(() => {
-    let active = true;
     setSelectedJobId(null);
+    setSelectedRecord(null);
     setForm(emptyJob);
-    if (!companyId) { setJobs([]); return () => { active = false; }; }
-    setLoading(true);
-    void apiRequest<Job[]>(`/api/v1/companies/${companyId}/jobs`, { accessToken: session.accessToken })
-      .then((result) => { if (active) setJobs(result); })
-      .catch((requestError) => { if (active && (!(requestError instanceof ApiClientError) || requestError.status !== 404)) setError(getErrorMessage(requestError)); })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
-  }, [companyId, session.accessToken]);
+    setActiveTab("editor");
+    setViewMode("list");
+  }, [companyId]);
+
+  useEffect(() => {
+    if (initialJobId && jobs.length > 0) {
+      const target = jobs.find((j) => j.jobId === initialJobId);
+      if (target) {
+        setSelectedJobId(target.jobId);
+        setSelectedRecord(target);
+        setForm(toForm(target));
+        setActiveTab("pipeline");
+        setViewMode("workspace");
+      }
+    }
+  }, [initialJobId, jobs]);
 
   useEffect(() => {
     let active = true;
-    const selected = jobs.find((job) => job.jobId === selectedJobId);
-    if (!selected) {
+    const selected = selectedRecord;
+    if (!selected || selected.matchingSupported === false) {
       setParsedJd(null);
       setParsedJdDraft(null);
-      return () => { active = false; };
+      return () => {
+        active = false;
+      };
     }
     setLoadingParsedJd(true);
     void (async () => {
       for (let attempt = 0; attempt < 8 && active; attempt += 1) {
         try {
-          const result = await apiRequest<ParsedJd>(`/api/v1/parsed-jds/${selected.jobVersionId}`, {
+          const result = await apiRequest<ParsedJd>(`/api/v2/parsed-jds/${selected.jobVersionId}`, {
             accessToken: session.accessToken
           });
-          if (active) { setParsedJd(result); setParsedJdDraft(structuredClone(result.payload)); }
+          if (active) {
+            setParsedJd(result);
+            setParsedJdDraft(structuredClone(result.payload));
+          }
           return;
         } catch (requestError) {
           const pending = requestError instanceof ApiClientError && requestError.status === 404;
-          if (!pending) { if (active) setError(getErrorMessage(requestError)); return; }
+          if (!pending) {
+            if (active) setError(getJobErrorMessage(requestError));
+            return;
+          }
           if (attempt < 7) await new Promise((resolve) => window.setTimeout(resolve, 1000));
         }
       }
-      if (active) { setParsedJd(null); setParsedJdDraft(null); }
-    })().finally(() => { if (active) setLoadingParsedJd(false); });
-    return () => { active = false; };
-  }, [jobs, selectedJobId, session.accessToken]);
+      if (active) {
+        setParsedJd(null);
+        setParsedJdDraft(null);
+      }
+    })().finally(() => {
+      if (active) setLoadingParsedJd(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, [selectedRecord, session.accessToken, session.userId]);
 
-  function selectJob(job: Job) { setSelectedJobId(job.jobId); setForm(toForm(job)); setMessage(null); setError(null); }
-  function newJob() { setSelectedJobId(null); setForm(emptyJob); setMessage(null); setError(null); }
-  function updateForm<K extends keyof JobForm>(key: K, value: JobForm[K]) { setForm((current) => ({ ...current, [key]: value })); }
+  const reviewDirty =
+    !!parsedJd && !!parsedJdDraft && JSON.stringify(parsedJdDraft) !== JSON.stringify(parsedJd.payload);
+  const formDirty = JSON.stringify(form) !== JSON.stringify(selectedRecord ? toForm(selectedRecord) : emptyJob);
+  useUnsavedChanges(reviewDirty || formDirty, () =>
+    setError("Bạn còn thay đổi chưa lưu. Hãy lưu trước khi chuyển màn hình.")
+  );
+
+  function canLeaveDraft(): boolean {
+    if (reviewDirty || formDirty || saving) {
+      setError("Bạn còn thay đổi chưa lưu hoặc đang xử lý. Hãy lưu trước khi đổi tin tuyển dụng.");
+      return false;
+    }
+    return true;
+  }
+
+  function selectJob(job: Job, targetTab: WorkspaceTab = "pipeline") {
+    if (!canLeaveDraft()) return;
+    setSelectedJobId(job.jobId);
+    setSelectedRecord(job);
+    setForm(toForm(job));
+    setActiveTab(targetTab);
+    setViewMode("workspace");
+    setMessage(null);
+    setError(null);
+  }
+
+  function newJob() {
+    if (!canLeaveDraft()) return;
+    setSelectedJobId(null);
+    setSelectedRecord(null);
+    setForm(emptyJob);
+    setActiveTab("editor");
+    setViewMode("workspace");
+    setMessage(null);
+    setError(null);
+  }
+
+  function backToList() {
+    if (!canLeaveDraft()) return;
+    setViewMode("list");
+    setSelectedJobId(null);
+    setSelectedRecord(null);
+    setForm(emptyJob);
+    setMessage(null);
+    setError(null);
+  }
+
+  function updateForm<K extends keyof JobForm>(key: K, value: JobForm[K]) {
+    setForm((current) => ({ ...current, [key]: value }));
+  }
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!companyId || saving) return;
-    setSaving(true); setMessage(null); setError(null);
+    setSaving(true);
+    setMessage(null);
+    setError(null);
     const payload = {
       ...form,
+      category: { ...form.category, positionName: form.category.positionName || form.title },
       benefitsText: form.benefitsText || null,
       locationText: form.locationText || null,
+      externalAiPolicyVersion: form.externalAiConsent ? externalAiPolicyVersion : null,
       countryCode: form.countryCode || null,
       workMode: form.workMode || null,
       employmentType: form.employmentType || null,
@@ -170,47 +198,97 @@ export function RecruiterJobBoard({ session, companyId, canRecruit }: {
       salaryCurrency: form.salaryMin || form.salaryMax ? form.salaryCurrency : null,
       salaryPeriod: form.salaryMin || form.salaryMax ? form.salaryPeriod : null,
       applicationDeadline: form.applicationDeadline ? new Date(form.applicationDeadline).toISOString() : null,
-      ...(selectedJobId ? { version: jobs.find((job) => job.jobId === selectedJobId)?.version } : {})
+      ...(selectedJobId ? { version: selectedRecord?.version } : {})
     };
     try {
-      const saved = await apiRequest<Job>(selectedJobId ? `/api/v1/jobs/${selectedJobId}` : `/api/v1/companies/${companyId}/jobs`, {
-        method: selectedJobId ? "PUT" : "POST", accessToken: session.accessToken, body: JSON.stringify(payload)
-      });
-      setJobs((current) => selectedJobId ? current.map((job) => job.jobId === saved.jobId ? saved : job) : [saved, ...current]);
-      setSelectedJobId(saved.jobId); setForm(toForm(saved));
-      setParsedJd(null); setParsedJdDraft(null);
-      setMessage(selectedJobId
-        ? "JD đã được cập nhật; yêu cầu parse đã được đưa vào hàng đợi."
-        : "JD nháp đã được tạo; yêu cầu parse đã được đưa vào hàng đợi.");
-    } catch (requestError) { setError(getErrorMessage(requestError)); }
-    finally { setSaving(false); }
+      const saved = await apiRequest<Job>(
+        selectedJobId ? `/api/v2/jobs/${selectedJobId}` : `/api/v2/companies/${companyId}/jobs`,
+        {
+          method: selectedJobId ? "PUT" : "POST",
+          accessToken: session.accessToken,
+          body: JSON.stringify(payload)
+        }
+      );
+      setSelectedRecord(saved);
+      results.refresh();
+      setSelectedJobId(saved.jobId);
+      setForm(toForm(saved));
+      setActiveTab("editor");
+      setViewMode("workspace");
+      setParsedJd(null);
+      setParsedJdDraft(null);
+      setMessage(
+        saved.matchingSupported === false
+          ? "Đã lưu tin. Ngành này chưa hỗ trợ AI; có thể đăng tin và tuyển dụng thủ công."
+          : selectedJobId
+            ? "JD đã được cập nhật; yêu cầu parse đã được đưa vào hàng đợi."
+            : "JD nháp đã được tạo; yêu cầu parse đã được đưa vào hàng đợi."
+      );
+    } catch (requestError) {
+      setError(getJobErrorMessage(requestError));
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function changeState(job: Job, action: "publish" | "close") {
-    setMessage(null); setError(null);
-    if (action === "publish" && parsedJd?.status !== "CONFIRMED") {
-      setError("Cần review và xác nhận ParsedJD trước khi đăng JD.");
+    setMessage(null);
+    setError(null);
+    if (action === "publish" && companyStatus !== "ACTIVE") {
+      setError("Công ty cần được Admin duyệt hoạt động trước khi đăng tin.");
       return;
     }
+    if (saving || formDirty || reviewDirty) {
+      setError("Hãy lưu các thay đổi trước khi đăng hoặc đóng tin.");
+      return;
+    }
+    setSaving(true);
     try {
-      const updated = await apiRequest<Job>(`/api/v1/jobs/${job.jobId}/${action}?version=${job.version}`, { method: "POST", accessToken: session.accessToken });
-      setJobs((current) => current.map((item) => item.jobId === updated.jobId ? updated : item));
-      selectJob(updated); setMessage(action === "publish" ? "JD đã được đăng." : "JD đã được đóng.");
-    } catch (requestError) { setError(getErrorMessage(requestError)); }
+      if (action === "publish" && job.matchingSupported !== false) {
+        const currentParsedJd = await apiRequest<ParsedJd>(`/api/v2/parsed-jds/${job.jobVersionId}`, {
+          accessToken: session.accessToken
+        });
+        if (currentParsedJd.status !== "CONFIRMED") {
+          setError("Cần review và xác nhận ParsedJD trước khi đăng JD.");
+          return;
+        }
+      }
+      const updated = await apiRequest<Job>(`/api/v2/jobs/${job.jobId}/${action}?version=${job.version}`, {
+        method: "POST",
+        accessToken: session.accessToken
+      });
+      results.refresh();
+      if (selectedJobId === updated.jobId) {
+        setSelectedRecord(updated);
+        setForm(toForm(updated));
+      }
+      setMessage(action === "publish" ? "JD đã được đăng." : "JD đã được đóng.");
+    } catch (requestError) {
+      setError(getJobErrorMessage(requestError));
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function confirmParsedJd() {
-    if (!parsedJd) return;
-    setMessage(null); setError(null);
+    if (!parsedJd || reviewDirty || saving) return;
+    setSaving(true);
+    setMessage(null);
+    setError(null);
     try {
-      const confirmed = await apiRequest<ParsedJd>(`/api/v1/parsed-jds/${parsedJd.jobVersionId}/confirm`, {
-        method: "POST", accessToken: session.accessToken,
+      const confirmed = await apiRequest<ParsedJd>(`/api/v2/parsed-jds/${parsedJd.jobVersionId}/confirm`, {
+        method: "POST",
+        accessToken: session.accessToken,
         body: JSON.stringify({ expectedRevisionId: parsedJd.revisionId })
       });
       setParsedJd(confirmed);
       setParsedJdDraft(structuredClone(confirmed.payload));
-      setMessage("ParsedJD đã được xác nhận. Có thể đăng JD sau khi Core nhận event.");
-    } catch (requestError) { setError(getErrorMessage(requestError)); }
+      setMessage("Đã xác nhận yêu cầu tuyển dụng. Trạng thái đăng tin sẽ cập nhật sau khi xử lý.");
+    } catch (requestError) {
+      setError(getJobErrorMessage(requestError));
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function saveParsedJd() {
@@ -220,108 +298,306 @@ export function RecruiterJobBoard({ session, companyId, canRecruit }: {
       setError("Kỹ năng trong ParsedJD không được để trống.");
       return;
     }
-    setSaving(true); setMessage(null); setError(null);
+    setSaving(true);
+    setMessage(null);
+    setError(null);
     try {
-      const updated = await apiRequest<ParsedJd>(`/api/v1/parsed-jds/${parsedJd.jobVersionId}`, {
-        method: "PATCH", accessToken: session.accessToken,
+      const updated = await apiRequest<ParsedJd>(`/api/v2/parsed-jds/${parsedJd.jobVersionId}`, {
+        method: "PATCH",
+        accessToken: session.accessToken,
         body: JSON.stringify({ expectedRevisionId: parsedJd.revisionId, payload: parsedJdDraft })
       });
       setParsedJd(updated);
       setParsedJdDraft(structuredClone(updated.payload));
       setMessage("Đã lưu ParsedJD revision mới. Kiểm tra lại rồi xác nhận.");
-    } catch (requestError) { setError(getErrorMessage(requestError)); }
-    finally { setSaving(false); }
+    } catch (requestError) {
+      setError(getJobErrorMessage(requestError));
+    } finally {
+      setSaving(false);
+    }
   }
 
   function updateJdSkill(section: "requiredSkills" | "preferredSkills", index: number, raw: string) {
     if (!parsedJdDraft) return;
-    setParsedJdDraft({ ...parsedJdDraft, requirements: { ...parsedJdDraft.requirements,
-      [section]: parsedJdDraft.requirements[section].map((skill, itemIndex) => itemIndex === index
-        ? { ...skill, raw }
-        : skill)
-    } });
+    setParsedJdDraft({
+      ...parsedJdDraft,
+      requirements: {
+        ...parsedJdDraft.requirements,
+        [section]: parsedJdDraft.requirements[section].map((skill, itemIndex) =>
+          itemIndex === index ? { ...skill, raw } : skill
+        )
+      }
+    });
   }
 
   function addJdSkill(section: "requiredSkills" | "preferredSkills") {
     if (!parsedJdDraft) return;
-    const skill: JdSkill = { raw: "", canonicalSkillId: null, normalizationStatus: "UNRESOLVED",
-      criticality: section === "requiredSkills" ? "CRITICAL" : "NORMAL", minimumMonths: null,
-      evidenceIds: [], confidence: 1, confirmedByRecruiter: true };
-    setParsedJdDraft({ ...parsedJdDraft, requirements: { ...parsedJdDraft.requirements,
-      [section]: [...parsedJdDraft.requirements[section], skill]
-    } });
+    const skill: JdSkill = {
+      raw: "",
+      canonicalSkillId: null,
+      normalizationStatus: "UNRESOLVED",
+      criticality: section === "requiredSkills" ? "CRITICAL" : "NORMAL",
+      minimumMonths: null,
+      evidenceIds: [],
+      confidence: 1,
+      confirmedByRecruiter: true
+    };
+    setParsedJdDraft({
+      ...parsedJdDraft,
+      requirements: {
+        ...parsedJdDraft.requirements,
+        [section]: [...parsedJdDraft.requirements[section], skill]
+      }
+    });
   }
 
   function removeJdSkill(section: "requiredSkills" | "preferredSkills", index: number) {
     if (!parsedJdDraft) return;
-    setParsedJdDraft({ ...parsedJdDraft, requirements: { ...parsedJdDraft.requirements,
-      [section]: parsedJdDraft.requirements[section].filter((_, itemIndex) => itemIndex !== index)
-    } });
+    setParsedJdDraft({
+      ...parsedJdDraft,
+      requirements: {
+        ...parsedJdDraft.requirements,
+        [section]: parsedJdDraft.requirements[section].filter((_, itemIndex) => itemIndex !== index)
+      }
+    });
   }
 
   if (!companyId) return null;
-  return <div className="workspace-panel job-board">
-    <div className="section-heading"><div><p className="eyebrow">Job descriptions</p><h3>JD của công ty</h3></div><span>{jobs.length} JD</span></div>
-    {loading ? <p className="muted">Đang tải JD…</p> : <div className="job-list">
-      {jobs.map((job) => <button key={job.jobId} type="button" className={`company-option ${job.jobId === selectedJobId ? "selected" : ""}`} onClick={() => selectJob(job)}>
-        <span><strong>{job.title}</strong><small>v{job.jobVersionNumber} · {job.status}</small></span><span className="status-pill">{job.openings} vị trí</span>
-      </button>)}
-      {jobs.length === 0 && <p className="muted">Chưa có JD. Tạo bản nháp đầu tiên.</p>}
-    </div>}
-    {canRecruit && <button className="secondary-button" type="button" onClick={newJob}>+ Tạo JD mới</button>}
-    <form className="job-form" onSubmit={save}>
-      <fieldset className="permission-fieldset" disabled={!canRecruit}>
-      <div className="form-grid"><label>Tiêu đề<input required maxLength={240} value={form.title} onChange={(e) => updateForm("title", e.target.value)} /></label>
-        <label>Địa điểm<input maxLength={300} value={form.locationText} onChange={(e) => updateForm("locationText", e.target.value)} /></label>
-        <label>Quốc gia<input pattern="[A-Z]{2}" maxLength={2} value={form.countryCode} onChange={(e) => updateForm("countryCode", e.target.value.toUpperCase())} /></label>
-        <label>Hình thức<select value={form.workMode} onChange={(e) => updateForm("workMode", e.target.value)}><option value="">Chọn</option><option>ONSITE</option><option>HYBRID</option><option>REMOTE</option></select></label>
-        <label>Loại hợp đồng<select value={form.employmentType} onChange={(e) => updateForm("employmentType", e.target.value)}><option>FULL_TIME</option><option>PART_TIME</option><option>CONTRACT</option><option>INTERNSHIP</option></select></label>
-        <label>Cấp độ<input maxLength={30} value={form.seniorityLevel} onChange={(e) => updateForm("seniorityLevel", e.target.value)} /></label>
-        <label>Số vị trí<input type="number" min={1} required value={form.openings} onChange={(e) => updateForm("openings", Number(e.target.value))} /></label>
-        <label>Hạn nhận hồ sơ<input type="datetime-local" value={form.applicationDeadline} onChange={(e) => updateForm("applicationDeadline", e.target.value)} /></label>
-      </div>
-      <label>Mô tả công việc<textarea required rows={5} value={form.description} onChange={(e) => updateForm("description", e.target.value)} /></label>
-      <label>Yêu cầu<textarea required rows={5} value={form.requirementsText} onChange={(e) => updateForm("requirementsText", e.target.value)} /></label>
-      <label>Quyền lợi<textarea rows={3} value={form.benefitsText} onChange={(e) => updateForm("benefitsText", e.target.value)} /></label>
-      <div className="form-grid"><label>Lương tối thiểu<input type="number" min={0} value={form.salaryMin} onChange={(e) => updateForm("salaryMin", e.target.value)} /></label><label>Lương tối đa<input type="number" min={0} value={form.salaryMax} onChange={(e) => updateForm("salaryMax", e.target.value)} /></label><label>Tiền tệ<input maxLength={3} value={form.salaryCurrency} onChange={(e) => updateForm("salaryCurrency", e.target.value.toUpperCase())} /></label><label>Kỳ lương<select value={form.salaryPeriod} onChange={(e) => updateForm("salaryPeriod", e.target.value)}><option>HOUR</option><option>MONTH</option><option>YEAR</option></select></label></div>
-      <div className="parsed-jd-review">
-        <div className="section-heading"><div><p className="eyebrow">AI review</p><h3>ParsedJD</h3></div><span className="status-pill">{loadingParsedJd ? "Đang parse…" : parsedJd?.status ?? "Chưa có"}</span></div>
-        {parsedJd && parsedJdDraft && <>
-          <p className="muted">Revision v{parsedJd.revisionNumber} · family {parsedJdDraft.title.canonicalFamily ?? "OTHER"} · level {parsedJdDraft.title.level ?? "—"}</p>
-          {(["requiredSkills", "preferredSkills"] as const).map((section) => <div className="parsed-section" key={section}>
-            <div className="parsed-section-heading"><strong>{section === "requiredSkills" ? "Kỹ năng bắt buộc" : "Kỹ năng ưu tiên"}</strong>
-              <button className="secondary-button" type="button" disabled={parsedJd.status === "CONFIRMED"}
-                onClick={() => addJdSkill(section)}>Thêm</button></div>
-            {parsedJdDraft.requirements[section].map((skill, index) => <div className="parsed-row" key={`${section}-${index}`}>
-              <input value={skill.raw} disabled={parsedJd.status === "CONFIRMED"}
-                aria-label={`${section === "requiredSkills" ? "Kỹ năng bắt buộc" : "Kỹ năng ưu tiên"} ${index + 1}`}
-                onChange={(event) => updateJdSkill(section, index, event.target.value)} />
-              <button className="danger-button" type="button" disabled={parsedJd.status === "CONFIRMED"}
-                onClick={() => removeJdSkill(section, index)}>Xóa</button>
-            </div>)}
-            {parsedJdDraft.requirements[section].length === 0 && <p className="muted">Không có.</p>}
-          </div>)}
-          <label>Kinh nghiệm liên quan tối thiểu (tháng)<input type="number" min={0}
-            disabled={parsedJd.status === "CONFIRMED"}
-            value={parsedJdDraft.requirements.minimumRelevantExperienceMonths ?? ""}
-            onChange={(event) => setParsedJdDraft({ ...parsedJdDraft, requirements: { ...parsedJdDraft.requirements,
-              minimumRelevantExperienceMonths: event.target.value === "" ? null : Math.max(0, Number(event.target.value))
-            } })} /></label>
-          {parsedJdDraft.qualityFlags.length > 0 && <p className="muted">Cờ chất lượng: {parsedJdDraft.qualityFlags.join(", ")}</p>}
-          {parsedJd.status === "PARSED" && <div className="button-row"><button className="secondary-button" type="button"
-            disabled={saving} onClick={() => void saveParsedJd()}>Lưu revision ParsedJD</button>
-            <button type="button" disabled={saving} onClick={() => void confirmParsedJd()}>Xác nhận ParsedJD</button></div>}
-        </>}
-        {!parsedJd && !loadingParsedJd && <p className="muted">Lưu JD để AI tạo bản parse review.</p>}
-      </div>
-      {message && <p className="success-message" role="status">{message}</p>}{error && <p className="error-message" role="alert">{error}</p>}
-      <div className="button-row"><button type="submit" disabled={saving}>{saving ? "Đang lưu…" : selectedJobId ? "Lưu JD" : "Tạo bản nháp"}</button>{selectedJobId && jobs.find((job) => job.jobId === selectedJobId)?.status === "DRAFT" && <button className="secondary-button" type="button" onClick={() => { const job = jobs.find((item) => item.jobId === selectedJobId); if (job) void changeState(job, "publish"); }}>Đăng JD</button>}{selectedJobId && jobs.find((job) => job.jobId === selectedJobId)?.status === "PUBLISHED" && <button className="secondary-button" type="button" onClick={() => { const job = jobs.find((item) => item.jobId === selectedJobId); if (job) void changeState(job, "close"); }}>Đóng JD</button>}</div>
-      </fieldset>
-    </form>
-    {!canRecruit && <p className="muted">Bạn có quyền xem JD và pipeline, nhưng không thể sửa hoặc chuyển trạng thái.</p>}
-    <RecruiterApplicationsPanel session={session} jobId={selectedJobId} canTransition={canRecruit} />
-  </div>;
-}
 
-function toForm(job: Job): JobForm { return { title: job.title, description: job.description, requirementsText: job.requirementsText, benefitsText: job.benefitsText ?? "", locationText: job.locationText ?? "", countryCode: job.countryCode ?? "VN", workMode: job.workMode ?? "", employmentType: job.employmentType ?? "FULL_TIME", seniorityLevel: job.seniorityLevel ?? "", openings: job.openings, salaryMin: job.salaryMin?.toString() ?? "", salaryMax: job.salaryMax?.toString() ?? "", salaryCurrency: job.salaryCurrency ?? "VND", salaryPeriod: job.salaryPeriod ?? "MONTH", salaryNegotiable: job.salaryNegotiable, applicationDeadline: job.applicationDeadline ? job.applicationDeadline.slice(0, 16) : "" }; }
-function getErrorMessage(error: unknown): string { return error instanceof ApiClientError ? error.error.message : "Không thể kết nối tới Gateway. Vui lòng thử lại."; }
+  const selectedJob = selectedRecord;
+  const canPublish = canRecruit && companyStatus === "ACTIVE";
+  const salaryLabel = selectedJob ? formatJobSalary(selectedJob) : null;
+
+  return (
+    <div className="space-y-6">
+      {companyStatus !== "ACTIVE" && <ErrorBanner tone="info" message={companyStatus === "PENDING"
+        ? "Công ty đang chờ Admin duyệt. Bạn có thể chuẩn bị bản nháp; chỉ công ty đang hoạt động được đăng tin. Tải lại workspace sau khi được duyệt."
+        : "Công ty hiện chưa hoạt động nên không thể đăng tin tuyển dụng."} />}
+      {viewMode === "list" && (
+        <RecruiterJobList
+          jobs={jobs}
+          paging={results}
+          canRecruit={canRecruit}
+          canPublish={canPublish}
+          jobSearch={jobSearch}
+          onJobSearchChange={setJobSearch}
+          statusFilter={statusFilter}
+          onStatusFilterChange={setStatusFilter}
+          sort={sort}
+          onSortChange={setSort}
+          categoryFilter={categoryFilter}
+          onCategoryFilterChange={setCategoryFilter}
+          message={message}
+          error={error}
+          onNewJob={newJob}
+          onSelectJob={selectJob}
+          onChangeState={(job, action) => void changeState(job, action)}
+        />
+      )}
+
+      {/* Keep editor mounted offscreen in list view so direct form tests and draft preservation work consistently. */}
+      <div
+        className={cn(
+          viewMode === "list"
+            ? "fixed -left-[10000px] top-0 h-px w-px overflow-hidden opacity-0 pointer-events-none"
+            : "space-y-5"
+        )}
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Button type="button" variant="secondary" size="sm" onClick={backToList}>
+            ← Quay lại danh sách tin
+          </Button>
+          <div className="flex items-center gap-2 text-xs text-ink-500">
+            <span
+              className="font-medium text-ink-700 hover:text-brand-700 cursor-pointer"
+              role="button"
+              tabIndex={0}
+              onClick={backToList}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") backToList();
+              }}
+            >
+              Danh sách tin tuyển dụng
+            </span>
+            <span>/</span>
+            <span className="font-semibold text-ink-900">
+              {selectedRecord ? selectedRecord.title : "Tạo tin tuyển dụng mới"}
+            </span>
+          </div>
+        </div>
+
+        <main className="space-y-5">
+          {selectedJobId && activeTab !== "editor" && activeTab !== "review" && (
+            <>
+              {message && <ErrorBanner tone="success" message={message} />}
+              {error && <ErrorBanner tone="error" message={error} />}
+            </>
+          )}
+          {selectedJob && (
+            <header className="rounded-2xl bg-slate-900 text-white px-6 py-5 shadow-card space-y-4">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="space-y-2 min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-brand-300">
+                      JD Tuyển dụng
+                    </span>
+                    <Badge tone={jobStatusTone(selectedJob.status)}>{jobStatusLabel(selectedJob.status)}</Badge>
+                    <Badge tone="neutral">v{selectedJob.jobVersionNumber}</Badge>
+                    {selectedJob.matchingSupported === false && <Badge tone="info">Review thủ công (Ngoài IT)</Badge>}
+                  </div>
+                  <h3 className="text-xl font-bold text-white m-0">{selectedJob.title}</h3>
+                  <div className="flex flex-wrap gap-2 text-xs text-slate-300">
+                    <span className="rounded-lg bg-white/10 px-2.5 py-1">
+                      📍 {selectedJob.locationText ?? "Linh hoạt"}
+                    </span>
+                    <span className="rounded-lg bg-white/10 px-2.5 py-1">
+                      🏢 {selectedJob.workMode ?? "Toàn thời gian"}
+                    </span>
+                    <span className="rounded-lg bg-white/10 px-2.5 py-1">🎯 {selectedJob.openings} chỉ tiêu</span>
+                    {salaryLabel && <span className="rounded-lg bg-white/10 px-2.5 py-1">💰 {salaryLabel}</span>}
+                  </div>
+                </div>
+
+                {canRecruit && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {selectedJob.status === "DRAFT" && (
+                      <Button variant="primary" size="sm" disabled={!canPublish || saving} onClick={() => void changeState(selectedJob, "publish")}>
+                        🚀 Đăng JD
+                      </Button>
+                    )}
+                    {selectedJob.status === "PUBLISHED" && (
+                      <Button variant="danger" size="sm" onClick={() => void changeState(selectedJob, "close")}>
+                        🛑 Đóng JD
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-wrap gap-1.5 border-t border-white/10 pt-3">
+                {[
+                  { id: "pipeline" as const, label: "👥 Ứng viên & Pipeline" },
+                  { id: "analytics" as const, label: "📊 Thống kê tin này" },
+                  { id: "editor" as const, label: "✏️ Chi tiết tin tuyển dụng" }
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => {
+                      if (tab.id === "editor" || canLeaveDraft()) setActiveTab(tab.id);
+                    }}
+                    className={cn(
+                      "rounded-xl px-3.5 py-2 text-xs font-semibold transition-colors cursor-pointer",
+                      activeTab === tab.id
+                        ? "bg-white text-ink-900 shadow-xs"
+                        : "text-slate-300 hover:bg-white/10 hover:text-white"
+                    )}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+                {selectedRecord?.matchingSupported !== false && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (formDirty) setError("Lưu tin tuyển dụng trước khi kiểm tra yêu cầu.");
+                      else {
+                        setActiveTab("review");
+                        setError(null);
+                      }
+                    }}
+                    className={cn(
+                      "rounded-xl px-3.5 py-2 text-xs font-semibold transition-colors cursor-pointer",
+                      activeTab === "review"
+                        ? "bg-white text-ink-900 shadow-xs"
+                        : "text-slate-300 hover:bg-white/10 hover:text-white"
+                    )}
+                  >
+                    Kiểm tra yêu cầu
+                  </button>
+                )}
+              </div>
+            </header>
+          )}
+
+          {selectedJobId && activeTab === "pipeline" && (
+            <RecruiterApplicationsPanel
+              key={selectedJobId}
+              session={session}
+              jobId={selectedJobId}
+              canTransition={canRecruit}
+            />
+          )}
+
+          {selectedJobId && activeTab === "analytics" && (
+            <RecruiterJobAnalytics
+              jobId={selectedJobId}
+              jobTitle={selectedJob?.title ?? "Tin tuyển dụng"}
+              openings={selectedJob?.openings ?? 1}
+              accessToken={session.accessToken}
+              onOpenPipeline={() => setActiveTab("pipeline")}
+            />
+          )}
+
+          {selectedRecord && activeTab === "review" && (
+            <RecruiterJdReview
+              selectedRecord={selectedRecord}
+              parsedJd={parsedJd}
+              parsedJdDraft={parsedJdDraft}
+              loadingParsedJd={loadingParsedJd}
+              reviewDirty={reviewDirty}
+              saving={saving}
+              message={message}
+              error={error}
+              onAddSkill={addJdSkill}
+              onUpdateSkill={updateJdSkill}
+              onRemoveSkill={removeJdSkill}
+              onUpdateExperienceMonths={(months) => {
+                if (!parsedJdDraft) return;
+                setParsedJdDraft({
+                  ...parsedJdDraft,
+                  requirements: {
+                    ...parsedJdDraft.requirements,
+                    minimumRelevantExperienceMonths: months
+                  }
+                });
+              }}
+              onSaveParsedJd={() => void saveParsedJd()}
+              onConfirmParsedJd={() => void confirmParsedJd()}
+            />
+          )}
+
+          {(!selectedJobId || activeTab === "editor") && (
+            <RecruiterJobEditor
+              form={form}
+              selectedJob={selectedJob}
+              selectedJobId={selectedJobId}
+              companyId={companyId}
+              session={session}
+              canRecruit={canRecruit}
+              canPublish={canPublish}
+              saving={saving}
+              message={message}
+              error={error}
+              onUpdateForm={updateForm}
+              onSubmit={save}
+              onChangeState={(job, action) => void changeState(job, action)}
+              onSuggestionApplied={(value) => {
+                updateForm("category", value);
+                setError(null);
+                setMessage("Đã áp dụng gợi ý vào biểu mẫu. Lưu bản nháp để ghi nhận thay đổi.");
+              }}
+            />
+          )}
+
+          {!canRecruit && (
+            <ErrorBanner
+              tone="info"
+              message="Bạn có quyền xem JD và pipeline, nhưng không thể sửa hoặc chuyển trạng thái."
+            />
+          )}
+        </main>
+      </div>
+    </div>
+  );
+}

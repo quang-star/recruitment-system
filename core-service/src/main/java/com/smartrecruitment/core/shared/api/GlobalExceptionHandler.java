@@ -3,6 +3,9 @@ package com.smartrecruitment.core.shared.api;
 import com.smartrecruitment.core.candidate.application.CandidateProfileConflictException;
 import com.smartrecruitment.core.candidate.application.CandidateProfileNotFoundException;
 import com.smartrecruitment.core.cv.application.CandidateCvNotFoundException;
+import com.smartrecruitment.core.cv.application.CvDraftConflictException;
+import com.smartrecruitment.core.cv.application.CvDraftNotFoundException;
+import com.smartrecruitment.core.cv.application.CvDraftValidationException;
 import com.smartrecruitment.core.cv.application.CvStorageException;
 import com.smartrecruitment.core.cv.application.CvUploadException;
 import com.smartrecruitment.core.cv.application.CvRetryConflictException;
@@ -35,6 +38,12 @@ import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    @ExceptionHandler(com.smartrecruitment.core.catalog.application.CategoryConflictException.class)
+    ResponseEntity<ApiError> handleCategoryConflict(com.smartrecruitment.core.catalog.application.CategoryConflictException exception,
+                                                   HttpServletRequest request) {
+        return error(HttpStatus.CONFLICT, "CATEGORY_CONFLICT", exception.getMessage(), Map.of(), request);
+    }
+
     @ExceptionHandler(CandidateProfileNotFoundException.class)
     ResponseEntity<ApiError> handleNotFound(CandidateProfileNotFoundException exception, HttpServletRequest request) {
         return error(HttpStatus.NOT_FOUND, "CANDIDATE_PROFILE_NOT_FOUND", exception.getMessage(), Map.of(), request);
@@ -54,6 +63,21 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(CandidateCvNotFoundException.class)
     ResponseEntity<ApiError> handleCvNotFound(CandidateCvNotFoundException exception, HttpServletRequest request) {
         return error(HttpStatus.NOT_FOUND, "CV_NOT_FOUND", exception.getMessage(), Map.of(), request);
+    }
+
+    @ExceptionHandler(CvDraftNotFoundException.class)
+    ResponseEntity<ApiError> handleCvDraftNotFound(CvDraftNotFoundException exception, HttpServletRequest request) {
+        return error(HttpStatus.NOT_FOUND, "CV_DRAFT_NOT_FOUND", exception.getMessage(), Map.of(), request);
+    }
+
+    @ExceptionHandler(CvDraftConflictException.class)
+    ResponseEntity<ApiError> handleCvDraftConflict(CvDraftConflictException exception, HttpServletRequest request) {
+        return error(HttpStatus.CONFLICT, "CV_DRAFT_CONFLICT", exception.getMessage(), Map.of(), request);
+    }
+
+    @ExceptionHandler(CvDraftValidationException.class)
+    ResponseEntity<ApiError> handleCvDraftValidation(CvDraftValidationException exception, HttpServletRequest request) {
+        return error(HttpStatus.BAD_REQUEST, "CV_DRAFT_INVALID", exception.getMessage(), Map.of(), request);
     }
 
     @ExceptionHandler(CvUploadException.class)

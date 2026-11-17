@@ -46,7 +46,7 @@ class Client:
 
 
 def login(client: Client, email: str, password: str, device: str) -> dict[str, Any]:
-    return client.request("POST", "/api/v1/auth/login", {"email": email, "password": password,
+    return client.request("POST", "/api/v2/auth/login", {"email": email, "password": password,
                           "clientType": "WEB", "deviceName": device})
 
 
@@ -65,7 +65,7 @@ def wait_mail_token(client: Client, email: str, subject_word: str,
             recipients = {value.get("Address", "").casefold() for value in message.get("To", [])}
             if email.casefold() not in recipients or subject_word.casefold() not in message.get("Subject", "").casefold():
                 continue
-            detail = client.request("GET", f"/api/v1/message/{message['ID']}", mailpit=True)
+            detail = client.request("GET", f"/api/v2/message/{message['ID']}", mailpit=True)
             match = re.search(r"token=([0-9a-f]{64})", f"{detail.get('Text', '')}\n{detail.get('HTML', '')}")
             if match:
                 return match.group(1)
@@ -81,14 +81,14 @@ def ensure_recruiter(client: Client, email: str, password: str) -> dict[str, Any
             raise
     before = mail_ids(client)
     try:
-        client.request("POST", "/api/v1/auth/register",
+        client.request("POST", "/api/v2/auth/register",
                        {"email": email, "password": password, "accountType": "RECRUITER"})
     except ApiError as error:
         if error.status != 409:
             raise
     verification = wait_mail_token(client, email, "verify", before, allow_existing=True)
     try:
-        client.request("POST", "/api/v1/auth/verify-email", {"token": verification})
+        client.request("POST", "/api/v2/auth/verify-email", {"token": verification})
     except ApiError as error:
         if error.status != 409:
             raise
@@ -97,7 +97,7 @@ def ensure_recruiter(client: Client, email: str, password: str) -> dict[str, Any
 
 def update_member(client: Client, company_id: str, member: dict[str, Any], owner_token: str,
                   role: str, status: str) -> dict[str, Any]:
-    return client.request("PATCH", f"/api/v1/companies/{company_id}/members/{member['memberId']}",
+    return client.request("PATCH", f"/api/v2/companies/{company_id}/members/{member['memberId']}",
                           {"role": role, "status": status, "version": member["version"]}, owner_token)
 
 
@@ -115,24 +115,24 @@ def main() -> int:
     client = Client(args.gateway_url, args.mailpit_url)
     owner = login(client, args.owner_email, args.owner_password, "Company invitation owner")
     invitee = ensure_recruiter(client, args.invitee_email, args.invitee_password)
-    companies = client.request("GET", "/api/v1/companies", token=owner["accessToken"])
+    companies = client.request("GET", "/api/v2/companies", token=owner["accessToken"])
     company = next(value for value in companies if value["slug"] == args.company_slug)
     company_id = company["companyId"]
-    members = client.request("GET", f"/api/v1/companies/{company_id}/members", token=owner["accessToken"])
+    members = client.request("GET", f"/api/v2/companies/{company_id}/members", token=owner["accessToken"])
     member = next((value for value in members if value["userId"] == invitee["userId"] and value["status"] != "LEFT"), None)
 
     if member is None:
         before = mail_ids(client)
         reuse = False
         try:
-            client.request("POST", f"/api/v1/companies/{company_id}/invitations",
+            client.request("POST", f"/api/v2/companies/{company_id}/invitations",
                            {"email": args.invitee_email, "role": "VIEWER"}, owner["accessToken"])
         except ApiError as error:
             if error.status != 409:
                 raise
             reuse = True
         invitation_token = wait_mail_token(client, args.invitee_email, "invitation", before, allow_existing=reuse)
-        member = client.request("POST", "/api/v1/companies/invitations/accept",
+        member = client.request("POST", "/api/v2/companies/invitations/accept",
                                 {"token": invitation_token}, invitee["accessToken"])
         print("  invitation email + matching JWT email acceptance: passed")
     else:
@@ -152,7 +152,7 @@ def main() -> int:
         raise AssertionError("Owner protection did not reject role/status change")
     print("  owner immutability: protected with HTTP 409")
 
-    invitee_companies = client.request("GET", "/api/v1/companies", token=invitee["accessToken"])
+    invitee_companies = client.request("GET", "/api/v2/companies", token=invitee["accessToken"])
     assert any(value["companyId"] == company_id for value in invitee_companies)
     print("  invited recruiter company visibility: passed")
     print("Company invitation smoke passed.")

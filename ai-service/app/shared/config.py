@@ -20,16 +20,16 @@ class Settings(BaseSettings):
     auth_jwt_audience: str = Field(description="Accepted access-token audience.")
     auth_jwks_cache_seconds: int = Field(default=300, ge=30, le=3600)
     kafka_bootstrap_servers: str = Field(default="localhost:9092")
-    kafka_consumer_group: str = Field(default="ai-cv-worker-v1")
-    kafka_cv_uploaded_topic: str = Field(default="cv.uploaded.v1")
-    kafka_cv_processing_updated_topic: str = Field(default="cv.processing.updated.v1")
-    kafka_cv_confirmed_topic: str = Field(default="cv.confirmed.v1")
-    kafka_job_processing_updated_topic: str = Field(default="job.processing.updated.v1")
-    kafka_job_confirmed_topic: str = Field(default="job.confirmed.v1")
-    kafka_job_submitted_topic: str = Field(default="job.version.submitted.v1")
-    kafka_application_submitted_topic: str = Field(default="application.submitted.v1")
-    kafka_matching_completed_topic: str = Field(default="matching.completed.v1")
-    kafka_dead_letter_topic: str = Field(default="ai.processing.dlq.v1")
+    kafka_consumer_group: str = Field(default="ai-cv-worker-v2")
+    kafka_cv_uploaded_topic: str = Field(default="cv.uploaded.v2")
+    kafka_cv_processing_updated_topic: str = Field(default="cv.processing.updated.v2")
+    kafka_cv_confirmed_topic: str = Field(default="cv.confirmed.v2")
+    kafka_job_processing_updated_topic: str = Field(default="job.processing.updated.v2")
+    kafka_job_confirmed_topic: str = Field(default="job.confirmed.v2")
+    kafka_job_submitted_topic: str = Field(default="job.version.submitted.v2")
+    kafka_application_submitted_topic: str = Field(default="application.submitted.v2")
+    kafka_matching_completed_topic: str = Field(default="matching.completed.v2")
+    kafka_dead_letter_topic: str = Field(default="ai.processing.dlq.v2")
     kafka_max_processing_attempts: int = Field(default=3, ge=1, le=10)
     kafka_retry_backoff_seconds: float = Field(default=1.0, ge=0, le=30)
     storage_endpoint: str = Field(default="http://localhost:9000")
@@ -46,9 +46,16 @@ class Settings(BaseSettings):
     gemini_model: str = Field(default="gemini-3.8-flash", pattern=r"^gemini-[a-z0-9.-]+$", max_length=60)
     gemini_timeout_seconds: float = Field(default=25.0, ge=1, le=60)
     gemini_max_input_chars: int = Field(default=30000, ge=100, le=60000)
-    extraction_provider: Literal["rules", "gemini", "groq"] = "groq"
-    cv_extraction_provider: Literal["rules", "gemini", "groq"] | None = None
-    jd_extraction_provider: Literal["rules", "gemini", "groq"] | None = None
+    extraction_provider: Literal["rules", "gemini", "groq", "router9"] = "groq"
+    cv_extraction_provider: Literal["rules", "gemini", "groq", "router9"] | None = None
+    jd_extraction_provider: Literal["rules", "gemini", "groq", "router9"] | None = None
+    router9_enabled: bool = False
+    router9_api_key: SecretStr = Field(default=SecretStr(""), repr=False)
+    router9_base_url: str = "http://localhost:20128/v1"
+    router9_model: str = Field(default="", pattern=r"^(?:[A-Za-z0-9][A-Za-z0-9._/-]{0,119})?$")
+    router9_timeout_seconds: float = Field(default=25.0, ge=1, le=60)
+    router9_max_input_chars: int = Field(default=30000, ge=100, le=60000)
+    router9_max_output_tokens: int = Field(default=4096, ge=256, le=8192)
     groq_enabled: bool = False
     groq_api_key: SecretStr = Field(default=SecretStr(""), repr=False)
     groq_model: str = Field(default="qwen/qwen3.8-27b", pattern=r"^[A-Za-z0-9][A-Za-z0-9._/-]{0,119}$")
@@ -58,6 +65,13 @@ class Settings(BaseSettings):
     groq_max_output_tokens: int = Field(default=4096, ge=256, le=8192)
     extraction_daily_call_limit: int = Field(default=100, ge=0, le=100000)
     extraction_user_daily_call_limit: int = Field(default=10, ge=0, le=10000)
+    career_core_catalog_url: str = Field(default="http://core-service:8082/api/v2/public/job-categories")
+    career_catalog_timeout_seconds: float = Field(default=3.0, ge=0.1, le=5)
+    reprocessing_core_eligibility_url: str = Field(default="http://core-service:8082/api/v2/dashboard/reprocessing/eligibility")
+    reprocessing_core_timeout_seconds: float = Field(default=3.0, ge=0.1, le=5)
+    matching_mode: Literal["baseline", "shadow"] = "baseline"
+    semantic_cache_directory: str | None = None
+    semantic_max_input_chars: int = Field(default=20000, ge=100, le=60000)
 
 
 @lru_cache

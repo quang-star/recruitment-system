@@ -9,7 +9,6 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Optional;
-import java.util.UUID;
 import static com.smartrecruitment.auth.infrastructure.jooq.generated.tables.AuthUsers.AUTH_USERS;
 @Repository
 public class JooqAuthUserRepository implements AuthUserRepository {
@@ -18,7 +17,7 @@ public class JooqAuthUserRepository implements AuthUserRepository {
     @Override
     public AuthUser insert(AuthUser user) {
         AuthUsersRecord savedRecord = dsl.insertInto(AUTH_USERS)
-                .set(AUTH_USERS.PUBLIC_ID, user.publicId()).set(AUTH_USERS.EMAIL, user.email())
+                .set(AUTH_USERS.EMAIL, user.email())
                 .set(AUTH_USERS.NORMALIZED_EMAIL, user.normalizedEmail()).set(AUTH_USERS.STATUS, user.status().name())
                 .set(AUTH_USERS.EMAIL_VERIFIED_AT, utc(user.emailVerifiedAt())).set(AUTH_USERS.LAST_LOGIN_AT, utc(user.lastLoginAt()))
                 .set(AUTH_USERS.CREATED_AT, utc(user.createdAt())).set(AUTH_USERS.UPDATED_AT, utc(user.updatedAt()))
@@ -31,10 +30,6 @@ public class JooqAuthUserRepository implements AuthUserRepository {
         return dsl.selectFrom(AUTH_USERS).where(AUTH_USERS.NORMALIZED_EMAIL.eq(normalizedEmail)).fetchOptional(this::toDomain);
     }
     @Override
-    public Optional<AuthUser> findByPublicId(UUID publicId) {
-        return dsl.selectFrom(AUTH_USERS).where(AUTH_USERS.PUBLIC_ID.eq(publicId)).fetchOptional(this::toDomain);
-    }
-    @Override
     public Optional<AuthUser> findById(Long id) {
         return dsl.selectFrom(AUTH_USERS).where(AUTH_USERS.ID.eq(id)).fetchOptional(this::toDomain);
     }
@@ -45,19 +40,22 @@ public class JooqAuthUserRepository implements AuthUserRepository {
     @Override
     public Optional<AuthUser> activateById(Long id, Instant verifiedAt) {
         return dsl.update(AUTH_USERS).set(AUTH_USERS.STATUS, UserStatus.ACTIVE.name())
-                .set(AUTH_USERS.EMAIL_VERIFIED_AT, utc(verifiedAt)).set(AUTH_USERS.UPDATED_AT, utc(verifiedAt))
+                .set(AUTH_USERS.EMAIL_VERIFIED_AT, TimestampGuards.atLeast(AUTH_USERS.CREATED_AT, verifiedAt))
+                .set(AUTH_USERS.UPDATED_AT, TimestampGuards.atLeast(AUTH_USERS.CREATED_AT, verifiedAt))
                 .set(AUTH_USERS.VERSION, AUTH_USERS.VERSION.plus(1L)).where(AUTH_USERS.ID.eq(id))
                 .and(AUTH_USERS.STATUS.eq(UserStatus.PENDING.name())).returning().fetchOptional(this::toDomain);
     }
     @Override
     public Optional<AuthUser> updateLastLogin(Long id, Instant lastLoginAt) {
-        return dsl.update(AUTH_USERS).set(AUTH_USERS.LAST_LOGIN_AT, utc(lastLoginAt))
-                .set(AUTH_USERS.UPDATED_AT, utc(lastLoginAt)).set(AUTH_USERS.VERSION, AUTH_USERS.VERSION.plus(1L))
+        return dsl.update(AUTH_USERS)
+                .set(AUTH_USERS.LAST_LOGIN_AT, TimestampGuards.atLeast(AUTH_USERS.CREATED_AT, lastLoginAt))
+                .set(AUTH_USERS.UPDATED_AT, TimestampGuards.atLeast(AUTH_USERS.CREATED_AT, lastLoginAt))
+                .set(AUTH_USERS.VERSION, AUTH_USERS.VERSION.plus(1L))
                 .where(AUTH_USERS.ID.eq(id)).and(AUTH_USERS.STATUS.eq(UserStatus.ACTIVE.name()))
                 .returning().fetchOptional(this::toDomain);
     }
     private AuthUser toDomain(AuthUsersRecord record) {
-        return new AuthUser(record.getId(), record.getPublicId(), record.getEmail(), record.getNormalizedEmail(),
+        return new AuthUser(record.getId(), record.getEmail(), record.getNormalizedEmail(),
                 UserStatus.valueOf(record.getStatus()), instant(record.getEmailVerifiedAt()), instant(record.getLastLoginAt()),
                 instant(record.getCreatedAt()), instant(record.getUpdatedAt()), record.getVersion());
     }

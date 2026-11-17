@@ -5,27 +5,38 @@ import com.smartrecruitment.core.shared.domain.ExternalAiConsent;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.Locale;
-import java.util.UUID;
 
-public record JobVersion(UUID publicId, int versionNumber, String title, String description,
+public record JobVersion(Long id, int versionNumber, String title, String description,
                          String requirementsText, String benefitsText, String locationText,
                          String countryCode, WorkMode workMode, EmploymentType employmentType,
                          String seniorityLevel, int openings, BigDecimal salaryMin, BigDecimal salaryMax,
                          String salaryCurrency, String salaryPeriod, boolean salaryNegotiable,
-                         OffsetDateTime applicationDeadline, String sourceHash, UUID createdByUserId, ExternalAiConsent externalAiConsent) {
-    public JobVersion(UUID publicId, int versionNumber, String title, String description,
+                         OffsetDateTime applicationDeadline, String sourceHash, Long createdByUserId, ExternalAiConsent externalAiConsent, JobCategorySnapshot category) {
+    public JobVersion(Long id, int versionNumber, String title, String description,
                       String requirementsText, String benefitsText, String locationText,
                       String countryCode, WorkMode workMode, EmploymentType employmentType,
                       String seniorityLevel, int openings, BigDecimal salaryMin, BigDecimal salaryMax,
                       String salaryCurrency, String salaryPeriod, boolean salaryNegotiable,
-                      OffsetDateTime applicationDeadline, String sourceHash, UUID createdByUserId) {
-        this(publicId, versionNumber, title, description, requirementsText, benefitsText, locationText,
+                      OffsetDateTime applicationDeadline, String sourceHash, Long createdByUserId) {
+        this(id, versionNumber, title, description, requirementsText, benefitsText, locationText,
                 countryCode, workMode, employmentType, seniorityLevel, openings, salaryMin, salaryMax,
                 salaryCurrency, salaryPeriod, salaryNegotiable, applicationDeadline, sourceHash,
                 createdByUserId, ExternalAiConsent.declined());
     }
+    public JobVersion(Long id, int versionNumber, String title, String description,
+                      String requirementsText, String benefitsText, String locationText,
+                      String countryCode, WorkMode workMode, EmploymentType employmentType,
+                      String seniorityLevel, int openings, BigDecimal salaryMin, BigDecimal salaryMax,
+                      String salaryCurrency, String salaryPeriod, boolean salaryNegotiable,
+                      OffsetDateTime applicationDeadline, String sourceHash, Long createdByUserId, ExternalAiConsent externalAiConsent) {
+        this(id, versionNumber, title, description, requirementsText, benefitsText, locationText,
+                countryCode, workMode, employmentType, seniorityLevel, openings, salaryMin, salaryMax,
+                salaryCurrency, salaryPeriod, salaryNegotiable, applicationDeadline, sourceHash,
+                createdByUserId, externalAiConsent, JobCategorySnapshot.legacyIt(title));
+    }
     public JobVersion {
         java.util.Objects.requireNonNull(externalAiConsent, "externalAiConsent");
+        java.util.Objects.requireNonNull(category, "category");
         title = required(title, "title");
         description = required(description, "description");
         requirementsText = required(requirementsText, "requirementsText");

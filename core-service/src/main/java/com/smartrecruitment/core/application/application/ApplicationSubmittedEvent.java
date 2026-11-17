@@ -6,7 +6,7 @@ import java.time.OffsetDateTime;
 import java.util.Objects;
 import java.util.UUID;
 
-public record ApplicationSubmittedEvent(UUID applicationId, UUID cvVersionId, UUID jobVersionId,
+public record ApplicationSubmittedEvent(Long applicationId, Long cvVersionId, Long jobVersionId,
                                         UUID correlationId, OffsetDateTime occurredAt) {
     public ApplicationSubmittedEvent {
         Objects.requireNonNull(applicationId, "applicationId");
@@ -17,7 +17,7 @@ public record ApplicationSubmittedEvent(UUID applicationId, UUID cvVersionId, UU
     }
 
     public static ApplicationSubmittedEvent from(Application application, UUID correlationId) {
-        return new ApplicationSubmittedEvent(application.publicId(), application.cvVersionId(),
+        return new ApplicationSubmittedEvent(application.id(), application.cvVersionId(),
                 application.jobVersionId(), correlationId, OffsetDateTime.now());
     }
 }

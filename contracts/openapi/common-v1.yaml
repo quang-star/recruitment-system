@@ -5,6 +5,20 @@ info:
 paths: {}
 components:
   parameters:
+    Page:
+      name: page
+      in: query
+      description: Zero-based page; its presence selects the paged response instead of the legacy array.
+      schema: { type: integer, minimum: 0, maximum: 100000 }
+    PageSize:
+      name: size
+      in: query
+      description: Defaults to 12 for jobs and 10 for applications; used with page.
+      schema: { type: integer, minimum: 1, maximum: 100 }
+    SearchText:
+      name: q
+      in: query
+      schema: { type: string, maxLength: 200 }
     CorrelationId:
       name: X-Correlation-Id
       in: header
@@ -21,6 +35,8 @@ components:
         minLength: 1
         maxLength: 200
   schemas:
+    PageResponse:
+      $ref: ../schemas/page-response-v1.schema.json
     ApiError:
       type: object
       additionalProperties: false

@@ -1,6 +1,6 @@
+from identity_fixtures import legacy_id, new_id
 from datetime import UTC, datetime
 from copy import deepcopy
-from uuid import UUID, uuid4
 
 import pytest
 
@@ -9,7 +9,7 @@ from app.jd.parser import parse_jd
 from app.jd.repository import ParsedJdRevisionRecord, ParsedJdRevisionRepository
 
 
-JOB_VERSION_ID = UUID("779494ac-c858-4570-a884-6e88423b8e2b")
+JOB_VERSION_ID = int(str(legacy_id('779494ac-c858-4570-a884-6e88423b8e2b')))
 SOURCE_HASH = "0cb83583181fc5bdb09aa37cf82ab5f89e7438e88925de3e6e1f0f0eddb76382"
 
 
@@ -61,7 +61,7 @@ def test_recruiter_edit_normalizes_known_and_preserves_unknown_skill() -> None:
 
     assert validated["requirements"]["preferredSkills"][0]["normalizationStatus"] == "KNOWN"
     assert validated["requirements"]["preferredSkills"][0]["canonicalSkillId"] == \
-        "d4f49f3b-a28e-5fd3-b558-94beba4054c0"
+        str(legacy_id('d4f49f3b-a28e-5fd3-b558-94beba4054c0'))
     assert validated["requirements"]["preferredSkills"][1]["normalizationStatus"] == "PENDING"
     assert validated["requirements"]["preferredSkills"][1]["canonicalSkillId"] is None
     assert validated["requirements"]["preferredSkills"][0]["confirmedByRecruiter"] is True
@@ -72,7 +72,7 @@ def test_public_parsed_jd_api_does_not_accept_raw_jd_upserts() -> None:
     methods = {
         method
         for route in router.routes
-        if route.path == "/api/v1/parsed-jds/{job_version_id}"
+        if route.path == "/api/v2/parsed-jds/{job_version_id}"
         for method in route.methods
     }
 
@@ -80,12 +80,11 @@ def test_public_parsed_jd_api_does_not_accept_raw_jd_upserts() -> None:
 
 
 def test_confirmation_rejects_a_stale_revision() -> None:
-    latest_id = uuid4()
-    owner_id = uuid4()
+    latest_id = new_id()
+    owner_id = new_id()
     latest = ParsedJdRevisionRecord(
-        id=9,
-        public_id=latest_id,
-        job_id=uuid4(),
+        id=latest_id,
+        job_id=new_id(),
         job_version_id=JOB_VERSION_ID,
         owner_user_id=owner_id,
         revision_number=2,
@@ -101,7 +100,49 @@ def test_confirmation_rejects_a_stale_revision() -> None:
     repository = ParsedJdRevisionRepository(_ScalarSession(latest))
 
     with pytest.raises(ValueError, match="stale"):
-        repository.confirm(JOB_VERSION_ID, owner_id, uuid4(), owner_id)
+        repository.confirm(JOB_VERSION_ID, owner_id, new_id(), owner_id)
+
+
+def test_confirmation_and_supersede_respect_timestamp_constraint_under_clock_rollback() -> None:
+    from sqlalchemy import CheckConstraint, MetaData, create_engine
+    from sqlalchemy.orm import Session
+    from app.jd.repository import ParsedJdHeadRecord
+
+    engine = create_engine("sqlite://")
+    metadata = MetaData()
+    rev_table = ParsedJdRevisionRecord.__table__.to_metadata(metadata)
+    rev_table.append_constraint(CheckConstraint("updated_at >= created_at", name="ck_parsed_jd_revisions_timestamps"))
+    ParsedJdHeadRecord.__table__.to_metadata(metadata)
+    metadata.create_all(engine)
+    future = datetime(2100, 1, 2, 9)
+    owner = new_id()
+    job_id = new_id()
+    try:
+        with Session(engine) as session:
+            rev1 = ParsedJdRevisionRecord(
+                id=1, job_id=job_id, job_version_id=JOB_VERSION_ID, owner_user_id=owner,
+                revision_number=1, source_hash=SOURCE_HASH, payload=payload(),
+                status="PARSED", created_at=future, updated_at=future, version=0,
+            )
+            session.add(rev1)
+            session.commit()
+            confirmed1 = ParsedJdRevisionRepository(session).confirm(JOB_VERSION_ID, owner, rev1.id, owner)
+            session.commit()
+            assert confirmed1.confirmed_at is not None
+            assert confirmed1.confirmed_at.astimezone(UTC) >= future.astimezone(UTC)
+            rev2 = ParsedJdRevisionRecord(
+                id=2, job_id=job_id, job_version_id=JOB_VERSION_ID, owner_user_id=owner,
+                revision_number=2, source_hash="b" * 64, payload=payload(),
+                status="PARSED", created_at=future, updated_at=future, version=0,
+            )
+            session.add(rev2)
+            session.commit()
+            confirmed2 = ParsedJdRevisionRepository(session).confirm(JOB_VERSION_ID, owner, rev2.id, owner)
+            session.commit()
+            assert confirmed2.confirmed_at is not None
+            assert confirmed2.confirmed_at.astimezone(UTC) >= future.astimezone(UTC)
+    finally:
+        engine.dispose()
 
 
 class _ScalarSession:

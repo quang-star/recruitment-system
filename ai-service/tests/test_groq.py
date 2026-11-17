@@ -1,3 +1,4 @@
+from identity_fixtures import legacy_id
 from copy import deepcopy
 from io import BytesIO
 import json
@@ -10,13 +11,13 @@ from pydantic import SecretStr
 from app.jd.parser import parse_jd
 from app.cv.parser import parse_pdf
 from app.shared.config import Settings
-from app.shared.extraction import get_provider
-from app.shared.gemini import GeminiExtractor
-from app.shared.groq import GroqExtractor
-from app.shared import groq
+from app.extraction.policy import get_provider
+from app.extraction.gemini import GeminiExtractor
+from app.extraction.groq import GroqExtractor
+from app.extraction import groq
 
 
-VERSION = "779494ac-c858-4570-a884-6e88423b8e2b"
+VERSION = str(legacy_id('779494ac-c858-4570-a884-6e88423b8e2b'))
 
 
 def test_default_runtime_routes_cv_and_jd_to_groq_when_both_providers_are_available():

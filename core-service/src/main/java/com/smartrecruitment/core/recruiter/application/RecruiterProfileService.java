@@ -5,7 +5,6 @@ import com.smartrecruitment.core.recruiter.domain.RecruiterProfile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.UUID;
 
 @Service
 public class RecruiterProfileService {
@@ -16,12 +15,12 @@ public class RecruiterProfileService {
     }
 
     @Transactional(readOnly = true)
-    public RecruiterProfile getMine(UUID userId) {
+    public RecruiterProfile getMine(Long userId) {
         return profiles.findByUserId(userId).orElseThrow(RecruiterProfileNotFoundException::new);
     }
 
     @Transactional
-    public RecruiterProfile putMine(UUID userId, String displayName, String businessTitle,
+    public RecruiterProfile putMine(Long userId, String displayName, String businessTitle,
                                     String businessPhone, Long expectedVersion) {
         return profiles.findByUserId(userId)
                 .map(existing -> update(existing, displayName, businessTitle, businessPhone, expectedVersion))

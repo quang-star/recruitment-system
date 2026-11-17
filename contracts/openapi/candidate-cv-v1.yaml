@@ -76,6 +76,34 @@ paths:
         '403': { description: Candidate role required }
         '404': { description: Owned CV not found }
         '409': { description: CV_RETRY_CONFLICT - stale or ineligible version/state }
+  /api/v1/cvs/{cvId}/file:
+    get:
+      summary: Download the exact active version of an owned CV for review
+      description: >-
+        Candidate role and ownership required. Deleted, superseded, inactive or
+        mismatched versions return 404 before object storage is accessed.
+        No storage key or presigned URL is exposed. Response is not cacheable.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: cvId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: cvVersionId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Original PDF, Cache-Control no-store
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        '400': { description: Invalid identifiers }
+        '401': { description: Valid bearer token required }
+        '403': { description: Candidate role required }
+        '404': { description: Owned active CV version not found }
+        '503': { description: Source storage temporarily unavailable }
 components:
   securitySchemes:
     bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }

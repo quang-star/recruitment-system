@@ -11,6 +11,11 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,7 +33,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/cvs")
+@RequestMapping("/api/v2/cvs")
 public class CandidateCvController {
     private final CvService cvs;
 
@@ -54,22 +59,36 @@ public class CandidateCvController {
         return cvs.listMine(userId(jwt)).stream().map(CandidateCvResponse::from).toList();
     }
 
-    public record RetryCvRequest(@NotNull UUID cvVersionId, @NotNull @Min(0) Long expectedVersion) { }
+    public record RetryCvRequest(@NotNull Long cvVersionId, @NotNull @Min(0) Long expectedVersion) { }
 
     @PostMapping("/{cvId}/retry")
     @ResponseStatus(HttpStatus.ACCEPTED)
     public CandidateCvResponse retry(@AuthenticationPrincipal Jwt jwt, HttpServletRequest request,
-                                      @PathVariable UUID cvId, @Valid @RequestBody RetryCvRequest body) {
+                                      @PathVariable Long cvId, @Valid @RequestBody RetryCvRequest body) {
         return CandidateCvResponse.from(cvs.retry(userId(jwt), cvId, body.cvVersionId(), body.expectedVersion(),
                 UUID.fromString(CorrelationIdFilter.current(request))));
     }
 
     @GetMapping("/{cvId}")
-    public CandidateCvResponse get(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID cvId) {
+    public CandidateCvResponse get(@AuthenticationPrincipal Jwt jwt, @PathVariable Long cvId) {
         return CandidateCvResponse.from(cvs.getMine(userId(jwt), cvId));
     }
 
-    private static UUID userId(Jwt jwt) {
-        return UUID.fromString(jwt.getSubject());
+    @GetMapping(value = "/{cvId}/file", produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<InputStreamResource> file(@AuthenticationPrincipal Jwt jwt,
+                                                      @PathVariable Long cvId,
+                                                      @RequestParam Long cvVersionId) {
+        var download = cvs.downloadMine(userId(jwt), cvId, cvVersionId);
+        // Avoid asynchronous header/commit races while retaining bounded-memory streaming.
+        var body = new InputStreamResource(download.content());
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_PDF).contentLength(download.sizeBytes())
+                .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
+                        .filename(download.originalFilename(), java.nio.charset.StandardCharsets.UTF_8).build().toString())
+                .body(body);
+    }
+
+    private static Long userId(Jwt jwt) {
+        return com.smartrecruitment.core.shared.api.SubjectId.parse(jwt.getSubject());
     }
 }

@@ -6,6 +6,7 @@ import com.nimbusds.jose.proc.SecurityContext;
 import com.smartrecruitment.auth.user.application.AuthTokenProperties;
 import com.smartrecruitment.auth.user.application.port.AccessTokenIssuer;
 import com.smartrecruitment.auth.user.domain.AuthUser;
+import com.smartrecruitment.auth.shared.api.SubjectId;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -63,7 +64,15 @@ public class AuthSecurityConfig {
                 : OAuth2TokenValidatorResult.failure(
                         new OAuth2Error("invalid_token", "JWT audience is not accepted", null));
         decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(
-                JwtValidators.createDefaultWithIssuer(properties.jwt().issuer()), audienceValidator));
+                JwtValidators.createDefaultWithIssuer(properties.jwt().issuer()), audienceValidator,
+                jwt -> {
+                    try {
+                        SubjectId.parse(jwt.getSubject());
+                        return OAuth2TokenValidatorResult.success();
+                    } catch (org.springframework.security.oauth2.server.resource.InvalidBearerTokenException exception) {
+                        return OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token", exception.getMessage(), null));
+                    }
+                }));
         return decoder;
     }
 
@@ -73,7 +82,7 @@ public class AuthSecurityConfig {
             Instant expiresAt = issuedAt.plus(properties.jwt().accessTokenTtl());
             JwtClaimsSet claims = JwtClaimsSet.builder().issuer(properties.jwt().issuer())
                     .audience(List.of(properties.jwt().audience()))
-                    .subject(user.publicId().toString()).claim("email", user.email()).claim("roles", roles)
+                    .subject(user.id().toString()).claim("email", user.email()).claim("roles", roles)
                     .issuedAt(issuedAt).expiresAt(expiresAt).id(UUID.randomUUID().toString()).build();
             String value = encoder.encode(JwtEncoderParameters.from(
                     JwsHeader.with(SignatureAlgorithm.RS256).keyId(signingKey.getKeyID()).build(), claims)).getTokenValue();
@@ -93,19 +102,22 @@ public class AuthSecurityConfig {
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.csrf(csrf -> csrf.ignoringRequestMatchers("/api/v1/auth/**"))
+        http.csrf(csrf -> csrf.ignoringRequestMatchers("/api/v2/auth/**"))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.POST,
-                                "/api/v1/auth/register",
-                                "/api/v1/auth/verify-email",
-                                "/api/v1/auth/resend-verification",
-                                "/api/v1/auth/forgot-password",
-                                "/api/v1/auth/reset-password",
-                                "/api/v1/auth/login",
-                                "/api/v1/auth/refresh",
-                                "/api/v1/auth/logout").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/.well-known/jwks.json", "/actuator/health").permitAll()
+                                "/api/v2/auth/register",
+                                "/api/v2/auth/verify-email",
+                                "/api/v2/auth/resend-verification",
+                                "/api/v2/auth/forgot-password",
+                                "/api/v2/auth/reset-password",
+                                "/api/v2/auth/login",
+                                "/api/v2/auth/google/login",
+                                "/api/v2/auth/google/challenge",
+                                "/api/v2/auth/refresh",
+                                "/api/v2/auth/logout").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/.well-known/jwks.json", "/actuator/health",
+                                "/api/v2/auth/google/config").permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt ->
                         jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())));

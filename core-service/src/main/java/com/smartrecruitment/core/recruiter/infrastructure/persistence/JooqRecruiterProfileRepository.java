@@ -2,13 +2,13 @@ package com.smartrecruitment.core.recruiter.infrastructure.persistence;
 
 import com.smartrecruitment.core.recruiter.application.port.RecruiterProfileRepository;
 import com.smartrecruitment.core.recruiter.domain.RecruiterProfile;
+import com.smartrecruitment.core.shared.infrastructure.persistence.TimestampGuards;
 import org.jooq.DSLContext;
 import org.springframework.stereotype.Repository;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Optional;
-import java.util.UUID;
 
 import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.RecruiterProfiles.RECRUITER_PROFILES;
 
@@ -21,7 +21,7 @@ public class JooqRecruiterProfileRepository implements RecruiterProfileRepositor
     }
 
     @Override
-    public Optional<RecruiterProfile> findByUserId(UUID userId) {
+    public Optional<RecruiterProfile> findByUserId(Long userId) {
         return dsl.selectFrom(RECRUITER_PROFILES)
                 .where(RECRUITER_PROFILES.USER_ID.eq(userId))
                 .and(RECRUITER_PROFILES.DELETED_AT.isNull())
@@ -32,7 +32,7 @@ public class JooqRecruiterProfileRepository implements RecruiterProfileRepositor
     public RecruiterProfile insert(RecruiterProfile profile) {
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
         var record = dsl.insertInto(RECRUITER_PROFILES)
-                .set(RECRUITER_PROFILES.PUBLIC_ID, profile.publicId())
+
                 .set(RECRUITER_PROFILES.USER_ID, profile.userId())
                 .set(RECRUITER_PROFILES.DISPLAY_NAME, profile.displayName())
                 .set(RECRUITER_PROFILES.BUSINESS_TITLE, profile.businessTitle())
@@ -52,7 +52,7 @@ public class JooqRecruiterProfileRepository implements RecruiterProfileRepositor
                 .set(RECRUITER_PROFILES.DISPLAY_NAME, profile.displayName())
                 .set(RECRUITER_PROFILES.BUSINESS_TITLE, profile.businessTitle())
                 .set(RECRUITER_PROFILES.BUSINESS_PHONE, profile.businessPhone())
-                .set(RECRUITER_PROFILES.UPDATED_AT, OffsetDateTime.now(ZoneOffset.UTC))
+                .set(RECRUITER_PROFILES.UPDATED_AT, TimestampGuards.atLeast(RECRUITER_PROFILES.CREATED_AT, OffsetDateTime.now(ZoneOffset.UTC)))
                 .set(RECRUITER_PROFILES.VERSION, RECRUITER_PROFILES.VERSION.plus(1L))
                 .where(RECRUITER_PROFILES.USER_ID.eq(profile.userId()))
                 .and(RECRUITER_PROFILES.VERSION.eq(expectedVersion))
@@ -64,7 +64,7 @@ public class JooqRecruiterProfileRepository implements RecruiterProfileRepositor
 
     private RecruiterProfile toDomain(
             com.smartrecruitment.core.infrastructure.jooq.generated.tables.records.RecruiterProfilesRecord record) {
-        return new RecruiterProfile(record.getPublicId(), record.getUserId(), record.getDisplayName(),
+        return new RecruiterProfile(record.getId(), record.getUserId(), record.getDisplayName(),
                 record.getBusinessTitle(), record.getBusinessPhone(), record.getVersion());
     }
 }

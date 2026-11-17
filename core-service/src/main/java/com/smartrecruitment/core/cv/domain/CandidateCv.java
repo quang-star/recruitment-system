@@ -1,12 +1,11 @@
 package com.smartrecruitment.core.cv.domain;
 
 import java.util.Objects;
-import java.util.UUID;
 
-public record CandidateCv(UUID publicId, UUID candidateUserId, String title, CvStatus status,
+public record CandidateCv(Long id, Long candidateUserId, String title, CvStatus status,
                           CvVersion activeVersion, long version) {
     public CandidateCv {
-        Objects.requireNonNull(publicId, "publicId");
+        Objects.requireNonNull(id, "id");
         Objects.requireNonNull(candidateUserId, "candidateUserId");
         if (title == null || title.isBlank()) throw new IllegalArgumentException("title must not be blank");
         title = title.trim();
@@ -16,7 +15,7 @@ public record CandidateCv(UUID publicId, UUID candidateUserId, String title, CvS
         if (version < 0) throw new IllegalArgumentException("version must not be negative");
     }
 
-    public static CandidateCv uploaded(UUID candidateUserId, String title, CvVersion version) {
-        return new CandidateCv(UUID.randomUUID(), candidateUserId, title, CvStatus.ACTIVE, version, 0);
+    public static CandidateCv uploaded(Long candidateUserId, String title, CvVersion version) {
+        return new CandidateCv(0L, candidateUserId, title, CvStatus.ACTIVE, version, 0);
     }
 }

@@ -1,9 +1,9 @@
 """Opt-in against an isolated disposable database, never the application DB."""
+from uuid import UUID, uuid4
 import asyncio
 import os
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock
-from uuid import UUID, uuid4
 
 import pytest
 from sqlalchemy import create_engine, select

@@ -1,14 +1,35 @@
 package com.smartrecruitment.core.application.domain;
 
 import java.time.OffsetDateTime;
-import java.util.UUID;
 
-public record Application(UUID publicId, UUID candidateUserId, UUID companyId, UUID cvId, UUID cvVersionId,
-                          UUID jobId, UUID jobVersionId, String coverLetter,
+public record Application(Long id, Long candidateUserId, Long companyId, Long cvId, Long cvVersionId,
+                          Long jobId, Long jobVersionId, String coverLetter,
+                          ApplicationStatus status, ApplicationSource source,
+                          OffsetDateTime appliedAt, OffsetDateTime updatedAt, long version, boolean matchingSupported, boolean cvAccessGranted,
+                          String jobTitle, String companyName, String candidateName, String candidateHeadline,
+                          String candidateEmail, String candidatePhone) {
+    public Application(Long id, Long candidateUserId, Long companyId, Long cvId, Long cvVersionId,
+                       Long jobId, Long jobVersionId, String coverLetter, ApplicationStatus status, ApplicationSource source,
+                       OffsetDateTime appliedAt, OffsetDateTime updatedAt, long version, boolean matchingSupported, boolean cvAccessGranted) {
+        this(id, candidateUserId, companyId, cvId, cvVersionId, jobId, jobVersionId, coverLetter, status, source,
+                appliedAt, updatedAt, version, matchingSupported, cvAccessGranted, null, null, null, null, null, null);
+    }
+    public Application(Long id, Long candidateUserId, Long companyId, Long cvId, Long cvVersionId,
+                          Long jobId, Long jobVersionId, String coverLetter,
                           ApplicationStatus status, ApplicationSource source,
                           OffsetDateTime appliedAt, OffsetDateTime updatedAt, long version) {
+        this(id, candidateUserId, companyId, cvId, cvVersionId, jobId, jobVersionId, coverLetter, status, source, appliedAt, updatedAt, version, true, true);
+    }
+
+    public Application(Long id, Long candidateUserId, Long companyId, Long cvId, Long cvVersionId,
+                          Long jobId, Long jobVersionId, String coverLetter,
+                          ApplicationStatus status, ApplicationSource source,
+                          OffsetDateTime appliedAt, OffsetDateTime updatedAt, long version, boolean matchingSupported) {
+        this(id, candidateUserId, companyId, cvId, cvVersionId, jobId, jobVersionId, coverLetter, status, source, appliedAt, updatedAt, version, matchingSupported, true);
+    }
+
     public Application {
-        if (publicId == null || candidateUserId == null || companyId == null || cvId == null || cvVersionId == null
+        if (id == null || candidateUserId == null || companyId == null || cvId == null || cvVersionId == null
                 || jobId == null || jobVersionId == null) throw new IllegalArgumentException("Application snapshot is required");
         if (coverLetter != null) {
             coverLetter = coverLetter.trim();

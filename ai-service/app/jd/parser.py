@@ -1,14 +1,16 @@
 from __future__ import annotations
 
+from app.shared.identities import parse_id
 import re
 from typing import Any
 from uuid import UUID, uuid5
 
 from app.taxonomy.normalizer import extract_known_skills, taxonomy_version
-from app.shared.evidence import attach_source_evidence, skill_locations
+from app.taxonomy.roles import role_family, role_level
+from app.extraction.evidence import attach_source_evidence, skill_locations
 
 
-PARSER_VERSION = "rules-v0.4.1"
+PARSER_VERSION = "rules-v0.4.2"
 _EVIDENCE_NAMESPACE = UUID("6d3d1b4f-1d29-4eaa-8a8f-bcc2a66f7ce4")
 _PREFERRED_MARKERS = ("nice to have", "preferred", "ưu tiên", "lợi thế", "điểm cộng")
 
@@ -20,7 +22,7 @@ def parse_jd(job_version_id: str, source_hash: str, title: str,
     The parser only emits a canonical skill when an exact taxonomy alias is found.
     Unknown terms are intentionally left out instead of inventing taxonomy IDs.
     """
-    UUID(job_version_id)
+    parse_id(job_version_id)
     combined = f"{title}\n{description}\n{requirements_text}"
     lowered = combined.casefold()
     language = "vi" if any(character in lowered for character in "ăâđêôơư") else "en"
@@ -48,8 +50,8 @@ def parse_jd(job_version_id: str, source_hash: str, title: str,
     if not responsibilities:
         quality_flags.append("NO_RESPONSIBILITIES")
     payload: dict[str, Any] = {
-        "$schema": "https://smart-recruitment.local/contracts/schemas/parsed-jd-v1.schema.json",
-        "schemaVersion": "parsed-jd/1.0",
+        "$schema": "https://smart-recruitment.local/contracts/schemas/parsed-jd-v2.schema.json",
+        "schemaVersion": "parsed-jd/2.0",
         "document": {
             "jobVersionId": job_version_id,
             "language": language,
@@ -183,20 +185,8 @@ def _language_requirements(job_version_id: str, text: str) -> list[dict[str, obj
 
 
 def _family(title: str) -> str:
-    lowered = title.casefold()
-    for marker, family in (("backend", "BACKEND"), ("front-end", "FRONTEND"), ("frontend", "FRONTEND"),
-                           ("fullstack", "FULLSTACK"), ("full stack", "FULLSTACK"), ("mobile", "MOBILE"),
-                           ("devops", "DEVOPS"), ("data", "DATA_AI"), ("qa", "QA"), ("security", "SECURITY")):
-        if marker in lowered:
-            return family
-    return "OTHER"
+    return role_family(title)
 
 
 def _level(title: str) -> str | None:
-    lowered = title.casefold()
-    for marker, level in (("intern", "INTERN"), ("fresher", "FRESHER"), ("junior", "JUNIOR"),
-                          ("middle", "MIDDLE"), ("mid-level", "MIDDLE"), ("senior", "SENIOR"),
-                          ("lead", "LEAD"), ("manager", "MANAGER")):
-        if marker in lowered:
-            return level
-    return None
+    return role_level(title)

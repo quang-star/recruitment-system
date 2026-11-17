@@ -32,20 +32,23 @@ public class GatewaySecurityConfig {
                 .authorizeExchange(authorize -> authorize
                         .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .pathMatchers(HttpMethod.POST,
-                                "/api/v1/auth/register",
-                                "/api/v1/auth/verify-email",
-                                "/api/v1/auth/resend-verification",
-                                "/api/v1/auth/forgot-password",
-                                "/api/v1/auth/reset-password",
-                                "/api/v1/auth/login",
-                                "/api/v1/auth/refresh",
-                                "/api/v1/auth/logout").permitAll()
-                        .pathMatchers(HttpMethod.GET, "/.well-known/jwks.json", "/actuator/health").permitAll()
-                        .pathMatchers("/api/v1/candidates/**", "/api/v1/cvs/**", "/api/v1/candidate/**",
-                                "/api/v1/parsed-cvs/**").hasRole("CANDIDATE")
-                        .pathMatchers("/api/v1/recruiter/**", "/api/v1/companies/**", "/api/v1/jobs/**",
-                                "/api/v1/parsed-jds/**").hasRole("RECRUITER")
-                        .pathMatchers("/api/v1/applications/**").hasAnyRole("CANDIDATE", "RECRUITER")
+                                "/api/v2/auth/register",
+                                "/api/v2/auth/verify-email",
+                                "/api/v2/auth/resend-verification",
+                                "/api/v2/auth/forgot-password",
+                                "/api/v2/auth/reset-password",
+                                "/api/v2/auth/login",
+                                "/api/v2/auth/google/login",
+                                "/api/v2/auth/google/challenge",
+                                "/api/v2/auth/refresh",
+                                "/api/v2/auth/logout").permitAll()
+                        .pathMatchers(HttpMethod.GET, "/.well-known/jwks.json", "/actuator/health", "/api/v2/public/**",
+                                "/api/v2/auth/google/config").permitAll()
+                        .pathMatchers("/api/v2/candidates/**", "/api/v2/cvs/**", "/api/v2/candidate/**",
+                                "/api/v2/parsed-cvs/**").hasRole("CANDIDATE")
+                        .pathMatchers("/api/v2/recruiter/**", "/api/v2/companies/**", "/api/v2/jobs/**",
+                                "/api/v2/parsed-jds/**").hasRole("RECRUITER")
+                        .pathMatchers("/api/v2/applications/**").hasAnyRole("CANDIDATE", "RECRUITER")
                         .anyExchange().authenticated())
                 .oauth2ResourceServer(resourceServer -> resourceServer.jwt(jwt ->
                         jwt.jwtAuthenticationConverter(jwtAuthenticationConverter)))
@@ -72,7 +75,22 @@ public class GatewaySecurityConfig {
                 : OAuth2TokenValidatorResult.failure(
                         new OAuth2Error("invalid_token", "JWT audience is not accepted", null));
         decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(
-                JwtValidators.createDefaultWithIssuer(issuer), audienceValidator));
+                JwtValidators.createDefaultWithIssuer(issuer), audienceValidator, subjectValidator()));
         return decoder;
+    }
+
+    static OAuth2TokenValidator<Jwt> subjectValidator() {
+        return jwt -> {
+            String subject = jwt.getSubject();
+            if (subject != null && subject.matches("[1-9][0-9]{0,18}")) {
+                try {
+                    Long.parseLong(subject);
+                    return OAuth2TokenValidatorResult.success();
+                } catch (NumberFormatException ignored) {
+                    // Signed BIGINT overflow is not a business identity.
+                }
+            }
+            return OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token", "Invalid account identity", null));
+        };
     }
 }

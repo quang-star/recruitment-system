@@ -12,7 +12,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -95,7 +94,6 @@ class AuthRegistrationServiceTests {
                         public AuthUser insert(AuthUser pending) {
                             user = new AuthUser(
                                     1L,
-                                    pending.publicId(),
                                     pending.email(),
                                     pending.normalizedEmail(),
                                     pending.status(),
@@ -115,9 +113,9 @@ class AuthRegistrationServiceTests {
                         }
 
                         @Override
-                        public Optional<AuthUser> findByPublicId(UUID publicId) {
+                        public Optional<AuthUser> findById(Long id) {
                             return Optional.ofNullable(user)
-                                    .filter(value -> value.publicId().equals(publicId));
+                                    .filter(value -> value.id().equals(id));
                         }
 
                         @Override
@@ -132,7 +130,6 @@ class AuthRegistrationServiceTests {
                             }
                             user = new AuthUser(
                                     user.id(),
-                                    user.publicId(),
                                     user.email(),
                                     user.normalizedEmail(),
                                     UserStatus.ACTIVE,

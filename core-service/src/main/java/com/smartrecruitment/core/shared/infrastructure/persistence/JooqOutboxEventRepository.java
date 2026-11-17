@@ -1,0 +1,218 @@
+package com.smartrecruitment.core.shared.infrastructure.persistence;
+
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
+import com.smartrecruitment.core.cv.application.CvUploadedEvent;
+import com.smartrecruitment.core.application.application.ApplicationSubmittedEvent;
+import com.smartrecruitment.core.job.application.JobVersionSubmittedEvent;
+import com.smartrecruitment.core.shared.application.port.OutboxEventRepository;
+import org.jooq.DSLContext;
+import org.jooq.JSON;
+import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Duration;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.List;
+import java.util.UUID;
+
+import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.OutboxEvents.OUTBOX_EVENTS;
+
+@Repository
+public class JooqOutboxEventRepository implements OutboxEventRepository {
+    private final DSLContext dsl;
+    private final ObjectMapper objectMapper;
+
+    public JooqOutboxEventRepository(DSLContext dsl, ObjectMapper objectMapper) {
+        this.dsl = dsl;
+        this.objectMapper = objectMapper;
+    }
+
+    @Override
+    public void append(CvUploadedEvent event) {
+        try {
+            String payload = objectMapper.writeValueAsString(eventPayload(event));
+            OffsetDateTime availableAt = TimestampGuards.laterOf(event.occurredAt(), OffsetDateTime.now(ZoneOffset.UTC));
+            dsl.insertInto(OUTBOX_EVENTS)
+                    .set(OUTBOX_EVENTS.EVENT_ID, UUID.randomUUID())
+                    .set(OUTBOX_EVENTS.AGGREGATE_TYPE, "CV")
+                    .set(OUTBOX_EVENTS.AGGREGATE_ID, event.cvId())
+                    .set(OUTBOX_EVENTS.AGGREGATE_VERSION, Math.max(1L, event.processingGeneration()))
+                    .set(OUTBOX_EVENTS.EVENT_TYPE, "cv.uploaded.v2")
+                    .set(OUTBOX_EVENTS.SCHEMA_VERSION, (short) 2)
+                    .set(OUTBOX_EVENTS.IDEMPOTENCY_KEY, "cv.uploaded.v2:" + event.cvVersionId()
+                            + (event.processingGeneration() == 0 ? "" : ":retry:" + event.processingGeneration()))
+                    .set(OUTBOX_EVENTS.CORRELATION_ID, event.correlationId())
+                    .set(OUTBOX_EVENTS.PAYLOAD, JSON.json(payload))
+                    .set(OUTBOX_EVENTS.OCCURRED_AT, event.occurredAt())
+                    .set(OUTBOX_EVENTS.AVAILABLE_AT, availableAt)
+                    .set(OUTBOX_EVENTS.ATTEMPT_COUNT, 0)
+                    .execute();
+        } catch (JacksonException exception) {
+            throw new IllegalStateException("Could not serialize CV upload event", exception);
+        }
+    }
+
+    @Override
+    public void append(com.smartrecruitment.core.shared.application.PrivacyEvent event) {
+        String payload = objectMapper.writeValueAsString(event.payload());
+        dsl.insertInto(OUTBOX_EVENTS).set(OUTBOX_EVENTS.EVENT_ID, UUID.randomUUID())
+                .set(OUTBOX_EVENTS.AGGREGATE_TYPE, event.eventType().startsWith("cv.") ? "CV" : "APPLICATION")
+                .set(OUTBOX_EVENTS.AGGREGATE_ID, event.resourceId()).set(OUTBOX_EVENTS.AGGREGATE_VERSION, 1L)
+                .set(OUTBOX_EVENTS.EVENT_TYPE, event.eventType()).set(OUTBOX_EVENTS.SCHEMA_VERSION, (short) 2)
+                .set(OUTBOX_EVENTS.IDEMPOTENCY_KEY, event.eventType() + ":" + event.resourceId())
+                .set(OUTBOX_EVENTS.CORRELATION_ID, event.correlationId()).set(OUTBOX_EVENTS.PAYLOAD, JSON.json(payload))
+                .set(OUTBOX_EVENTS.OCCURRED_AT, event.occurredAt()).set(OUTBOX_EVENTS.AVAILABLE_AT, event.occurredAt())
+                .set(OUTBOX_EVENTS.ATTEMPT_COUNT, 0).onConflictDoNothing().execute();
+    }
+
+    @Override
+    public void append(ApplicationSubmittedEvent event) {
+        try {
+            String payload = objectMapper.writeValueAsString(new Object() {
+                public final Long applicationId = event.applicationId();
+                public final Long cvVersionId = event.cvVersionId();
+                public final Long jobVersionId = event.jobVersionId();
+            });
+            OffsetDateTime availableAt = TimestampGuards.laterOf(event.occurredAt(), OffsetDateTime.now(ZoneOffset.UTC));
+            dsl.insertInto(OUTBOX_EVENTS)
+                    .set(OUTBOX_EVENTS.EVENT_ID, UUID.randomUUID())
+                    .set(OUTBOX_EVENTS.AGGREGATE_TYPE, "APPLICATION")
+                    .set(OUTBOX_EVENTS.AGGREGATE_ID, event.applicationId())
+                    .set(OUTBOX_EVENTS.AGGREGATE_VERSION, 0L)
+                    .set(OUTBOX_EVENTS.EVENT_TYPE, "application.submitted.v2")
+                    .set(OUTBOX_EVENTS.SCHEMA_VERSION, (short) 2)
+                    .set(OUTBOX_EVENTS.IDEMPOTENCY_KEY, "application.submitted.v2:" + event.applicationId())
+                    .set(OUTBOX_EVENTS.CORRELATION_ID, event.correlationId())
+                    .set(OUTBOX_EVENTS.PAYLOAD, JSON.json(payload))
+                    .set(OUTBOX_EVENTS.OCCURRED_AT, event.occurredAt())
+                    .set(OUTBOX_EVENTS.AVAILABLE_AT, availableAt)
+                    .set(OUTBOX_EVENTS.ATTEMPT_COUNT, 0)
+                    .execute();
+        } catch (JacksonException exception) {
+            throw new IllegalStateException("Could not serialize application submission event", exception);
+        }
+    }
+
+    @Override
+    public void append(JobVersionSubmittedEvent event) {
+        try {
+            String payload = objectMapper.writeValueAsString(new Object() {
+                public final Long jobId = event.jobId();
+                public final Long jobVersionId = event.jobVersionId();
+                public final Long recruiterUserId = event.recruiterUserId();
+                public final String matchingDomain = event.matchingDomain();
+                public final boolean externalAiConsent = event.externalAiConsent().granted();
+                public final String externalAiPolicyVersion = event.externalAiConsent().policyVersion();
+                public final String sourceHash = event.sourceHash();
+                public final String objectRef = event.objectRef();
+            });
+            OffsetDateTime availableAt = TimestampGuards.laterOf(event.occurredAt(), OffsetDateTime.now(ZoneOffset.UTC));
+            dsl.insertInto(OUTBOX_EVENTS)
+                    .set(OUTBOX_EVENTS.EVENT_ID, UUID.randomUUID())
+                    .set(OUTBOX_EVENTS.AGGREGATE_TYPE, "JOB")
+                    .set(OUTBOX_EVENTS.AGGREGATE_ID, event.jobId())
+                    .set(OUTBOX_EVENTS.AGGREGATE_VERSION, 0L)
+                    .set(OUTBOX_EVENTS.EVENT_TYPE, "job.version.submitted.v2")
+                    .set(OUTBOX_EVENTS.SCHEMA_VERSION, (short) 2)
+                    .set(OUTBOX_EVENTS.IDEMPOTENCY_KEY, "job.version.submitted.v2:" + event.jobVersionId())
+                    .set(OUTBOX_EVENTS.CORRELATION_ID, event.correlationId())
+                    .set(OUTBOX_EVENTS.PAYLOAD, JSON.json(payload))
+                    .set(OUTBOX_EVENTS.OCCURRED_AT, event.occurredAt())
+                    .set(OUTBOX_EVENTS.AVAILABLE_AT, availableAt)
+                    .set(OUTBOX_EVENTS.ATTEMPT_COUNT, 0)
+                    .execute();
+        } catch (JacksonException exception) {
+            throw new IllegalStateException("Could not serialize Job version submission event", exception);
+        }
+    }
+
+    @Transactional
+    public List<PendingOutboxEvent> claimPending(String workerId, int limit) {
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        OffsetDateTime staleBefore = now.minusSeconds(30);
+        var records = dsl.selectFrom(OUTBOX_EVENTS)
+                .where(OUTBOX_EVENTS.PUBLISHED_AT.isNull())
+                .and(OUTBOX_EVENTS.AVAILABLE_AT.le(now))
+                .and(OUTBOX_EVENTS.LOCKED_AT.isNull().or(OUTBOX_EVENTS.LOCKED_AT.lt(staleBefore)))
+                .orderBy(OUTBOX_EVENTS.OCCURRED_AT.asc())
+                .limit(limit)
+                .forUpdate()
+                .skipLocked()
+                .fetch();
+
+        records.forEach(record -> dsl.update(OUTBOX_EVENTS)
+                .set(OUTBOX_EVENTS.LOCKED_BY, workerId)
+                .set(OUTBOX_EVENTS.LOCKED_AT, now)
+                .set(OUTBOX_EVENTS.ATTEMPT_COUNT, OUTBOX_EVENTS.ATTEMPT_COUNT.add(1))
+                .where(OUTBOX_EVENTS.ID.eq(record.getId()))
+                .execute());
+
+        return records.map(record -> new PendingOutboxEvent(
+                record.getId(), record.getEventId(), record.getAggregateId(), record.getEventType(),
+                record.getSchemaVersion(), record.getIdempotencyKey(), record.getCorrelationId(),
+                record.getOccurredAt(), record.getPayload().data(), record.getAttemptCount() + 1));
+    }
+
+    @Transactional
+    public void markPublished(long id, String workerId) {
+        dsl.update(OUTBOX_EVENTS)
+                .set(OUTBOX_EVENTS.PUBLISHED_AT,
+                        TimestampGuards.atLeast(OUTBOX_EVENTS.OCCURRED_AT, OffsetDateTime.now(ZoneOffset.UTC)))
+                .set(OUTBOX_EVENTS.LOCKED_BY, (String) null)
+                .set(OUTBOX_EVENTS.LOCKED_AT, (OffsetDateTime) null)
+                .set(OUTBOX_EVENTS.LAST_ERROR_CODE, (String) null)
+                .set(OUTBOX_EVENTS.LAST_ERROR_AT, (OffsetDateTime) null)
+                .where(OUTBOX_EVENTS.ID.eq(id))
+                .and(OUTBOX_EVENTS.LOCKED_BY.eq(workerId))
+                .and(OUTBOX_EVENTS.PUBLISHED_AT.isNull())
+                .execute();
+    }
+
+    @Transactional
+    public void markFailed(long id, String workerId, String errorCode, Duration retryDelay) {
+        if (retryDelay == null || retryDelay.isNegative()) throw new IllegalArgumentException("Invalid outbox retry delay");
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        dsl.update(OUTBOX_EVENTS)
+                .set(OUTBOX_EVENTS.AVAILABLE_AT,
+                        TimestampGuards.atLeast(OUTBOX_EVENTS.OCCURRED_AT, now.plus(retryDelay)))
+                .set(OUTBOX_EVENTS.LOCKED_BY, (String) null)
+                .set(OUTBOX_EVENTS.LOCKED_AT, (OffsetDateTime) null)
+                .set(OUTBOX_EVENTS.LAST_ERROR_CODE, errorCode)
+                .set(OUTBOX_EVENTS.LAST_ERROR_AT, now)
+                .where(OUTBOX_EVENTS.ID.eq(id))
+                .and(OUTBOX_EVENTS.LOCKED_BY.eq(workerId))
+                .and(OUTBOX_EVENTS.PUBLISHED_AT.isNull())
+                .execute();
+    }
+
+    /** Removes delivered events in bounded batches; unpublished events are never deleted. */
+    @Transactional
+    public int deletePublishedBefore(OffsetDateTime cutoff, int limit) {
+        return dsl.deleteFrom(OUTBOX_EVENTS)
+                .where(OUTBOX_EVENTS.ID.in(dsl.select(OUTBOX_EVENTS.ID).from(OUTBOX_EVENTS)
+                        .where(OUTBOX_EVENTS.PUBLISHED_AT.lt(cutoff))
+                        .orderBy(OUTBOX_EVENTS.PUBLISHED_AT.asc())
+                        .limit(limit)))
+                .execute();
+    }
+
+    private static Object eventPayload(CvUploadedEvent event) {
+        return new Object() {
+            public final Long cvId = event.cvId();
+            public final Long cvVersionId = event.cvVersionId();
+            public final Long candidateUserId = event.candidateUserId();
+            public final String objectRef = event.objectRef();
+            public final String sourceHash = event.sourceHash();
+            public final long processingGeneration = event.processingGeneration();
+            public final boolean externalAiConsent = event.externalAiConsent().granted();
+            public final String externalAiPolicyVersion = event.externalAiConsent().policyVersion();
+        };
+    }
+
+    public record PendingOutboxEvent(long id, UUID eventId, Long aggregateId, String eventType,
+                                     short schemaVersion, String idempotencyKey, UUID correlationId,
+                                     OffsetDateTime occurredAt, String payload, int attemptCount) {
+    }
+}

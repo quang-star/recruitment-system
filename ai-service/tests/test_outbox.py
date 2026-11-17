@@ -28,7 +28,7 @@ def test_failure_survives_new_session_and_retry_preserves_event_id():
     sessions = factory()
     event = {"eventId": str(uuid4()), "payload": {"status": "CONFIRMED"}}
     with sessions.begin() as session:
-        enqueue(session, "cv.confirmed.v1", "cv-id", event)
+        enqueue(session, "cv.confirmed.v2", "cv-id", event)
     failed = AsyncMock()
     failed.send_and_wait.side_effect = TimeoutError("private broker detail")
     assert asyncio.run(publish_one(sessions, failed))

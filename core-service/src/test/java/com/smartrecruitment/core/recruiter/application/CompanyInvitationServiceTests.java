@@ -16,7 +16,6 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -28,7 +27,7 @@ class CompanyInvitationServiceTests {
     void invitationNormalizesEmailStoresOnlyHashAndSendsRawToken() {
         Fixture fixture = new Fixture();
 
-        CompanyInvitation invitation = fixture.service.invite(fixture.owner, fixture.company.publicId(),
+        CompanyInvitation invitation = fixture.service.invite(fixture.owner, fixture.company.id(),
                 " New.Recruiter@Example.COM ", "RECRUITER");
 
         assertThat(invitation.normalizedEmail()).isEqualTo("new.recruiter@example.com");
@@ -41,13 +40,13 @@ class CompanyInvitationServiceTests {
     @Test
     void duplicateActiveInvitationAndMismatchedJwtEmailAreRejected() {
         Fixture fixture = new Fixture();
-        fixture.service.invite(fixture.owner, fixture.company.publicId(), "member@example.com", "VIEWER");
+        fixture.service.invite(fixture.owner, fixture.company.id(), "member@example.com", "VIEWER");
 
-        assertThatThrownBy(() -> fixture.service.invite(fixture.owner, fixture.company.publicId(),
+        assertThatThrownBy(() -> fixture.service.invite(fixture.owner, fixture.company.id(),
                 "MEMBER@example.com", "VIEWER"))
                 .isInstanceOf(CompanyInvitationConflictException.class)
                 .hasMessageContaining("active invitation");
-        assertThatThrownBy(() -> fixture.service.accept(UUID.randomUUID(), "other@example.com", "r".repeat(64)))
+        assertThatThrownBy(() -> fixture.service.accept(com.smartrecruitment.core.support.TestIds.next(), "other@example.com", "r".repeat(64)))
                 .isInstanceOf(CompanyInvitationConflictException.class)
                 .hasMessageContaining("different email");
     }
@@ -55,8 +54,8 @@ class CompanyInvitationServiceTests {
     @Test
     void matchingAuthenticatedRecruiterAcceptsInvitationAsAnActiveMember() {
         Fixture fixture = new Fixture();
-        fixture.service.invite(fixture.owner, fixture.company.publicId(), "member@example.com", "COMPANY_ADMIN");
-        UUID memberUserId = UUID.randomUUID();
+        fixture.service.invite(fixture.owner, fixture.company.id(), "member@example.com", "COMPANY_ADMIN");
+        Long memberUserId = com.smartrecruitment.core.support.TestIds.next();
 
         CompanyMember member = fixture.service.accept(memberUserId, "MEMBER@example.com", "r".repeat(64));
 
@@ -66,7 +65,7 @@ class CompanyInvitationServiceTests {
     }
 
     private static final class Fixture {
-        private final UUID owner = UUID.randomUUID();
+        private final Long owner = com.smartrecruitment.core.support.TestIds.next();
         private final Company company = Company.create(owner, "Acme Legal", "Acme", "invitation-test-acme",
                 null, null, "VN", null, null);
         private final FakeCompanies companies = new FakeCompanies(company, owner);
@@ -76,32 +75,32 @@ class CompanyInvitationServiceTests {
                 new FixedTokens(), sender, Clock.fixed(NOW, ZoneOffset.UTC));
     }
 
-    private record FakeCompanies(Company company, UUID owner) implements CompanyRepository {
-        @Override public Company insertWithOwner(Company value, UUID userId) { return value; }
-        @Override public Optional<Company> findByPublicIdForMember(UUID companyId, UUID userId) {
-            return company.publicId().equals(companyId) && owner.equals(userId) ? Optional.of(company) : Optional.empty();
+    private record FakeCompanies(Company company, Long owner) implements CompanyRepository {
+        @Override public Company insertWithOwner(Company value, Long userId) { return value; }
+        @Override public Optional<Company> findByIdForMember(Long companyId, Long userId) {
+            return company.id().equals(companyId) && owner.equals(userId) ? Optional.of(company) : Optional.empty();
         }
-        @Override public List<Company> findAllForMember(UUID userId) { return List.of(company); }
-        @Override public boolean isActiveMember(UUID companyId, UUID userId) { return owner.equals(userId); }
-        @Override public boolean canManage(UUID companyId, UUID userId) { return owner.equals(userId); }
+        @Override public List<Company> findAllForMember(Long userId) { return List.of(company); }
+        @Override public boolean isActiveMember(Long companyId, Long userId) { return owner.equals(userId); }
+        @Override public boolean canManage(Long companyId, Long userId) { return owner.equals(userId); }
         @Override public Optional<Company> update(Company value, long expectedVersion) { return Optional.of(value); }
     }
 
     private static final class FakeInvitations implements CompanyInvitationRepository {
         private final List<CompanyInvitation> values = new ArrayList<>();
         @Override public CompanyInvitation insert(CompanyInvitation invitation) { values.add(invitation); return invitation; }
-        @Override public List<CompanyInvitation> findAll(UUID companyId) { return List.copyOf(values); }
-        @Override public Optional<CompanyInvitation> findActive(UUID companyId, String email, OffsetDateTime now) {
+        @Override public List<CompanyInvitation> findAll(Long companyId) { return List.copyOf(values); }
+        @Override public Optional<CompanyInvitation> findActive(Long companyId, String email, OffsetDateTime now) {
             return values.stream().filter(value -> value.companyId().equals(companyId))
                     .filter(value -> value.normalizedEmail().equals(email)).filter(value -> value.activeAt(now)).findFirst();
         }
         @Override public Optional<CompanyInvitation> findActiveByTokenHash(String hash, OffsetDateTime now) {
             return values.stream().filter(value -> value.tokenHash().equals(hash)).filter(value -> value.activeAt(now)).findFirst();
         }
-        @Override public int revokeExpired(UUID companyId, String email, OffsetDateTime now) { return 0; }
-        @Override public boolean revoke(UUID companyId, UUID id, long version, OffsetDateTime now) { return false; }
-        @Override public Optional<CompanyMember> accept(CompanyInvitation invitation, UUID userId, OffsetDateTime now) {
-            return Optional.of(new CompanyMember(UUID.randomUUID(), invitation.companyId(), userId,
+        @Override public int revokeExpired(Long companyId, String email, OffsetDateTime now) { return 0; }
+        @Override public boolean revoke(Long companyId, Long id, long version, OffsetDateTime now) { return false; }
+        @Override public Optional<CompanyMember> accept(CompanyInvitation invitation, Long userId, OffsetDateTime now) {
+            return Optional.of(new CompanyMember(com.smartrecruitment.core.support.TestIds.next(), invitation.companyId(), userId,
                     invitation.role(), "ACTIVE", now, 0));
         }
     }

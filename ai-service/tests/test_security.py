@@ -1,3 +1,4 @@
+from identity_fixtures import new_id
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from uuid import uuid4
@@ -30,7 +31,7 @@ def test_health_is_public() -> None:
 
 def test_ai_task_endpoint_requires_bearer_token() -> None:
     route = next(route for route in task_router.routes
-                 if route.path == "/api/v1/ai-tasks/{task_id}")
+                 if route.path == "/api/v2/ai-tasks/{task_id}")
     assert route.dependencies
     with pytest.raises(ApiContractError) as captured:
         require_access_token(None)
@@ -41,7 +42,7 @@ def test_ai_task_endpoint_requires_bearer_token() -> None:
 
 def test_verifier_accepts_expected_issuer_and_audience() -> None:
     private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-    subject = uuid4()
+    subject = new_id()
     now = datetime.now(UTC)
     token = jwt.encode(
         {
@@ -79,6 +80,65 @@ def test_verifier_rejects_wrong_audience() -> None:
             "sub": str(uuid4()),
             "iat": now,
             "exp": now + timedelta(minutes=5),
+        },
+        private_key,
+        algorithm="RS256",
+    )
+    verifier = JwtVerifier(
+        "https://issuer.test/jwks.json",
+        "https://issuer.test",
+        "smart-recruitment-api",
+        jwks_client=StaticJwksClient(private_key.public_key()),
+    )
+
+    with pytest.raises(ApiContractError) as captured:
+        verifier.verify(token)
+
+    assert captured.value.status_code == 401
+    assert captured.value.code == "INVALID_ACCESS_TOKEN"
+
+
+def test_verifier_tolerates_small_clock_skew_on_iat() -> None:
+    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    subject = new_id()
+    now = datetime.now(UTC)
+    token = jwt.encode(
+        {
+            "iss": "https://issuer.test",
+            "aud": ["smart-recruitment-api"],
+            "sub": str(subject),
+            "roles": ["RECRUITER"],
+            "iat": now + timedelta(seconds=5),
+            "exp": now + timedelta(minutes=5),
+        },
+        private_key,
+        algorithm="RS256",
+        headers={"kid": "test-key"},
+    )
+    verifier = JwtVerifier(
+        "https://issuer.test/jwks.json",
+        "https://issuer.test",
+        "smart-recruitment-api",
+        jwks_client=StaticJwksClient(private_key.public_key()),
+    )
+
+    principal = verifier.verify(token)
+
+    assert principal.subject == subject
+    assert principal.roles == ("RECRUITER",)
+
+
+def test_verifier_rejects_expired_token_beyond_clock_skew() -> None:
+    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    now = datetime.now(UTC)
+    token = jwt.encode(
+        {
+            "iss": "https://issuer.test",
+            "aud": ["smart-recruitment-api"],
+            "sub": str(new_id()),
+            "roles": ["CANDIDATE"],
+            "iat": now - timedelta(minutes=10),
+            "exp": now - timedelta(seconds=60),
         },
         private_key,
         algorithm="RS256",

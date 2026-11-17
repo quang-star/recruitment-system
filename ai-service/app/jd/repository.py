@@ -2,64 +2,66 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from copy import deepcopy
-from datetime import datetime
-from uuid import UUID, uuid4
+from datetime import UTC, datetime
 
-from sqlalchemy import BigInteger, DateTime, Integer, JSON, String, Uuid, func, select, update
+from sqlalchemy import DateTime, Integer, JSON, String, func, select
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
-from app.shared.database import Base
+from app.shared.database import BUSINESS_ID, Base, monotonic_update_time, stored_time
 
 
 class ParsedJdRevisionRecord(Base):
     __tablename__ = "parsed_jd_revisions"
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
-    public_id: Mapped[UUID] = mapped_column(Uuid, unique=True, nullable=False)
-    job_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
-    job_version_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
-    owner_user_id: Mapped[UUID] = mapped_column(Uuid, nullable=False)
+    id: Mapped[int] = mapped_column(BUSINESS_ID, primary_key=True, autoincrement=True)
+    job_id: Mapped[int] = mapped_column(BUSINESS_ID, nullable=False)
+    job_version_id: Mapped[int] = mapped_column(BUSINESS_ID, nullable=False)
+    owner_user_id: Mapped[int] = mapped_column(BUSINESS_ID, nullable=False)
     revision_number: Mapped[int] = mapped_column(Integer, nullable=False)
     source_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     payload: Mapped[dict] = mapped_column(JSON, nullable=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="PARSED")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    confirmed_by: Mapped[UUID | None] = mapped_column(Uuid)
+    confirmed_by: Mapped[int | None] = mapped_column(BUSINESS_ID)
     confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    version: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
+    version: Mapped[int] = mapped_column(BUSINESS_ID, nullable=False, default=0)
+    supersedes_revision_id: Mapped[int | None] = mapped_column(BUSINESS_ID)
+    reprocess_effect_key: Mapped[str | None] = mapped_column(String(64), unique=True)
 
 
 class ParsedJdHeadRecord(Base):
     __tablename__ = "parsed_jd_heads"
 
-    job_version_id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
-    revision_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
-    confirmed_by: Mapped[UUID] = mapped_column(Uuid, nullable=False)
+    job_version_id: Mapped[int] = mapped_column(BUSINESS_ID, primary_key=True)
+    revision_id: Mapped[int] = mapped_column(BUSINESS_ID, nullable=False)
+    confirmed_by: Mapped[int] = mapped_column(BUSINESS_ID, nullable=False)
     confirmed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    version: Mapped[int] = mapped_column(BigInteger, nullable=False, default=0)
+    version: Mapped[int] = mapped_column(BUSINESS_ID, nullable=False, default=0)
 
 
 @dataclass(frozen=True, slots=True)
 class ParsedJdRevision:
-    public_id: UUID
-    job_id: UUID
-    job_version_id: UUID
-    owner_user_id: UUID
+    id: int
+    job_id: int
+    job_version_id: int
+    owner_user_id: int
     revision_number: int
     source_hash: str
     payload: dict
     status: str
-    confirmed_by: UUID | None
+    confirmed_by: int | None
     confirmed_at: datetime | None
     version: int
+    supersedes_revision_id: int | None = None
+    reprocess_effect_key: str | None = None
 
 
 class ParsedJdRevisionRepository:
     def __init__(self, session: Session):
         self._session = session
 
-    def upsert(self, job_id: UUID, job_version_id: UUID, owner_user_id: UUID,
+    def upsert(self, job_id: int, job_version_id: int, owner_user_id: int,
                source_hash: str, payload: dict) -> ParsedJdRevision:
         latest = self._session.scalar(
             select(ParsedJdRevisionRecord)
@@ -73,9 +75,9 @@ class ParsedJdRevisionRepository:
             select(func.coalesce(func.max(ParsedJdRevisionRecord.revision_number), 0) + 1)
             .where(ParsedJdRevisionRecord.job_version_id == job_version_id)
         ).scalar_one()
-        now = datetime.now().astimezone()
+        now = stored_time(self._session, datetime.now(UTC))
         record = ParsedJdRevisionRecord(
-            public_id=uuid4(), job_id=job_id, job_version_id=job_version_id,
+            job_id=job_id, job_version_id=job_version_id,
             owner_user_id=owner_user_id, revision_number=int(next_number),
             source_hash=source_hash, payload=payload, status="PARSED",
             created_at=now, updated_at=now, version=0,
@@ -84,9 +86,9 @@ class ParsedJdRevisionRepository:
         self._session.flush()
         return self._to_domain(record, None)
 
-    def create_revision(self, job_id: UUID, job_version_id: UUID, owner_user_id: UUID,
+    def create_revision(self, job_id: int, job_version_id: int, owner_user_id: int,
                         source_hash: str, payload: dict,
-                        expected_revision_id: UUID) -> ParsedJdRevision:
+                        expected_revision_id: int) -> ParsedJdRevision:
         latest = self._session.scalar(
             select(ParsedJdRevisionRecord)
             .where(ParsedJdRevisionRecord.job_version_id == job_version_id)
@@ -94,11 +96,11 @@ class ParsedJdRevisionRepository:
             .order_by(ParsedJdRevisionRecord.revision_number.desc())
             .with_for_update()
         )
-        if latest is None or latest.public_id != expected_revision_id:
+        if latest is None or latest.id != expected_revision_id:
             raise ValueError("ParsedJD revision is stale; reload the latest revision")
-        now = datetime.now().astimezone()
+        now = stored_time(self._session, datetime.now(UTC))
         record = ParsedJdRevisionRecord(
-            public_id=uuid4(), job_id=job_id, job_version_id=job_version_id,
+            job_id=job_id, job_version_id=job_version_id,
             owner_user_id=owner_user_id, revision_number=latest.revision_number + 1,
             source_hash=source_hash, payload=payload, status="PARSED",
             created_at=now, updated_at=now, version=0,
@@ -107,7 +109,24 @@ class ParsedJdRevisionRepository:
         self._session.flush()
         return self._to_domain(record, None)
 
-    def find_owned(self, job_version_id: UUID, owner_user_id: UUID) -> ParsedJdRevision | None:
+    def create_reprocess_revision(self, job_id: int, job_version_id: int, owner_user_id: int,
+                                  source_hash: str, payload: dict, expected_revision_id: int,
+                                  effect_key: str) -> ParsedJdRevision:
+        existing = self._session.scalar(select(ParsedJdRevisionRecord).where(
+            ParsedJdRevisionRecord.reprocess_effect_key == effect_key))
+        if existing is not None:
+            if existing.job_version_id != job_version_id or existing.owner_user_id != owner_user_id:
+                raise ValueError("Reprocessing effect belongs to another source")
+            return self._to_domain(existing, None)
+        revision = self.create_revision(job_id, job_version_id, owner_user_id, source_hash, payload, expected_revision_id)
+        record = self._session.scalar(select(ParsedJdRevisionRecord).where(ParsedJdRevisionRecord.id == revision.id))
+        if record is None:
+            raise RuntimeError("Reprocessing revision was not persisted")
+        record.supersedes_revision_id, record.reprocess_effect_key = expected_revision_id, effect_key
+        self._session.flush()
+        return self._to_domain(record, None)
+
+    def find_owned(self, job_version_id: int, owner_user_id: int) -> ParsedJdRevision | None:
         row = self._session.execute(
             select(ParsedJdRevisionRecord, ParsedJdHeadRecord)
             .outerjoin(ParsedJdHeadRecord,
@@ -118,7 +137,7 @@ class ParsedJdRevisionRepository:
         ).first()
         return self._to_domain(row[0], row[1]) if row else None
 
-    def find_confirmed(self, job_version_id: UUID) -> ParsedJdRevision | None:
+    def find_confirmed(self, job_version_id: int) -> ParsedJdRevision | None:
         row = self._session.execute(
             select(ParsedJdRevisionRecord, ParsedJdHeadRecord)
             .join(ParsedJdHeadRecord, ParsedJdHeadRecord.revision_id == ParsedJdRevisionRecord.id)
@@ -126,8 +145,8 @@ class ParsedJdRevisionRepository:
         ).first()
         return self._to_domain(row[0], row[1]) if row else None
 
-    def confirm(self, job_version_id: UUID, owner_user_id: UUID,
-                expected_revision_id: UUID, confirmed_by: UUID) -> ParsedJdRevision:
+    def confirm(self, job_version_id: int, owner_user_id: int,
+                expected_revision_id: int, confirmed_by: int) -> ParsedJdRevision:
         record = self._session.scalar(
             select(ParsedJdRevisionRecord)
             .where(ParsedJdRevisionRecord.job_version_id == job_version_id)
@@ -137,7 +156,7 @@ class ParsedJdRevisionRepository:
         )
         if record is None:
             raise LookupError("ParsedJD revision was not found")
-        if record.public_id != expected_revision_id:
+        if record.id != expected_revision_id:
             raise ValueError("ParsedJD revision is stale; reload the latest revision")
 
         if record.status != "CONFIRMED":
@@ -152,14 +171,21 @@ class ParsedJdRevisionRepository:
             .where(ParsedJdHeadRecord.job_version_id == job_version_id)
             .with_for_update()
         )
-        now = datetime.now().astimezone()
+        now_utc = monotonic_update_time(record.created_at, record.updated_at)
+        now = stored_time(self._session, now_utc)
         if head is not None and head.revision_id != record.id:
-            self._session.execute(
-                update(ParsedJdRevisionRecord)
+            prior = self._session.scalar(
+                select(ParsedJdRevisionRecord)
                 .where(ParsedJdRevisionRecord.id == head.revision_id)
-                .values(status="SUPERSEDED", updated_at=now,
-                        version=ParsedJdRevisionRecord.version + 1)
+                .with_for_update()
             )
+            if prior is not None:
+                prior.status = "SUPERSEDED"
+                prior.updated_at = stored_time(
+                    self._session,
+                    monotonic_update_time(prior.created_at, prior.updated_at, candidate=now_utc),
+                )
+                prior.version += 1
             head.revision_id = record.id
             head.confirmed_by = confirmed_by
             head.confirmed_at = now
@@ -180,11 +206,13 @@ class ParsedJdRevisionRepository:
     def _to_domain(record: ParsedJdRevisionRecord,
                    head: ParsedJdHeadRecord | None) -> ParsedJdRevision:
         return ParsedJdRevision(
-            public_id=record.public_id, job_id=record.job_id,
+            id=record.id, job_id=record.job_id,
             job_version_id=record.job_version_id, owner_user_id=record.owner_user_id,
             revision_number=record.revision_number, source_hash=record.source_hash,
             payload=record.payload, status=record.status,
             confirmed_by=(head.confirmed_by if head else record.confirmed_by),
             confirmed_at=(head.confirmed_at if head else record.confirmed_at),
             version=record.version,
+            supersedes_revision_id=record.supersedes_revision_id,
+            reprocess_effect_key=record.reprocess_effect_key,
         )

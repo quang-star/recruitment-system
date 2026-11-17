@@ -3,8 +3,8 @@ package com.smartrecruitment.core.cv.application;
 import com.smartrecruitment.core.shared.domain.ExternalAiConsent;
 
 import com.smartrecruitment.core.cv.application.port.CandidateCvRepository;
-import com.smartrecruitment.core.cv.application.port.ObjectStorage;
-import com.smartrecruitment.core.cv.application.port.OutboxEventRepository;
+import com.smartrecruitment.core.shared.application.port.ObjectStorage;
+import com.smartrecruitment.core.shared.application.port.OutboxEventRepository;
 import com.smartrecruitment.core.cv.domain.CandidateCv;
 import com.smartrecruitment.core.cv.domain.CvVersion;
 import com.smartrecruitment.core.cv.domain.CvProcessingStatus;
@@ -49,24 +49,24 @@ public class CvService {
     }
 
     @Transactional
-    public CandidateCv upload(UUID candidateUserId, String requestedTitle, MultipartFile file) {
+    public CandidateCv upload(Long candidateUserId, String requestedTitle, MultipartFile file) {
         return upload(candidateUserId, requestedTitle, file, UUID.randomUUID());
     }
 
     @Transactional
-    public CandidateCv upload(UUID candidateUserId, String requestedTitle, MultipartFile file, UUID correlationId) {
+    public CandidateCv upload(Long candidateUserId, String requestedTitle, MultipartFile file, UUID correlationId) {
         return upload(candidateUserId, requestedTitle, file, correlationId, ExternalAiConsent.declined());
     }
 
     @Transactional
-    public CandidateCv upload(UUID candidateUserId, String requestedTitle, MultipartFile file,
+    public CandidateCv upload(Long candidateUserId, String requestedTitle, MultipartFile file,
                               UUID correlationId, ExternalAiConsent consent) {
         validate(file);
         String filename = safeFilename(file.getOriginalFilename());
         String title = normalizeTitle(requestedTitle, filename);
         String objectKey = "candidates/" + candidateUserId + "/" + UUID.randomUUID() + ".pdf";
         String sha256 = sha256(file);
-        UUID versionId = UUID.randomUUID();
+        Long versionId = 0L;
         CvVersion version = CvVersion.uploaded(versionId, storageBucket, objectKey, filename,
                 file.getSize(), sha256, candidateUserId, consent);
         CandidateCv candidateCv = CandidateCv.uploaded(candidateUserId, title, version);
@@ -91,21 +91,40 @@ public class CvService {
     }
 
     @Transactional(readOnly = true)
-    public List<CandidateCv> listMine(UUID candidateUserId) {
+    public List<CandidateCv> listMine(Long candidateUserId) {
         return cvs.findByCandidateUserId(candidateUserId);
     }
 
     @Transactional(readOnly = true)
-    public CandidateCv getMine(UUID candidateUserId, UUID cvId) {
-        return cvs.findByPublicId(candidateUserId, cvId).orElseThrow(CandidateCvNotFoundException::new);
+    public CandidateCv getMine(Long candidateUserId, Long cvId) {
+        return cvs.findById(candidateUserId, cvId).orElseThrow(CandidateCvNotFoundException::new);
+    }
+
+    public record CvDownload(String originalFilename, long sizeBytes, InputStream content) { }
+
+    @Transactional(readOnly = true)
+    public CvDownload downloadMine(Long candidateUserId, Long cvId, Long cvVersionId) {
+        CandidateCv cv = getMine(candidateUserId, cvId);
+        CvVersion version = cv.activeVersion();
+        if (cv.status() != CvStatus.ACTIVE || !version.id().equals(cvVersionId)
+                || version.processingStatus() == CvProcessingStatus.DELETED
+                || version.processingStatus() == CvProcessingStatus.SUPERSEDED) {
+            throw new CandidateCvNotFoundException();
+        }
+        try {
+            return new CvDownload(version.originalFilename(), version.sizeBytes(),
+                    storage.openDownload(version.objectBucket(), version.objectKey()));
+        } catch (RuntimeException failure) {
+            throw new CvStorageException(failure);
+        }
     }
 
     @Transactional
-    public CandidateCv retry(UUID candidateUserId, UUID cvId, UUID cvVersionId,
+    public CandidateCv retry(Long candidateUserId, Long cvId, Long cvVersionId,
                              long expectedVersion, UUID correlationId) {
         CandidateCv current = getMine(candidateUserId, cvId);
         if (expectedVersion < 0 || current.status() != CvStatus.ACTIVE
-                || !current.activeVersion().publicId().equals(cvVersionId)) throw new CvRetryConflictException();
+                || !current.activeVersion().id().equals(cvVersionId)) throw new CvRetryConflictException();
         if (isSameQueuedRetry(current, cvVersionId, expectedVersion)) return current;
         if (current.activeVersion().processingStatus() != CvProcessingStatus.FAILED
                 || !"SOURCE_STORAGE_UNAVAILABLE".equals(current.activeVersion().failureCode())
@@ -121,9 +140,9 @@ public class CvService {
         return queued.get();
     }
 
-    private static boolean isSameQueuedRetry(CandidateCv cv, UUID cvVersionId, long expectedVersion) {
+    private static boolean isSameQueuedRetry(CandidateCv cv, Long cvVersionId, long expectedVersion) {
         var version = cv.activeVersion();
-        return cv.status() == CvStatus.ACTIVE && version.publicId().equals(cvVersionId)
+        return cv.status() == CvStatus.ACTIVE && version.id().equals(cvVersionId)
                 && version.processingStatus() == CvProcessingStatus.QUEUED
                 && version.version() - 1 == expectedVersion
                 && version.processingGeneration() == version.version();
