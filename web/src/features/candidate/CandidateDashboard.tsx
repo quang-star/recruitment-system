@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { apiRequest } from "../../shared/api/client";
 import { PageResult } from "../../shared/api/pagination";
 import { AuthSession } from "../../shared/auth/session";
-import { CheckCircleIcon, CvIcon, JobsIcon, SparklesIcon } from "../../shared/components/Icon";
+import { CheckCircleIcon, CvIcon, JobsIcon } from "../../shared/components/Icon";
 import { Badge, Button, Card, EmptyState, ErrorBanner } from "../../shared/ui";
 import { workModeLabel } from "../public/jobPresentation";
 import { CvOverview, pendingCvStatuses, reviewCvStatuses } from "./cvStatus";
@@ -45,6 +45,7 @@ function applicationTone(status: string): "brand" | "success" | "warning" | "dan
 }
 
 export function CandidateDashboard({ session, profile, onNavigate, onOpenJob }: Props) {
+  const [failedAvatar, setFailedAvatar] = useState<string | null>(null);
   const [cvs, setCvs] = useState<CvOverview[] | null>(null);
   const [jobs, setJobs] = useState<Job[] | null>(null);
   const [applications, setApplications] = useState<Application[] | null>(null);
@@ -122,14 +123,12 @@ export function CandidateDashboard({ session, profile, onNavigate, onOpenJob }: 
     <div className="space-y-6">
       <Card padding="md" className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4 min-w-0">
-          {profile?.avatarUrl ? (
+          {profile?.avatarUrl && failedAvatar !== profile.avatarUrl ? (
             <img
               src={profile.avatarUrl}
               alt="Avatar"
               className="h-14 w-14 rounded-2xl border border-border-subtle object-cover shrink-0"
-              onError={(e) => {
-                (e.target as HTMLElement).style.display = "none";
-              }}
+              onError={() => setFailedAvatar(profile.avatarUrl ?? null)}
             />
           ) : (
             <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand-600 text-base font-bold text-white">
@@ -176,9 +175,6 @@ export function CandidateDashboard({ session, profile, onNavigate, onOpenJob }: 
             className="rounded-2xl border border-brand-200 bg-gradient-to-r from-brand-50 via-white to-teal-50/70 p-5 sm:p-6 shadow-card flex flex-col sm:flex-row sm:items-center justify-between gap-4"
           >
             <div className="flex items-start gap-3.5 min-w-0">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-600 text-white shadow-xs">
-                <SparklesIcon size={22} aria-hidden="true" />
-              </span>
               <div className="min-w-0">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-brand-700 m-0">
                   BƯỚC TIẾP THEO
@@ -363,7 +359,6 @@ export function CandidateDashboard({ session, profile, onNavigate, onOpenJob }: 
 
               <Card as="section" padding="md" className="space-y-2.5 bg-slate-50/70">
                 <div className="flex items-center gap-2 text-brand-700">
-                  <SparklesIcon size={18} aria-hidden="true" />
                   <h2 className="text-sm font-bold text-ink-900 m-0">Hiểu rõ mức độ phù hợp</h2>
                 </div>
                 <p className="text-xs sm:text-sm text-ink-600 m-0 leading-relaxed">

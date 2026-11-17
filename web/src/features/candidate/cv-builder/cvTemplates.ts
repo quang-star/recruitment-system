@@ -35,7 +35,7 @@ export const CV_TEMPLATE_CATALOG: readonly CvTemplateCatalogItem[] = [
   {
     id: "executive",
     title: "Chuyên Nghiệp · Executive",
-    subtitle: "Header màu nổi bật chuẩn TopCV",
+    subtitle: "Header màu nổi bật",
     tags: ["Hiện đại", "Hai cột", "ATS"],
     defaultAccent: "#00b14f",
     description: "Header màu toàn phần nổi bật họ tên, ảnh đại diện và chức danh; thân 2 cột cân đối.",

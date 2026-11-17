@@ -22,7 +22,7 @@ export const CV_FONT_FAMILIES = ["sans", "serif", "mono"] as const;
 export type CvFontFamily = typeof CV_FONT_FAMILIES[number];
 
 export const ACCENT_PRESETS = [
-  { id: "#00b14f", label: "Xanh TopCV" },
+  { id: "#00b14f", label: "Xanh lá" },
   { id: "#0f766e", label: "Xanh ngọc" },
   { id: "#1e3a8a", label: "Xanh navy" },
   { id: "#334155", label: "Xám đá" },
@@ -49,7 +49,7 @@ export const TEMPLATE_META: Record<TemplateId, { name: string; badge: string; de
   executive: {
     name: "Executive",
     badge: "EXECUTIVE · A4 · HEADER NỔI BẬT",
-    description: "Header màu toàn phần phong cách TopCV cùng thân hai cột cân đối.",
+    description: "Header màu toàn phần cùng thân hai cột cân đối.",
   },
 };
 

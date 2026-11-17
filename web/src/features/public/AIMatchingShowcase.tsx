@@ -1,5 +1,5 @@
 import { FC } from "react";
-import { CheckCircleIcon, CvIcon, LayersIcon, SparklesIcon } from "../../shared/components/Icon";
+import { CheckCircleIcon, CvIcon, LayersIcon } from "../../shared/components/Icon";
 import { Card } from "../../shared/ui";
 
 export const AIMatchingShowcase: FC = () => {
@@ -25,16 +25,15 @@ export const AIMatchingShowcase: FC = () => {
   ];
 
   return (
-    <section id="ai-matching-section" className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 space-y-8">
-      <div className="text-center max-w-2xl mx-auto space-y-2.5">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 border border-brand-200 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-brand-700">
-          <SparklesIcon size={13} aria-hidden="true" />
+    <section id="ai-matching-section" className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 space-y-6">
+      <div className="max-w-2xl space-y-2">
+        <p className="text-xs font-semibold uppercase tracking-wider text-brand-700 m-0">
           Công nghệ đối chiếu minh bạch
-        </span>
-        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink-900 m-0">
+        </p>
+        <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-ink-900 m-0">
           Quy trình Tuyển dụng Thông minh với AI
         </h2>
-        <p className="text-sm sm:text-base text-ink-600 m-0 leading-relaxed">
+        <p className="text-sm text-ink-600 m-0 leading-relaxed">
           Hệ thống kết hợp phân tích tài liệu cục bộ và AI có kiểm soát quyền riêng tư nhằm hỗ trợ đối soát kỹ năng chính xác, không tự động loại hồ sơ.
         </p>
       </div>
@@ -43,8 +42,8 @@ export const AIMatchingShowcase: FC = () => {
         {pillars.map(({ step, title, desc, icon: Icon }) => (
           <Card key={step} padding="md" className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-700 border border-brand-200">
-                <Icon size={20} aria-hidden="true" />
+              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-brand-700 border border-border-subtle">
+                <Icon size={18} aria-hidden="true" />
               </span>
               <span className="font-mono text-xs font-bold text-ink-400">{step}</span>
             </div>

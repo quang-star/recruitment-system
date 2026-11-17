@@ -43,11 +43,13 @@ const rankingLabel: Record<string, string> = {
 export function SkillCandidateSuggestions({
   accessToken,
   selected,
-  catalogVersion
+  catalogVersion,
+  onSelectMergeTarget
 }: {
   accessToken: string;
   selected: string;
   catalogVersion: number;
+  onSelectMergeTarget?: (skillId: string, canonicalName: string) => void;
 }) {
   const [semantic, setSemantic] = useState(false);
   const [result, setResult] = useState<CandidateResult | null>(null);
@@ -129,9 +131,21 @@ export function SkillCandidateSuggestions({
                   key={candidate.skillId}
                   className="rounded-xl border border-border-subtle bg-white p-3.5 shadow-xs space-y-2 break-words"
                 >
-                  <div>
-                    <strong className="text-sm font-bold text-ink-900">{candidate.canonicalName}</strong>
-                    <p className="text-xs text-ink-600 m-0 mt-0.5">Tên đối chiếu: {candidate.matchedAlias}</p>
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <strong className="text-sm font-bold text-ink-900">{candidate.canonicalName}</strong>
+                      <p className="text-xs text-ink-600 m-0 mt-0.5">Tên đối chiếu: {candidate.matchedAlias}</p>
+                    </div>
+                    {onSelectMergeTarget && candidate.skillId !== selected && (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => onSelectMergeTarget(candidate.skillId, candidate.canonicalName)}
+                      >
+                        Chọn làm đích gộp
+                      </Button>
+                    )}
                   </div>
                   <dl className="grid grid-cols-2 gap-3 text-xs m-0 pt-2 border-t border-border-subtle">
                     <div>

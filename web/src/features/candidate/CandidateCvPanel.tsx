@@ -570,7 +570,7 @@ export function CandidateCvPanel({ session, onLogout }: Props) {
                 : "bg-slate-100 text-ink-700 hover:bg-slate-200"
             }`}
           >
-            Kho mẫu CV TopCV
+            Kho mẫu CV
           </button>
         </div>
       </div>

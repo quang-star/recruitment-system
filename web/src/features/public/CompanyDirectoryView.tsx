@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ArrowRightIcon, CompanyIcon, MapPinIcon, SearchIcon } from "../../shared/components/Icon";
 import { Badge, Card, EmptyState } from "../../shared/ui";
 import { CompanyCover } from "./CompanyCover";
+import { CompanyLogo } from "./CompanyLogo";
 import { CompanyInfo } from "./companyData";
 
 type CompanyDirectoryViewProps = {
@@ -64,11 +65,11 @@ export function CompanyDirectoryView({ companies, onSelectCompany }: CompanyDire
               <div className="p-5 flex-1 flex flex-col justify-between gap-4 -mt-8 relative">
                 <div className="space-y-3">
                   <div className="flex items-end justify-between gap-3">
-                    <img
+                    <CompanyLogo
                       src={company.logo}
-                      alt=""
-                      className="h-14 w-14 rounded-xl border-2 border-white bg-white object-contain p-1.5 shadow-card"
-                      onError={(e) => { e.currentTarget.src = "/logos/smartrecruitment.svg"; }}
+                      name={company.shortName || company.name}
+                      className="h-14 w-14 rounded-lg border-2 border-white shadow-card"
+                      textClassName="text-sm font-bold"
                     />
                     {company.openJobsCount != null && (
                       <Badge tone="brand">{company.openJobsCount} việc làm</Badge>

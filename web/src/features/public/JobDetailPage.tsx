@@ -5,6 +5,7 @@ import { AuthSession } from "../../shared/auth/session";
 import { ArrowLeftIcon, ClockIcon, CompanyIcon, MapPinIcon, UsersIcon } from "../../shared/components/Icon";
 import { Badge, Button, Card, ErrorBanner } from "../../shared/ui";
 import { PreApplyMatchWidget } from "../application/PreApplyMatchWidget";
+import { CompanyLogo } from "./CompanyLogo";
 import { CompanyInfo, resolveCompanyMeta } from "./companyData";
 import {
   employmentTypeLabel,
@@ -40,7 +41,7 @@ export function JobDetailPage({
   onViewCompany,
   onRequireLogin,
   onOpenCvLibrary,
-  backLabel = "← Quay lại danh sách"
+  backLabel = "Quay lại danh sách"
 }: Props) {
   const meta = company ?? resolveCompanyMeta(job.companyId, job.companyName);
   const titleRef = useRef<HTMLHeadingElement>(null);
@@ -83,8 +84,8 @@ export function JobDetailPage({
   return (
     <div className="job-page mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
       <nav aria-label="Điều hướng chi tiết việc làm">
-        <Button type="button" variant="secondary" size="sm" onClick={onBack}>
-          <ArrowLeftIcon size={15} aria-hidden="true" />
+        <Button type="button" variant="secondary" size="md" onClick={onBack}>
+          <ArrowLeftIcon size={16} aria-hidden="true" />
           <span>{backLabel}</span>
         </Button>
       </nav>
@@ -93,11 +94,11 @@ export function JobDetailPage({
         <div className="lg:col-span-2 space-y-6">
           <Card as="article" padding="lg" aria-labelledby="job-page-title" className="space-y-5">
             <div className="flex flex-col sm:flex-row sm:items-start gap-4">
-              <img
+              <CompanyLogo
                 src={job.companyLogo || meta.logo}
-                alt=""
-                className="h-14 w-14 shrink-0 rounded-2xl border border-border-subtle bg-white object-contain p-2 shadow-xs"
-                onError={(e) => { e.currentTarget.src = "/logos/smartrecruitment.svg"; }}
+                name={job.companyName || meta.shortName}
+                className="h-14 w-14 rounded-lg shadow-xs"
+                textClassName="text-sm font-bold"
               />
               <div className="min-w-0 flex-1 space-y-2">
                 <p className="text-sm font-semibold text-brand-700 m-0">
@@ -239,7 +240,7 @@ export function JobDetailPage({
             {!relatedLoading && !relatedError && others.length > 0 && (
               <div className="space-y-3">
                 {others.map((other) => (
-                  <PublicJobListCard key={other.jobId} job={other} onSelectJob={onSelectJob} />
+                  <PublicJobListCard key={other.jobId} job={other} onSelectJob={onSelectJob} showAction={false} />
                 ))}
               </div>
             )}

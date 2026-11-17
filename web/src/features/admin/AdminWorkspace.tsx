@@ -6,7 +6,7 @@ import { AuthSession } from "../../shared/auth/session";
 import { CompanyIcon, HistoryIcon, LayersIcon, SparklesIcon } from "../../shared/components/Icon";
 import { WorkspaceNavItem, WorkspaceShell } from "../../shared/layout/WorkspaceShell";
 import { EnsureRouter, useSafeNavigate } from "../../shared/router";
-import { Badge, Button, Card, ErrorBanner, Tabs, cn } from "../../shared/ui";
+import { Badge, Button, Card, EmptyState, ErrorBanner, Tabs, cn } from "../../shared/ui";
 import { CategoryEntry } from "../recruiter/JobCategoryFields";
 import { AdminAuditPanel } from "./AdminAuditPanel";
 import { CompanyReviewPanel } from "./CompanyReviewPanel";
@@ -24,6 +24,7 @@ import {
   adminRouteMap,
   adminPageTitle,
   catalogStatusLabel,
+  categoryLabel,
   resolveAdminTab,
   skillCategories,
   skillCategoryLabel,
@@ -63,6 +64,9 @@ function AdminWorkspaceEditor({ session, onLogout, tab }: { session: AuthSession
   const [busy, setBusy] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [loadedTab, setLoadedTab] = useState<AdminTab | null>(null);
+  const [catQuery, setCatQuery] = useState("");
+  const [catKind, setCatKind] = useState<"" | CategoryEntry["kind"]>("");
+  const [catStatus, setCatStatus] = useState("");
   const queueRef = useRef<HTMLElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
 
@@ -297,8 +301,21 @@ function AdminWorkspaceEditor({ session, onLogout, tab }: { session: AuthSession
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
+                {tab === "categories" && loadedTab === "categories" && (
+                  <>
+                    <Badge tone="neutral">{categories.length} danh mục</Badge>
+                    {categories.some((c) => c.status === "PENDING") && (
+                      <Badge tone="warning">
+                        {categories.filter((c) => c.status === "PENDING").length} chờ duyệt
+                      </Badge>
+                    )}
+                  </>
+                )}
                 {catalog && tab === "skills" && (
-                  <Badge tone="brand">Phiên bản taxonomy: {catalog.taxonomyVersion}</Badge>
+                  <>
+                    <Badge tone="brand">Phiên bản taxonomy: {catalog.taxonomyVersion}</Badge>
+                    <Badge tone="neutral">{catalog.skills.length} kỹ năng</Badge>
+                  </>
                 )}
                 {(error || needsReload) && (
                   <Button
@@ -378,61 +395,172 @@ function AdminWorkspaceEditor({ session, onLogout, tab }: { session: AuthSession
 
           <div className="grid gap-6 xl:grid-cols-[1.05fr_1fr] items-start">
             <aside ref={queueRef} className="space-y-4 min-w-0 scroll-mt-6">
-              {tab === "categories" && (
-                <Card padding="md" className="space-y-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <h3 className="text-base font-bold text-ink-900 m-0">Danh mục nghề</h3>
-                    <Badge tone="neutral">{entries.length} mục</Badge>
-                  </div>
-                  <div className="overflow-x-auto rounded-xl border border-border-subtle bg-white">
-                    <table className="w-full border-collapse text-left text-sm">
-                      <caption className="sr-only">Danh mục nghề</caption>
-                      <thead>
-                        <tr className="border-b border-border-subtle bg-slate-50/90 text-[11px] font-semibold uppercase tracking-wider text-ink-500">
-                          <th className="px-4 py-2.5">Tên danh mục</th>
-                          <th className="px-4 py-2.5">Trạng thái</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border-subtle">
-                        {entries.map((entry) => (
-                          <tr
-                            key={entry.id}
+              {tab === "categories" && (() => {
+                const categoryById = new Map(categories.map((c) => [c.id, c]));
+                const q = catQuery.trim().toLowerCase();
+                const filteredCategories = categories.filter((c) => {
+                  if (catKind && c.kind !== catKind) return false;
+                  if (catStatus && c.status !== catStatus) return false;
+                  if (q) {
+                    const parentName = c.parentId ? categoryById.get(c.parentId)?.name.toLowerCase() ?? "" : "";
+                    if (!c.name.toLowerCase().includes(q) && !parentName.includes(q)) return false;
+                  }
+                  return true;
+                });
+                const pendingCount = categories.filter((c) => c.status === "PENDING").length;
+                const hasFilter = Boolean(q || catKind || catStatus);
+                return (
+                  <Card padding="md" className="space-y-3.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-base font-bold text-ink-900 m-0">Danh mục nghề</h3>
+                        <Badge tone="neutral">
+                          {hasFilter ? `${filteredCategories.length}/${categories.length}` : `${entries.length} mục`}
+                        </Badge>
+                        {pendingCount > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setCatStatus((prev) => (prev === "PENDING" ? "" : "PENDING"))}
                             className={cn(
-                              "transition-colors hover:bg-slate-50/80",
-                              entry.id === selected && "bg-brand-50/50"
+                              "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors cursor-pointer",
+                              catStatus === "PENDING"
+                                ? "bg-amber-600 text-white"
+                                : "bg-amber-100 text-amber-900 hover:bg-amber-200"
                             )}
                           >
-                            <td className="px-4 py-2.5">
-                              <button
-                                type="button"
-                                aria-pressed={entry.id === selected}
-                                disabled={busy || loadedTab !== tab}
-                                onClick={() => select(entry.id)}
-                                className="text-left text-sm font-semibold text-ink-900 hover:text-brand-700 cursor-pointer disabled:cursor-not-allowed"
-                              >
-                                {entry.name}
-                              </button>
-                            </td>
-                            <td className="px-4 py-2.5">
-                              <Badge
-                                tone={
-                                  entry.status === "ACTIVE"
-                                    ? "success"
-                                    : entry.status === "PENDING"
-                                      ? "warning"
-                                      : "neutral"
-                                }
-                              >
-                                {catalogStatusLabel[entry.status] ?? entry.status}
-                              </Badge>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </Card>
-              )}
+                            {pendingCount} chờ duyệt
+                          </button>
+                        )}
+                      </div>
+                      {selected && (
+                        <Button variant="secondary" size="sm" disabled={busy} onClick={() => select("")}>
+                          + Thêm mới
+                        </Button>
+                      )}
+                    </div>
+
+                    <div className="grid gap-2 sm:grid-cols-[1.2fr_0.9fr_0.9fr] rounded-xl border border-border-subtle bg-slate-50/70 p-2.5">
+                      <input
+                        type="search"
+                        aria-label="Tìm danh mục nghề"
+                        placeholder="Tìm theo tên hoặc danh mục cha…"
+                        value={catQuery}
+                        onChange={(e) => setCatQuery(e.target.value)}
+                        className="h-9 w-full rounded-lg border border-border-strong bg-white px-3 text-xs text-ink-900 placeholder:text-ink-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                      />
+                      <select
+                        aria-label="Lọc cấp danh mục"
+                        value={catKind}
+                        onChange={(e) => setCatKind(e.target.value as "" | CategoryEntry["kind"])}
+                        className="h-9 w-full rounded-lg border border-border-strong bg-white px-2.5 text-xs font-medium text-ink-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                      >
+                        <option value="">Tất cả cấp</option>
+                        <option value="INDUSTRY">Ngành</option>
+                        <option value="SPECIALIZATION">Nhóm chuyên môn</option>
+                        <option value="POSITION">Vị trí</option>
+                      </select>
+                      <select
+                        aria-label="Lọc trạng thái danh mục"
+                        value={catStatus}
+                        onChange={(e) => setCatStatus(e.target.value)}
+                        className="h-9 w-full rounded-lg border border-border-strong bg-white px-2.5 text-xs font-medium text-ink-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                      >
+                        <option value="">Tất cả trạng thái</option>
+                        <option value="PENDING">Chờ duyệt</option>
+                        <option value="ACTIVE">Đang hoạt động</option>
+                        <option value="DEFERRED">Tạm hoãn</option>
+                        <option value="REJECTED">Đã từ chối</option>
+                        <option value="MERGED">Đã gộp</option>
+                      </select>
+                    </div>
+                    {hasFilter && (
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCatQuery("");
+                            setCatKind("");
+                            setCatStatus("");
+                          }}
+                          className="text-xs font-semibold text-brand-700 hover:underline cursor-pointer bg-transparent border-0 p-0"
+                        >
+                          Xóa bộ lọc danh mục
+                        </button>
+                      </div>
+                    )}
+
+                    {filteredCategories.length ? (
+                      <div className="max-h-[540px] overflow-auto rounded-xl border border-border-subtle bg-white">
+                        <table className="w-full border-collapse text-left text-sm">
+                          <caption className="sr-only">Danh mục nghề</caption>
+                          <thead className="sticky top-0 z-10 bg-slate-50 shadow-[0_1px_0_0_var(--color-border-subtle)]">
+                            <tr className="text-[11px] font-semibold uppercase tracking-wider text-ink-500">
+                              <th className="px-4 py-2.5">Tên danh mục</th>
+                              <th className="px-3 py-2.5">Cấp</th>
+                              <th className="px-4 py-2.5">Trạng thái</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border-subtle">
+                            {filteredCategories.map((entry) => {
+                              const parentEntry = entry.parentId ? categoryById.get(entry.parentId) : undefined;
+                              const isSelected = entry.id === selected;
+                              return (
+                                <tr
+                                  key={entry.id}
+                                  className={cn(
+                                    "transition-colors hover:bg-slate-50/80",
+                                    isSelected && "bg-brand-50/60 border-l-4 border-l-brand-600"
+                                  )}
+                                >
+                                  <td className="px-4 py-2.5">
+                                    <button
+                                      type="button"
+                                      aria-pressed={isSelected}
+                                      disabled={busy || loadedTab !== tab}
+                                      onClick={() => select(entry.id)}
+                                      className="text-left text-sm font-semibold text-ink-900 hover:text-brand-700 cursor-pointer disabled:cursor-not-allowed"
+                                    >
+                                      {entry.name}
+                                    </button>
+                                    {parentEntry && (
+                                      <span className="mt-0.5 block text-xs text-ink-500">
+                                        ↳ {parentEntry.name}
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="px-3 py-2.5 text-xs text-ink-600 whitespace-nowrap">
+                                    {categoryLabel[entry.kind]}
+                                  </td>
+                                  <td className="px-4 py-2.5 whitespace-nowrap">
+                                    <Badge
+                                      tone={
+                                        entry.status === "ACTIVE"
+                                          ? "success"
+                                          : entry.status === "PENDING"
+                                            ? "warning"
+                                            : entry.status === "REJECTED"
+                                              ? "danger"
+                                              : "neutral"
+                                      }
+                                    >
+                                      {catalogStatusLabel[entry.status] ?? entry.status}
+                                    </Badge>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <EmptyState
+                        title="Không có danh mục phù hợp"
+                        description="Thử thay đổi từ khóa hoặc bộ lọc cấp/trạng thái."
+                      />
+                    )}
+                  </Card>
+                );
+              })()}
 
               {catalog && tab === "skills" && loadedTab === tab && (
                 <PendingSkillQueue
@@ -522,6 +650,17 @@ function AdminWorkspaceEditor({ session, onLogout, tab }: { session: AuthSession
                     accessToken={session.accessToken}
                     selected={selected}
                     catalogVersion={catalog.version}
+                    onSelectMergeTarget={
+                      active
+                        ? (skillId, canonicalName) => {
+                            setTarget(skillId);
+                            setSkillPanel("edit");
+                            setNotice(
+                              `Đã chọn "${canonicalName}" làm đích gộp. Nhập lý do thay đổi và nhấn "Gộp danh mục" để hoàn tất.`
+                            );
+                          }
+                        : undefined
+                    }
                   />
                 </div>
               )}

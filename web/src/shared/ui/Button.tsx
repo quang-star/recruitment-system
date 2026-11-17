@@ -18,9 +18,9 @@ const variantClasses: Record<ButtonVariant, string> = {
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
-  sm: "h-8 px-3 text-xs font-medium rounded-lg gap-1.5",
-  md: "h-10 px-4 text-sm font-semibold rounded-xl gap-2",
-  lg: "h-11 px-5 text-sm font-semibold rounded-xl gap-2"
+  sm: "h-8 px-3 text-xs font-medium rounded-md gap-1.5",
+  md: "h-10 px-4 text-sm font-semibold rounded-lg gap-2",
+  lg: "h-11 px-5 text-sm font-semibold rounded-lg gap-2"
 };
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {

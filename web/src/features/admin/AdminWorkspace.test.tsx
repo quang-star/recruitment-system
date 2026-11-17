@@ -388,3 +388,49 @@ it("requires clean replacement of masked skill values while retaining reason-onl
   expect(mutationBody()).not.toHaveProperty("name");
   expect(mutationBody()).not.toHaveProperty("aliases");
 });
+
+it("filters job categories by query, kind, and status, and clears selection via + Thêm mới", async () => {
+  vi.mocked(apiRequest).mockImplementation(async (path) => {
+    if (path === "/api/v2/dashboard/catalog") {
+      return [
+        { id: "pending", kind: "INDUSTRY", parentId: null, name: "Ngành mới", status: "PENDING", version: 3 },
+        { id: "active-spec", kind: "SPECIALIZATION", parentId: "pending", name: "Backend", status: "ACTIVE", version: 1 }
+      ];
+    }
+    return catalog;
+  });
+  render(<AdminWorkspace session={session} onLogout={vi.fn()} />);
+  await screen.findByRole("button", { name: "Ngành mới" });
+  fireEvent.change(screen.getByLabelText("Lọc trạng thái danh mục"), { target: { value: "ACTIVE" } });
+  expect(screen.queryByRole("button", { name: "Ngành mới" })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Backend" })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Xóa bộ lọc danh mục" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Ngành mới" }));
+  expect(screen.getByLabelText("Tên", { exact: true })).toHaveValue("Ngành mới");
+  fireEvent.click(screen.getAllByRole("button", { name: "+ Thêm mới" })[0]);
+  expect(screen.getByLabelText("Danh mục", { exact: true })).toHaveValue("");
+  expect(screen.getByLabelText("Tên", { exact: true })).toHaveValue("");
+});
+
+it("pre-fills merge target and returns to edit tab when selecting a candidate suggestion", async () => {
+  vi.mocked(apiRequest).mockImplementation(async (path, options) => {
+    if (options?.method) return {};
+    if (path.includes("/candidates?")) {
+      return {
+        taxonomyVersion: "1.0.1", resolution: "UNRESOLVED", requiresReview: true, semanticStatus: "DISABLED",
+        candidates: [{ skillId: "active", canonicalName: "ActiveX", matchedAlias: "activex", fuzzyScore: 0.88, semanticScore: null }],
+        algorithmVersion: "v1", scorePolicy: "RANKING_ONLY", rankingMethod: "FUZZY_RATIO", fuzzyMethod: "RATIO", modelId: null, modelRevision: null
+      };
+    }
+    const ledger = emptyLedger(path); if (ledger) return ledger;
+    if (path === "/api/v2/dashboard/catalog") return [];
+    return catalog;
+  });
+  render(<AdminWorkspace session={session} onLogout={vi.fn()} />);
+  await selectSkill();
+  fireEvent.click(screen.getByRole("tab", { name: "Gợi ý chuẩn hóa" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Chọn làm đích gộp" }));
+  expect(screen.getByRole("tab", { name: "Thông tin và duyệt" })).toHaveAttribute("aria-selected", "true");
+  expect(screen.getByLabelText("Gộp vào danh mục đã có")).toHaveValue("active");
+  expect(screen.getByText(/Đã chọn "ActiveX" làm đích gộp/)).toBeInTheDocument();
+});

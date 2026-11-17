@@ -5,6 +5,7 @@ import { candidateAccountLinks, CandidateAccountView, CandidateView } from "../c
 
 type Props = {
   name: string;
+  avatarUrl?: string | null;
   activeView?: CandidateView;
   onNavigate: (view: CandidateView) => void;
   onLogout: () => void;
@@ -12,7 +13,8 @@ type Props = {
 
 const icons = { dashboard: DashboardIcon, profile: ProfileIcon, cv: CvIcon, applications: JobsIcon, security: SecurityIcon };
 
-export function CandidateAccountMenu({ name, activeView, onNavigate, onLogout }: Props) {
+export function CandidateAccountMenu({ name, avatarUrl, activeView, onNavigate, onLogout }: Props) {
+  const [failedAvatar, setFailedAvatar] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -89,12 +91,13 @@ export function CandidateAccountMenu({ name, activeView, onNavigate, onLogout }:
         }}
         className="inline-flex items-center gap-2 rounded-full border border-border-subtle bg-slate-50 px-2.5 py-1.5 text-xs sm:text-sm font-semibold text-ink-800 hover:border-brand-300 hover:bg-white transition-colors cursor-pointer"
       >
-        <span
-          aria-hidden="true"
-          className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-600 text-xs font-bold text-white"
-        >
-          {name.trim().slice(0, 1).toUpperCase()}
-        </span>
+        {avatarUrl && failedAvatar !== avatarUrl ? (
+          <img src={avatarUrl} alt="" onError={() => setFailedAvatar(avatarUrl)} className="h-6 w-6 rounded-full object-cover" />
+        ) : (
+          <span aria-hidden="true" className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-600 text-xs font-bold text-white">
+            {name.trim().slice(0, 1).toUpperCase()}
+          </span>
+        )}
         <span className="max-w-[130px] truncate">{name}</span>
         <span aria-hidden="true" className="text-ink-400 text-xs">⌄</span>
       </button>

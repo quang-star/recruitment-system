@@ -24,6 +24,7 @@
 **/target/
 **/node_modules/
 **/dist/
+/web/release/
 **/.venv/
 **/__pycache__/
 **/.pytest_cache/
