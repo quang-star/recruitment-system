@@ -125,9 +125,9 @@ describe("Public job discovery", () => {
     expect(screen.queryByRole("heading", { name: "React Engineer" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("link", { name: /Java Developer.*Xem chi tiết/ }));
     expect(await screen.findByRole("heading", { name: "Java Developer", level: 1 })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "← Quay lại danh sách" }));
+    fireEvent.click(screen.getByRole("button", { name: "Quay lại danh sách" }));
     expect(await screen.findByRole("heading", { name: "Alpha", level: 1 })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "← Danh sách công ty" }));
+    fireEvent.click(screen.getByRole("button", { name: "Danh sách công ty" }));
     expect(await screen.findByRole("heading", { name: "Tìm hiểu nhà tuyển dụng" })).toBeInTheDocument();
   });
 
@@ -158,7 +158,7 @@ describe("Public job discovery", () => {
     window.history.replaceState(null, "", "/?view=search&q=React&mode=REMOTE&job=react");
     render(<PublicHomePage onLoginSuccess={vi.fn()} />);
     await screen.findByRole("heading", { name: "React Engineer", level: 1 });
-    fireEvent.click(screen.getByRole("button", { name: "← Quay lại danh sách" }));
+    fireEvent.click(screen.getByRole("button", { name: "Quay lại danh sách" }));
     expect(screen.getByRole("textbox", { name: "Tìm kiếm việc làm" })).toHaveValue("React");
     expect(screen.getByLabelText("Lọc theo chế độ làm việc")).toHaveValue("REMOTE");
     expect(new URLSearchParams(window.location.search).get("job")).toBeNull();
@@ -208,7 +208,7 @@ describe("Public job discovery", () => {
     window.history.replaceState(null, "", "/?view=search&company=company-b");
     render(<PublicHomePage onLoginSuccess={vi.fn()} />);
     expect(await screen.findByRole("heading", { name: "Beta", level: 1 })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "← Danh sách công ty" }));
+    fireEvent.click(screen.getByRole("button", { name: "Danh sách công ty" }));
     fireEvent.click(screen.getByRole("button", { name: "Tìm việc làm" }));
     expect(await screen.findByRole("heading", { name: "React Engineer" })).toBeInTheDocument();
   });

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Smart Recruitment</string>
+    <string name="title_activity_main">Smart Recruitment</string>
+    <string name="package_name">com.smartrecruitment.app</string>
+    <string name="custom_url_scheme">com.smartrecruitment.app</string>
+</resources>

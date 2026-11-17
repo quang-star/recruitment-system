@@ -2,7 +2,25 @@ import { PublicJob } from "./types";
 
 export function publishedLabel(job: PublicJob) {
   const timestamp = job.publishedAt ? Date.parse(job.publishedAt) : NaN;
-  return Number.isFinite(timestamp) ? `Đăng ${new Date(timestamp).toLocaleDateString("vi-VN")}` : "Chưa cập nhật ngày đăng";
+  if (!Number.isFinite(timestamp)) return "Chưa cập nhật ngày đăng";
+
+  const diffMs = Date.now() - timestamp;
+  if (diffMs < 0) {
+    return `Đăng ${new Date(timestamp).toLocaleDateString("vi-VN")}`;
+  }
+
+  const minutes = Math.floor(diffMs / 60_000);
+  if (minutes < 1) return "Vừa đăng";
+  if (minutes < 60) return `${minutes} phút trước`;
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} giờ trước`;
+
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days} ngày trước`;
+  if (days < 30) return `${Math.floor(days / 7)} tuần trước`;
+
+  return `Đăng ${new Date(timestamp).toLocaleDateString("vi-VN")}`;
 }
 
 export function normalizeSearch(value: string) {

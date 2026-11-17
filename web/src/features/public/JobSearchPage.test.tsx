@@ -52,3 +52,22 @@ it("retains query parameters in shareable job links and retries failed searches"
   fireEvent.click(link);
   expect(onSelectJob).toHaveBeenCalledWith(job);
 });
+
+it("supports explicit search submit, keyword clear button, quick keywords, and clickable skill tags", async () => {
+  window.history.replaceState(null, "", "/?view=search");
+  const onSelectJob = vi.fn();
+  render(<JobSearchPage discovery={discovery} onSelectJob={onSelectJob} />);
+  await screen.findByRole("link", { name: /Java Engineer/ });
+
+  const input = screen.getByLabelText("Tìm kiếm việc làm");
+  fireEvent.change(input, { target: { value: "Spring" } });
+  fireEvent.click(screen.getByRole("button", { name: "Tìm kiếm" }));
+  await waitFor(() => expect(new URLSearchParams(window.location.search).get("q")).toBe("Spring"));
+
+  fireEvent.click(screen.getByRole("button", { name: "Xóa từ khóa" }));
+  await waitFor(() => expect(new URLSearchParams(window.location.search).has("q")).toBe(false));
+
+  fireEvent.click(screen.getByRole("button", { name: "Lọc theo kỹ năng Java" }));
+  await waitFor(() => expect(new URLSearchParams(window.location.search).get("q")).toBe("Java"));
+  expect(onSelectJob).not.toHaveBeenCalled();
+});

@@ -29,6 +29,7 @@ it("loads other jobs for this company, excludes the current job and navigates th
   expect(await screen.findByRole("link", { name: /Platform Engineer/ })).toBeInTheDocument();
   const related = screen.getByRole("region", { name: "Việc làm khác tại công ty" });
   expect(within(related).queryByRole("link", { name: /Java Engineer/ })).not.toBeInTheDocument();
+  expect(within(related).queryByText("Xem chi tiết")).not.toBeInTheDocument();
   expect(vi.mocked(apiRequest).mock.calls[0][0]).toContain("companyId=2");
   fireEvent.click(screen.getByRole("link", { name: /Platform Engineer/ }));
   expect(actions.onSelectJob).toHaveBeenCalledWith(other);

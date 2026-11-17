@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { ApiClientError, apiRequest } from "../../shared/api/client";
+import { ApiClientError, apiDownload, apiRequest } from "../../shared/api/client";
 import { AuthSession } from "../../shared/auth/session";
 import { ProfileIcon } from "../../shared/components/Icon";
 import { EnsureRouter, routes, useSafeNavigate } from "../../shared/router";
@@ -115,6 +115,8 @@ function CandidateProfilePageInner({ session, onLogout }: CandidateProfilePagePr
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [avatarError, setAvatarError] = useState(false);
+  const [uploadedAvatar, setUploadedAvatar] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const loadedUserIdRef = useRef<string | null>(null);
 
   const searchParams = new URLSearchParams(location.search);
@@ -181,8 +183,58 @@ function CandidateProfilePageInner({ session, onLogout }: CandidateProfilePagePr
     return () => controller.abort();
   }, [session.accessToken, session.userId, onLogout]);
 
+  useEffect(() => {
+    const path = profile?.avatarUrl;
+    if (!path?.startsWith("/api/v2/candidates/me/avatar/")) {
+      setUploadedAvatar(null);
+      return;
+    }
+    const controller = new AbortController();
+    let objectUrl: string | null = null;
+    setUploadedAvatar(null);
+    void apiDownload(path, { accessToken: session.accessToken, signal: controller.signal, headers: { Accept: "image/png" } })
+      .then(({ blob }) => {
+        if (controller.signal.aborted) return;
+        objectUrl = URL.createObjectURL(blob);
+        setUploadedAvatar(objectUrl);
+      })
+      .catch(() => { if (!controller.signal.aborted) setUploadedAvatar(null); });
+    return () => {
+      controller.abort();
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [profile?.avatarUrl, session.accessToken]);
+
+  async function uploadAvatar(file: File) {
+    if (!profile) return;
+    if (!(["image/jpeg", "image/png"].includes(file.type)) || file.size > 2 * 1024 * 1024) {
+      setError("Chọn ảnh JPEG hoặc PNG có dung lượng tối đa 2 MB.");
+      return;
+    }
+    setUploadingAvatar(true);
+    setError(null);
+    setSaveMessage(null);
+    const body = new FormData();
+    body.append("file", file);
+    try {
+      const updated = await apiRequest<CandidateProfile>(`/api/v2/candidates/me/avatar?version=${profile.version}`, {
+        method: "POST", accessToken: session.accessToken, body,
+      });
+      setProfile(updated);
+      setForm((previous) => ({ ...previous, avatarUrl: updated.avatarUrl ?? "" }));
+      setAvatarError(false);
+      setSaveMessage("Ảnh đại diện đã được cập nhật.");
+    } catch (failure) {
+      if (failure instanceof ApiClientError && failure.status === 401) { onLogout(); return; }
+      setError(failure instanceof ApiClientError ? failure.error.message : "Không thể cập nhật ảnh đại diện. Vui lòng thử lại.");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  }
+
   async function handleSubmitProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (uploadingAvatar) return;
     setSaving(true);
     setSaveMessage(null);
     setError(null);
@@ -221,7 +273,8 @@ function CandidateProfilePageInner({ session, onLogout }: CandidateProfilePagePr
 
   const candidateDisplayName = profile?.displayName || form.displayName || "Ứng viên";
 
-  const safeAvatar = safeExternalUrl(form.avatarUrl);
+  const savedAvatar = uploadedAvatar ?? safeExternalUrl(profile?.avatarUrl);
+  const safeAvatar = form.avatarUrl.startsWith("/api/v2/candidates/me/avatar/") ? uploadedAvatar : safeExternalUrl(form.avatarUrl);
   const safeLinkedIn = safeExternalUrl(form.linkedinUrl);
   const safeGitHub = safeExternalUrl(form.githubUrl);
   const safePortfolio = safeExternalUrl(form.portfolioUrl);
@@ -238,6 +291,7 @@ function CandidateProfilePageInner({ session, onLogout }: CandidateProfilePagePr
       onLoginSuccess={() => {}}
       candidate={{
         name: candidateDisplayName,
+        avatarUrl: savedAvatar,
         activeView,
         onNavigate: navigateView,
         onLogout,
@@ -246,7 +300,7 @@ function CandidateProfilePageInner({ session, onLogout }: CandidateProfilePagePr
       {activeView === "dashboard" && (
         <CandidateDashboard
           session={session}
-          profile={profile}
+          profile={profile ? { ...profile, avatarUrl: savedAvatar } : null}
           onNavigate={navigateView}
           onOpenJob={(jobId) => navigate(routes.jobDetail(jobId))}
         />
@@ -400,20 +454,24 @@ function CandidateProfilePageInner({ session, onLogout }: CandidateProfilePagePr
                           />
                         </label>
 
-                        <label className="block text-sm font-medium text-ink-800">
-                          <span>URL ảnh đại diện</span>
-                          <input
-                            type="url"
-                            maxLength={255}
-                            value={form.avatarUrl}
-                            onChange={(event) => {
-                              setAvatarError(false);
-                              setForm((prev) => ({ ...prev, avatarUrl: event.target.value }));
-                            }}
-                            placeholder="https://..."
-                            className={inputClass}
-                          />
-                        </label>
+                        <div>
+                          <label className="block text-sm font-medium text-ink-800">
+                            <span>Ảnh đại diện</span>
+                            <input
+                              type="file"
+                              accept="image/jpeg,image/png"
+                              disabled={uploadingAvatar || saving || !profile}
+                              onChange={(event) => {
+                                const file = event.target.files?.[0];
+                                event.target.value = "";
+                                if (file) void uploadAvatar(file);
+                              }}
+                              className="mt-1.5 block w-full text-sm text-ink-700 file:mr-3 file:rounded-xl file:border file:border-border-strong file:bg-white file:px-3 file:py-2 file:text-sm file:font-medium"
+                            />
+                          </label>
+                          <p className="mt-1 text-xs text-ink-500">Chọn ảnh JPEG hoặc PNG, tối đa 2 MB. Ảnh được lưu ngay khi chọn.</p>
+                          {uploadingAvatar && <p role="status" className="text-xs text-ink-500">Đang cập nhật ảnh…</p>}
+                        </div>
                       </div>
                     </div>
 
@@ -433,7 +491,7 @@ function CandidateProfilePageInner({ session, onLogout }: CandidateProfilePagePr
                       <span className="text-xs text-ink-500">
                         Phiên bản hồ sơ #{profile?.version ?? 0}
                       </span>
-                      <Button type="submit" disabled={saving}>
+                      <Button type="submit" disabled={saving || uploadingAvatar}>
                         {saving ? "Đang lưu…" : "Cập nhật hồ sơ"}
                       </Button>
                     </div>

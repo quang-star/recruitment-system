@@ -242,3 +242,50 @@ export const GlobeIcon: FC<IconProps> = ({ size = 18, ...props }) => (
     <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
   </svg>
 );
+
+export const BanknoteIcon: FC<IconProps> = ({ size = 18, ...props }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <rect width="20" height="12" x="2" y="6" rx="2" />
+    <circle cx="12" cy="12" r="2" />
+    <path d="M6 12h.01M18 12h.01" />
+  </svg>
+);
+
+export const BookmarkIcon: FC<IconProps & { filled?: boolean }> = ({ size = 18, filled = false, ...props }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />
+  </svg>
+);
+
+export const ProjectLogoIcon: FC<IconProps> = ({ size = 32, ...props }) => (
+  <svg width={size} height={size} viewBox="0 0 100 100" fill="none" {...props}>
+    <path
+      d="M 37 22 V 13 C 37 9 40.5 5.5 45 5.5 H 55 C 59.5 5.5 63 9 63 13 V 22"
+      stroke="#2c7ef4"
+      strokeWidth="5.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M 88 42 V 37 C 88 27 79 21.5 67 21.5 H 33 C 21 21.5 12 27 12 37 V 75 C 12 85 21 92.5 33 92.5 H 41"
+      stroke="#2c7ef4"
+      strokeWidth="5.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M 48 92.5 H 67 C 79 92.5 88 85 88 75 V 50"
+      stroke="#029f98"
+      strokeWidth="5.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <circle cx="50" cy="45" r="9.5" fill="#2c7ef4" />
+    <path
+      d="M 33 73 C 33 59 67 59 67 73"
+      stroke="#2c7ef4"
+      strokeWidth="5.5"
+      strokeLinecap="round"
+    />
+  </svg>
+);

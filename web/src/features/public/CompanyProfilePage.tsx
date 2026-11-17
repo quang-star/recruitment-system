@@ -4,6 +4,7 @@ import { PageControls } from "../../shared/components/PageControls";
 import { useUrlParams } from "../../shared/navigation";
 import { Badge, Button, Card, EmptyState, ErrorBanner } from "../../shared/ui";
 import { CompanyCover } from "./CompanyCover";
+import { CompanyLogo } from "./CompanyLogo";
 import { CompanyInfo } from "./companyData";
 import { PublicJobListCard } from "./PublicJobListCard";
 import { PublicJob } from "./types";
@@ -38,9 +39,9 @@ export function CompanyProfilePage({ company, onBack, onSelectJob }: Props) {
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
       <nav aria-label="Điều hướng công ty">
-        <Button type="button" variant="secondary" size="sm" onClick={onBack}>
-          <ArrowLeftIcon size={15} aria-hidden="true" />
-          <span>← Danh sách công ty</span>
+        <Button type="button" variant="secondary" size="md" onClick={onBack}>
+          <ArrowLeftIcon size={16} aria-hidden="true" />
+          <span>Danh sách công ty</span>
         </Button>
       </nav>
 
@@ -48,11 +49,12 @@ export function CompanyProfilePage({ company, onBack, onSelectJob }: Props) {
         <CompanyCover src={company.coverImage} className="h-44 sm:h-52 w-full" />
         <div className="p-6 sm:p-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-12 relative">
           <div className="flex flex-col sm:flex-row sm:items-end gap-4 min-w-0">
-            <img
+            <CompanyLogo
               src={company.logo}
+              name={company.shortName || company.name}
               alt={`${company.shortName} logo`}
-              className="h-20 w-20 sm:h-24 sm:w-24 shrink-0 rounded-2xl border-4 border-white bg-white object-contain p-2 shadow-card"
-              onError={(e) => { e.currentTarget.src = "/logos/smartrecruitment.svg"; }}
+              className="h-20 w-20 sm:h-24 sm:w-24 rounded-xl border-4 border-white shadow-card"
+              textClassName="text-xl font-bold"
             />
             <div className="space-y-1.5 min-w-0 pt-1">
               <div className="flex flex-wrap items-center gap-2">

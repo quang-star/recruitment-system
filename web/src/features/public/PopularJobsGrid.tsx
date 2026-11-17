@@ -1,5 +1,6 @@
-import { MapPinIcon } from "../../shared/components/Icon";
-import { Badge, Card } from "../../shared/ui";
+import { BanknoteIcon, MapPinIcon } from "../../shared/components/Icon";
+import { Card } from "../../shared/ui";
+import { CompanyLogo } from "./CompanyLogo";
 import { resolveCompanyMeta } from "./companyData";
 import { formatSalary, workModeLabel } from "./jobPresentation";
 import { PublicJob } from "./types";
@@ -30,11 +31,10 @@ export function PopularJobsGrid({ jobs, onSelectJob, onApplyJob }: PopularJobsGr
           return (
             <Card key={job.jobId} as="article" interactive padding="sm" className="flex flex-col justify-between gap-3">
               <div className="flex items-start gap-3">
-                <img
+                <CompanyLogo
                   src={job.companyLogo || company.logo}
-                  alt=""
-                  className="h-10 w-10 shrink-0 rounded-xl border border-border-subtle bg-white object-contain p-1"
-                  onError={(e) => { e.currentTarget.src = "/logos/smartrecruitment.svg"; }}
+                  name={job.companyName || company.shortName}
+                  className="h-10 w-10 rounded-lg"
                 />
                 <div className="min-w-0 flex-1">
                   <h3 className="text-sm font-bold text-ink-900 m-0 leading-snug">
@@ -53,8 +53,11 @@ export function PopularJobsGrid({ jobs, onSelectJob, onApplyJob }: PopularJobsGr
               </div>
 
               <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border-subtle/70 text-xs">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge tone="brand">{formatSalary(job)}</Badge>
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <span className="inline-flex items-center gap-1 font-bold text-emerald-700">
+                    <BanknoteIcon size={13} className="text-emerald-600 shrink-0" aria-hidden="true" />
+                    <span>{formatSalary(job)}</span>
+                  </span>
                   <span className="inline-flex items-center gap-1 text-ink-500">
                     <MapPinIcon size={12} aria-hidden="true" />
                     <span className="truncate max-w-[110px]">{job.locationText || workModeLabel(job.workMode)}</span>

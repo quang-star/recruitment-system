@@ -102,7 +102,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 export async function apiDownload(path: string, options: RequestOptions = {}): Promise<{ blob: Blob; filename: string }> {
   const { accessToken, idempotencyKey: _idempotencyKey, ...requestInit } = options;
   const headers = new Headers(requestInit.headers);
-  headers.set("Accept", "application/pdf");
+  if (!headers.has("Accept")) headers.set("Accept", "application/pdf");
   headers.set("X-Correlation-Id", createCorrelationId());
   if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
   const response = await authenticatedFetch(path, requestInit, headers, accessToken);

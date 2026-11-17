@@ -20,7 +20,7 @@ export function Card({ as = "div", interactive = false, padding = "md", classNam
   return (
     <Component
       className={cn(
-        "bg-surface border border-border-subtle rounded-2xl shadow-card",
+        "bg-surface border border-border-subtle rounded-xl shadow-card",
         interactive && "transition-all duration-150 hover:shadow-card-hover hover:border-brand-300",
         paddingMap[padding],
         className

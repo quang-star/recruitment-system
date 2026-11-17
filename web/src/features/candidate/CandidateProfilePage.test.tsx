@@ -2,11 +2,11 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, it, vi } from "vitest";
 import { CandidateProfilePage } from "./CandidateProfilePage";
-import { apiRequest } from "../../shared/api/client";
+import { apiDownload, apiRequest } from "../../shared/api/client";
 import { AuthSession } from "../../shared/auth/session";
 import { setPendingJobId } from "../../shared/pendingApplication";
 
-vi.mock("../../shared/api/client", async (original) => ({ ...await original<typeof import("../../shared/api/client")>(), apiRequest: vi.fn() }));
+vi.mock("../../shared/api/client", async (original) => ({ ...await original<typeof import("../../shared/api/client")>(), apiRequest: vi.fn(), apiDownload: vi.fn() }));
 vi.mock("./CandidateCvPanel", () => ({ CandidateCvPanel: () => <h2>Thư viện CV cá nhân</h2> }));
 vi.mock("./CandidateDashboard", () => ({ CandidateDashboard: () => <h2>Tổng quan cá nhân</h2> }));
 vi.mock("../auth/AccountSecurityPanel", () => ({ AccountSecurityPanel: () => <h2>Bảo mật tài khoản cá nhân</h2> }));
@@ -136,9 +136,38 @@ it("edits and saves expanded candidate profile contact, social links, and bio", 
   const putCall = vi.mocked(apiRequest).mock.calls.find(([path, opt]) => path === "/api/v2/candidates/me" && opt?.method === "PUT");
   expect(putCall).toBeDefined();
   const payload = JSON.parse(putCall![1]!.body as string);
+  expect(payload.avatarUrl).toBe("https://example.com/avatar.png");
+  expect(within(screen.getByRole("button", { name: "Tài khoản Nguyễn An" })).getByRole("presentation")).toHaveAttribute("src", "https://example.com/avatar.png");
   expect(payload.phoneNumber).toBe("0988888888");
   expect(payload.contactEmail).toBe("an@example.com");
   expect(payload.version).toBe(0);
+});
+
+it("uploads an account avatar and shows it in the account menu", async () => {
+  window.history.replaceState(null, "", "/?candidate=profile");
+  const imageUrl = "/api/v2/candidates/me/avatar/123e4567-e89b-12d3-a456-426614174000";
+  const createUrl = vi.fn(() => "blob:avatar");
+  const revokeUrl = vi.fn();
+  vi.stubGlobal("URL", Object.assign(URL, { createObjectURL: createUrl, revokeObjectURL: revokeUrl }));
+  vi.mocked(apiDownload).mockResolvedValue({ blob: new Blob(["image"], { type: "image/png" }), filename: "avatar.png" });
+  vi.mocked(apiRequest).mockImplementation(async (path) => {
+    if (path.startsWith("/api/v2/candidates/me/avatar?")) return { displayName: "Nguyễn An", headline: "Developer", locationText: "Hà Nội", visibility: "APPLICATION_ONLY", version: 1, avatarUrl: imageUrl };
+    if (path === "/api/v2/candidates/me") return { displayName: "Nguyễn An", headline: "Developer", locationText: "Hà Nội", visibility: "APPLICATION_ONLY", version: 0 };
+    if (path.includes("/jobs?") || path.includes("/applications?")) return { items: [], total: 0, page: 0, size: 12 };
+    return [];
+  });
+  const view = render(<CandidateProfilePage session={session} onLogout={vi.fn()} />);
+  const input = await screen.findByLabelText("Ảnh đại diện");
+  const file = new File(["image"], "avatar.png", { type: "image/png" });
+  await userEvent.upload(input, file);
+  await screen.findByText("Ảnh đại diện đã được cập nhật.");
+  await waitFor(() => expect(within(screen.getByRole("button", { name: "Tài khoản Nguyễn An" })).getByRole("presentation")).toHaveAttribute("src", "blob:avatar"));
+  const upload = vi.mocked(apiRequest).mock.calls.find(([path]) => path.startsWith("/api/v2/candidates/me/avatar?"));
+  expect(upload?.[0]).toContain("version=0");
+  expect((upload?.[1]?.body as FormData).get("file")).toBe(file);
+  view.unmount();
+  expect(revokeUrl).toHaveBeenCalledWith("blob:avatar");
+  vi.unstubAllGlobals();
 });
 
 it("renders /candidate/cv directly without fetching public portal endpoints", async () => {

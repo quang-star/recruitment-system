@@ -16,13 +16,13 @@ Giao diện khách tìm việc và ứng viên hỗ trợ mobile. Không gian nh
 quản trị viên dành cho laptop/desktop, với bố cục tối thiểu 1024 px và thanh điều
 hướng cố định; màn hình hẹp sử dụng cuộn ngang thay vì menu/bố cục mobile riêng.
 
-Ứng viên có thể rút đơn, thu hồi quyền chia sẻ hoặc xóa CV. Quyền truy cập tài liệu được kiểm tra theo tài khoản và hồ sơ ứng tuyển.
+Ứng viên có thể cập nhật ảnh đại diện tài khoản bằng ảnh JPEG/PNG (tối đa 2 MiB) trong Hồ sơ, rút đơn, thu hồi quyền chia sẻ hoặc xóa CV. Quyền truy cập tài liệu được kiểm tra theo tài khoản và hồ sơ ứng tuyển.
 
 ### Tạo CV theo mẫu & Chỉnh sửa PDF trực tiếp
 
-Trong **CV của tôi**, bạn có thể quản lý bản nháp/CV ở tab **CV & Bản nháp của tôi**, khám phá mẫu ở tab **Kho mẫu CV TopCV**, **Sửa file PDF trực tiếp**, hoặc chọn **Tạo CV theo mẫu** để mở trình soạn thảo WYSIWYG trực tiếp trên trang A4 với 4 mẫu bố cục (`Executive`, `Modern`, `Classic`, `Minimal`).
+Trong **CV của tôi**, bạn có thể quản lý bản nháp/CV ở tab **CV & Bản nháp của tôi**, khám phá mẫu ở tab **Kho mẫu CV**, **Sửa file PDF trực tiếp**, hoặc chọn **Tạo CV theo mẫu** để mở trình soạn thảo WYSIWYG trực tiếp trên trang A4 với 4 mẫu bố cục (`Executive`, `Modern`, `Classic`, `Minimal`).
 
-- **Trình soạn thảo TopCV (`CvBuilder`)**: chỉnh sửa trực tiếp từng mục trên tờ CV (kèm thanh định dạng nhanh **In đậm**, *In nghiêng*, `• Bullet`), đổi tên tiêu đề từng mục tự do, bảng điều khiển 4 tab (**Thiết kế**, **Bố cục mục**, **Gợi ý & Nhập**, **Hoàn thiện**), chọn font chữ (`Noto Sans`, `Noto Serif`, `Mono`), bảng màu & mã màu nhấn tùy chỉnh, cỡ chữ, giãn dòng, ngôn ngữ tiêu đề (`Tiếng Việt` / `English`), ngày sinh / giới tính, các mục mở rộng (**Giải thưởng**, **Hoạt động**, **Sở thích**), gợi ý viết CV mẫu, chấm điểm mức độ hoàn thiện, **cắt/xoay ảnh đại diện 1:1** cục bộ trên Canvas trình duyệt, tự động lưu bản nháp khi chỉnh sửa bản nháp đã lưu, phím tắt `Ctrl+S` / `Ctrl+Z` / `Ctrl+Y`, và **Hoàn tác / Làm lại**.
+- **Trình soạn thảo CV (`CvBuilder`)**: chỉnh sửa trực tiếp từng mục trên tờ CV (kèm thanh định dạng nhanh **In đậm**, *In nghiêng*, `• Bullet`), đổi tên tiêu đề từng mục tự do, bảng điều khiển 4 tab (**Thiết kế**, **Bố cục mục**, **Gợi ý & Nhập**, **Hoàn thiện**), chọn font chữ (`Noto Sans`, `Noto Serif`, `Mono`), bảng màu & mã màu nhấn tùy chỉnh, cỡ chữ, giãn dòng, ngôn ngữ tiêu đề (`Tiếng Việt` / `English`), ngày sinh / giới tính, các mục mở rộng (**Giải thưởng**, **Hoạt động**, **Sở thích**), gợi ý viết CV mẫu, chấm điểm mức độ hoàn thiện, **cắt/xoay ảnh đại diện 1:1** cục bộ trên Canvas trình duyệt, tự động lưu bản nháp khi chỉnh sửa bản nháp đã lưu, phím tắt `Ctrl+S` / `Ctrl+Z` / `Ctrl+Y`, và **Hoàn tác / Làm lại**.
 - **Nhập & đối chiếu PDF trong `CvBuilder`**: bạn có thể nhập tay, lấy thông tin từ hồ sơ cá nhân, chọn **Tinh chỉnh bằng CV Builder** từ CV đã phân tích trong thư viện, hoặc chọn **Nhập từ file PDF…** để đọc text PDF cục bộ ngay trên trình duyệt bằng `pdfjs-dist` kèm chế độ **PDF gốc đối chiếu** song song (lưu ý file ảnh scan chưa OCR cần dùng luồng phân tích AI hoặc **Sửa trực tiếp trên PDF**).
 - **Trình sửa file PDF trực tiếp (`PdfOverlayEditor`)**: nhấn **Sửa file PDF trực tiếp** hoặc **Sửa trực tiếp trên PDF** trên thẻ CV để mở canvas trang PDF thật, đặt vùng **Che trắng**, chèn **Chữ tiếng Việt** (font SIL OFL `Noto Sans` nhúng qua `@pdf-lib/fontkit`) hoặc **Chèn ảnh / Chữ ký** với lịch sử Hoàn tác / Làm lại, sau đó tải xuống PDF đã chỉnh sửa hoặc lưu thành phiên bản CV mới vào thư viện.
 
@@ -351,6 +351,38 @@ Suite E2E yêu cầu email/password tài khoản QA được truyền rõ qua
 test code không tự chọn credential demo mặc định. Chỉ trỏ `E2E_BASE_URL` đến stack QA đã được phép dùng.
 Một số ca cần tài khoản quản trị thử nghiệm qua `E2E_ADMIN_EMAIL` và `E2E_ADMIN_PASSWORD`,
 hoặc metadata fixture retry qua `E2E_RETRY_*`. Kiểm tra kết quả skip; thiếu fixture không được coi là ca đã đạt.
+
+## Bản cài Android và Windows
+
+`web/` có cấu hình Capacitor cho Android và Electron cho Windows. Cả hai đóng gói
+giao diện React; Gateway, Auth, Core và AI vẫn chạy trên server. Trước khi tạo bản
+dùng thực tế, triển khai Gateway qua HTTPS và đặt `VITE_GATEWAY_URL` thành origin
+của Gateway khi build Web. Gateway phải cho phép origin của app theo cấu hình CORS;
+đường dẫn `localhost` trên điện thoại trỏ về chính điện thoại. Chưa có Gateway
+công khai thì file cài chỉ dùng để xem giao diện, không đăng nhập hoặc tải dữ liệu.
+
+Trong `web/` trên Windows, sau khi đã cài dependencies:
+
+```powershell
+$env:VITE_GATEWAY_URL = 'https://gateway.example.com' # thay bằng Gateway thật
+npm run build
+npm run android:sync
+cd android
+.\gradlew.bat assembleDebug
+```
+
+APK thử nghiệm nằm tại `web/android/app/build/outputs/apk/debug/app-debug.apk`.
+Android Studio/SDK và JDK tương thích phải được cài. Bản phát hành cần ký bằng
+keystore riêng; không đưa keystore vào repository. Để tạo EXE portable từ `web/`:
+
+```powershell
+$env:VITE_GATEWAY_URL = 'https://gateway.example.com' # thay bằng Gateway thật
+npm run desktop:package
+```
+
+File EXE nằm trong `web/release/`. Bản local chưa ký mã. Kiểm thử Google sign-in,
+PDF và liên kết xác minh email trên thiết bị trước khi phát hành; Google sign-in
+hiện dùng popup dành cho Web. Recruiter/Admin vẫn cần màn hình từ 1024 px.
 
 ## Tài liệu
 
