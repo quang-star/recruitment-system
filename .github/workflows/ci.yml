@@ -70,4 +70,4 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Validate production-like and development Compose models
-        run: docker compose -f compose.yaml -f compose.dev.yaml config --quiet
+        run: docker compose --env-file .env.example -f compose.yaml -f compose.dev.yaml config --quiet
