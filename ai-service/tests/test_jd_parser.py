@@ -81,6 +81,20 @@ def test_parser_extracts_education_and_language_requirements() -> None:
     assert payload["requirements"]["languages"][0]["required"] is True
 
 
+def test_parser_normalizes_html_preserving_required_and_preferred_boundaries() -> None:
+    payload = parse_jd(
+        str(legacy_id('779494ac-c858-4570-a884-6e88423b8e2b')),
+        "0cb83583181fc5bdb09aa37cf82ab5f89e7438e88925de3e6e1f0f0eddb76382",
+        "Backend Engineer",
+        "<p>Xây dựng dịch vụ backend.</p><ul><li><p>Phát triển API.</p></li></ul>",
+        "<p><strong>Bắt buộc:</strong></p><ul><li><p>Java</p></li></ul><p><strong>Ưu tiên:</strong></p><ul><li><p>Docker</p></li></ul>",
+    )
+
+    assert {skill["raw"] for skill in payload["requirements"]["requiredSkills"]} == {"Java"}
+    assert {skill["raw"] for skill in payload["requirements"]["preferredSkills"]} == {"Docker"}
+    assert all("<" not in r["raw"] and ">" not in r["raw"] for r in payload["responsibilities"])
+
+
 def test_negated_degree_requirement_is_not_scored_and_languages_are_not_dropped():
     payload = parse_jd(
         str(legacy_id('779494ac-c858-4570-a884-6e88423b8e2b')), "0" * 64,
