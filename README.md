@@ -133,7 +133,7 @@ docker compose -f compose.yaml -f compose.dev.yaml ps
 | [localhost:8025](http://localhost:8025) | Mailpit để xem email xác thực và khôi phục tài khoản. |
 | [localhost:9001](http://localhost:9001) | MinIO Console; đăng nhập bằng cấu hình MinIO trong `.env`. |
 
-`compose.dev.yaml` mở thêm cổng hạ tầng để phát triển. `compose.yaml` chỉ công bố Web và Gateway. PostgreSQL, Kafka và MinIO lưu dữ liệu bằng Docker volumes.
+`compose.dev.yaml` mở cổng Gateway trên `localhost:8080` và các cổng hạ tầng để phát triển. Trên Coolify, proxy chuyển tiếp trực tiếp tới cổng `8080` trong container Gateway. PostgreSQL, Kafka và MinIO lưu dữ liệu bằng Docker volumes.
 
 ### 3. Dùng thử
 
