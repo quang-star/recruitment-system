@@ -42,14 +42,31 @@ class GoogleSignInServiceTests {
 
     @Test
     void createsVerifiedCandidateWithNoPasswordAndReusesExistingSessions() {
-        service.login("credential", "nonce", null, "browser", "127.0.0.1");
+        var result = service.login("credential", "nonce", null, "browser", "127.0.0.1");
         ArgumentCaptor<AuthUser> saved = ArgumentCaptor.forClass(AuthUser.class);
         verify(users).insert(saved.capture());
         assertThat(saved.getValue().status()).isEqualTo(UserStatus.ACTIVE);
         assertThat(saved.getValue().emailVerifiedAt()).isEqualTo(NOW);
         assertThat(saved.getValue().normalizedEmail()).isEqualTo("candidate@example.com");
+        assertThat(result.newAccount()).isTrue();
+        assertThat(result.googleProfile()).isEqualTo(new GoogleSignInService.GoogleProfileHint(
+                "Candidate", null, "Candidate@Example.com"));
         verify(roles).assignCandidateRole(1L, NOW);
         verify(authentication).loginVerifiedIdentity(1L, "browser", "127.0.0.1");
+    }
+
+    @Test
+    void returnsTruncatedGoogleNameAndAvatarForNewAccounts() {
+        String longName = "Nguyễn ".repeat(30);
+        when(verifier.verify("credential", "nonce"))
+                .thenReturn(new GoogleIdentityVerifier.VerifiedIdentity(
+                        "subject", "an@example.com", longName, "https://lh3.googleusercontent.com/a/photo"));
+        var result = service.login("credential", "nonce", "CANDIDATE", "browser", "127.0.0.1");
+        assertThat(result.newAccount()).isTrue();
+        assertThat(result.googleProfile().displayName()).hasSizeLessThanOrEqualTo(120);
+        assertThat(result.googleProfile().displayName()).startsWith("Nguyễn");
+        assertThat(result.googleProfile().avatarUrl()).isEqualTo("https://lh3.googleusercontent.com/a/photo");
+        assertThat(result.googleProfile().email()).isEqualTo("an@example.com");
     }
 
     @Test
@@ -62,7 +79,8 @@ class GoogleSignInServiceTests {
     @Test
     void returningIdentityKeepsRoleAndDoesNotRelinkByChangedEmail() {
         when(identities.findUserId("subject")).thenReturn(Optional.of(42L));
-        service.login("credential", "nonce", "RECRUITER", null, null);
+        var result = service.login("credential", "nonce", "RECRUITER", null, null);
+        assertThat(result.newAccount()).isFalse();
         verify(authentication).loginVerifiedIdentity(42L, null, null);
         verifyNoInteractions(roles, users);
     }

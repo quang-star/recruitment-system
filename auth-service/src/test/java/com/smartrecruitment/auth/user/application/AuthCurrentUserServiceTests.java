@@ -1,6 +1,8 @@
 package com.smartrecruitment.auth.user.application;
 
 import com.smartrecruitment.auth.user.application.port.AuthUserRepository;
+import com.smartrecruitment.auth.user.application.port.GoogleIdentityRepository;
+import com.smartrecruitment.auth.user.application.port.PasswordCredentialRepository;
 import com.smartrecruitment.auth.user.domain.AuthUser;
 import com.smartrecruitment.auth.user.domain.UserStatus;
 import org.junit.jupiter.api.Test;
@@ -16,10 +18,12 @@ class AuthCurrentUserServiceTests {
     private static final Long USER_ID = 1L;
 
     @Test
-    void returnsActiveUserWithCurrentRoles() {
+    void returnsActiveUserWithCurrentRolesAndAuthMethods() {
         AuthUser user = user(UserStatus.ACTIVE, Instant.parse("2026-08-14T00:00:00Z"));
         AuthCurrentUserService service = new AuthCurrentUserService(repository(user),
-                internalUserId -> List.of("CANDIDATE"));
+                internalUserId -> List.of("CANDIDATE"),
+                googleRepo(true),
+                passwordRepo(false));
 
         CurrentUserResult result = service.get(USER_ID);
 
@@ -27,6 +31,20 @@ class AuthCurrentUserServiceTests {
         assertThat(result.email()).isEqualTo("candidate@example.com");
         assertThat(result.emailVerified()).isTrue();
         assertThat(result.roles()).containsExactly("CANDIDATE");
+        assertThat(result.hasPassword()).isFalse();
+        assertThat(result.googleLinked()).isTrue();
+    }
+
+    @Test
+    void defaultsToPasswordOnlyWhenOptionalRepositoriesAreOmitted() {
+        AuthUser user = user(UserStatus.ACTIVE, Instant.parse("2026-08-14T00:00:00Z"));
+        AuthCurrentUserService service = new AuthCurrentUserService(repository(user),
+                internalUserId -> List.of("CANDIDATE"));
+
+        CurrentUserResult result = service.get(USER_ID);
+
+        assertThat(result.hasPassword()).isTrue();
+        assertThat(result.googleLinked()).isFalse();
     }
 
     @Test
@@ -36,6 +54,26 @@ class AuthCurrentUserServiceTests {
 
         assertThatThrownBy(() -> service.get(USER_ID))
                 .isInstanceOf(CurrentUserUnavailableException.class);
+    }
+
+    private static GoogleIdentityRepository googleRepo(boolean linked) {
+        return new GoogleIdentityRepository() {
+            @Override
+            public Optional<Long> findUserId(String subject) { return Optional.empty(); }
+            @Override
+            public boolean link(String subject, Long userId) { return false; }
+            @Override
+            public boolean existsByUserId(Long userId) { return linked && USER_ID.equals(userId); }
+        };
+    }
+
+    private static PasswordCredentialRepository passwordRepo(boolean hasPassword) {
+        return new PasswordCredentialRepository() {
+            @Override
+            public void insert(Long userId, String passwordHash, Instant createdAt) {}
+            @Override
+            public boolean existsByUserId(Long userId) { return hasPassword && USER_ID.equals(userId); }
+        };
     }
 
     private static AuthUserRepository repository(AuthUser user) {

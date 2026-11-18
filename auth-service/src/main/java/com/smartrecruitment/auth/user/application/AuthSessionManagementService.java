@@ -24,12 +24,17 @@ public class AuthSessionManagementService {
 
     @Transactional(readOnly = true)
     public List<SessionResult> list(Long userId) {
+        return list(userId, null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<SessionResult> list(Long userId, Long currentSessionId) {
         var user = users.findById(userId)
                 .filter(value -> value.status() == UserStatus.ACTIVE)
                 .orElseThrow(CurrentUserUnavailableException::new);
         Instant now = Instant.now(clock);
         return sessions.findAllByUserId(user.id()).stream()
-                .map(value -> SessionResult.from(value, now))
+                .map(value -> SessionResult.from(value, now, currentSessionId))
                 .toList();
     }
 
@@ -46,12 +51,12 @@ public class AuthSessionManagementService {
     public record SessionResult(String sessionId, String clientType, String deviceName, String userAgent,
                                 String createdIp, String lastSeenIp, Instant authenticatedAt, Instant lastSeenAt,
                                 Instant idleExpiresAt, Instant absoluteExpiresAt, Instant revokedAt,
-                                String revokeReason, boolean active) {
-        static SessionResult from(SessionRepository.SessionDetails value, Instant now) {
+                                String revokeReason, boolean active, boolean current) {
+        static SessionResult from(SessionRepository.SessionDetails value, Instant now, Long currentSessionId) {
             return new SessionResult(value.id().toString(), value.clientType(), value.deviceName(), value.userAgent(),
                     value.createdIp(), value.lastSeenIp(), value.authenticatedAt(), value.lastSeenAt(),
                     value.idleExpiresAt(), value.absoluteExpiresAt(), value.revokedAt(), value.revokeReason(),
-                    value.activeAt(now));
+                    value.activeAt(now), currentSessionId != null && currentSessionId.equals(value.id()));
         }
     }
 }

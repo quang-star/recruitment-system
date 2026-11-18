@@ -5,4 +5,5 @@ import java.util.Optional;
 public interface GoogleIdentityRepository {
     Optional<Long> findUserId(String subject);
     boolean link(String subject, Long userId);
+    default boolean existsByUserId(Long userId) { return false; }
 }

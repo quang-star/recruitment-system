@@ -1,5 +1,6 @@
 package com.smartrecruitment.auth.auth.api;
 
+import com.smartrecruitment.auth.user.application.AuthenticationResult;
 import com.smartrecruitment.auth.user.application.GoogleSignInException;
 import com.smartrecruitment.auth.user.application.GoogleSignInService;
 import org.junit.jupiter.api.BeforeEach;
@@ -9,6 +10,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.Instant;
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -48,6 +50,30 @@ class GoogleAuthControllerTests {
                     .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
         }
         verifyNoInteractions(service);
+    }
+
+    @Test
+    void returnsSessionWithGoogleProfileHintOnFirstLogin() throws Exception {
+        Instant now = Instant.parse("2026-11-18T10:00:00Z");
+        when(service.login(eq("google-token"), eq("n".repeat(64)), eq("CANDIDATE"), any(), any()))
+                .thenReturn(new GoogleSignInService.GoogleLoginResult(
+                        new AuthenticationResult(42L, "app-access", "app-refresh",
+                                now.plusSeconds(900), now.plusSeconds(86400), List.of("CANDIDATE")),
+                        true,
+                        new GoogleSignInService.GoogleProfileHint(
+                                "Nguyễn Văn An", "https://lh3.googleusercontent.com/a/an", "an@example.com")));
+        http.perform(post("/api/v2/auth/google/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"credential\":\"google-token\",\"nonce\":\"" + "n".repeat(64)
+                                + "\",\"accountType\":\"CANDIDATE\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.userId").value("42"))
+                .andExpect(jsonPath("$.accessToken").value("app-access"))
+                .andExpect(jsonPath("$.refreshToken").value("app-refresh"))
+                .andExpect(jsonPath("$.roles[0]").value("CANDIDATE"))
+                .andExpect(jsonPath("$.newAccount").value(true))
+                .andExpect(jsonPath("$.googleProfile.displayName").value("Nguyễn Văn An"))
+                .andExpect(jsonPath("$.googleProfile.avatarUrl").value("https://lh3.googleusercontent.com/a/an"))
+                .andExpect(jsonPath("$.googleProfile.email").value("an@example.com"));
     }
 
     @Test

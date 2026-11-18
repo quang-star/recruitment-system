@@ -80,7 +80,7 @@ public class AuthController {
     }
     @GetMapping("/sessions")
     public java.util.List<AuthSessionManagementService.SessionResult> sessions(@AuthenticationPrincipal Jwt jwt) {
-        return sessionManagementService.list(SubjectId.parse(jwt.getSubject()));
+        return sessionManagementService.list(SubjectId.parse(jwt.getSubject()), parseOptionalSessionId(jwt));
     }
     @DeleteMapping("/sessions/{sessionId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -105,6 +105,10 @@ public class AuthController {
     @GetMapping("/me")
     public CurrentUserResponse getCurrentUser(@AuthenticationPrincipal Jwt jwt) {
         return CurrentUserResponse.from(currentUserService.get(SubjectId.parse(jwt.getSubject())));
+    }
+    private static Long parseOptionalSessionId(Jwt jwt) {
+        String sid = jwt.getClaimAsString("sid");
+        return sid == null || sid.isBlank() ? null : SubjectId.parse(sid);
     }
     public record RegisterRequest(@NotBlank @Email @Size(max = 320) String email,
                                   @NotBlank @Size(min = 8, max = 128) String password,
@@ -147,10 +151,11 @@ public class AuthController {
         }
     }
     public record CurrentUserResponse(String userId, String email, String status,
-                                      boolean emailVerified, java.util.List<String> roles) {
+                                      boolean emailVerified, java.util.List<String> roles,
+                                      boolean hasPassword, boolean googleLinked) {
         static CurrentUserResponse from(CurrentUserResult result) {
             return new CurrentUserResponse(result.userId().toString(), result.email(), result.status(),
-                    result.emailVerified(), result.roles());
+                    result.emailVerified(), result.roles(), result.hasPassword(), result.googleLinked());
         }
     }
 }
