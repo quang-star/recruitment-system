@@ -68,6 +68,90 @@ paths:
           description: Company does not exist
         '409':
           description: Company changed or is no longer PENDING
+  /api/v2/dashboard/companies/{companyId}/reject:
+    post:
+      summary: Reject a pending company (SYSTEM_ADMIN only)
+      description: Atomically changes operating status PENDING to CLOSED, increments version and records an audit entry.
+      parameters:
+        - $ref: '#/components/parameters/CompanyId'
+        - $ref: common-v2.yaml#/components/parameters/CorrelationId
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Approval'
+      responses:
+        '200':
+          description: Rejected company
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Company'
+        '400':
+          description: Invalid version or blank/oversized reason
+        '403':
+          description: SYSTEM_ADMIN is required
+        '404':
+          description: Company does not exist
+        '409':
+          description: Company changed or is no longer PENDING
+  /api/v2/dashboard/companies/{companyId}/suspend:
+    post:
+      summary: Suspend an active company (SYSTEM_ADMIN only)
+      description: Atomically changes operating status ACTIVE to SUSPENDED, increments version and records an audit entry.
+      parameters:
+        - $ref: '#/components/parameters/CompanyId'
+        - $ref: common-v2.yaml#/components/parameters/CorrelationId
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Approval'
+      responses:
+        '200':
+          description: Suspended company
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Company'
+        '400':
+          description: Invalid version or blank/oversized reason
+        '403':
+          description: SYSTEM_ADMIN is required
+        '404':
+          description: Company does not exist
+        '409':
+          description: Company changed or is no longer ACTIVE
+  /api/v2/dashboard/companies/{companyId}/reactivate:
+    post:
+      summary: Reactivate a suspended company (SYSTEM_ADMIN only)
+      description: Atomically changes operating status SUSPENDED to ACTIVE, increments version and records an audit entry.
+      parameters:
+        - $ref: '#/components/parameters/CompanyId'
+        - $ref: common-v2.yaml#/components/parameters/CorrelationId
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Approval'
+      responses:
+        '200':
+          description: Reactivated company
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Company'
+        '400':
+          description: Invalid version or blank/oversized reason
+        '403':
+          description: SYSTEM_ADMIN is required
+        '404':
+          description: Company does not exist
+        '409':
+          description: Company changed or is no longer SUSPENDED
   /api/v2/dashboard/companies/{companyId}/history:
     get:
       summary: Recent operating approval history (SYSTEM_ADMIN only)
@@ -143,11 +227,14 @@ components:
         actorUserId:
           $ref: ../schemas/cv-response-v2.schema.json#/properties/cvId
         action:
-          const: APPROVE
+          type: string
+          enum: [APPROVE, REJECT, SUSPEND, REACTIVATE]
         fromStatus:
-          const: PENDING
+          type: string
+          enum: [PENDING, ACTIVE, SUSPENDED]
         toStatus:
-          const: ACTIVE
+          type: string
+          enum: [ACTIVE, SUSPENDED, CLOSED]
         version:
           type: integer
           minimum: 1
