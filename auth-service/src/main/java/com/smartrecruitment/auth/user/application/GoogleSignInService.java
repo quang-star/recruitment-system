@@ -56,13 +56,14 @@ public class GoogleSignInService {
     }
 
     @Transactional
-    public AuthenticationResult login(String credential, String nonce, String accountType,
-                                      String userAgent, String ipAddress) {
+    public GoogleLoginResult login(String credential, String nonce, String accountType,
+                                   String userAgent, String ipAddress) {
         GoogleIdentityVerifier.VerifiedIdentity identity = verifier.verify(credential, nonce);
         Instant now = clock.instant();
         consume(nonce, now);
         Long userId = identities.findUserId(identity.subject()).orElse(null);
-        if (userId == null) {
+        boolean newAccount = userId == null;
+        if (newAccount) {
             String normalizedEmail = identity.email().trim().toLowerCase(Locale.ROOT);
             if (users.existsByNormalizedEmail(normalizedEmail)) throw new GoogleSignInException(LINK_REQUIRED);
             String role = accountType == null ? "CANDIDATE" : accountType;
@@ -75,7 +76,12 @@ public class GoogleSignInService {
             if (!identities.link(identity.subject(), userId)) throw new GoogleSignInException(ACCOUNT_CONFLICT);
         }
         // Existing identities keep their roles, account email and ID even if Google email changes.
-        return authentication.loginVerifiedIdentity(userId, userAgent, ipAddress);
+        AuthenticationResult session = authentication.loginVerifiedIdentity(userId, userAgent, ipAddress);
+        GoogleProfileHint googleProfile = new GoogleProfileHint(
+                resolveDisplayName(identity),
+                identity.pictureUrl(),
+                identity.email().trim());
+        return new GoogleLoginResult(session, newAccount, googleProfile);
     }
 
     @Transactional
@@ -99,5 +105,27 @@ public class GoogleSignInService {
         if (!challenges.consume(tokens.hash(nonce), now)) throw new GoogleSignInException(INVALID_TOKEN);
     }
 
+    private static String resolveDisplayName(GoogleIdentityVerifier.VerifiedIdentity identity) {
+        if (identity.name() != null && !identity.name().isBlank()) {
+            String normalized = truncate(identity.name().trim(), 120);
+            if (!normalized.isBlank()) return normalized;
+        }
+        String email = identity.email() == null ? "" : identity.email().trim();
+        int at = email.indexOf('@');
+        if (at > 0) {
+            String localPart = truncate(email.substring(0, at).trim(), 120);
+            if (!localPart.isBlank()) return localPart;
+        }
+        return "Người dùng";
+    }
+
+    private static String truncate(String value, int maxLength) {
+        if (value.length() <= maxLength) return value;
+        int end = Character.isHighSurrogate(value.charAt(maxLength - 1)) ? maxLength - 1 : maxLength;
+        return value.substring(0, end).trim();
+    }
+
     public record Challenge(String nonce, Instant expiresAt) {}
+    public record GoogleProfileHint(String displayName, String avatarUrl, String email) {}
+    public record GoogleLoginResult(AuthenticationResult session, boolean newAccount, GoogleProfileHint googleProfile) {}
 }

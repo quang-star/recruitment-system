@@ -111,7 +111,7 @@ public class AuthAuthenticationService {
                 ? now.plus(idleSessionTtl) : session.absoluteExpiresAt();
         sessions.touch(session.id(), ipAddress, now, nextIdleExpiry);
         List<String> roleCodes = roles.findActiveRoleCodes(user.id());
-        AccessTokenIssuer.IssuedAccessToken accessToken = accessTokenIssuer.issue(user, roleCodes, now);
+        AccessTokenIssuer.IssuedAccessToken accessToken = accessTokenIssuer.issue(user, roleCodes, session.id(), now);
         return new AuthenticationResult(user.id(), accessToken.value(), rawReplacement,
                 accessToken.expiresAt(), replacementExpiresAt, roleCodes);
     }
@@ -133,7 +133,7 @@ public class AuthAuthenticationService {
         String rawRefreshToken = tokenGenerator.generate();
         refreshTokens.insert(session.id(), tokenGenerator.hash(rawRefreshToken), null, now, refreshExpiresAt);
         List<String> roleCodes = roles.findActiveRoleCodes(user.id());
-        AccessTokenIssuer.IssuedAccessToken accessToken = accessTokenIssuer.issue(user, roleCodes, now);
+        AccessTokenIssuer.IssuedAccessToken accessToken = accessTokenIssuer.issue(user, roleCodes, session.id(), now);
         return new AuthenticationResult(user.id(), accessToken.value(), rawRefreshToken,
                 accessToken.expiresAt(), refreshExpiresAt, roleCodes);
     }

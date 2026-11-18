@@ -2,6 +2,7 @@ package com.smartrecruitment.auth.auth.api;
 
 import com.smartrecruitment.auth.shared.api.ApiError;
 import com.smartrecruitment.auth.shared.api.CorrelationIdFilter;
+import com.smartrecruitment.auth.user.application.AuthenticationResult;
 import com.smartrecruitment.auth.user.application.GoogleSignInException;
 import com.smartrecruitment.auth.user.application.GoogleSignInService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -37,8 +38,8 @@ public class GoogleAuthController {
     }
 
     @PostMapping("/login")
-    public AuthController.TokenResponse login(@Valid @RequestBody LoginRequest request, HttpServletRequest http) {
-        return AuthController.TokenResponse.from(google.login(request.credential(), request.nonce(),
+    public GoogleLoginResponse login(@Valid @RequestBody LoginRequest request, HttpServletRequest http) {
+        return GoogleLoginResponse.from(google.login(request.credential(), request.nonce(),
                 request.accountType(), http.getHeader("User-Agent"), http.getRemoteAddr()));
     }
 
@@ -56,6 +57,25 @@ public class GoogleAuthController {
     }
 
     public record Config(String clientId) {}
+    public record GoogleProfileHint(String displayName, String avatarUrl, String email) {}
+    public record GoogleLoginResponse(String userId, String accessToken, String refreshToken,
+                                      java.time.Instant accessTokenExpiresAt, java.time.Instant refreshTokenExpiresAt,
+                                      java.util.List<String> roles, boolean newAccount,
+                                      GoogleProfileHint googleProfile) {
+        static GoogleLoginResponse from(GoogleSignInService.GoogleLoginResult result) {
+            AuthenticationResult session = result.session();
+            GoogleSignInService.GoogleProfileHint profile = result.googleProfile();
+            return new GoogleLoginResponse(
+                    session.userId().toString(),
+                    session.accessToken(),
+                    session.refreshToken(),
+                    session.accessTokenExpiresAt(),
+                    session.refreshTokenExpiresAt(),
+                    session.roles(),
+                    result.newAccount(),
+                    profile == null ? null : new GoogleProfileHint(profile.displayName(), profile.avatarUrl(), profile.email()));
+        }
+    }
     public record LoginRequest(@NotBlank @Size(max = 16384) String credential,
                                @NotBlank @Size(min = 64, max = 128) String nonce,
                                @Pattern(regexp = "CANDIDATE|RECRUITER") String accountType) {}

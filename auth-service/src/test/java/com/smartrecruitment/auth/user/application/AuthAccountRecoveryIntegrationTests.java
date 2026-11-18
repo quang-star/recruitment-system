@@ -12,6 +12,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtValidationException;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.time.Instant;
@@ -33,6 +35,7 @@ class AuthAccountRecoveryIntegrationTests {
     @Autowired private PasswordCredentialRepository credentials;
     @Autowired private RoleRepository roles;
     @Autowired private PasswordEncoder passwordEncoder;
+    @Autowired private JwtDecoder jwtDecoder;
 
     @MockitoBean
     private VerificationEmailSender emailSender;
@@ -80,11 +83,17 @@ class AuthAccountRecoveryIntegrationTests {
 
         var session = sessionManagement.list(user.id()).getFirst();
         assertThat(session.active()).isTrue();
+        assertThat(session.current()).isFalse();
         assertThat(session.deviceName()).isEqualTo("Demo browser");
+        var decoded = jwtDecoder.decode(login.accessToken());
+        Long currentSessionId = Long.valueOf(decoded.getClaimAsString("sid"));
+        assertThat(sessionManagement.list(user.id(), currentSessionId).getFirst().current()).isTrue();
 
         sessionManagement.revoke(user.id(), Long.valueOf(session.sessionId()));
 
         assertThat(sessionManagement.list(user.id()).getFirst().active()).isFalse();
+        assertThatThrownBy(() -> jwtDecoder.decode(login.accessToken()))
+                .isInstanceOf(JwtValidationException.class);
         assertThatThrownBy(() -> authentication.refresh(login.refreshToken(), "127.0.0.1"))
                 .isInstanceOf(InvalidRefreshTokenException.class);
         assertThatThrownBy(() -> sessionManagement.revoke(user.id(), Long.valueOf(session.sessionId())))

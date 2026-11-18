@@ -19,6 +19,10 @@ public class JooqPasswordCredentialRepository implements PasswordCredentialRepos
                         record.get(PASSWORD_CREDENTIALS.MUST_CHANGE_PASSWORD)));
     }
     @Override
+    public boolean existsByUserId(Long userId) {
+        return dsl.fetchExists(PASSWORD_CREDENTIALS, PASSWORD_CREDENTIALS.USER_ID.eq(userId));
+    }
+    @Override
     public void insert(Long userId, String passwordHash, Instant createdAt) {
         OffsetDateTime timestamp = createdAt.atOffset(ZoneOffset.UTC);
         dsl.insertInto(PASSWORD_CREDENTIALS)

@@ -33,7 +33,29 @@ class GoogleIdTokenVerifierTests {
         var identity = verifier.verify(sign(claims()), NONCE);
         assertThat(identity.subject()).isEqualTo("google-subject");
         assertThat(identity.email()).isEqualTo("candidate@example.com");
+        assertThat(identity.name()).isNull();
+        assertThat(identity.pictureUrl()).isNull();
         assertThat(verifier.verify(sign(claims().issuer("accounts.google.com")), NONCE)).isEqualTo(identity);
+    }
+
+    @Test
+    void extractsVerifiedDisplayNameGivenFamilyFallbackAndSafeHttpsPictureUrl() throws Exception {
+        var full = verifier.verify(sign(claims()
+                .claim("name", "  Nguyễn   Văn   An  ")
+                .claim("picture", "https://lh3.googleusercontent.com/a/avatar123")), NONCE);
+        assertThat(full.name()).isEqualTo("Nguyễn Văn An");
+        assertThat(full.pictureUrl()).isEqualTo("https://lh3.googleusercontent.com/a/avatar123");
+
+        var partsOnly = verifier.verify(sign(claims()
+                .claim("given_name", "An")
+                .claim("family_name", "Nguyễn")
+                .claim("picture", "http://insecure.example.com/a.png")), NONCE);
+        assertThat(partsOnly.name()).isEqualTo("An Nguyễn");
+        assertThat(partsOnly.pictureUrl()).isNull();
+
+        var oversizedOrInvalidPicture = verifier.verify(sign(claims()
+                .claim("picture", "javascript:alert(1)")), NONCE);
+        assertThat(oversizedOrInvalidPicture.pictureUrl()).isNull();
     }
 
     @Test

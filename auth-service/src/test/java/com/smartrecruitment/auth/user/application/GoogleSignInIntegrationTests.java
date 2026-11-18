@@ -26,6 +26,7 @@ class GoogleSignInIntegrationTests {
     @Autowired private GoogleIdentityRepository identities;
     @Autowired private GoogleLoginChallengeRepository challenges;
     @Autowired private VerificationTokenGenerator tokens;
+    @Autowired private AuthCurrentUserService currentUsers;
     @MockitoBean private GoogleIdentityVerifier verifier;
 
     @Test
@@ -34,17 +35,26 @@ class GoogleSignInIntegrationTests {
         String subject = UUID.randomUUID().toString();
         when(verifier.clientId()).thenReturn("client");
         when(verifier.verify(eq(subject), anyString()))
-                .thenReturn(new GoogleIdentityVerifier.VerifiedIdentity(subject, email));
+                .thenReturn(new GoogleIdentityVerifier.VerifiedIdentity(
+                        subject, email, "Trần Văn Bình", "https://lh3.googleusercontent.com/a/binh"));
         var challenge = google.challenge();
-        AuthenticationResult login = google.login(subject, challenge.nonce(), "CANDIDATE", "JUnit", "127.0.0.1");
+        GoogleSignInService.GoogleLoginResult result = google.login(subject, challenge.nonce(), "CANDIDATE", "JUnit", "127.0.0.1");
+        AuthenticationResult login = result.session();
+        assertThat(result.newAccount()).isTrue();
+        assertThat(result.googleProfile()).isEqualTo(new GoogleSignInService.GoogleProfileHint(
+                "Trần Văn Bình", "https://lh3.googleusercontent.com/a/binh", email));
         assertThat(login.roles()).containsExactly("CANDIDATE");
         assertThat(credentials.findByUserId(identities.findUserId(subject).orElseThrow())).isEmpty();
+        CurrentUserResult currentUser = currentUsers.get(login.userId());
+        assertThat(currentUser.hasPassword()).isFalse();
+        assertThat(currentUser.googleLinked()).isTrue();
         assertThat(authentication.refresh(login.refreshToken(), null).accessToken()).isNotBlank();
         assertThatThrownBy(() -> google.login(subject, challenge.nonce(), "RECRUITER", null, null))
                 .isInstanceOf(GoogleSignInException.class);
         var second = google.login(subject, google.challenge().nonce(), "RECRUITER", null, null);
-        assertThat(second.userId()).isEqualTo(login.userId());
-        assertThat(second.roles()).containsExactly("CANDIDATE");
+        assertThat(second.newAccount()).isFalse();
+        assertThat(second.session().userId()).isEqualTo(login.userId());
+        assertThat(second.session().roles()).containsExactly("CANDIDATE");
     }
 
     @Test
