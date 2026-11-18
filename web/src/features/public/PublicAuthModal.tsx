@@ -10,6 +10,7 @@ import { PublicJob } from "./types";
 export function PublicAuthModal({
   open,
   authMode,
+  initialAccountType = "CANDIDATE",
   demoAccount,
   applyingJob,
   onClose,
@@ -19,6 +20,7 @@ export function PublicAuthModal({
 }: {
   open: boolean;
   authMode: "login" | "register";
+  initialAccountType?: "CANDIDATE" | "RECRUITER";
   demoAccount: { email: string; revision: number };
   applyingJob: PublicJob | null;
   onClose: () => void;
@@ -126,9 +128,10 @@ export function PublicAuthModal({
               </div>
             )}
             <LoginPage
-              key={`${demoAccount.revision}-${authMode}`}
+              key={`${demoAccount.revision}-${authMode}-${initialAccountType}`}
               initialMode={authMode}
               initialEmail={demoAccount.email}
+              initialAccountType={initialAccountType}
               onSuccess={onLoginSuccess}
             />
           </div>

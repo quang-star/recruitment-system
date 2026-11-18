@@ -92,7 +92,7 @@ export function CandidateAccountMenu({ name, avatarUrl, activeView, onNavigate, 
         className="inline-flex items-center gap-2 rounded-full border border-border-subtle bg-slate-50 px-2.5 py-1.5 text-xs sm:text-sm font-semibold text-ink-800 hover:border-brand-300 hover:bg-white transition-colors cursor-pointer"
       >
         {avatarUrl && failedAvatar !== avatarUrl ? (
-          <img src={avatarUrl} alt="" onError={() => setFailedAvatar(avatarUrl)} className="h-6 w-6 rounded-full object-cover" />
+          <img src={avatarUrl} alt="" referrerPolicy="no-referrer" onError={() => setFailedAvatar(avatarUrl)} className="h-6 w-6 rounded-full object-cover" />
         ) : (
           <span aria-hidden="true" className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-600 text-xs font-bold text-white">
             {name.trim().slice(0, 1).toUpperCase()}

@@ -4,6 +4,7 @@ export type MatchState = "loading" | "ready" | "waiting" | "error";
 export type MatchPresentation = {
   matchingSupported?: boolean;
   cvAccessGranted?: boolean;
+  status?: string;
   match?: Pick<ApplicationMatch, "status" | "finalScore"> | null;
   matchState?: MatchState;
 };
@@ -22,7 +23,11 @@ export function matchRating(application: MatchPresentation) {
 }
 
 export function matchSummary(application: MatchPresentation) {
-  if (application.cvAccessGranted === false) return "Đã thu hồi quyền xem";
+  if (application.cvAccessGranted === false) {
+    if (application.status === "REJECTED") return "Đã đóng quyền xem (hồ sơ bị từ chối)";
+    if (application.status === "WITHDRAWN") return "Ứng viên đã rút hồ sơ";
+    return "Đã thu hồi quyền xem";
+  }
   if (application.matchingSupported === false) return "Xem xét thủ công";
   if (application.matchState === "loading") return "Đang tải kết quả đối chiếu…";
   if (application.matchState === "error") return "Không tải được kết quả đối chiếu";

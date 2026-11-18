@@ -5,6 +5,9 @@ export type AuthSession = {
   accessTokenExpiresAt: string;
   refreshTokenExpiresAt: string;
   roles: string[];
+  email?: string;
+  hasPassword?: boolean;
+  googleLinked?: boolean;
 };
 
 const sessionKey = "smart-recruitment.session";
@@ -38,7 +41,10 @@ export function loadSession(): AuthSession | null {
       refreshToken: session.refreshToken,
       accessTokenExpiresAt: session.accessTokenExpiresAt ?? "",
       refreshTokenExpiresAt: session.refreshTokenExpiresAt ?? "",
-      roles: session.roles ?? []
+      roles: session.roles ?? [],
+      ...(typeof session.email === "string" ? { email: session.email } : {}),
+      ...(typeof session.hasPassword === "boolean" ? { hasPassword: session.hasPassword } : {}),
+      ...(typeof session.googleLinked === "boolean" ? { googleLinked: session.googleLinked } : {})
     };
   } catch {
     return null;

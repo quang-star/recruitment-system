@@ -13,7 +13,7 @@ export function HotIndustries({ categories, onSelectCategory }: HotIndustriesPro
     <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-12">
       <div className="rounded-xl border border-border-subtle bg-white p-6 sm:p-8 shadow-card">
         <div className="mb-5">
-          <h2 className="text-lg sm:text-xl font-bold tracking-tight text-ink-900 m-0">
+          <h2 className="text-xl font-bold tracking-tight text-ink-900 m-0">
             Khám phá theo chuyên môn
           </h2>
           <p className="text-sm text-ink-500 mt-1 mb-0">
@@ -33,8 +33,8 @@ export function HotIndustries({ categories, onSelectCategory }: HotIndustriesPro
                 <LayersIcon size={17} aria-hidden="true" />
               </span>
               <div className="min-w-0">
-                <strong className="block truncate text-sm font-bold text-ink-900">{cat.name}</strong>
-                <span className="block text-xs text-ink-500 mt-0.5">{cat.jobCount} việc làm</span>
+                <strong className="block truncate text-sm sm:text-base font-bold text-ink-900">{cat.name}</strong>
+                <span className="block text-xs sm:text-sm text-ink-500 mt-0.5">{cat.jobCount} việc làm</span>
               </div>
             </button>
           ))}

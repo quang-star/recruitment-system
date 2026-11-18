@@ -8,7 +8,14 @@ import { workModeLabel } from "../public/jobPresentation";
 import { CvOverview, pendingCvStatuses, reviewCvStatuses } from "./cvStatus";
 
 type Job = { jobId: string; title: string; locationText: string | null; workMode: string | null };
-type Application = { applicationId: string; jobId: string; status: string; appliedAt: string };
+type Application = {
+  applicationId: string;
+  jobId: string;
+  jobTitle?: string | null;
+  companyName?: string | null;
+  status: string;
+  appliedAt: string;
+};
 type Profile = { displayName: string; headline: string | null; locationText: string | null; avatarUrl?: string | null };
 type Props = {
   session: AuthSession;
@@ -127,6 +134,7 @@ export function CandidateDashboard({ session, profile, onNavigate, onOpenJob }: 
             <img
               src={profile.avatarUrl}
               alt="Avatar"
+              referrerPolicy="no-referrer"
               className="h-14 w-14 rounded-2xl border border-border-subtle object-cover shrink-0"
               onError={() => setFailedAvatar(profile.avatarUrl ?? null)}
             />
@@ -136,13 +144,13 @@ export function CandidateDashboard({ session, profile, onNavigate, onOpenJob }: 
             </span>
           )}
           <div className="min-w-0">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-brand-700 m-0">
+            <p className="text-xs font-bold uppercase tracking-wider text-brand-700 m-0">
               KHÔNG GIAN ỨNG VIÊN
             </p>
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink-900 m-0 truncate">
               Xin chào, {profile?.displayName || "bạn"}
             </h1>
-            <p className="text-xs sm:text-sm text-ink-500 m-0 mt-0.5">
+            <p className="text-sm text-ink-500 m-0 mt-0.5">
               Theo dõi hồ sơ và bước tiếp theo trên hành trình tìm việc.
             </p>
           </div>
@@ -176,13 +184,13 @@ export function CandidateDashboard({ session, profile, onNavigate, onOpenJob }: 
           >
             <div className="flex items-start gap-3.5 min-w-0">
               <div className="min-w-0">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-brand-700 m-0">
+                <p className="text-xs font-bold uppercase tracking-wider text-brand-700 m-0">
                   BƯỚC TIẾP THEO
                 </p>
                 <h2 id="next-step-title" className="text-base sm:text-lg font-bold text-ink-900 m-0 mt-0.5">
                   {next.title}
                 </h2>
-                <p className="text-xs sm:text-sm text-ink-600 m-0 mt-1 leading-relaxed">{next.text}</p>
+                <p className="text-sm text-ink-600 m-0 mt-1 leading-relaxed">{next.text}</p>
               </div>
             </div>
             <Button type="button" onClick={() => onNavigate(next.view)} className="shrink-0">
@@ -250,10 +258,10 @@ export function CandidateDashboard({ session, profile, onNavigate, onOpenJob }: 
                       >
                         <div className="min-w-0">
                           <h3 className="text-sm font-bold text-ink-900 m-0 truncate">
-                            {jobs?.find((job) => job.jobId === application.jobId)?.title ?? "Vị trí đã ứng tuyển"}
+                            {application.jobTitle || jobs?.find((job) => job.jobId === application.jobId)?.title || "Vị trí đã ứng tuyển"}
                           </h3>
                           <small className="text-xs text-ink-500">
-                            Đã gửi {new Date(application.appliedAt).toLocaleDateString("vi-VN")}
+                            {application.companyName ? `${application.companyName} · ` : ""}Đã gửi {new Date(application.appliedAt).toLocaleDateString("vi-VN")}
                           </small>
                         </div>
                         <Badge tone={applicationTone(application.status)}>

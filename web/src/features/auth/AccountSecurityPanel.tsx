@@ -1,7 +1,7 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 
 import { ApiClientError, apiRequest } from "../../shared/api/client";
-import { AuthSession } from "../../shared/auth/session";
+import { AuthSession, loadSession, sessionGeneration, updateSession } from "../../shared/auth/session";
 import { Badge, Button, Card, ErrorBanner } from "../../shared/ui";
 import { GoogleSignIn } from "./GoogleSignIn";
 
@@ -19,6 +19,13 @@ type AccountSession = {
   revokedAt: string | null;
   revokeReason: string | null;
   active: boolean;
+  current?: boolean;
+};
+
+type CurrentUserStatus = {
+  email?: string;
+  hasPassword?: boolean;
+  googleLinked?: boolean;
 };
 
 type Props = { session: AuthSession; onLogout: () => void };
@@ -34,16 +41,28 @@ export function AccountSecurityPanel({ session, onLogout }: Props) {
   const [newPassword, setNewPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
   const [changing, setChanging] = useState(false);
+  const [sendingPasswordSetup, setSendingPasswordSetup] = useState(false);
+  const [passwordSetupMessage, setPasswordSetupMessage] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [googleLinked, setGoogleLinked] = useState(false);
+  const [accountEmail, setAccountEmail] = useState<string | null>(session.email ?? null);
+  const [hasPassword, setHasPassword] = useState(session.hasPassword ?? true);
+  const [googleLinked, setGoogleLinked] = useState(session.googleLinked ?? false);
+  const [accountStatusLoading, setAccountStatusLoading] = useState(
+    session.googleLinked === undefined || session.hasPassword === undefined
+  );
 
   async function linkGoogle(credential: string, nonce: string) {
+    const generation = sessionGeneration();
     await apiRequest<void>("/api/v2/auth/google/link", {
       method: "POST",
       accessToken: session.accessToken,
       body: JSON.stringify({ credential, nonce })
     });
+    const latest = loadSession();
+    if (latest && generation === sessionGeneration()) {
+      updateSession({ ...latest, googleLinked: true }, latest.refreshToken, generation);
+    }
     setGoogleLinked(true);
   }
 
@@ -67,7 +86,54 @@ export function AccountSecurityPanel({ session, onLogout }: Props) {
     void loadSessions();
   }, [loadSessions]);
 
-  async function revoke(sessionId: string) {
+  useEffect(() => {
+    let active = true;
+    const generation = sessionGeneration();
+    if (session.googleLinked === undefined || session.hasPassword === undefined) {
+      setAccountStatusLoading(true);
+    }
+    void apiRequest<CurrentUserStatus>("/api/v2/auth/me", {
+      accessToken: session.accessToken
+    })
+      .then((me) => {
+        if (!active) return;
+        const nextEmail = typeof me?.email === "string" ? me.email : undefined;
+        const nextHasPassword = typeof me?.hasPassword === "boolean" ? me.hasPassword : undefined;
+        const nextGoogleLinked = typeof me?.googleLinked === "boolean" ? me.googleLinked : undefined;
+        if (nextEmail !== undefined) setAccountEmail(nextEmail);
+        if (nextHasPassword !== undefined) setHasPassword(nextHasPassword);
+        if (nextGoogleLinked !== undefined) setGoogleLinked(nextGoogleLinked);
+        const latest = loadSession();
+        if (
+          latest &&
+          generation === sessionGeneration() &&
+          (nextEmail !== undefined || nextHasPassword !== undefined || nextGoogleLinked !== undefined)
+        ) {
+          updateSession(
+            {
+              ...latest,
+              ...(nextEmail !== undefined ? { email: nextEmail } : {}),
+              ...(nextHasPassword !== undefined ? { hasPassword: nextHasPassword } : {}),
+              ...(nextGoogleLinked !== undefined ? { googleLinked: nextGoogleLinked } : {})
+            },
+            latest.refreshToken,
+            generation
+          );
+        }
+      })
+      .catch((requestError) => {
+        if (!active) return;
+        if (requestError instanceof ApiClientError && requestError.status === 401) onLogout();
+      })
+      .finally(() => {
+        if (active) setAccountStatusLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [onLogout, session.accessToken, session.googleLinked, session.hasPassword]);
+
+  async function revoke(sessionId: string, isCurrent: boolean) {
     if (revokingId) return;
     setRevokingId(sessionId);
     setMessage(null);
@@ -77,6 +143,10 @@ export function AccountSecurityPanel({ session, onLogout }: Props) {
         method: "DELETE",
         accessToken: session.accessToken
       });
+      if (isCurrent) {
+        onLogout();
+        return;
+      }
       setSessions((current) =>
         current.map((item) =>
           item.sessionId === sessionId
@@ -89,12 +159,33 @@ export function AccountSecurityPanel({ session, onLogout }: Props) {
             : item
         )
       );
-      setMessage("Phiên đã được thu hồi.");
+      setMessage("Phiên đã được thu hồi. Phiên đó không thể làm mới và sẽ bị đăng xuất khi xác thực lại.");
     } catch (requestError) {
       if (requestError instanceof ApiClientError && requestError.status === 401) onLogout();
       else setError(errorMessage(requestError));
     } finally {
       setRevokingId(null);
+    }
+  }
+
+  async function sendPasswordSetupEmail() {
+    if (!accountEmail || sendingPasswordSetup) return;
+    setSendingPasswordSetup(true);
+    setError(null);
+    setMessage(null);
+    setPasswordSetupMessage(null);
+    try {
+      await apiRequest<{ message: string }>("/api/v2/auth/forgot-password", {
+        method: "POST",
+        body: JSON.stringify({ email: accountEmail })
+      });
+      setPasswordSetupMessage(
+        `Đã gửi hướng dẫn tạo mật khẩu tới ${accountEmail}. Mở liên kết trong email (có hiệu lực 30 phút) để thiết lập mật khẩu.`
+      );
+    } catch (requestError) {
+      setError(errorMessage(requestError));
+    } finally {
+      setSendingPasswordSetup(false);
     }
   }
 
@@ -137,67 +228,125 @@ export function AccountSecurityPanel({ session, onLogout }: Props) {
             </h3>
           </div>
 
-          <form onSubmit={changePassword} className="space-y-4">
-            <label className="block text-sm font-medium text-ink-800">
-              Mật khẩu hiện tại
-              <input
-                type="password"
-                autoComplete="current-password"
-                minLength={8}
-                maxLength={128}
-                value={currentPassword}
-                onChange={(event) => setCurrentPassword(event.target.value)}
-                required
-                className={inputClass}
-              />
-            </label>
-            <label className="block text-sm font-medium text-ink-800">
-              Mật khẩu mới
-              <input
-                type="password"
-                autoComplete="new-password"
-                minLength={12}
-                maxLength={128}
-                value={newPassword}
-                onChange={(event) => setNewPassword(event.target.value)}
-                required
-                className={inputClass}
-              />
-            </label>
-            <label className="block text-sm font-medium text-ink-800">
-              Nhập lại mật khẩu mới
-              <input
-                type="password"
-                autoComplete="new-password"
-                minLength={12}
-                maxLength={128}
-                value={confirmation}
-                onChange={(event) => setConfirmation(event.target.value)}
-                required
-                className={inputClass}
-              />
-            </label>
-            <Button type="submit" disabled={changing}>
-              {changing ? "Đang đổi…" : "Đổi mật khẩu và đăng xuất mọi phiên"}
-            </Button>
-          </form>
+          {accountStatusLoading ? (
+            <p className="text-sm text-ink-500 m-0">Đang kiểm tra phương thức đăng nhập…</p>
+          ) : hasPassword ? (
+            <form onSubmit={changePassword} className="space-y-4">
+              <label className="block text-sm font-medium text-ink-800">
+                Mật khẩu hiện tại
+                <input
+                  type="password"
+                  autoComplete="current-password"
+                  minLength={8}
+                  maxLength={128}
+                  value={currentPassword}
+                  onChange={(event) => setCurrentPassword(event.target.value)}
+                  required
+                  className={inputClass}
+                />
+              </label>
+              <label className="block text-sm font-medium text-ink-800">
+                Mật khẩu mới
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  minLength={12}
+                  maxLength={128}
+                  placeholder="Tối thiểu 12 ký tự"
+                  value={newPassword}
+                  onChange={(event) => setNewPassword(event.target.value)}
+                  required
+                  className={inputClass}
+                />
+              </label>
+              <label className="block text-sm font-medium text-ink-800">
+                Nhập lại mật khẩu mới
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  minLength={12}
+                  maxLength={128}
+                  value={confirmation}
+                  onChange={(event) => setConfirmation(event.target.value)}
+                  required
+                  className={inputClass}
+                />
+              </label>
+              <Button type="submit" disabled={changing}>
+                {changing ? "Đang đổi…" : "Đổi mật khẩu và đăng xuất mọi phiên"}
+              </Button>
+            </form>
+          ) : (
+            <div className="space-y-4">
+              <div className="rounded-xl border border-sky-200 bg-sky-50/70 p-4 space-y-2">
+                <Badge tone="info">Chưa đặt mật khẩu riêng</Badge>
+                <p className="text-sm text-ink-800 m-0 leading-relaxed">
+                  Tài khoản này hiện đăng nhập bằng Google và chưa có mật khẩu riêng.
+                  Bạn có thể gửi liên kết tạo mật khẩu về email để đăng nhập thêm bằng email và mật khẩu.
+                </p>
+              </div>
+              {accountEmail && (
+                <div className="space-y-2.5">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={sendingPasswordSetup || Boolean(passwordSetupMessage)}
+                    onClick={() => void sendPasswordSetupEmail()}
+                  >
+                    {sendingPasswordSetup
+                      ? "Đang gửi liên kết…"
+                      : passwordSetupMessage
+                        ? "Đã gửi liên kết tạo mật khẩu"
+                        : "Gửi liên kết tạo mật khẩu qua email"}
+                  </Button>
+                  {passwordSetupMessage && (
+                    <p
+                      className="rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-sm text-emerald-900 m-0"
+                      role="status"
+                    >
+                      {passwordSetupMessage}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </Card>
 
         <Card as="section" padding="lg" className="space-y-4">
-          <h3 className="text-lg font-bold text-ink-900 m-0">Liên kết Google</h3>
-          <p className="text-sm text-ink-600 m-0 leading-relaxed">
-            Chọn tài khoản Google có cùng email với tài khoản hiện tại để dùng cho những lần đăng nhập sau.
-            Nếu chỉ đăng nhập bằng Google, bạn có thể tạo mật khẩu qua “Quên mật khẩu” trên trang đăng nhập.
-          </p>
-          {googleLinked ? (
-            <p
-              className="rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-sm text-emerald-900 m-0"
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-lg font-bold text-ink-900 m-0">Liên kết Google</h3>
+            {!accountStatusLoading && (
+              <Badge tone={googleLinked ? "success" : "neutral"}>
+                {googleLinked ? "Đã liên kết" : "Chưa liên kết"}
+              </Badge>
+            )}
+          </div>
+          {accountStatusLoading ? (
+            <p className="text-sm text-ink-500 m-0">Đang kiểm tra trạng thái liên kết…</p>
+          ) : googleLinked ? (
+            <div
+              className="rounded-xl border border-emerald-200 bg-emerald-50/70 px-4 py-3.5 space-y-1.5"
               role="status"
             >
-              Đã liên kết Google. Bạn có thể đăng nhập bằng Google từ lần sau.
-            </p>
+              <p className="text-sm font-semibold text-emerald-950 m-0">
+                Đã liên kết Google{accountEmail ? ` (${accountEmail})` : ""}.
+              </p>
+              <p className="text-sm text-emerald-900 m-0 leading-relaxed">
+                Bạn có thể dùng tài khoản Google này cho những lần đăng nhập sau.
+              </p>
+            </div>
           ) : (
-            <GoogleSignIn onCredential={linkGoogle} />
+            <>
+              <p className="text-sm text-ink-600 m-0 leading-relaxed">
+                Chọn tài khoản Google có cùng email với tài khoản hiện tại để dùng cho những lần đăng nhập sau.
+              </p>
+              <GoogleSignIn
+                onCredential={linkGoogle}
+                promptText="Liên kết với tài khoản Google"
+                showTopDivider={false}
+              />
+            </>
           )}
         </Card>
       </div>
@@ -228,9 +377,12 @@ export function AccountSecurityPanel({ session, onLogout }: Props) {
                 className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white px-4 py-3.5"
               >
                 <div className="space-y-0.5 min-w-0">
-                  <strong className="block text-sm font-semibold text-ink-900">
-                    {item.deviceName || item.clientType}
-                  </strong>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <strong className="text-sm font-semibold text-ink-900">
+                      {item.deviceName || item.clientType}
+                    </strong>
+                    {item.current && item.active && <Badge tone="info">Phiên hiện tại</Badge>}
+                  </div>
                   <small className="block text-xs text-ink-500">
                     {item.lastSeenIp || item.createdIp || "IP không xác định"} · hoạt động {formatTime(item.lastSeenAt)}
                   </small>
@@ -246,12 +398,16 @@ export function AccountSecurityPanel({ session, onLogout }: Props) {
                     size="sm"
                     variant="danger"
                     disabled={revokingId === item.sessionId}
-                    onClick={() => void revoke(item.sessionId)}
+                    onClick={() => void revoke(item.sessionId, Boolean(item.current))}
                   >
-                    {revokingId === item.sessionId ? "Đang thu hồi…" : "Thu hồi"}
+                    {revokingId === item.sessionId
+                      ? "Đang thu hồi…"
+                      : item.current
+                        ? "Thu hồi & đăng xuất"
+                        : "Thu hồi"}
                   </Button>
                 ) : (
-                  <Badge tone="neutral">INACTIVE</Badge>
+                  <Badge tone="neutral">Đã thu hồi</Badge>
                 )}
               </div>
             ))}

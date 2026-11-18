@@ -26,7 +26,7 @@ export function CompanyDirectoryView({ companies, onSelectCompany }: CompanyDire
     <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-10 space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between border-b border-border-subtle pb-6">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-wider text-brand-700 m-0 mb-1">
+          <p className="text-xs font-bold uppercase tracking-wider text-brand-700 m-0 mb-1">
             Doanh nghiệp đối tác
           </p>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink-900 m-0">

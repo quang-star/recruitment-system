@@ -3,10 +3,11 @@ import { useLocation } from "react-router-dom";
 
 import { ApiClientError, apiRequest } from "../../shared/api/client";
 import { AuthSession } from "../../shared/auth/session";
-import { CompanyIcon, HistoryIcon, LayersIcon, SparklesIcon } from "../../shared/components/Icon";
+import { CompanyIcon, HistoryIcon, LayersIcon, SecurityIcon, SparklesIcon } from "../../shared/components/Icon";
 import { WorkspaceNavItem, WorkspaceShell } from "../../shared/layout/WorkspaceShell";
 import { EnsureRouter, useSafeNavigate } from "../../shared/router";
 import { Badge, Button, Card, EmptyState, ErrorBanner, Tabs, cn } from "../../shared/ui";
+import { AccountSecurityPanel } from "../auth/AccountSecurityPanel";
 import { CategoryEntry } from "../recruiter/JobCategoryFields";
 import { AdminAuditPanel } from "./AdminAuditPanel";
 import { CompanyReviewPanel } from "./CompanyReviewPanel";
@@ -22,7 +23,6 @@ import {
   SkillCatalog,
   SkillRelation,
   adminRouteMap,
-  adminPageTitle,
   catalogStatusLabel,
   categoryLabel,
   resolveAdminTab,
@@ -37,7 +37,8 @@ const adminNavItems: WorkspaceNavItem<AdminTab>[] = [
   { id: "categories", label: "Ngành / nhóm / vị trí", icon: <LayersIcon size={18} /> },
   { id: "skills", label: "Kỹ năng / tên gọi khác", icon: <SparklesIcon size={18} /> },
   { id: "audit", label: "Nhật ký thay đổi", icon: <HistoryIcon size={18} /> },
-  { id: "companies", label: "Duyệt công ty", icon: <CompanyIcon size={18} /> }
+  { id: "companies", label: "Duyệt công ty", icon: <CompanyIcon size={18} /> },
+  { id: "security", label: "Bảo mật", icon: <SecurityIcon size={18} /> }
 ];
 
 function AdminWorkspaceEditor({ session, onLogout, tab }: { session: AuthSession; onLogout: () => void; tab: AdminTab }) {
@@ -67,7 +68,6 @@ function AdminWorkspaceEditor({ session, onLogout, tab }: { session: AuthSession
   const [catQuery, setCatQuery] = useState("");
   const [catKind, setCatKind] = useState<"" | CategoryEntry["kind"]>("");
   const [catStatus, setCatStatus] = useState("");
-  const queueRef = useRef<HTMLElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -81,7 +81,7 @@ function AdminWorkspaceEditor({ session, onLogout, tab }: { session: AuthSession
     let active = true;
     setError(null);
     setLoadedTab(null);
-    if (tab === "audit" || tab === "companies") {
+    if (tab === "audit" || tab === "companies" || tab === "security") {
       setLoadedTab(tab);
       return;
     }
@@ -276,9 +276,22 @@ function AdminWorkspaceEditor({ session, onLogout, tab }: { session: AuthSession
       variant="recruiter"
       activeItem={tab}
       brandLabel="Quản trị Hệ thống"
-      eyebrow="Quản trị hệ thống"
-      title={adminPageTitle[tab]}
       userLabel="Admin"
+      accountRoleLabel="Quản trị viên"
+      accountMenuItems={[
+        {
+          id: "security",
+          label: "Bảo mật tài khoản",
+          icon: <SecurityIcon size={16} />,
+          active: tab === "security",
+          onSelect: () => {
+            if (!busy && navigate(adminRouteMap.security)) {
+              select("");
+              setNeedsReload(false);
+            }
+          }
+        }
+      ]}
       onLogout={onLogout}
       onNavigate={(next) => {
         if (!busy) {
@@ -289,7 +302,11 @@ function AdminWorkspaceEditor({ session, onLogout, tab }: { session: AuthSession
       }}
       navItems={adminNavItems}
     >
-      {tab === "companies" ? <CompanyReviewPanel accessToken={session.accessToken} /> : tab === "audit" ? (
+      {tab === "security" ? (
+        <AccountSecurityPanel session={session} onLogout={onLogout} />
+      ) : tab === "companies" ? (
+        <CompanyReviewPanel accessToken={session.accessToken} />
+      ) : tab === "audit" ? (
         <AdminAuditPanel accessToken={session.accessToken} />
       ) : (
         <div className="space-y-5">
@@ -394,7 +411,7 @@ function AdminWorkspaceEditor({ session, onLogout, tab }: { session: AuthSession
           </Card>
 
           <div className="grid gap-6 xl:grid-cols-[1.05fr_1fr] items-start">
-            <aside ref={queueRef} className="space-y-4 min-w-0 scroll-mt-6">
+            <aside className="space-y-4 min-w-0">
               {tab === "categories" && (() => {
                 const categoryById = new Map(categories.map((c) => [c.id, c]));
                 const q = catQuery.trim().toLowerCase();
@@ -494,7 +511,7 @@ function AdminWorkspaceEditor({ session, onLogout, tab }: { session: AuthSession
                         <table className="w-full border-collapse text-left text-sm">
                           <caption className="sr-only">Danh mục nghề</caption>
                           <thead className="sticky top-0 z-10 bg-slate-50 shadow-[0_1px_0_0_var(--color-border-subtle)]">
-                            <tr className="text-[11px] font-semibold uppercase tracking-wider text-ink-500">
+                            <tr className="text-xs font-semibold uppercase tracking-wider text-ink-500">
                               <th className="px-4 py-2.5">Tên danh mục</th>
                               <th className="px-3 py-2.5">Cấp</th>
                               <th className="px-4 py-2.5">Trạng thái</th>
@@ -576,11 +593,6 @@ function AdminWorkspaceEditor({ session, onLogout, tab }: { session: AuthSession
             </aside>
 
             <div ref={editorRef} className="space-y-4 min-w-0 scroll-mt-6">
-              {selected && <Button variant="ghost" size="sm" className="xl:hidden" onClick={() => {
-                (queueRef.current?.querySelector<HTMLButtonElement>('button[aria-pressed="true"]')
-                  ?? queueRef.current?.querySelector<HTMLButtonElement>("button:not(:disabled)"))?.focus({ preventScroll: true });
-                queueRef.current?.scrollIntoView?.({ block: "start" });
-              }}>← Quay lại danh sách</Button>}
               {selected && catalog && tab === "skills" && (
                 <Tabs
                   ariaLabel="Chi tiết kỹ năng"

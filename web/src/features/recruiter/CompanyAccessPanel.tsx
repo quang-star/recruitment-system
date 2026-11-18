@@ -133,7 +133,7 @@ export function CompanyAccessPanel({ session, companyId, members, canManage, onM
     <Card padding="lg" className="space-y-6">
       <div className="flex items-center justify-between gap-3 border-b border-border-subtle pb-4">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-brand-700 m-0">Access control</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-brand-700 m-0">Phân quyền thành viên</p>
           <h3 className="text-lg font-bold text-ink-900 m-0 mt-0.5">Thành viên công ty</h3>
         </div>
         <Badge tone="neutral">{members.length} thành viên</Badge>
@@ -201,7 +201,7 @@ export function CompanyAccessPanel({ session, companyId, members, canManage, onM
       {canManage && (
         <div className="space-y-4 border-t border-border-subtle pt-5">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-brand-700 m-0">Company invitations</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-brand-700 m-0">Company invitations</p>
             <h3 className="text-base font-bold text-ink-900 m-0 mt-0.5">Mời thành viên</h3>
           </div>
           <form className="grid gap-3 sm:grid-cols-[1fr_180px_auto] sm:items-end" onSubmit={invite}>

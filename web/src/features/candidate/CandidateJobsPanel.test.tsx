@@ -119,3 +119,219 @@ it("shows the submitted job title and company and follows exact notification app
   expect(screen.getByText(/Synthetic Company/)).toBeVisible();
   expect(apiRequest).toHaveBeenCalledWith(expect.stringMatching(/applicationId=57.*page=0/), expect.anything());
 });
+
+it("preserves the second CV chosen in PreApplyMatchWidget and warns when its version changes", async () => {
+  setPendingJobId(null);
+  const original = vi.mocked(apiRequest).getMockImplementation()!;
+  vi.mocked(apiRequest).mockImplementation(async (path, options) => {
+    if (path === "/api/v2/cvs") {
+      return [
+        { cvId: "cv-1", title: "CV First", activeVersion: { cvVersionId: "cv-v1", processingStatus: "CONFIRMED" } },
+        { cvId: "cv-2", title: "CV Second", activeVersion: { cvVersionId: "cv-v2", processingStatus: "CONFIRMED" } }
+      ];
+    }
+    if (path === "/api/v2/candidate/applications" && options?.method === "POST") {
+      return { applicationId: "new-app", matchingSupported: true };
+    }
+    return original(path, options);
+  });
+
+  const onApplied = vi.fn();
+  const user = userEvent.setup();
+  const { unmount } = render(
+    <CandidateJobsPanel
+      session={session}
+      initialJobId="chosen"
+      initialCvId="cv-2"
+      initialCvVersionId="cv-v2"
+      dialogOnly
+      onApplied={onApplied}
+    />
+  );
+
+  const select = await screen.findByLabelText("Chọn CV đã xác nhận");
+  expect(select).toHaveValue("cv-2");
+  await user.click(screen.getByRole("checkbox"));
+  await user.click(screen.getByRole("button", { name: /^Ứng tuyển$/ }));
+  await waitFor(() => expect(onApplied).toHaveBeenCalledOnce());
+  expect(apiRequest).toHaveBeenCalledWith(
+    "/api/v2/candidate/applications",
+    expect.objectContaining({
+      body: JSON.stringify({
+        jobId: "chosen",
+        cvId: "cv-2",
+        cvVersionId: "cv-v2",
+        coverLetter: null,
+        consentAccepted: true,
+        policyVersion: "cv-sharing-v1"
+      })
+    })
+  );
+
+  unmount();
+
+  render(
+    <CandidateJobsPanel
+      session={session}
+      initialJobId="chosen"
+      initialCvId="cv-2"
+      initialCvVersionId="cv-v2-stale"
+      dialogOnly
+    />
+  );
+  expect(await screen.findByText(/Phiên bản CV bạn vừa đối chiếu đã thay đổi/)).toBeInTheDocument();
+  expect(screen.getByLabelText("Chọn CV đã xác nhận")).toHaveValue("");
+});
+
+it("distinguishes CV loading failure with retry from missing confirmed CVs", async () => {
+  setPendingJobId(null);
+  const original = vi.mocked(apiRequest).getMockImplementation()!;
+  let failCvs = true;
+  vi.mocked(apiRequest).mockImplementation(async (path, options) => {
+    if (path === "/api/v2/cvs") {
+      if (failCvs) throw new Error("CV service down");
+      return [{ cvId: "cv-1", title: "CV Ready", activeVersion: { cvVersionId: "cv-v1", processingStatus: "CONFIRMED" } }];
+    }
+    return original(path, options);
+  });
+
+  const user = userEvent.setup();
+  render(<CandidateJobsPanel session={session} initialJobId="chosen" dialogOnly />);
+  await screen.findByRole("dialog", { name: "Chosen job" });
+  expect(await screen.findByText(/Không thể kết nối tới Gateway/)).toBeInTheDocument();
+  expect(screen.queryByText(/Bạn chưa có CV ở trạng thái CONFIRMED/)).not.toBeInTheDocument();
+
+  failCvs = false;
+  await user.click(screen.getByRole("button", { name: "Thử lại" }));
+  expect(await screen.findByLabelText("Chọn CV đã xác nhận")).toHaveValue("cv-1");
+});
+
+it("supports quick inline CV upload, confirmation, and submission from the apply modal", async () => {
+  setPendingJobId(null);
+  const original = vi.mocked(apiRequest).getMockImplementation()!;
+  let newCvStatus = "QUEUED";
+
+  vi.mocked(apiRequest).mockImplementation(async (path, options) => {
+    if (path === "/api/v2/cvs" && (!options?.method || options.method === "GET")) {
+      return [{ cvId: "cv-old", title: "Old CV", activeVersion: { cvVersionId: "cv-old-v1", processingStatus: "CONFIRMED" } }];
+    }
+    if (path === "/api/v2/cvs" && options?.method === "POST") {
+      return {
+        cvId: "cv-new",
+        title: "Quick Backend CV",
+        status: "ACTIVE",
+        version: 0,
+        activeVersion: {
+          cvVersionId: "cv-new-v1",
+          originalFilename: "quick-cv.pdf",
+          sizeBytes: 12_345,
+          processingStatus: "QUEUED",
+          version: 0,
+          failureCode: null
+        }
+      };
+    }
+    if (path === "/api/v2/cvs/cv-new") {
+      return {
+        cvId: "cv-new",
+        title: "Quick Backend CV",
+        status: "ACTIVE",
+        version: 0,
+        activeVersion: {
+          cvVersionId: "cv-new-v1",
+          originalFilename: "quick-cv.pdf",
+          sizeBytes: 12_345,
+          processingStatus: newCvStatus,
+          version: 1,
+          failureCode: null
+        }
+      };
+    }
+    if (path === "/api/v2/parsed-cvs/cv-new-v1" && (!options?.method || options.method === "GET")) {
+      return {
+        revisionId: "rev-1",
+        revisionNumber: 1,
+        cvVersionId: "cv-new-v1",
+        status: "PARSED",
+        payload: {
+          skills: [{ raw: "Java", evidenceIds: ["ev-1"], confidence: 0.98 }],
+          experiences: [{ titleRaw: "Backend Dev", titleCanonical: "backend", companyRedacted: null, startMonth: "2024-01", endMonth: null, isCurrent: true, responsibilities: [], skillIds: [], evidenceIds: [], confidence: 0.9 }],
+          education: [],
+          languages: [],
+          projects: [],
+          certificates: [],
+          summary: { totalExperienceMonths: 18, qualityFlags: [] }
+        }
+      };
+    }
+    if (path === "/api/v2/parsed-cvs/cv-new-v1/confirm" && options?.method === "POST") {
+      newCvStatus = "CONFIRMED";
+      return {
+        revisionId: "rev-1",
+        revisionNumber: 1,
+        cvVersionId: "cv-new-v1",
+        status: "CONFIRMED",
+        payload: {
+          skills: [{ raw: "Java", evidenceIds: ["ev-1"], confidence: 0.98 }],
+          experiences: [],
+          education: [],
+          languages: [],
+          projects: [],
+          certificates: [],
+          summary: { totalExperienceMonths: 18, qualityFlags: [] }
+        }
+      };
+    }
+    if (path === "/api/v2/candidate/applications" && options?.method === "POST") {
+      return { applicationId: "app-quick", matchingSupported: true };
+    }
+    return original(path, options);
+  });
+
+  const onApplied = vi.fn();
+  const user = userEvent.setup();
+  render(<CandidateJobsPanel session={session} initialJobId="chosen" dialogOnly onApplied={onApplied} />);
+
+  expect(await screen.findByLabelText("Chọn CV đã xác nhận")).toHaveValue("cv-old");
+  await user.click(screen.getByRole("tab", { name: /Tải CV mới lên/ }));
+
+  // Guard: submit button stays disabled while in upload mode even if consent is checked.
+  await user.click(screen.getByRole("checkbox", { name: /Tôi đồng ý chia sẻ CV/ }));
+  expect(screen.getByRole("button", { name: "Ứng tuyển" })).toBeDisabled();
+
+  const file = new File(["%PDF-1.7\nhello"], "quick-cv.pdf", { type: "application/pdf" });
+  await user.upload(screen.getByLabelText("File PDF CV (tối đa 10 MiB)"), file);
+  await user.type(screen.getByLabelText("Tên CV mới (tuỳ chọn)"), "Quick Backend CV");
+
+  newCvStatus = "PARSED";
+  await user.click(screen.getByRole("button", { name: /Tải lên & phân tích CV/ }));
+
+  expect(
+    await screen.findByText(
+      "Kiểm tra nhanh dữ liệu AI trích xuất rồi bấm xác nhận để dùng CV này ứng tuyển.",
+      {},
+      { timeout: 4000 }
+    )
+  ).toBeInTheDocument();
+  expect(screen.getByText("Java")).toBeInTheDocument();
+
+  await user.click(screen.getByRole("button", { name: /Xác nhận & chọn CV này/ }));
+  expect(await screen.findByLabelText("Chọn CV đã xác nhận", {}, { timeout: 4000 })).toHaveValue("cv-new");
+  expect(screen.getByText(/CV "Quick Backend CV" đã được xác nhận và chọn sẵn để ứng tuyển\./)).toBeInTheDocument();
+
+  await user.click(screen.getByRole("button", { name: /^Ứng tuyển$/ }));
+  await waitFor(() => expect(onApplied).toHaveBeenCalledOnce());
+  expect(apiRequest).toHaveBeenCalledWith(
+    "/api/v2/candidate/applications",
+    expect.objectContaining({
+      body: JSON.stringify({
+        jobId: "chosen",
+        cvId: "cv-new",
+        cvVersionId: "cv-new-v1",
+        coverLetter: null,
+        consentAccepted: true,
+        policyVersion: "cv-sharing-v1"
+      })
+    })
+  );
+});

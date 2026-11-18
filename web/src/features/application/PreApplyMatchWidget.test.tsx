@@ -201,7 +201,9 @@ describe("PreApplyMatchWidget", () => {
         expect(screen.getByText("Hồ sơ của bạn rất phù hợp với vị trí này!")).toBeInTheDocument();
         expect(screen.getByText("Bạn đáp ứng hầu hết kỹ năng trọng yếu. Hãy tự tin ứng tuyển ngay!")).toBeInTheDocument();
       }
-      if (status === "DEGRADED") expect(screen.getByText("Cần kiểm tra thêm")).toBeInTheDocument();
+      if (status === "DEGRADED") {
+        expect(screen.getByText("Chưa đủ căn cứ chấm điểm · Cần xem thủ công")).toBeInTheDocument();
+      }
       expect(screen.queryByText("85")).not.toBeInTheDocument();
       expect(screen.queryByText("/100")).not.toBeInTheDocument();
       expect(screen.getByText("Khớp 2/3 kỹ năng cốt lõi")).toBeInTheDocument();
@@ -214,7 +216,10 @@ describe("PreApplyMatchWidget", () => {
       name: "Ứng tuyển vị trí này với CV đã chọn",
     });
     fireEvent.click(applyBtn);
-    expect(handleApply).toHaveBeenCalledWith(sampleJob);
+    expect(handleApply).toHaveBeenCalledWith(sampleJob, {
+      cvId: "cv-001",
+      cvVersionId: "cv-ver-001",
+    });
   });
 
   it("renders non-IT notice when job does not support AI matching", () => {
@@ -303,5 +308,30 @@ describe("PreApplyMatchWidget", () => {
     expect(screen.getByRole("button", { name: "👁 Xem CV" })).toBeEnabled();
     expect(screen.getByText("Chưa có phiên bản JD được xác nhận để đối chiếu.")).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("hides duplicate apply button when existingApplication is present", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation(async (url: string) => {
+        if (url.endsWith("/api/v2/cvs")) return jsonResponse(confirmedCvs);
+        return jsonResponse(previewResponse(sampleJob.jobVersionId!, 82));
+      })
+    );
+    const onViewApplication = vi.fn();
+    render(
+      <PreApplyMatchWidget
+        job={sampleJob}
+        session={sampleSession}
+        onApplyJob={vi.fn()}
+        existingApplication={{ applicationId: "app-existing", status: "INTERVIEW" }}
+        onViewApplication={onViewApplication}
+      />
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "⚡ Kiểm tra ngay" }));
+    expect(await screen.findByText("Bạn đã ứng tuyển vị trí này")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Ứng tuyển vị trí này với CV đã chọn" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Xem đơn ứng tuyển" }));
+    expect(onViewApplication).toHaveBeenCalledWith("app-existing");
   });
 });

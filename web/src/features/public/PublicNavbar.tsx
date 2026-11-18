@@ -132,14 +132,14 @@ export const PublicNavbar: FC<Props> = ({
               <button
                 type="button"
                 onClick={() => onOpenAuth("register")}
-                className="hidden sm:inline-flex h-9 items-center rounded-xl border border-border-strong bg-white px-3.5 text-xs sm:text-sm font-semibold text-ink-800 hover:bg-slate-50 cursor-pointer"
+                className="hidden sm:inline-flex h-9 items-center rounded-xl border border-border-strong bg-white px-3.5 text-sm font-semibold text-ink-800 hover:bg-slate-50 cursor-pointer"
               >
                 Tạo tài khoản
               </button>
               <button
                 type="button"
                 onClick={() => onOpenAuth("login")}
-                className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-brand-600 px-3.5 sm:px-4 text-xs sm:text-sm font-semibold text-white shadow-xs hover:bg-brand-700 cursor-pointer"
+                className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-brand-600 px-3.5 sm:px-4 text-sm font-semibold text-white shadow-xs hover:bg-brand-700 cursor-pointer"
               >
                 <ProfileIcon size={16} aria-hidden="true" />
                 <span>Đăng nhập</span>

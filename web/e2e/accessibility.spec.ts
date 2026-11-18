@@ -33,7 +33,7 @@ test("mobile job review stays within the viewport and returns to results", async
   await expect(detail.getByRole("heading", { level: 1 })).toBeFocused();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   await page.screenshot({ path: "test-results/mobile-job-review.png" });
-  await detail.getByRole("button", { name: "← Quay lại danh sách", exact: true }).click();
+  await page.goBack();
   await expect(detail).not.toBeVisible();
   await expect(firstJob).toBeFocused();
   await firstJob.click();

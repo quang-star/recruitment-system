@@ -38,9 +38,11 @@ export type MatchPreviewResponse = ApplicationMatch & {
 type Props = {
   job: PublicJob;
   session?: AuthSession | null;
-  onApplyJob: (job: PublicJob) => void;
+  onApplyJob: (job: PublicJob, preferredCv?: { cvId: string; cvVersionId?: string }) => void;
   onRequireLogin?: () => void;
   onOpenCvLibrary?: () => void;
+  existingApplication?: { applicationId: string; status: string } | null;
+  onViewApplication?: (applicationId: string) => void;
 };
 
 function previewErrorMessage(error: unknown): string {
@@ -59,6 +61,8 @@ export const PreApplyMatchWidget: FC<Props> = ({
   onApplyJob,
   onRequireLogin,
   onOpenCvLibrary,
+  existingApplication,
+  onViewApplication,
 }) => {
   const [cvs, setCvs] = useState<CvItem[]>([]);
   const [selectedCvId, setSelectedCvId] = useState<string>("");
@@ -308,7 +312,9 @@ export const PreApplyMatchWidget: FC<Props> = ({
                   </span>
                   <MatchRating match={previewResult} />
                   {previewResult.status === "DEGRADED" && (
-                    <small className="block text-xs font-medium text-amber-800 mt-1">Cần kiểm tra thêm</small>
+                    <small className="block text-xs font-medium text-amber-800 mt-1">
+                      Chưa đủ căn cứ chấm điểm · Cần xem thủ công
+                    </small>
                   )}
                 </div>
                 <div className="flex-1 min-w-0 space-y-1">
@@ -382,13 +388,37 @@ export const PreApplyMatchWidget: FC<Props> = ({
               </div>
 
               <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-border-subtle">
-                <button
-                  type="button"
-                  onClick={() => onApplyJob(job)}
-                  className="inline-flex h-10 items-center rounded-xl bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700 cursor-pointer"
-                >
-                  Ứng tuyển vị trí này với CV đã chọn
-                </button>
+                {existingApplication ? (
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <span className="inline-flex h-10 items-center rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 text-sm font-semibold text-emerald-800">
+                      Bạn đã ứng tuyển vị trí này
+                    </span>
+                    {onViewApplication && (
+                      <button
+                        type="button"
+                        onClick={() => onViewApplication(existingApplication.applicationId)}
+                        className="inline-flex h-10 items-center rounded-xl border border-border-strong bg-white px-4 text-sm font-semibold text-ink-800 hover:bg-slate-50 cursor-pointer"
+                      >
+                        Xem đơn ứng tuyển
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onApplyJob(
+                        job,
+                        selectedCvId
+                          ? { cvId: selectedCvId, cvVersionId: previewResult.cvVersionId }
+                          : undefined
+                      )
+                    }
+                    className="inline-flex h-10 items-center rounded-xl bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700 cursor-pointer"
+                  >
+                    Ứng tuyển vị trí này với CV đã chọn
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => setShowFullBreakdown(!showFullBreakdown)}

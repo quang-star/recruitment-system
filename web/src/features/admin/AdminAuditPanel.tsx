@@ -265,7 +265,7 @@ export function AdminAuditPanel({ accessToken }: { accessToken: string }) {
                 <table className="w-full border-collapse text-left text-sm">
                   <caption className="sr-only">Các thay đổi được ghi nhận</caption>
                   <thead className="sticky top-0 z-10 bg-slate-50 shadow-[0_1px_0_0_var(--color-border-subtle)]">
-                    <tr className="text-[11px] font-semibold uppercase tracking-wider text-ink-500">
+                    <tr className="text-xs font-semibold uppercase tracking-wider text-ink-500">
                       <th className="px-4 py-2.5">Hành động</th>
                       <th className="px-3 py-2.5">Danh mục / kỹ năng</th>
                       <th className="px-4 py-2.5">Thời điểm</th>
@@ -294,7 +294,7 @@ export function AdminAuditPanel({ accessToken }: { accessToken: string }) {
                           </td>
                           <td className="px-3 py-2.5 align-top text-sm font-medium text-ink-900 break-words">
                             <span className="block">{name(state(item.after ?? item.afterState))}</span>
-                            <span className="mt-0.5 block font-mono text-[11px] text-ink-500">#{item.resourceId}</span>
+                            <span className="mt-0.5 block font-mono text-xs text-ink-500">#{item.resourceId}</span>
                           </td>
                           <td className="px-4 py-2.5 align-top text-xs text-ink-600 whitespace-nowrap">
                             {historyTime(item.createdAt ?? item.occurredAt)}

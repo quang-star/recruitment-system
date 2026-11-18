@@ -11,7 +11,7 @@ export function PublicFooter({
   candidate?: CandidateNavigation;
   onOpenSearch: () => void;
   onOpenCompanies: () => void;
-  onOpenAuth: (mode?: "login" | "register") => void;
+  onOpenAuth: (mode?: "login" | "register", accountType?: "CANDIDATE" | "RECRUITER") => void;
 }) {
   const linkClass =
     "text-slate-300 hover:text-white transition-colors bg-transparent border-0 p-0 cursor-pointer text-left";
@@ -51,12 +51,20 @@ export function PublicFooter({
                 </button>
               </li>
               <li>
-                <button type="button" onClick={() => onOpenAuth()} className={linkClass}>
+                <button
+                  type="button"
+                  onClick={() => (candidate ? candidate.onNavigate("cv") : onOpenAuth("login", "CANDIDATE"))}
+                  className={linkClass}
+                >
                   Tải lên CV ứng tuyển
                 </button>
               </li>
               <li>
-                <button type="button" onClick={() => onOpenAuth()} className={linkClass}>
+                <button
+                  type="button"
+                  onClick={() => (candidate ? candidate.onNavigate("profile") : onOpenAuth("login", "CANDIDATE"))}
+                  className={linkClass}
+                >
                   Tạo hồ sơ chuyên nghiệp
                 </button>
               </li>
@@ -67,12 +75,12 @@ export function PublicFooter({
             <h4 className="text-xs font-bold uppercase tracking-wider text-white m-0">DÀNH CHO NHÀ TUYỂN DỤNG</h4>
             <ul className="space-y-2 list-none p-0 m-0 text-sm">
               <li>
-                <button type="button" onClick={() => onOpenAuth()} className={linkClass}>
+                <button type="button" onClick={() => onOpenAuth("register", "RECRUITER")} className={linkClass}>
                   Đăng tin tuyển dụng
                 </button>
               </li>
               <li>
-                <button type="button" onClick={() => onOpenAuth()} className={linkClass}>
+                <button type="button" onClick={() => onOpenAuth("login", "RECRUITER")} className={linkClass}>
                   Quản lý ứng viên
                 </button>
               </li>

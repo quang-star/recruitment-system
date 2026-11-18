@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import userEvent from "@testing-library/user-event";
 import { beforeEach, expect, it, vi } from "vitest";
 import { CandidateProfilePage } from "./CandidateProfilePage";
-import { apiDownload, apiRequest } from "../../shared/api/client";
+import { ApiClientError, apiDownload, apiRequest } from "../../shared/api/client";
 import { AuthSession } from "../../shared/auth/session";
 import { setPendingJobId } from "../../shared/pendingApplication";
 
@@ -48,7 +48,7 @@ it("defaults signed-in candidates to the same job-first homepage and puts person
   expect(screen.getByRole("button", { name: /^Công nghệ AI$/ })).toBeVisible();
   expect(screen.queryByRole("navigation", { name: "Tài khoản cá nhân" })).not.toBeInTheDocument();
   expect(trigger).toHaveAttribute("aria-expanded", "false");
-  fireEvent.click(screen.getByRole("button", { name: /Quay lại trang chủ việc làm/ }));
+  fireEvent.click(screen.getByRole("button", { name: "Trang chủ cổng tuyển dụng" }));
   expect(screen.getByRole("form", { name: "Tìm cơ hội nghề nghiệp" })).toBeInTheDocument();
 });
 
@@ -77,7 +77,7 @@ it("navigates from the homepage to CV management and keeps account data when ret
   await screen.findByRole("button", { name: "Tài khoản Nguyễn An" });
   fireEvent.click(screen.getByRole("button", { name: /Quản lý CV của tôi/ }));
   expect(screen.getByRole("heading", { name: "Thư viện CV cá nhân" })).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: /Quay lại trang chủ việc làm/ }));
+  fireEvent.click(screen.getByRole("button", { name: "Trang chủ cổng tuyển dụng" }));
   await waitFor(() => expect(screen.getByRole("button", { name: "Tài khoản Nguyễn An" })).toBeInTheDocument());
   expect(vi.mocked(apiRequest).mock.calls.filter(([path]) => path === "/api/v2/candidates/me")).toHaveLength(1);
 });
@@ -224,4 +224,142 @@ it("preserves unsaved profile edits when the access token refreshes for the same
     expect(screen.getByLabelText("Tên hiển thị")).toHaveValue("Unsaved refresh draft");
   });
   expect(vi.mocked(apiRequest).mock.calls.filter(([path]) => path === "/api/v2/candidates/me")).toHaveLength(1);
+});
+
+it("treats missing initial profile (404) as empty without error and creates profile with version null", async () => {
+  window.history.replaceState({}, "", "/candidate/profile");
+  vi.mocked(apiRequest).mockImplementation(async (path, options) => {
+    if (path === "/api/v2/candidates/me" && options?.method === "PUT") {
+      const body = JSON.parse(options.body as string);
+      return { ...body, candidateProfileId: "prof-new", userId: "candidate", version: 0 };
+    }
+    if (path === "/api/v2/candidates/me") {
+      throw new ApiClientError(404, { code: "CANDIDATE_PROFILE_NOT_FOUND", message: "Candidate profile was not found", details: {}, correlationId: "c1", timestamp: "2026-11-18T10:00:00Z" });
+    }
+    if (path === "/api/v2/public/jobs?summary") return {};
+    if (path.includes("/jobs?") || path.includes("/applications?")) return { items: [], total: 0, page: 0, size: 12 };
+    return [];
+  });
+
+  render(<CandidateProfilePage session={session} onLogout={vi.fn()} />);
+  const nameInput = await screen.findByLabelText("Tên hiển thị");
+  expect(nameInput).toHaveValue("");
+  expect(screen.queryByText(/Candidate profile was not found/)).not.toBeInTheDocument();
+
+  fireEvent.change(nameInput, { target: { value: "Trần Minh" } });
+  fireEvent.click(screen.getByRole("button", { name: "Cập nhật hồ sơ" }));
+
+  await waitFor(() => {
+    expect(screen.getByText("Hồ sơ đã được lưu.")).toBeInTheDocument();
+  });
+
+  const putCall = vi.mocked(apiRequest).mock.calls.find(([path, opt]) => path === "/api/v2/candidates/me" && opt?.method === "PUT");
+  expect(putCall).toBeDefined();
+  expect(JSON.parse(putCall![1]!.body as string).version).toBeNull();
+});
+
+it("supports drag-and-drop avatar upload and removing an existing avatar", async () => {
+  window.history.replaceState(null, "", "/candidate/profile");
+  const imageUrl = "/api/v2/candidates/me/avatar/123e4567-e89b-12d3-a456-426614174000";
+  const createUrl = vi.fn(() => "blob:dropped-avatar");
+  const revokeUrl = vi.fn();
+  vi.stubGlobal("URL", Object.assign(URL, { createObjectURL: createUrl, revokeObjectURL: revokeUrl }));
+  vi.mocked(apiDownload).mockResolvedValue({ blob: new Blob(["image"], { type: "image/png" }), filename: "avatar.png" });
+  vi.mocked(apiRequest).mockImplementation(async (path, options) => {
+    if (path.startsWith("/api/v2/candidates/me/avatar?")) {
+      return { displayName: "Nguyễn An", headline: "Developer", locationText: "Hà Nội", visibility: "APPLICATION_ONLY", version: 1, avatarUrl: imageUrl };
+    }
+    if (path === "/api/v2/candidates/me" && options?.method === "PUT") {
+      const body = JSON.parse(options.body as string);
+      return { ...body, candidateProfileId: "prof-1", userId: "candidate", version: 2 };
+    }
+    if (path === "/api/v2/candidates/me") {
+      return { displayName: "Nguyễn An", headline: "Developer", locationText: "Hà Nội", visibility: "APPLICATION_ONLY", version: 0 };
+    }
+    if (path.includes("/jobs?") || path.includes("/applications?")) return { items: [], total: 0, page: 0, size: 12 };
+    return [];
+  });
+
+  try {
+    render(<CandidateProfilePage session={session} onLogout={vi.fn()} />);
+    const dropzone = await screen.findByTestId("candidate-avatar-dropzone");
+    const file = new File(["image"], "photo.png", { type: "image/png" });
+    fireEvent.drop(dropzone, { dataTransfer: { files: [file] } });
+
+    await screen.findByText("Ảnh đại diện đã được cập nhật.");
+    await waitFor(() =>
+      expect(within(screen.getByRole("button", { name: "Tài khoản Nguyễn An" })).getByRole("presentation")).toHaveAttribute("src", "blob:dropped-avatar")
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Xóa ảnh" }));
+    await screen.findByText("Ảnh đại diện đã được xóa.");
+
+    const putCall = vi.mocked(apiRequest).mock.calls.find(([path, opt]) => path === "/api/v2/candidates/me" && opt?.method === "PUT");
+    expect(putCall).toBeDefined();
+    const payload = JSON.parse(putCall![1]!.body as string);
+    expect(payload.avatarUrl).toBeNull();
+    expect(payload.version).toBe(1);
+    expect(screen.queryByRole("button", { name: "Xóa ảnh" })).not.toBeInTheDocument();
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});
+
+it("auto-creates profile when uploading avatar with displayName on an empty account and requires displayName when blank", async () => {
+  window.history.replaceState({}, "", "/candidate/profile");
+  const imageUrl = "/api/v2/candidates/me/avatar/123e4567-e89b-12d3-a456-426614174000";
+  const createUrl = vi.fn(() => "blob:new-profile-avatar");
+  const revokeUrl = vi.fn();
+  vi.stubGlobal("URL", Object.assign(URL, { createObjectURL: createUrl, revokeObjectURL: revokeUrl }));
+  vi.mocked(apiDownload).mockResolvedValue({ blob: new Blob(["image"], { type: "image/png" }), filename: "avatar.png" });
+  vi.mocked(apiRequest).mockImplementation(async (path, options) => {
+    if (path.startsWith("/api/v2/candidates/me/avatar?")) {
+      return { displayName: "Trần Minh", headline: null, locationText: null, visibility: "APPLICATION_ONLY", version: 1, avatarUrl: imageUrl };
+    }
+    if (path === "/api/v2/candidates/me" && options?.method === "PUT") {
+      const body = JSON.parse(options.body as string);
+      return { ...body, candidateProfileId: "prof-new", userId: "candidate", version: 0 };
+    }
+    if (path === "/api/v2/candidates/me") {
+      throw new ApiClientError(404, { code: "CANDIDATE_PROFILE_NOT_FOUND", message: "Candidate profile was not found", details: {}, correlationId: "c1", timestamp: "2026-11-18T10:00:00Z" });
+    }
+    if (path.includes("/jobs?") || path.includes("/applications?")) return { items: [], total: 0, page: 0, size: 12 };
+    return [];
+  });
+
+  try {
+    render(<CandidateProfilePage session={session} onLogout={vi.fn()} />);
+    const input = await screen.findByLabelText("Ảnh đại diện");
+    const file = new File(["image"], "avatar.png", { type: "image/png" });
+    await userEvent.upload(input, file);
+
+    await screen.findByText("Vui lòng nhập Tên hiển thị trước khi tải ảnh đại diện.");
+    expect(vi.mocked(apiRequest).mock.calls.some(([path]) => path.startsWith("/api/v2/candidates/me/avatar?"))).toBe(false);
+
+    fireEvent.change(screen.getByLabelText("Tên hiển thị"), { target: { value: "Trần Minh" } });
+    await userEvent.upload(input, file);
+
+    await screen.findByText("Ảnh đại diện đã được cập nhật.");
+    await waitFor(() =>
+      expect(within(screen.getByRole("button", { name: "Tài khoản Trần Minh" })).getByRole("presentation")).toHaveAttribute("src", "blob:new-profile-avatar")
+    );
+    const putCall = vi.mocked(apiRequest).mock.calls.find(([path, opt]) => path === "/api/v2/candidates/me" && opt?.method === "PUT");
+    const uploadCall = vi.mocked(apiRequest).mock.calls.find(([path]) => path.startsWith("/api/v2/candidates/me/avatar?"));
+    expect(putCall).toBeDefined();
+    expect(JSON.parse(putCall![1]!.body as string).version).toBeNull();
+    expect(uploadCall?.[0]).toContain("version=0");
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});
+
+it("rejects unsupported avatar file formats before calling the API", async () => {
+  window.history.replaceState({}, "", "/candidate/profile");
+  render(<CandidateProfilePage session={session} onLogout={vi.fn()} />);
+  const dropzone = await screen.findByTestId("candidate-avatar-dropzone");
+  const badFile = new File(["image"], "avatar.webp", { type: "image/webp" });
+  fireEvent.drop(dropzone, { dataTransfer: { files: [badFile] } });
+
+  await screen.findByText("Chọn ảnh JPEG hoặc PNG có dung lượng tối đa 2 MB.");
+  expect(vi.mocked(apiRequest).mock.calls.some(([path]) => path.startsWith("/api/v2/candidates/me/avatar?"))).toBe(false);
 });

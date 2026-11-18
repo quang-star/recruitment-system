@@ -17,8 +17,10 @@ type Company = {
   verificationStatus: string;
   version: number;
 };
-type Review = { id: string; actorUserId: string; fromStatus: string; toStatus: string; reason: string; version: number; occurredAt: string };
+type Review = { id: string; actorUserId: string; action?: string; fromStatus: string; toStatus: string; reason: string; version: number; occurredAt: string };
+type ReviewAction = "approve" | "reject" | "suspend" | "reactivate";
 const statusLabels: Record<string, string> = { PENDING: "Chờ duyệt", ACTIVE: "Đang hoạt động", SUSPENDED: "Tạm ngưng", CLOSED: "Đã đóng" };
+const actionLabels: Record<string, string> = { APPROVE: "Duyệt hoạt động", REJECT: "Từ chối", SUSPEND: "Tạm ngưng", REACTIVATE: "Kích hoạt lại" };
 const statusTones: Record<string, "warning" | "success" | "danger" | "neutral"> = {
   PENDING: "warning",
   ACTIVE: "success",
@@ -70,30 +72,50 @@ export function CompanyReviewPanel({ accessToken }: { accessToken: string }) {
     setNotice(null);
   }
 
-  async function approve(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!selected || busy || needsReload || selected.status !== "PENDING" || !reason.trim()) return;
+  async function submitAction(action: ReviewAction) {
+    if (!selected || busy || needsReload || !reason.trim()) return;
+    const expectedStatusByAction: Record<ReviewAction, Company["status"]> = {
+      approve: "PENDING",
+      reject: "PENDING",
+      suspend: "ACTIVE",
+      reactivate: "SUSPENDED"
+    };
+    if (selected.status !== expectedStatusByAction[action]) return;
     setBusy(true);
     setError(null);
     setNotice(null);
     try {
-      const approved = await apiRequest<Company>(`/api/v2/dashboard/companies/${selected.companyId}/approve`, {
+      const updated = await apiRequest<Company>(`/api/v2/dashboard/companies/${selected.companyId}/${action}`, {
         method: "POST", accessToken, body: JSON.stringify({ version: selected.version, reason: reason.trim() })
       });
-      setSelected(approved);
+      setSelected(updated);
       setReason("");
-      setNotice(`Đã duyệt ${approved.displayName}. Công ty có thể đăng tin tuyển dụng.`);
+      const successByAction: Record<ReviewAction, string> = {
+        approve: `Đã duyệt ${updated.displayName}. Công ty có thể đăng tin tuyển dụng.`,
+        reject: `Đã từ chối đăng ký công ty ${updated.displayName}.`,
+        suspend: `Đã tạm ngưng hoạt động ${updated.displayName}; tin tuyển dụng và hồ sơ mới đã bị chặn.`,
+        reactivate: `Đã kích hoạt lại ${updated.displayName}.`
+      };
+      setNotice(successByAction[action]);
       results.refresh();
     } catch (failure) {
       if (failure instanceof ApiClientError && failure.status === 409) {
         setNeedsReload(true);
-        setError("Công ty đã thay đổi hoặc đã được duyệt. Tải lại và kiểm tra trước khi thực hiện tiếp.");
+        setError("Công ty đã thay đổi trạng thái hoặc đã được xử lý trước đó. Tải lại và kiểm tra trước khi thực hiện tiếp.");
       } else {
-        setError(failure instanceof ApiClientError ? failure.error.message : "Không thể duyệt công ty. Vui lòng thử lại.");
+        setError(failure instanceof ApiClientError ? failure.error.message : "Không thể cập nhật trạng thái công ty. Vui lòng thử lại.");
       }
     } finally {
       setBusy(false);
     }
+  }
+
+  function handleFormSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!selected) return;
+    if (selected.status === "PENDING") void submitAction("approve");
+    else if (selected.status === "ACTIVE") void submitAction("suspend");
+    else if (selected.status === "SUSPENDED") void submitAction("reactivate");
   }
 
   return (
@@ -126,7 +148,7 @@ export function CompanyReviewPanel({ accessToken }: { accessToken: string }) {
           ) : (
             <div className="overflow-x-auto rounded-xl border border-border-subtle bg-white">
               <table className="w-full table-fixed text-sm text-left" aria-label="Danh sách công ty cần xét duyệt">
-                <thead className="bg-slate-50/90 border-b border-border-subtle text-[11px] font-semibold uppercase tracking-wider text-ink-500">
+                <thead className="bg-slate-50/90 border-b border-border-subtle text-xs font-semibold uppercase tracking-wider text-ink-500">
                   <tr><th className="px-4 py-2.5">Công ty / trạng thái</th><th className="w-28 px-4 py-2.5 text-right">Thao tác</th></tr>
                 </thead>
                 <tbody className="divide-y divide-border-subtle">{results.items.map((company) => {
@@ -137,7 +159,7 @@ export function CompanyReviewPanel({ accessToken }: { accessToken: string }) {
                       <p className="text-xs text-ink-500 m-0">{company.legalName}</p>
                       <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
                         <Badge tone={statusTones[company.status] ?? "neutral"}>{statusLabels[company.status]}</Badge>
-                        {company.countryCode && <span className="text-[11px] text-ink-500">{company.countryCode}</span>}
+                        {company.countryCode && <span className="text-xs text-ink-500">{company.countryCode}</span>}
                       </div>
                     </td>
                     <td className="px-4 py-3 text-right align-middle"><Button size="sm" variant={isSelected ? "primary" : "secondary"} disabled={busy}
@@ -178,20 +200,53 @@ export function CompanyReviewPanel({ accessToken }: { accessToken: string }) {
               <p className="text-sm text-ink-800 whitespace-pre-wrap m-0 leading-relaxed">{selected.description}</p>
             </div>
           )}
-          {selected.status === "PENDING" && <form onSubmit={(event) => void approve(event)} className="rounded-xl border border-brand-200 bg-brand-50/30 p-4 space-y-3">
-            <p className="text-xs text-ink-700 m-0">Duyệt cho phép công ty hoạt động; thao tác này không xác nhận tư cách pháp lý.</p>
-            <label className={labelClass}>Lý do duyệt
-              <textarea className={textareaClass} rows={3} required maxLength={1000} placeholder="Ví dụ: Đã đối chiếu thông tin công ty hợp lệ…" value={reason} disabled={busy || needsReload}
-                onChange={(event) => setReason(event.target.value)} />
-            </label>
-            <Button type="submit" loading={busy} disabled={needsReload || !reason.trim()}>Duyệt hoạt động</Button>
-          </form>}
+          {selected.status !== "CLOSED" ? (
+            <form onSubmit={handleFormSubmit}
+              className={`rounded-xl border p-4 space-y-3 ${selected.status === "ACTIVE" ? "border-amber-200 bg-amber-50/40" : "border-brand-200 bg-brand-50/30"}`}>
+              <p className="text-xs text-ink-700 m-0">
+                {selected.status === "PENDING"
+                  ? "Duyệt để cho phép công ty hoạt động hoặc từ chối hồ sơ đăng ký không hợp lệ."
+                  : selected.status === "ACTIVE"
+                    ? "Tạm ngưng sẽ ẩn công ty và các tin đang mở khỏi ứng viên, đồng thời chặn đăng tin hoặc ứng tuyển mới."
+                    : "Kích hoạt lại cho phép công ty tiếp tục xuất hiện công khai và tuyển dụng."}
+              </p>
+              <label className={labelClass}>
+                {selected.status === "PENDING" ? "Lý do duyệt" : selected.status === "ACTIVE" ? "Lý do tạm ngưng" : "Lý do kích hoạt lại"}
+                <textarea className={textareaClass} rows={3} required maxLength={1000}
+                  placeholder={selected.status === "PENDING"
+                    ? "Ví dụ: Đã đối chiếu thông tin công ty hợp lệ hoặc lý do từ chối…"
+                    : "Nhập lý do quản trị rõ ràng để lưu vào lịch sử…"}
+                  value={reason} disabled={busy || needsReload}
+                  onChange={(event) => setReason(event.target.value)} />
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {selected.status === "PENDING" && <>
+                  <Button type="submit" loading={busy} disabled={needsReload || !reason.trim()}>Duyệt hoạt động</Button>
+                  <Button type="button" variant="danger" loading={busy} disabled={needsReload || !reason.trim()}
+                    onClick={() => void submitAction("reject")}>Từ chối đăng ký</Button>
+                </>}
+                {selected.status === "ACTIVE" && (
+                  <Button type="submit" variant="danger" loading={busy} disabled={needsReload || !reason.trim()}>Tạm ngưng hoạt động</Button>
+                )}
+                {selected.status === "SUSPENDED" && (
+                  <Button type="submit" loading={busy} disabled={needsReload || !reason.trim()}>Kích hoạt lại</Button>
+                )}
+              </div>
+            </form>
+          ) : (
+            <p className="rounded-xl border border-border-subtle bg-slate-50 px-3.5 py-2.5 text-xs text-ink-600 m-0">
+              Công ty đã đóng; không còn hiển thị công khai hay tiếp nhận tin tuyển dụng mới.
+            </p>
+          )}
           {historyError && <ErrorBanner message={historyError} />}
           <div className="space-y-2 border-t border-border-subtle pt-3">
             <h4 className="text-sm font-bold text-ink-900 m-0">Lịch sử duyệt gần nhất</h4>
             {history.length === 0 ? <p className="text-sm text-ink-500 m-0">Chưa có lịch sử duyệt được ghi nhận.</p> : (
               <ol className="space-y-2 text-sm pl-0 list-none m-0">{history.map((entry) => <li key={entry.id} className="rounded-xl border border-border-subtle bg-slate-50/70 p-3 space-y-1">
-                <p className="m-0 text-xs font-semibold text-ink-800">{statusLabels[entry.fromStatus]} → {statusLabels[entry.toStatus]} · {new Date(entry.occurredAt).toLocaleString("vi-VN")}</p>
+                <p className="m-0 text-xs font-semibold text-ink-800">
+                  {entry.action && actionLabels[entry.action] ? `${actionLabels[entry.action]} · ` : ""}
+                  {statusLabels[entry.fromStatus]} → {statusLabels[entry.toStatus]} · {new Date(entry.occurredAt).toLocaleString("vi-VN")}
+                </p>
                 <p className="m-0 text-sm text-ink-900">{entry.reason}</p>
                 <small className="block text-xs text-ink-500">Admin #{entry.actorUserId} · Phiên bản {entry.version}</small>
               </li>)}</ol>

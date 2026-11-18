@@ -55,7 +55,7 @@ const componentLabels: Record<string, string> = {
 
 const statusConfig: Record<ApplicationMatch["status"], { label: string; tone: "success" | "warning" | "neutral" }> = {
   COMPLETED: { label: "Đã đối chiếu", tone: "success" },
-  DEGRADED: { label: "Cần kiểm tra thêm", tone: "warning" },
+  DEGRADED: { label: "Chưa đủ căn cứ chấm điểm · Cần xem thủ công", tone: "warning" },
   INSUFFICIENT_DATA: { label: "Chưa đủ dữ liệu", tone: "neutral" }
 };
 
@@ -125,6 +125,11 @@ export function MatchBreakdown({ match, onViewCv }: { match: ApplicationMatch; o
         <p className="text-xs text-ink-500 m-0 leading-relaxed">
           Mức độ phù hợp với vị trí trên thang 1–5 sao, không phải xác suất trúng tuyển. Nhà tuyển dụng quyết định sau khi xem hồ sơ.
         </p>
+        {match.status === "DEGRADED" && (
+          <p className="text-xs text-amber-800 bg-amber-50/80 border border-amber-200 rounded-lg px-2.5 py-1.5 m-0">
+            Chưa đủ căn cứ chấm điểm đầy đủ (JD thiếu kỹ năng bắt buộc, CV thiếu dữ liệu kỹ năng hoặc có mục chưa đối chiếu được). Cần xem hồ sơ thủ công thay vì dùng điểm để đánh giá năng lực.
+          </p>
+        )}
         {penaltyValue > 0 && (
           <p className="text-xs text-amber-800 bg-amber-50/80 border border-amber-200 rounded-lg px-2.5 py-1.5 m-0">
             Giảm trừ thiếu tiêu chí trọng yếu ({match.explanation.penaltyVersion ?? "penalty-v1"}): −{penaltyValue.toFixed(1)} điểm rubric (chỉ hỗ trợ ưu tiên xem xét, không tự động loại).

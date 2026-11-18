@@ -65,4 +65,32 @@ it("filters the paged queue and does not offer approval for ACTIVE companies", a
   await waitFor(() => expect(apiRequest).toHaveBeenCalledWith(expect.stringMatching(/status=ACTIVE&q=Synthetic&page=0&size=20/), expect.anything()));
   fireEvent.click(await screen.findByRole("button", { name: "Xem xét Synthetic Company" }));
   expect(screen.queryByRole("button", { name: "Duyệt hoạt động" })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Tạm ngưng hoạt động" })).toBeDisabled();
+});
+
+it("supports rejecting pending, suspending active, and reactivating suspended companies", async () => {
+  vi.mocked(apiRequest).mockImplementation(async (path, options) => {
+    if (path.endsWith("/reject") && options?.method === "POST") return { ...company, status: "CLOSED", version: 8 };
+    if (path.endsWith("/suspend") && options?.method === "POST") return { ...company, status: "SUSPENDED", version: 9 };
+    if (path.endsWith("/reactivate") && options?.method === "POST") return { ...company, status: "ACTIVE", version: 10 };
+    if (path.endsWith("/history")) return [];
+    if (path.includes("status=ACTIVE")) return { items: [{ ...company, status: "ACTIVE", version: 8 }], total: 1, page: 0, size: 20 };
+    return { items: [company], total: 1, page: 0, size: 20 };
+  });
+
+  render(<CompanyReviewPanel accessToken="synthetic" />);
+  fireEvent.click(await screen.findByRole("button", { name: "Xem xét Synthetic Company" }));
+  fireEvent.change(screen.getByLabelText("Lý do duyệt"), { target: { value: "Hồ sơ không hợp lệ" } });
+  fireEvent.click(screen.getByRole("button", { name: "Từ chối đăng ký" }));
+  expect(await screen.findByText(/Đã từ chối đăng ký công ty Synthetic Company/)).toBeVisible();
+
+  fireEvent.change(screen.getByLabelText("Trạng thái công ty"), { target: { value: "ACTIVE" } });
+  fireEvent.click(await screen.findByRole("button", { name: "Xem xét Synthetic Company" }));
+  fireEvent.change(screen.getByLabelText("Lý do tạm ngưng"), { target: { value: "Vi phạm chính sách" } });
+  fireEvent.click(screen.getByRole("button", { name: "Tạm ngưng hoạt động" }));
+  expect(await screen.findByText(/Đã tạm ngưng hoạt động Synthetic Company/)).toBeVisible();
+
+  fireEvent.change(screen.getByLabelText("Lý do kích hoạt lại"), { target: { value: "Đã khắc phục" } });
+  fireEvent.click(screen.getByRole("button", { name: "Kích hoạt lại" }));
+  expect(await screen.findByText(/Đã kích hoạt lại Synthetic Company/)).toBeVisible();
 });

@@ -12,6 +12,7 @@ export type PublicJob = {
   salaryMin: number | null;
   salaryMax: number | null;
   salaryCurrency: string | null;
+  salaryPeriod?: string | null;
   salaryNegotiable: boolean;
   companyId: string;
   companyName?: string;

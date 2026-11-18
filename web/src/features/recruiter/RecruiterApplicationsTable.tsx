@@ -23,7 +23,7 @@ export function RecruiterApplicationsTable({
       <table className="w-full border-collapse text-left text-sm">
         <caption className="sr-only">Danh sách ứng viên</caption>
         <thead>
-          <tr className="border-b border-border-subtle bg-slate-50/90 text-[11px] font-semibold uppercase tracking-wider text-ink-500">
+          <tr className="border-b border-border-subtle bg-slate-50/90 text-xs font-semibold uppercase tracking-wider text-ink-500">
             <th className="px-4 py-3">Hồ sơ</th>
             <th className="px-3 py-3">Ngày nộp</th>
             <th className="px-3 py-3">Trạng thái</th>
@@ -56,12 +56,12 @@ export function RecruiterApplicationsTable({
                         {application.candidateHeadline && (
                           <span className="text-xs text-ink-600">{application.candidateHeadline}</span>
                         )}
-                        <small className="text-[11px] text-ink-500">Hồ sơ {application.applicationId.slice(0, 8)}</small>
+                        <small className="text-xs text-ink-500">Hồ sơ {application.applicationId.slice(0, 8)}</small>
                       </div>
                     </div>
                   </div>
                 </td>
-                <td className="px-3 py-3 align-top text-xs text-ink-600 whitespace-nowrap">
+                <td className="px-3 py-3 align-top text-sm text-ink-600 whitespace-nowrap">
                   {new Date(application.appliedAt).toLocaleDateString("vi-VN")}
                 </td>
                 <td className="px-3 py-3 align-top">
@@ -70,7 +70,9 @@ export function RecruiterApplicationsTable({
                 <td className="px-4 py-3 align-top">
                   <MatchRating {...application} compact />
                   {application.match?.status === "DEGRADED" && (
-                    <small className="mt-1 block text-[11px] font-medium text-amber-700">Cần kiểm tra thêm</small>
+                    <small className="mt-1 block text-xs font-medium text-amber-700">
+                      Chưa đủ căn cứ chấm điểm · Cần xem thủ công
+                    </small>
                   )}
                 </td>
               </tr>
