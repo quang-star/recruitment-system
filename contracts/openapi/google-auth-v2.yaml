@@ -72,12 +72,13 @@ paths:
                     default: CANDIDATE
       responses:
         '200':
-          description: Normal application JWT and rotating refresh token; Google tokens
-            are not returned.
+          description: Normal application JWT and rotating refresh token, plus verified
+            Google profile hints for first-time profile setup; Google tokens are
+            not returned.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TokenResponse'
+                $ref: '#/components/schemas/GoogleLoginResponse'
         '400':
           $ref: '#/components/responses/GoogleError'
         '401':
@@ -172,3 +173,30 @@ components:
           type: array
           items:
             type: string
+    GoogleProfileHint:
+      type: object
+      required:
+      - displayName
+      - email
+      properties:
+        displayName:
+          type: string
+          minLength: 1
+          maxLength: 120
+        avatarUrl:
+          type:
+          - string
+          - 'null'
+          maxLength: 500
+        email:
+          type: string
+          maxLength: 320
+    GoogleLoginResponse:
+      allOf:
+      - $ref: '#/components/schemas/TokenResponse'
+      - type: object
+        properties:
+          newAccount:
+            type: boolean
+          googleProfile:
+            $ref: '#/components/schemas/GoogleProfileHint'

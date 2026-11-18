@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { apiRequest } from "../../shared/api/client";
 import { usePagedResource } from "../../shared/api/pagination";
 import { SearchIcon } from "../../shared/components/Icon";
 import { PageControls } from "../../shared/components/PageControls";
@@ -17,12 +18,16 @@ type Props = {
   onFocusRestored?: () => void;
 };
 
+type Industry = { id: string; kind: string; name: string; status: string };
+
 export function JobSearchPage({ discovery, onSelectJob, restoreFocusJobId, onFocusRestored }: Props) {
   const pageRef = useRef<HTMLDivElement>(null);
   const { params, navigate } = useUrlParams();
   const keyword = params.get("q") ?? "";
   const [draftKeyword, setDraftKeyword] = useState(keyword);
   const [showAdvancedMobile, setShowAdvancedMobile] = useState(false);
+  const [industries, setIndustries] = useState<Industry[]>([]);
+  const [industryLoadFailed, setIndustryLoadFailed] = useState(false);
   useEffect(() => { setDraftKeyword(keyword); }, [keyword]);
 
   const location = params.get("location") ?? "";
@@ -38,6 +43,12 @@ export function JobSearchPage({ discovery, onSelectJob, restoreFocusJobId, onFoc
     ...category,
     value: `${category.industryId}:${category.specializationId ?? ""}`
   }));
+  for (const entry of industries) {
+    const value = `${entry.id}:`;
+    if (!categories.some((category) => category.value === value)) {
+      categories.push({ industryId: entry.id, specializationId: null, name: entry.name, jobCount: 0, value });
+    }
+  }
   const salaryRange = SALARY_FILTER_OPTIONS[salary];
 
   const updateFilter = (key: string, value: string) => navigate({ [key]: value || null, page: null, job: null });
@@ -80,6 +91,15 @@ export function JobSearchPage({ discovery, onSelectJob, restoreFocusJobId, onFoc
   );
 
   useEffect(() => {
+    let active = true;
+    void apiRequest<Industry[]>("/api/v2/public/job-categories").then((entries) => {
+      if (!Array.isArray(entries)) throw new Error("Invalid category response");
+      if (active) setIndustries(entries.filter((entry) => entry.kind === "INDUSTRY" && entry.status === "ACTIVE"));
+    }).catch(() => { if (active) setIndustryLoadFailed(true); });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
     if (!restoreFocusJobId || results.loading) return;
     const links = pageRef.current?.querySelectorAll<HTMLAnchorElement>(".public-job-list-card") ?? [];
     const target = Array.from(links).find((node) => node.dataset.jobId === restoreFocusJobId);
@@ -101,7 +121,7 @@ export function JobSearchPage({ discovery, onSelectJob, restoreFocusJobId, onFoc
   const activeAdvancedCount = [salary, level, mode, type].filter(Boolean).length;
 
   const selectClass = (active = false, tall = false) =>
-    `${tall ? "h-10" : "h-9"} w-full rounded-xl border px-3 text-xs sm:text-sm transition-colors focus:border-brand-600 focus:outline-none ${
+    `${tall ? "h-10" : "h-9"} w-full rounded-xl border px-3 text-sm transition-colors focus:border-brand-600 focus:outline-none ${
       active
         ? "border-brand-500 bg-brand-50/70 font-semibold text-brand-800"
         : "border-border-strong bg-white text-ink-900"
@@ -117,7 +137,7 @@ export function JobSearchPage({ discovery, onSelectJob, restoreFocusJobId, onFoc
       <section aria-labelledby="job-search-title" className="space-y-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-[11px] font-bold uppercase tracking-wider text-brand-700 m-0 mb-1">
+            <p className="text-xs font-bold uppercase tracking-wider text-brand-700 m-0 mb-1">
               Tìm kiếm cơ hội
             </p>
             <h1 id="job-search-title" className="text-2xl sm:text-3xl font-bold tracking-tight text-ink-900 m-0">
@@ -189,6 +209,7 @@ export function JobSearchPage({ discovery, onSelectJob, restoreFocusJobId, onFoc
                   </option>
                 ))}
               </select>
+              {industryLoadFailed && <p className="text-xs text-ink-500 mt-1 mb-0">Chưa tải được tất cả ngành nghề; đang hiển thị các nhóm phổ biến.</p>}
             </div>
 
             <div className="lg:col-span-3">
@@ -208,7 +229,7 @@ export function JobSearchPage({ discovery, onSelectJob, restoreFocusJobId, onFoc
 
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex flex-wrap items-center gap-1.5" aria-label="Gợi ý từ khóa nhanh">
-              <span className="text-[11px] font-medium text-ink-500 mr-0.5">Phổ biến:</span>
+              <span className="text-xs font-medium text-ink-500 mr-0.5">Phổ biến:</span>
               {QUICK_KEYWORDS.map((tag) => {
                 const isSelected = keyword.trim().toLowerCase() === tag.toLowerCase();
                 return (
@@ -223,7 +244,7 @@ export function JobSearchPage({ discovery, onSelectJob, restoreFocusJobId, onFoc
                         updateFilter("q", tag);
                       }
                     }}
-                    className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors cursor-pointer ${
+                    className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors cursor-pointer ${
                       isSelected
                         ? "border-brand-500 bg-brand-600 text-white"
                         : "border-border-subtle bg-slate-50 text-ink-600 hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700"
@@ -252,7 +273,7 @@ export function JobSearchPage({ discovery, onSelectJob, restoreFocusJobId, onFoc
 
           <div className={`${showAdvancedMobile ? "grid" : "hidden sm:grid"} grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-border-subtle/70`}>
             <label data-active={Boolean(salary)} className="block space-y-1 text-xs font-medium text-ink-600">
-              <span>Mức lương</span>
+              <span>Mức lương (VND / tháng)</span>
               <select aria-label="Lọc theo mức lương" value={salary} onChange={(event) => updateFilter("salary", event.target.value)} className={selectClass(Boolean(salary))}>
                 <option value="">Tất cả</option>
                 {Object.entries(SALARY_FILTER_OPTIONS).map(([key, item]) => (

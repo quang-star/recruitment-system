@@ -25,4 +25,9 @@ public class JooqGoogleIdentityRepository implements GoogleIdentityRepository {
         return dsl.insertInto(GOOGLE_IDENTITIES).set(GOOGLE_IDENTITIES.SUBJECT, subject)
                 .set(GOOGLE_IDENTITIES.USER_ID, userId).onConflictDoNothing().execute() == 1;
     }
+
+    @Override
+    public boolean existsByUserId(Long userId) {
+        return dsl.fetchExists(GOOGLE_IDENTITIES, GOOGLE_IDENTITIES.USER_ID.eq(userId));
+    }
 }

@@ -39,6 +39,38 @@ export function formatSalary(job: PublicJob) {
   return "Lương thỏa thuận";
 }
 
+export function formatSalaryWithPeriod(job: PublicJob): string {
+  const base = formatSalary(job);
+  if (job.salaryNegotiable || (job.salaryMin == null && job.salaryMax == null) || !job.salaryPeriod) {
+    return base;
+  }
+  const periodLabel = job.salaryPeriod === "YEAR" ? "năm" : job.salaryPeriod === "HOUR" ? "giờ" : "tháng";
+  return `${base} / ${periodLabel}`;
+}
+
+export function deadlineRemainingLabel(deadlineIso?: string | null): string | null {
+  if (!deadlineIso) return null;
+  const deadlineMs = Date.parse(deadlineIso);
+  if (!Number.isFinite(deadlineMs)) return null;
+  const diffDays = Math.ceil((deadlineMs - Date.now()) / 86_400_000);
+  if (diffDays < 0) return "Đã hết hạn nộp";
+  if (diffDays === 0) return "Hạn nộp hôm nay";
+  return `Còn ${diffDays} ngày`;
+}
+
+export function countryLabel(countryCode?: string): string | null {
+  const trimmed = countryCode?.trim().toUpperCase();
+  if (!trimmed) return null;
+  try {
+    if (typeof Intl !== "undefined" && typeof Intl.DisplayNames === "function") {
+      return new Intl.DisplayNames(["vi"], { type: "region" }).of(trimmed) ?? trimmed;
+    }
+  } catch {
+    // Fallback to raw ISO code if locale region display is unavailable
+  }
+  return trimmed;
+}
+
 export function workModeLabel(value: string | null) {
   return ({ REMOTE: "Từ xa", HYBRID: "Hybrid", ONSITE: "Tại văn phòng" } as Record<string, string>)[value ?? ""] ?? value ?? "Linh hoạt";
 }

@@ -8,6 +8,7 @@ import { CvPreviewModal } from "../../shared/components/CvPreviewModal";
 import { JobsIcon, MapPinIcon } from "../../shared/components/Icon";
 import { PageControls } from "../../shared/components/PageControls";
 import { ReasonDialog } from "../../shared/components/ReasonDialog";
+import { richTextToPlainText } from "../../shared/components/RichTextEditor";
 import { getPendingJobId, setPendingJobId } from "../../shared/pendingApplication";
 import { EnsureRouter, routes, useSafeNavigate } from "../../shared/router";
 import { Badge, Button, Card, CardContent, EmptyState, ErrorBanner, Modal, PageHeader, Skeleton } from "../../shared/ui";
@@ -30,8 +31,11 @@ import {
 type Props = {
   session: AuthSession;
   initialJobId?: string;
+  initialCvId?: string;
+  initialCvVersionId?: string;
   applicationsOnly?: boolean;
   dialogOnly?: boolean;
+  onOpenCvLibrary?: () => void;
   onClose?: () => void;
   onApplied?: (message: string) => void;
 };
@@ -39,8 +43,11 @@ type Props = {
 function CandidateJobsPanelInner({
   session,
   initialJobId,
+  initialCvId,
+  initialCvVersionId,
   applicationsOnly = false,
   dialogOnly = false,
+  onOpenCvLibrary,
   onClose,
   onApplied
 }: Props) {
@@ -50,8 +57,13 @@ function CandidateJobsPanelInner({
   const [pendingJob, setPendingJob] = useState<Job | null>(null);
   const [missingInitialJobNotice, setMissingInitialJobNotice] = useState<string | null>(null);
   const [cvs, setCvs] = useState<Cv[]>([]);
+  const [loadingCvs, setLoadingCvs] = useState(false);
+  const [cvLoadError, setCvLoadError] = useState<string | null>(null);
+  const [cvLoadAttempt, setCvLoadAttempt] = useState(0);
+  const [targetLoadAttempt, setTargetLoadAttempt] = useState(0);
+  const [cvSelectionWarning, setCvSelectionWarning] = useState<string | null>(null);
   const [applications, setApplications] = useState<Application[]>([]);
-  const [cvId, setCvId] = useState("");
+  const [cvId, setCvId] = useState(initialCvId ?? "");
   const [consentAccepted, setConsentAccepted] = useState(false);
   const [coverLetter, setCoverLetter] = useState("");
   const [loadingInitialTarget, setLoadingInitialTarget] = useState(
@@ -64,7 +76,13 @@ function CandidateJobsPanelInner({
   const [workingApplicationId, setWorkingApplicationId] = useState<string | null>(null);
   const [withdrawTarget, setWithdrawTarget] = useState<Application | null>(null);
   const [revokeTarget, setRevokeTarget] = useState<Application | null>(null);
-  const [previewCv, setPreviewCv] = useState<{ cvId: string; cvVersionId?: string; title?: string; page?: number } | null>(null);
+  const [previewCv, setPreviewCv] = useState<{
+    cvId: string;
+    cvVersionId?: string;
+    title?: string;
+    filename?: string;
+    page?: number;
+  } | null>(null);
   const submissionKey = useRef(crypto.randomUUID());
 
   const [pendingTargetJobId] = useState<string | null>(() => initialJobId ?? (!dialogOnly ? getPendingJobId() : null));
@@ -112,22 +130,40 @@ function CandidateJobsPanelInner({
   useEffect(() => {
     if (applicationsOnly && !pendingJob && !pendingTargetJobId) return;
     const controller = new AbortController();
+    setLoadingCvs(true);
+    setCvLoadError(null);
     void apiRequest<Cv[]>("/api/v2/cvs", { accessToken: session.accessToken, signal: controller.signal })
       .then((items) => {
         if (controller.signal.aborted) return;
         setCvs(items);
         const confirmed = items.filter((item) => item.activeVersion?.processingStatus === "CONFIRMED");
-        if (confirmed.length > 0) {
-          setCvId((current) => current || confirmed[0].cvId);
+        if (initialCvId) {
+          const preferred = confirmed.find((item) => item.cvId === initialCvId);
+          if (!preferred) {
+            setCvSelectionWarning("CV bạn chọn để đối chiếu hiện chưa được xác nhận. Vui lòng chọn CV khác bên dưới.");
+            setCvId("");
+          } else if (initialCvVersionId && preferred.activeVersion.cvVersionId !== initialCvVersionId) {
+            setCvSelectionWarning("Phiên bản CV bạn vừa đối chiếu đã thay đổi. Vui lòng chọn lại CV bên dưới trước khi nộp.");
+            setCvId("");
+          } else {
+            setCvSelectionWarning(null);
+            setCvId(preferred.cvId);
+          }
+        } else if (confirmed.length > 0) {
+          setCvSelectionWarning(null);
+          setCvId((current) => (current && confirmed.some((c) => c.cvId === current) ? current : confirmed[0].cvId));
         }
       })
       .catch((failure) => {
-        if (!controller.signal.aborted && dialogOnly) {
-          setError(getErrorMessage(failure));
+        if (!controller.signal.aborted) {
+          setCvLoadError(getErrorMessage(failure));
         }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoadingCvs(false);
       });
     return () => controller.abort();
-  }, [session.accessToken, applicationsOnly, pendingJob, pendingTargetJobId, dialogOnly]);
+  }, [session.accessToken, applicationsOnly, pendingJob, pendingTargetJobId, initialCvId, initialCvVersionId, cvLoadAttempt]);
 
   // Load preselected target job from route prop or pending login redirect.
   useEffect(() => {
@@ -137,6 +173,7 @@ function CandidateJobsPanelInner({
     }
     const controller = new AbortController();
     setLoadingInitialTarget(true);
+    setError(null);
     void apiRequest<PageResult<Job>>(
       `/api/v2/candidate/jobs?jobId=${encodeURIComponent(pendingTargetJobId)}&page=0&size=1`,
       { accessToken: session.accessToken, signal: controller.signal }
@@ -164,7 +201,7 @@ function CandidateJobsPanelInner({
         if (!controller.signal.aborted) setLoadingInitialTarget(false);
       });
     return () => controller.abort();
-  }, [pendingTargetJobId, session.accessToken]);
+  }, [pendingTargetJobId, session.accessToken, targetLoadAttempt]);
 
   // Enrich paged applications with match scores without blocking list render.
   useEffect(() => {
@@ -201,8 +238,26 @@ function CandidateJobsPanelInner({
     };
   }, [applicationResults.items, session.accessToken, dialogOnly]);
 
+  // Auto-load status history when an application is expanded via notification deep link.
+  useEffect(() => {
+    if (dialogOnly || !selectedApplicationId || histories[selectedApplicationId]) return;
+    if (!applications.some((item) => item.applicationId === selectedApplicationId)) return;
+    const controller = new AbortController();
+    void apiRequest<StatusChange[]>(`/api/v2/applications/${selectedApplicationId}/history`, {
+      accessToken: session.accessToken,
+      signal: controller.signal
+    })
+      .then((history) => {
+        if (!controller.signal.aborted) {
+          setHistories((current) => ({ ...current, [selectedApplicationId]: history }));
+        }
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, [applications, dialogOnly, histories, selectedApplicationId, session.accessToken]);
+
   const confirmedCvs = cvs.filter((item) => item.activeVersion?.processingStatus === "CONFIRMED");
-  const selectedCv = confirmedCvs.find((item) => item.cvId === cvId) ?? confirmedCvs[0] ?? null;
+  const selectedCv = confirmedCvs.find((item) => item.cvId === cvId) ?? (cvSelectionWarning ? null : confirmedCvs[0] ?? null);
 
   function openApplyModal(job: Job) {
     setError(null);
@@ -323,19 +378,35 @@ function CandidateJobsPanelInner({
       pendingJob={pendingJob}
       confirmedCvs={confirmedCvs}
       selectedCv={selectedCv}
+      loadingCvs={loadingCvs}
+      cvLoadError={cvLoadError}
+      cvSelectionWarning={cvSelectionWarning}
+      accessToken={session.accessToken}
       coverLetter={coverLetter}
       consentAccepted={consentAccepted}
       submitting={submitting}
       error={error}
       onClose={closeApplyModal}
-      onSelectCv={setCvId}
+      onSelectCv={(nextId) => {
+        setCvId(nextId);
+        setCvSelectionWarning(null);
+      }}
+      onCvConfirmed={(uploadedCv) => {
+        setCvs((current) => [uploadedCv, ...current.filter((item) => item.cvId !== uploadedCv.cvId)]);
+        setCvId(uploadedCv.cvId);
+        setCvSelectionWarning(null);
+        setError(null);
+      }}
+      onRetryLoadCvs={() => setCvLoadAttempt((v) => v + 1)}
+      onOpenCvLibrary={onOpenCvLibrary ?? (() => navigate(routes.candidate.cv))}
       onCoverLetterChange={setCoverLetter}
       onConsentChange={setConsentAccepted}
       onPreviewCv={(cv) =>
         setPreviewCv({
           cvId: cv.cvId,
           cvVersionId: cv.activeVersion.cvVersionId,
-          title: cv.title
+          title: cv.title,
+          filename: cv.activeVersion.originalFilename
         })
       }
       onSubmit={handleSubmitApplication}
@@ -347,6 +418,7 @@ function CandidateJobsPanelInner({
       open
       onClose={() => setPreviewCv(null)}
       title={previewCv.title ?? "Xem trước CV"}
+      filename={previewCv.filename}
       downloadPath={
         previewCv.cvVersionId
           ? `/api/v2/cvs/${previewCv.cvId}/file?cvVersionId=${previewCv.cvVersionId}`
@@ -376,6 +448,21 @@ function CandidateJobsPanelInner({
               <div className="flex justify-end">
                 <Button type="button" variant="secondary" onClick={closeApplyModal}>
                   Đóng
+                </Button>
+              </div>
+            </div>
+          </Modal>
+        )}
+        {!loadingInitialTarget && !pendingJob && !missingInitialJobNotice && error && (
+          <Modal open onClose={closeApplyModal} title="Không tải được vị trí tuyển dụng" size="sm">
+            <div className="pt-4 space-y-4">
+              <ErrorBanner tone="error" message={error} />
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="secondary" onClick={closeApplyModal}>
+                  Đóng
+                </Button>
+                <Button type="button" onClick={() => setTargetLoadAttempt((v) => v + 1)}>
+                  Thử lại
                 </Button>
               </div>
             </div>
@@ -488,7 +575,9 @@ function CandidateJobsPanelInner({
                           <Badge tone="info">{formatSalary(job)}</Badge>
                         </div>
 
-                        <p className="text-sm text-ink-600 line-clamp-2 m-0 leading-relaxed">{job.description}</p>
+                        <p className="text-sm text-ink-600 line-clamp-2 m-0 leading-relaxed">
+                          {richTextToPlainText(job.description)}
+                        </p>
                       </div>
 
                       <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-border-subtle">

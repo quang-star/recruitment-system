@@ -1,16 +1,32 @@
+import {
+  ArrowRightIcon,
+  BanIcon,
+  CloseIcon,
+  EyeIcon,
+  InboxIcon,
+  SearchIcon,
+  StarIcon
+} from "../../shared/components/Icon";
 import { Button, cn } from "../../shared/ui";
 import { MatchRating } from "../application/MatchRating";
 import {
   Application,
   RecruiterTransition,
-  nextRecruitmentStage,
   ApplicationWithMatch,
   PIPELINE_STAGES,
   PipelineStage,
+  canRejectApplication,
   candidateDisplayName,
   candidateInitials,
-  translateApplicationStatus
+  screeningStageFor
 } from "./recruiterApplicationTypes";
+
+const STAGE_ICONS = {
+  SUBMITTED: InboxIcon,
+  UNDER_REVIEW: SearchIcon,
+  SHORTLISTED: StarIcon,
+  REJECTED: BanIcon
+} as const;
 
 /** Drag-and-drop four-stage recruiter Kanban board with inline stage transitions. */
 export function RecruiterKanbanBoard({
@@ -43,8 +59,9 @@ export function RecruiterKanbanBoard({
   return (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4" role="region" aria-label="Bảng Kanban tuyển dụng">
       {PIPELINE_STAGES.map((stage) => {
-        const stageApps = applications.filter((app) => app.status === stage.key);
+        const stageApps = applications.filter((app) => screeningStageFor(app.status) === stage.key);
         const isOver = dragOverStage === stage.key;
+        const StageIcon = STAGE_ICONS[stage.key];
         return (
           <div
             key={stage.key}
@@ -58,14 +75,14 @@ export function RecruiterKanbanBoard({
             }}
             onDrop={(e) => onDrop(e, stage.key)}
             className={cn(
-              "flex flex-col rounded-2xl border border-border-subtle border-t-4 bg-slate-50/80 p-3 min-h-[260px] transition-colors",
+              "flex flex-col rounded-xl border border-border-subtle border-t-4 bg-slate-50/80 p-3 min-h-[260px] transition-colors",
               stage.topBorderClass,
               isOver && "ring-2 ring-brand-500/40 bg-brand-50/40"
             )}
           >
             <div className="flex items-center justify-between gap-2 pb-3 mb-2 border-b border-border-subtle">
               <div className="flex items-center gap-1.5">
-                <span aria-hidden="true">{stage.icon}</span>
+                <StageIcon size={14} className={stage.iconColorClass} aria-hidden="true" />
                 <h4 className="text-xs font-bold uppercase tracking-wide text-ink-800 m-0">{stage.label}</h4>
               </div>
               <span
@@ -88,7 +105,7 @@ export function RecruiterKanbanBoard({
                   <div
                     key={application.applicationId}
                     data-stage={stage.key}
-                    draggable={canTransition}
+                    draggable={canTransition && canRejectApplication(application.status)}
                     onDragStart={(e) => onDragStart(e, application)}
                     onClick={() => onSelect(application.applicationId)}
                     className={cn(
@@ -119,7 +136,9 @@ export function RecruiterKanbanBoard({
                     <div>
                       <MatchRating {...application} compact />
                       {application.match?.status === "DEGRADED" && (
-                        <small className="mt-1 block text-[11px] font-medium text-amber-700">Cần kiểm tra thêm</small>
+                        <small className="mt-1 block text-[11px] font-medium text-amber-700">
+                          Chưa đủ căn cứ chấm điểm · Cần xem thủ công
+                        </small>
                       )}
                     </div>
 
@@ -146,7 +165,8 @@ export function RecruiterKanbanBoard({
                           })
                         }
                       >
-                        👁️ CV
+                        <EyeIcon size={14} aria-hidden="true" />
+                        <span>CV</span>
                       </Button>
 
                       {canTransition && application.status === "SUBMITTED" && (
@@ -157,7 +177,8 @@ export function RecruiterKanbanBoard({
                           onClick={() => onTransition(application, "UNDER_REVIEW")}
                           title="Chuyển sang Đang xem xét"
                         >
-                          ➡️ Xem xét
+                          <span>Xem xét</span>
+                          <ArrowRightIcon size={14} aria-hidden="true" />
                         </Button>
                       )}
 
@@ -169,17 +190,12 @@ export function RecruiterKanbanBoard({
                           onClick={() => onTransition(application, "SHORTLISTED")}
                           title="Chuyển vào Danh sách rút gọn"
                         >
-                          ⭐ Shortlist
+                          <StarIcon size={14} aria-hidden="true" />
+                          <span>Shortlist</span>
                         </Button>
                       )}
 
-                      {canTransition && ["SHORTLISTED", "INTERVIEW", "OFFERED"].includes(application.status) && (
-                        <Button variant="primary" size="sm" disabled={workingApplicationId === application.applicationId}
-                          onClick={() => onTransition(application, nextRecruitmentStage[application.status]!)}>
-                          {translateApplicationStatus(nextRecruitmentStage[application.status]!)}
-                        </Button>
-                      )}
-                      {canTransition && ["SUBMITTED", "UNDER_REVIEW", "SHORTLISTED", "INTERVIEW", "OFFERED"].includes(application.status) && (
+                      {canTransition && canRejectApplication(application.status) && (
                         <Button
                           variant="danger"
                           size="sm"
@@ -187,7 +203,8 @@ export function RecruiterKanbanBoard({
                           onClick={() => onRequestReject(application)}
                           title="Từ chối hồ sơ này"
                         >
-                          ✖ Từ chối
+                          <CloseIcon size={14} aria-hidden="true" />
+                          <span>Từ chối</span>
                         </Button>
                       )}
                     </div>

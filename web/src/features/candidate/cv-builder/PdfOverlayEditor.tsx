@@ -413,6 +413,12 @@ export function PdfOverlayEditor({
           </div>
 
           {error && <ErrorBanner message={error} />}
+          {tool === "whiteout" && (
+            <ErrorBanner
+              tone="info"
+              message="Lưu ý: Công cụ Che chữ cũ chỉ phủ lớp trắng trên giao diện hiển thị PDF, không xóa vĩnh viễn lớp chữ gốc bên dưới. Nếu cần xóa hoàn toàn thông tin nhạy cảm, hãy sửa từ file nguồn hoặc tạo bản mới trong CV Builder."
+            />
+          )}
           {notice && (
             <p role="status" className="m-0 rounded-lg border border-brand-100 bg-brand-50 px-3.5 py-2 text-xs text-brand-900">
               {notice}

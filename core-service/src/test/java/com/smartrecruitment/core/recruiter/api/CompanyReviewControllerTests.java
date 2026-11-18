@@ -52,7 +52,43 @@ class CompanyReviewControllerTests {
         mvc.perform(get("/api/v2/dashboard/companies/3/history")).andExpect(status().isForbidden());
         mvc.perform(post("/api/v2/dashboard/companies/3/approve").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"version\":0,\"reason\":\"Reviewed\"}")).andExpect(status().isForbidden());
+        mvc.perform(post("/api/v2/dashboard/companies/3/reject").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"version\":0,\"reason\":\"Spam\"}")).andExpect(status().isForbidden());
+        mvc.perform(post("/api/v2/dashboard/companies/3/suspend").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"version\":0,\"reason\":\"Violation\"}")).andExpect(status().isForbidden());
+        mvc.perform(post("/api/v2/dashboard/companies/3/reactivate").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"version\":0,\"reason\":\"Restored\"}")).andExpect(status().isForbidden());
         verifyNoInteractions(service);
+    }
+
+    @Test
+    void adminCanRejectSuspendAndReactivateWithCorrelationAndActor() throws Exception {
+        var service = mock(CompanyReviewService.class);
+        var correlation = UUID.randomUUID();
+        long companyId = 9007199254740993L;
+        when(service.reject(9L, companyId, 1, "Invalid docs", correlation)).thenReturn(new Company(companyId,
+                "Synthetic Legal", "Synthetic Company", "synthetic", null, null, "VN", null, null,
+                null, null, CompanyStatus.CLOSED, CompanyVerificationStatus.UNVERIFIED, 11L, 2));
+        when(service.suspend(9L, companyId, 2, "Abuse report", correlation)).thenReturn(new Company(companyId,
+                "Synthetic Legal", "Synthetic Company", "synthetic", null, null, "VN", null, null,
+                null, null, CompanyStatus.SUSPENDED, CompanyVerificationStatus.UNVERIFIED, 11L, 3));
+        when(service.reactivate(9L, companyId, 3, "Verified fix", correlation)).thenReturn(new Company(companyId,
+                "Synthetic Legal", "Synthetic Company", "synthetic", null, null, "VN", null, null,
+                null, null, CompanyStatus.ACTIVE, CompanyVerificationStatus.UNVERIFIED, 11L, 4));
+
+        var mvc = mvc(service, "SYSTEM_ADMIN");
+        mvc.perform(post("/api/v2/dashboard/companies/{id}/reject", companyId)
+                .requestAttr(CorrelationIdFilter.REQUEST_ATTRIBUTE, correlation.toString())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"version\":1,\"reason\":\"Invalid docs\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("CLOSED"));
+        mvc.perform(post("/api/v2/dashboard/companies/{id}/suspend", companyId)
+                .requestAttr(CorrelationIdFilter.REQUEST_ATTRIBUTE, correlation.toString())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"version\":2,\"reason\":\"Abuse report\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("SUSPENDED"));
+        mvc.perform(post("/api/v2/dashboard/companies/{id}/reactivate", companyId)
+                .requestAttr(CorrelationIdFilter.REQUEST_ATTRIBUTE, correlation.toString())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"version\":3,\"reason\":\"Verified fix\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("ACTIVE"));
     }
 
     @Test

@@ -39,7 +39,7 @@ describe("MatchBreakdown", () => {
     expect(screen.getByRole("img", { name: "Mức độ phù hợp: 4/5 sao · Phù hợp cao" })).toBeInTheDocument();
     expect(screen.getByRole("img", { name: "Mức độ phù hợp: 3/5 sao · Phù hợp trung bình" })).toBeInTheDocument();
     expect(screen.queryByText("62.5/100")).not.toBeInTheDocument();
-    expect(screen.getByText("Cần kiểm tra thêm")).toBeInTheDocument();
+    expect(screen.getByText("Chưa đủ căn cứ chấm điểm · Cần xem thủ công")).toBeInTheDocument();
     expect(screen.getByText("Kỹ năng bắt buộc")).not.toBeNull();
     expect(screen.getByText(/Chưa tìm thấy trong CV:\s+Kafka/)).not.toBeNull();
     expect(screen.getByText(/tham chiếu CV 0, JD 1/)).not.toBeNull();

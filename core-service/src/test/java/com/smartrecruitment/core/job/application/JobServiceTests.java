@@ -139,6 +139,35 @@ class JobServiceTests {
         assertThat(storage.deletedKey).isEqualTo(storage.objectKey);
     }
 
+    @Test
+    void cannotPublishExpiredJob() {
+        FakeJobs jobs = new FakeJobs();
+        Long userId = com.smartrecruitment.core.support.TestIds.next();
+        JobVersion expiredVersion = new JobVersion(com.smartrecruitment.core.support.TestIds.next(), 1, "Expired",
+                "Description", "Requirements", null, null, "VN", null, null, null, 1,
+                null, null, null, null, false, OffsetDateTime.now().minusHours(1), "a".repeat(64), userId);
+        jobs.job = Job.draft(com.smartrecruitment.core.support.TestIds.next(), userId, expiredVersion);
+        JobService service = new JobService(jobs, new AllowCompany());
+
+        assertThatThrownBy(() -> service.publish(userId, jobs.job.id(), 0))
+                .isInstanceOf(JobStateException.class)
+                .hasMessageContaining("deadline");
+    }
+
+    @Test
+    void requireRecruitAccessForVersionChecksMembership() {
+        FakeJobs jobs = new FakeJobs();
+        Long userId = com.smartrecruitment.core.support.TestIds.next();
+        Long versionId = com.smartrecruitment.core.support.TestIds.next();
+        jobs.allowedVersionId = versionId;
+        jobs.allowedUserId = userId;
+        JobService service = new JobService(jobs, new AllowCompany());
+
+        service.requireRecruitAccessForVersion(userId, versionId);
+        assertThatThrownBy(() -> service.requireRecruitAccessForVersion(com.smartrecruitment.core.support.TestIds.next(), versionId))
+                .isInstanceOf(JobNotFoundException.class);
+    }
+
     private static Job draft(Long userId) {
         JobVersion version = new JobVersion(com.smartrecruitment.core.support.TestIds.next(), 1, "Title", "Description", "Requirements", null,
                 null, "VN", null, null, null, 1, null, null, null, null, false, null, "a".repeat(64), userId);
@@ -157,7 +186,12 @@ class JobServiceTests {
         }
 
         private Job job;
+        private Long allowedVersionId;
+        private Long allowedUserId;
         @Override public Job insert(Job value) { job = value; return value; }
+        @Override public boolean canRecruitJobVersion(Long jobVersionId, Long userId) {
+            return jobVersionId.equals(allowedVersionId) && userId.equals(allowedUserId);
+        }
         @Override public Optional<Job> findByIdForMember(Long jobId, Long userId) { return Optional.ofNullable(job).filter(value -> value.id().equals(jobId)); }
         @Override public List<Job> findAllForMember(Long companyId, Long userId) { return job == null ? List.of() : List.of(job); }
         @Override public List<Job> findPublished() { return job == null ? List.of() : List.of(job); }

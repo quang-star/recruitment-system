@@ -34,13 +34,17 @@ export type CompanyInfo = {
 };
 
 export function getCompanyLogo(_slug?: string, _name?: string, customLogoUrl?: string | null): string {
-  if (customLogoUrl && customLogoUrl.trim()) return customLogoUrl.trim();
+  if (customLogoUrl && customLogoUrl.trim()) return companyImageUrl(customLogoUrl.trim());
   return "/logos/smartrecruitment.svg";
 }
 
 export function getCompanyCover(_slug?: string, _name?: string, customCoverUrl?: string | null): string {
-  if (customCoverUrl && customCoverUrl.trim()) return customCoverUrl.trim();
+  if (customCoverUrl && customCoverUrl.trim()) return companyImageUrl(customCoverUrl.trim());
   return "/companies/company-placeholder.svg";
+}
+
+function companyImageUrl(url: string): string {
+  return url.startsWith("/api/v2/public/") ? `${import.meta.env.VITE_GATEWAY_URL ?? ""}${url}` : url;
 }
 
 export function getCompanyTag(_slug?: string, _name?: string): string {

@@ -16,9 +16,12 @@ import org.springframework.stereotype.Component;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
 
+import java.net.URI;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.smartrecruitment.auth.user.application.GoogleSignInException.Reason.*;
 
@@ -62,11 +65,51 @@ public class GoogleIdTokenVerifier implements GoogleIdentityVerifier {
             if (!validClaims(jwt, clientId) || !nonce.equals(jwt.getClaimAsString("nonce"))) {
                 throw new GoogleSignInException(INVALID_TOKEN);
             }
-            return new VerifiedIdentity(jwt.getSubject(), jwt.getClaimAsString("email"));
+            return new VerifiedIdentity(
+                    jwt.getSubject(),
+                    jwt.getClaimAsString("email"),
+                    extractName(jwt),
+                    extractPictureUrl(jwt));
         } catch (JwtException | IllegalArgumentException exception) {
             // Never include the provider token, claims or decoder exception in responses/logs.
             throw new GoogleSignInException(INVALID_TOKEN);
         }
+    }
+
+    private static String extractName(Jwt jwt) {
+        String fullName = normalizeText(stringClaim(jwt, "name"));
+        if (fullName != null) return fullName;
+        String combined = Stream.of(stringClaim(jwt, "given_name"), stringClaim(jwt, "family_name"))
+                .map(GoogleIdTokenVerifier::normalizeText)
+                .filter(value -> value != null && !value.isEmpty())
+                .collect(Collectors.joining(" "));
+        return combined.isEmpty() ? null : combined;
+    }
+
+    private static String extractPictureUrl(Jwt jwt) {
+        String raw = stringClaim(jwt, "picture");
+        if (raw == null) return null;
+        String trimmed = raw.trim();
+        if (trimmed.isEmpty() || trimmed.length() > 500) return null;
+        try {
+            URI uri = URI.create(trimmed);
+            if (!"https".equalsIgnoreCase(uri.getScheme())) return null;
+            if (uri.getHost() == null || uri.getHost().isBlank() || uri.getUserInfo() != null) return null;
+            return trimmed;
+        } catch (IllegalArgumentException exception) {
+            return null;
+        }
+    }
+
+    private static String stringClaim(Jwt jwt, String name) {
+        Object value = jwt.getClaims().get(name);
+        return value instanceof String text ? text : null;
+    }
+
+    private static String normalizeText(String value) {
+        if (value == null) return null;
+        String collapsed = value.trim().replaceAll("\\s+", " ");
+        return collapsed.isEmpty() ? null : collapsed;
     }
 
     static boolean validClaims(Jwt jwt, String clientId) {

@@ -67,6 +67,8 @@ class Settings(BaseSettings):
     extraction_user_daily_call_limit: int = Field(default=10, ge=0, le=10000)
     career_core_catalog_url: str = Field(default="http://core-service:8082/api/v2/public/job-categories")
     career_catalog_timeout_seconds: float = Field(default=3.0, ge=0.1, le=5)
+    jd_core_access_base_url: str = Field(default="http://core-service:8082/api/v2/jobs/versions")
+    jd_core_access_timeout_seconds: float = Field(default=3.0, ge=0.1, le=5)
     reprocessing_core_eligibility_url: str = Field(default="http://core-service:8082/api/v2/dashboard/reprocessing/eligibility")
     reprocessing_core_timeout_seconds: float = Field(default=3.0, ge=0.1, le=5)
     matching_mode: Literal["baseline", "shadow"] = "baseline"

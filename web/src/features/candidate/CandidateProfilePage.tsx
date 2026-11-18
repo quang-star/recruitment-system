@@ -2,9 +2,9 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { ApiClientError, apiDownload, apiRequest } from "../../shared/api/client";
 import { AuthSession } from "../../shared/auth/session";
-import { ProfileIcon } from "../../shared/components/Icon";
+import { ProfileIcon, TrashIcon, UploadIcon } from "../../shared/components/Icon";
 import { EnsureRouter, routes, useSafeNavigate } from "../../shared/router";
-import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, ErrorBanner, PageHeader, Skeleton } from "../../shared/ui";
+import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, cn, ErrorBanner, PageHeader, Skeleton } from "../../shared/ui";
 import { AccountSecurityPanel } from "../auth/AccountSecurityPanel";
 import { NotificationCenter } from "../notification/NotificationCenter";
 import { PublicHomePage } from "../public/PublicHomePage";
@@ -86,6 +86,30 @@ function safeExternalUrl(raw: string | null | undefined): string | null {
   }
 }
 
+function isSupportedAvatarFile(file: File): boolean {
+  const mime = file.type.toLowerCase();
+  if (mime === "image/jpeg" || mime === "image/jpg" || mime === "image/png") return true;
+  if (!mime) return /\.(jpe?g|png)$/i.test(file.name);
+  return false;
+}
+
+function buildProfilePayload(source: ProfileFormState, version: number | null) {
+  return {
+    displayName: source.displayName.trim(),
+    headline: source.headline.trim() || null,
+    locationText: source.locationText.trim() || null,
+    visibility: source.visibility,
+    phoneNumber: source.phoneNumber.trim() || null,
+    contactEmail: source.contactEmail.trim() || null,
+    linkedinUrl: source.linkedinUrl.trim() || null,
+    githubUrl: source.githubUrl.trim() || null,
+    portfolioUrl: source.portfolioUrl.trim() || null,
+    avatarUrl: source.avatarUrl.trim() || null,
+    bio: source.bio.trim() || null,
+    version,
+  };
+}
+
 function viewRoute(view: CandidateView): string {
   switch (view) {
     case "dashboard":
@@ -114,9 +138,11 @@ function CandidateProfilePageInner({ session, onLogout }: CandidateProfilePagePr
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [avatarError, setAvatarError] = useState(false);
+  const [failedAvatarUrl, setFailedAvatarUrl] = useState<string | null>(null);
   const [uploadedAvatar, setUploadedAvatar] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [draggingAvatar, setDraggingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement | null>(null);
   const loadedUserIdRef = useRef<string | null>(null);
 
   const searchParams = new URLSearchParams(location.search);
@@ -166,12 +192,19 @@ function CandidateProfilePageInner({ session, onLogout }: CandidateProfilePagePr
           avatarUrl: loaded.avatarUrl ?? "",
           bio: loaded.bio ?? "",
         });
-        setAvatarError(false);
+        setFailedAvatarUrl(null);
       })
       .catch((failure) => {
         if (controller.signal.aborted) return;
         if (failure instanceof ApiClientError && failure.status === 401) {
           onLogout();
+          return;
+        }
+        if (failure instanceof ApiClientError && failure.status === 404) {
+          loadedUserIdRef.current = session.userId;
+          setProfile(null);
+          setForm(emptyForm);
+          setFailedAvatarUrl(null);
           return;
         }
         setError(failure instanceof ApiClientError ? failure.error.message : "Không thể tải hồ sơ ứng viên.");
@@ -205,28 +238,85 @@ function CandidateProfilePageInner({ session, onLogout }: CandidateProfilePagePr
     };
   }, [profile?.avatarUrl, session.accessToken]);
 
+  async function saveProfileRecord(payload: ReturnType<typeof buildProfilePayload>): Promise<CandidateProfile> {
+    return apiRequest<CandidateProfile>("/api/v2/candidates/me", {
+      method: "PUT",
+      accessToken: session.accessToken,
+      body: JSON.stringify(payload),
+    });
+  }
+
   async function uploadAvatar(file: File) {
-    if (!profile) return;
-    if (!(["image/jpeg", "image/png"].includes(file.type)) || file.size > 2 * 1024 * 1024) {
+    if (!isSupportedAvatarFile(file) || file.size <= 0 || file.size > 2 * 1024 * 1024) {
       setError("Chọn ảnh JPEG hoặc PNG có dung lượng tối đa 2 MB.");
+      return;
+    }
+    if (!profile && !form.displayName.trim()) {
+      setError("Vui lòng nhập Tên hiển thị trước khi tải ảnh đại diện.");
       return;
     }
     setUploadingAvatar(true);
     setError(null);
     setSaveMessage(null);
-    const body = new FormData();
-    body.append("file", file);
     try {
-      const updated = await apiRequest<CandidateProfile>(`/api/v2/candidates/me/avatar?version=${profile.version}`, {
-        method: "POST", accessToken: session.accessToken, body,
+      let activeProfile = profile;
+      if (!activeProfile) {
+        activeProfile = await saveProfileRecord(buildProfilePayload(form, null));
+        setProfile(activeProfile);
+      }
+      const body = new FormData();
+      body.append("file", file);
+      const updated = await apiRequest<CandidateProfile>(`/api/v2/candidates/me/avatar?version=${activeProfile.version}`, {
+        method: "POST",
+        accessToken: session.accessToken,
+        body,
       });
       setProfile(updated);
       setForm((previous) => ({ ...previous, avatarUrl: updated.avatarUrl ?? "" }));
-      setAvatarError(false);
+      setFailedAvatarUrl(null);
       setSaveMessage("Ảnh đại diện đã được cập nhật.");
     } catch (failure) {
       if (failure instanceof ApiClientError && failure.status === 401) { onLogout(); return; }
       setError(failure instanceof ApiClientError ? failure.error.message : "Không thể cập nhật ảnh đại diện. Vui lòng thử lại.");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  }
+
+  async function removeAvatar() {
+    if (uploadingAvatar || saving) return;
+    if (!profile) {
+      setForm((previous) => ({ ...previous, avatarUrl: "" }));
+      setUploadedAvatar(null);
+      setFailedAvatarUrl(null);
+      return;
+    }
+    setUploadingAvatar(true);
+    setError(null);
+    setSaveMessage(null);
+    try {
+      const updated = await saveProfileRecord({
+        displayName: profile.displayName,
+        headline: profile.headline,
+        locationText: profile.locationText,
+        visibility: profile.visibility,
+        phoneNumber: profile.phoneNumber,
+        contactEmail: profile.contactEmail,
+        linkedinUrl: profile.linkedinUrl,
+        githubUrl: profile.githubUrl,
+        portfolioUrl: profile.portfolioUrl,
+        avatarUrl: null,
+        bio: profile.bio,
+        version: profile.version,
+      });
+      setProfile(updated);
+      setForm((previous) => ({ ...previous, avatarUrl: "" }));
+      setUploadedAvatar(null);
+      setFailedAvatarUrl(null);
+      setSaveMessage("Ảnh đại diện đã được xóa.");
+    } catch (failure) {
+      if (failure instanceof ApiClientError && failure.status === 401) { onLogout(); return; }
+      setError(failure instanceof ApiClientError ? failure.error.message : "Không thể xóa ảnh đại diện. Vui lòng thử lại.");
     } finally {
       setUploadingAvatar(false);
     }
@@ -239,26 +329,9 @@ function CandidateProfilePageInner({ session, onLogout }: CandidateProfilePagePr
     setSaveMessage(null);
     setError(null);
     try {
-      const updated = await apiRequest<CandidateProfile>("/api/v2/candidates/me", {
-        method: "PUT",
-        accessToken: session.accessToken,
-        body: JSON.stringify({
-          displayName: form.displayName.trim(),
-          headline: form.headline.trim() || null,
-          locationText: form.locationText.trim() || null,
-          visibility: form.visibility,
-          phoneNumber: form.phoneNumber.trim() || null,
-          contactEmail: form.contactEmail.trim() || null,
-          linkedinUrl: form.linkedinUrl.trim() || null,
-          githubUrl: form.githubUrl.trim() || null,
-          portfolioUrl: form.portfolioUrl.trim() || null,
-          avatarUrl: form.avatarUrl.trim() || null,
-          bio: form.bio.trim() || null,
-          version: profile?.version ?? 0,
-        }),
-      });
+      const updated = await saveProfileRecord(buildProfilePayload(form, profile ? profile.version : null));
       setProfile(updated);
-      setAvatarError(false);
+      setFailedAvatarUrl(null);
       setSaveMessage("Hồ sơ đã được lưu.");
     } catch (failure) {
       if (failure instanceof ApiClientError && failure.status === 401) {
@@ -275,6 +348,8 @@ function CandidateProfilePageInner({ session, onLogout }: CandidateProfilePagePr
 
   const savedAvatar = uploadedAvatar ?? safeExternalUrl(profile?.avatarUrl);
   const safeAvatar = form.avatarUrl.startsWith("/api/v2/candidates/me/avatar/") ? uploadedAvatar : safeExternalUrl(form.avatarUrl);
+  const avatarHasError = Boolean(safeAvatar && failedAvatarUrl === safeAvatar);
+  const hasAvatar = Boolean(profile?.avatarUrl || form.avatarUrl.trim());
   const safeLinkedIn = safeExternalUrl(form.linkedinUrl);
   const safeGitHub = safeExternalUrl(form.githubUrl);
   const safePortfolio = safeExternalUrl(form.portfolioUrl);
@@ -333,6 +408,130 @@ function CandidateProfilePageInner({ session, onLogout }: CandidateProfilePagePr
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handleSubmitProfile} className="space-y-5">
+                    <div
+                      data-testid="candidate-avatar-dropzone"
+                      onDragOver={(event) => {
+                        event.preventDefault();
+                        if (!uploadingAvatar && !saving) setDraggingAvatar(true);
+                      }}
+                      onDragLeave={(event) => {
+                        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                          setDraggingAvatar(false);
+                        }
+                      }}
+                      onDrop={(event) => {
+                        event.preventDefault();
+                        setDraggingAvatar(false);
+                        if (uploadingAvatar || saving) return;
+                        const files = event.dataTransfer.files;
+                        if (files.length !== 1) {
+                          setError("Vui lòng chọn một ảnh mỗi lần tải lên.");
+                          return;
+                        }
+                        void uploadAvatar(files[0]);
+                      }}
+                      className={cn(
+                        "rounded-2xl border-2 border-dashed p-4 sm:p-5 transition-colors",
+                        draggingAvatar
+                          ? "border-brand-600 bg-brand-50/70"
+                          : "border-border-strong bg-slate-50/70"
+                      )}
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                        <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl border border-border-subtle bg-white shadow-xs">
+                          {safeAvatar && !avatarHasError ? (
+                            <img
+                              src={safeAvatar}
+                              alt="Xem trước ảnh đại diện"
+                              referrerPolicy="no-referrer"
+                              onError={() => setFailedAvatarUrl(safeAvatar)}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center bg-brand-100 text-xl font-bold text-brand-700">
+                              {initials || <ProfileIcon size={26} />}
+                            </div>
+                          )}
+                          {uploadingAvatar && (
+                            <div
+                              aria-hidden="true"
+                              className="absolute inset-0 flex items-center justify-center bg-white/80"
+                            >
+                              <div className="h-5 w-5 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" />
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="min-w-0 flex-1 space-y-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-sm font-semibold text-ink-900">Ảnh đại diện</span>
+                            {safeAvatar && !avatarHasError && (
+                              <Badge tone="success">Đang hiển thị</Badge>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2.5">
+                            <label
+                              className={cn(
+                                "inline-flex items-center gap-2 rounded-xl border px-3.5 py-2 text-sm font-semibold transition-colors focus-within:border-brand-600 focus-within:ring-2 focus-within:ring-brand-500/25",
+                                uploadingAvatar || saving
+                                  ? "cursor-not-allowed border-border-subtle bg-slate-100 text-ink-400"
+                                  : "cursor-pointer border-brand-200 bg-white text-brand-700 shadow-xs hover:border-brand-400 hover:bg-brand-50"
+                              )}
+                            >
+                              <input
+                                ref={avatarInputRef}
+                                type="file"
+                                aria-label="Ảnh đại diện"
+                                accept="image/jpeg,image/png"
+                                disabled={uploadingAvatar || saving}
+                                onChange={(event) => {
+                                  const file = event.target.files?.[0];
+                                  event.target.value = "";
+                                  if (file) void uploadAvatar(file);
+                                }}
+                                className="sr-only"
+                              />
+                              <UploadIcon size={16} aria-hidden="true" />
+                              <span>
+                                {uploadingAvatar
+                                  ? "Đang tải lên…"
+                                  : hasAvatar
+                                    ? "Thay ảnh khác"
+                                    : "Chọn ảnh tải lên"}
+                              </span>
+                            </label>
+
+                            {hasAvatar && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                disabled={uploadingAvatar || saving}
+                                onClick={() => void removeAvatar()}
+                                className="text-rose-700 hover:bg-rose-50 hover:text-rose-800"
+                              >
+                                <TrashIcon size={15} aria-hidden="true" />
+                                Xóa ảnh
+                              </Button>
+                            )}
+                          </div>
+                          <p className="m-0 text-xs leading-relaxed text-ink-500">
+                            Kéo thả ảnh vào khung hoặc nhấn chọn tệp JPEG, PNG (tối đa 2 MB). Ảnh được lưu tự động ngay sau khi tải lên.
+                          </p>
+                          {!profile && !form.displayName.trim() && (
+                            <p className="m-0 text-xs font-medium text-amber-700">
+                              Nhập Tên hiển thị ở bên dưới trước khi tải ảnh cho hồ sơ mới.
+                            </p>
+                          )}
+                          {uploadingAvatar && (
+                            <p role="status" className="m-0 text-xs font-medium text-brand-700">
+                              Đang cập nhật ảnh đại diện…
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <label className="block text-sm font-medium text-ink-800">
                         <span>Tên hiển thị</span>
@@ -415,7 +614,7 @@ function CandidateProfilePageInner({ session, onLogout }: CandidateProfilePagePr
 
                     <div className="pt-2 border-t border-border-subtle space-y-4">
                       <p className="text-xs font-bold uppercase tracking-wider text-ink-500 m-0">
-                        Liên kết chuyên môn &amp; ảnh đại diện
+                        Liên kết chuyên môn
                       </p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <label className="block text-sm font-medium text-ink-800">
@@ -442,7 +641,7 @@ function CandidateProfilePageInner({ session, onLogout }: CandidateProfilePagePr
                           />
                         </label>
 
-                        <label className="block text-sm font-medium text-ink-800">
+                        <label className="block text-sm font-medium text-ink-800 sm:col-span-2">
                           <span>Portfolio / Website cá nhân</span>
                           <input
                             type="url"
@@ -453,25 +652,6 @@ function CandidateProfilePageInner({ session, onLogout }: CandidateProfilePagePr
                             className={inputClass}
                           />
                         </label>
-
-                        <div>
-                          <label className="block text-sm font-medium text-ink-800">
-                            <span>Ảnh đại diện</span>
-                            <input
-                              type="file"
-                              accept="image/jpeg,image/png"
-                              disabled={uploadingAvatar || saving || !profile}
-                              onChange={(event) => {
-                                const file = event.target.files?.[0];
-                                event.target.value = "";
-                                if (file) void uploadAvatar(file);
-                              }}
-                              className="mt-1.5 block w-full text-sm text-ink-700 file:mr-3 file:rounded-xl file:border file:border-border-strong file:bg-white file:px-3 file:py-2 file:text-sm file:font-medium"
-                            />
-                          </label>
-                          <p className="mt-1 text-xs text-ink-500">Chọn ảnh JPEG hoặc PNG, tối đa 2 MB. Ảnh được lưu ngay khi chọn.</p>
-                          {uploadingAvatar && <p role="status" className="text-xs text-ink-500">Đang cập nhật ảnh…</p>}
-                        </div>
                       </div>
                     </div>
 
@@ -506,18 +686,34 @@ function CandidateProfilePageInner({ session, onLogout }: CandidateProfilePagePr
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center gap-3.5">
-                    {safeAvatar && !avatarError ? (
-                      <img
-                        src={safeAvatar}
-                        alt={candidateDisplayName}
-                        onError={() => setAvatarError(true)}
-                        className="h-14 w-14 rounded-2xl object-cover border border-border-subtle shrink-0"
-                      />
-                    ) : (
-                      <div className="h-14 w-14 rounded-2xl bg-brand-100 text-brand-700 font-bold text-lg flex items-center justify-center shrink-0">
-                        {initials || <ProfileIcon size={22} />}
-                      </div>
-                    )}
+                    <button
+                      type="button"
+                      disabled={uploadingAvatar || saving}
+                      onClick={() => avatarInputRef.current?.click()}
+                      aria-label="Đổi ảnh đại diện từ thẻ xem trước"
+                      title="Nhấn để chọn ảnh đại diện"
+                      className="group relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl border border-border-subtle bg-transparent p-0 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 disabled:cursor-not-allowed"
+                    >
+                      {safeAvatar && !avatarHasError ? (
+                        <img
+                          src={safeAvatar}
+                          alt={candidateDisplayName}
+                          referrerPolicy="no-referrer"
+                          onError={() => setFailedAvatarUrl(safeAvatar)}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="h-full w-full bg-brand-100 text-brand-700 font-bold text-lg flex items-center justify-center">
+                          {initials || <ProfileIcon size={22} />}
+                        </div>
+                      )}
+                      <span
+                        aria-hidden="true"
+                        className="absolute inset-x-0 bottom-0 bg-slate-900/65 py-0.5 text-[10px] font-semibold text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+                      >
+                        Đổi ảnh
+                      </span>
+                    </button>
                     <div className="min-w-0">
                       <p className="text-base font-bold text-ink-900 truncate m-0">{candidateDisplayName}</p>
                       <p className="text-xs text-ink-600 truncate m-0 mt-0.5">

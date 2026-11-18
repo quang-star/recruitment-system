@@ -1,6 +1,7 @@
 import { FormEvent } from "react";
 import { ExternalAiConsent } from "../../shared/components/ExternalAiConsent";
 import { SparklesIcon } from "../../shared/components/Icon";
+import { RichTextEditor } from "../../shared/components/RichTextEditor";
 import { AuthSession } from "../../shared/auth/session";
 import { Badge, Button, Card, ErrorBanner } from "../../shared/ui";
 import { CareerCategorySuggestions } from "./CareerCategorySuggestions";
@@ -21,14 +22,23 @@ type Props = {
   onUpdateForm: <K extends keyof JobForm>(key: K, value: JobForm[K]) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onChangeState: (job: Job, action: "publish" | "close") => void;
+  onDuplicate?: (job: Job) => void;
   onSuggestionApplied: (category: CategoryChoice) => void;
 };
 
 const fieldClass =
   "mt-1 h-10 w-full rounded-xl border border-border-strong bg-white px-3 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:bg-slate-50 disabled:text-ink-500";
-const textareaClass =
-  "mt-1 w-full rounded-xl border border-border-strong bg-white p-3 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:bg-slate-50 disabled:text-ink-500 leading-relaxed";
 const labelClass = "block text-xs font-semibold text-ink-700";
+
+const SENIORITY_OPTIONS = [
+  { value: "INTERN", label: "Thực tập (Intern)" },
+  { value: "FRESHER", label: "Fresher" },
+  { value: "JUNIOR", label: "Junior" },
+  { value: "MIDDLE", label: "Chuyên viên (Middle)" },
+  { value: "SENIOR", label: "Senior" },
+  { value: "LEAD", label: "Trưởng nhóm (Lead)" },
+  { value: "MANAGER", label: "Quản lý (Manager)" }
+];
 
 export function RecruiterJobEditor({
   form,
@@ -44,15 +54,20 @@ export function RecruiterJobEditor({
   onUpdateForm,
   onSubmit,
   onChangeState,
+  onDuplicate,
   onSuggestionApplied
 }: Props) {
+  const lockedNonDraft = Boolean(selectedJob && selectedJob.status !== "DRAFT");
+  const fieldsDisabled = !canRecruit || lockedNonDraft;
+  const knownSeniority = !form.seniorityLevel || SENIORITY_OPTIONS.some((item) => item.value === form.seniorityLevel);
+
   return (
     <Card padding="lg">
       <form className="space-y-6" onSubmit={onSubmit}>
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle pb-4">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-wider text-brand-700 m-0">
-              {selectedJobId ? "Job Editor" : "New Job"}
+              {selectedJobId ? "Biên tập tin tuyển dụng" : "Tạo tin mới"}
             </p>
             <h3 className="text-lg font-bold text-ink-900 m-0 mt-0.5">
               {selectedJobId ? "Biên tập tin tuyển dụng" : "Tạo tin tuyển dụng mới"}
@@ -65,7 +80,18 @@ export function RecruiterJobEditor({
           )}
         </div>
 
-        <fieldset className="border-0 p-0 m-0 min-w-0 space-y-6" disabled={!canRecruit}>
+        {lockedNonDraft && (
+          <ErrorBanner
+            tone="info"
+            message={
+              selectedJob?.status === "PUBLISHED"
+                ? "Tin đang đăng chỉ xem ở chế độ chỉ đọc để bảo toàn dữ liệu cho hồ sơ đã nộp."
+                : "Tin đã đóng chỉ xem ở chế độ chỉ đọc."
+            }
+          />
+        )}
+
+        <fieldset className="border-0 p-0 m-0 min-w-0 space-y-6" disabled={fieldsDisabled}>
           <section className="rounded-2xl border border-border-subtle bg-slate-50/50 p-5 space-y-4">
             <h4 className="text-sm font-bold text-ink-900 m-0">1. Thông tin chung</h4>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -110,10 +136,10 @@ export function RecruiterJobEditor({
                   value={form.workMode}
                   onChange={(e) => onUpdateForm("workMode", e.target.value)}
                 >
-                  <option value="">Chọn</option>
-                  <option>ONSITE</option>
-                  <option>HYBRID</option>
-                  <option>REMOTE</option>
+                  <option value="">Chọn hình thức</option>
+                  <option value="ONSITE">Tại văn phòng</option>
+                  <option value="HYBRID">Hybrid (Linh hoạt)</option>
+                  <option value="REMOTE">Từ xa (Remote)</option>
                 </select>
               </label>
 
@@ -124,22 +150,30 @@ export function RecruiterJobEditor({
                   value={form.employmentType}
                   onChange={(e) => onUpdateForm("employmentType", e.target.value)}
                 >
-                  <option>FULL_TIME</option>
-                  <option>PART_TIME</option>
-                  <option>CONTRACT</option>
-                  <option>INTERNSHIP</option>
+                  <option value="FULL_TIME">Toàn thời gian</option>
+                  <option value="PART_TIME">Bán thời gian</option>
+                  <option value="CONTRACT">Hợp đồng</option>
+                  <option value="INTERNSHIP">Thực tập</option>
                 </select>
               </label>
 
               <label className={labelClass}>
                 Cấp độ
-                <input
+                <select
                   className={fieldClass}
-                  maxLength={30}
-                  placeholder="Senior, Lead, Mid..."
                   value={form.seniorityLevel}
                   onChange={(e) => onUpdateForm("seniorityLevel", e.target.value)}
-                />
+                >
+                  <option value="">Không yêu cầu cụ thể</option>
+                  {!knownSeniority && (
+                    <option value={form.seniorityLevel}>{form.seniorityLevel}</option>
+                  )}
+                  {SENIORITY_OPTIONS.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
               </label>
 
               <label className={labelClass}>
@@ -169,45 +203,55 @@ export function RecruiterJobEditor({
           <section className="rounded-2xl border border-border-subtle bg-slate-50/50 p-5 space-y-4">
             <h4 className="text-sm font-bold text-ink-900 m-0">2. Bản mô tả &amp; Tiêu chuẩn ứng viên</h4>
             <div className="space-y-4">
-              <label className={labelClass}>
-                Mô tả công việc
-                <textarea
-                  className={textareaClass}
-                  required
-                  rows={5}
+              <div className={labelClass}>
+                <span>Mô tả công việc</span>
+                <RichTextEditor
+                  label="Mô tả công việc"
+                  disabled={fieldsDisabled}
                   placeholder="Mô tả trách nhiệm công việc chính, dự án tham gia..."
                   value={form.description}
-                  onChange={(e) => onUpdateForm("description", e.target.value)}
+                  onChange={(html) => onUpdateForm("description", html)}
                 />
-              </label>
+              </div>
 
-              <label className={labelClass}>
-                Yêu cầu
-                <textarea
-                  className={textareaClass}
-                  required
-                  rows={5}
+              <div className={labelClass}>
+                <span>Yêu cầu</span>
+                <RichTextEditor
+                  label="Yêu cầu"
+                  disabled={fieldsDisabled}
                   placeholder="Kỹ năng kỹ thuật, số năm kinh nghiệm, bằng cấp liên quan..."
                   value={form.requirementsText}
-                  onChange={(e) => onUpdateForm("requirementsText", e.target.value)}
+                  onChange={(html) => onUpdateForm("requirementsText", html)}
                 />
-              </label>
+              </div>
 
-              <label className={labelClass}>
-                Quyền lợi
-                <textarea
-                  className={textareaClass}
-                  rows={3}
+              <div className={labelClass}>
+                <span>Quyền lợi</span>
+                <RichTextEditor
+                  label="Quyền lợi"
+                  disabled={fieldsDisabled}
+                  minHeightClass="min-h-[96px]"
                   placeholder="Chế độ đãi ngộ, bảo hiểm, thưởng, laptop..."
                   value={form.benefitsText}
-                  onChange={(e) => onUpdateForm("benefitsText", e.target.value)}
+                  onChange={(html) => onUpdateForm("benefitsText", html)}
                 />
-              </label>
+              </div>
             </div>
           </section>
 
           <section className="rounded-2xl border border-border-subtle bg-slate-50/50 p-5 space-y-4">
-            <h4 className="text-sm font-bold text-ink-900 m-0">3. Mức lương &amp; Đãi ngộ</h4>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h4 className="text-sm font-bold text-ink-900 m-0">3. Mức lương &amp; Đãi ngộ</h4>
+              <label className="inline-flex items-center gap-2 text-xs font-semibold text-ink-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.salaryNegotiable}
+                  onChange={(e) => onUpdateForm("salaryNegotiable", e.target.checked)}
+                  className="h-4 w-4 rounded border-border-strong text-brand-600 focus:ring-brand-500"
+                />
+                <span>Lương thỏa thuận</span>
+              </label>
+            </div>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <label className={labelClass}>
                 Lương tối thiểu
@@ -215,6 +259,7 @@ export function RecruiterJobEditor({
                   className={fieldClass}
                   type="number"
                   min={0}
+                  disabled={form.salaryNegotiable}
                   placeholder="25000000"
                   value={form.salaryMin}
                   onChange={(e) => onUpdateForm("salaryMin", e.target.value)}
@@ -227,6 +272,7 @@ export function RecruiterJobEditor({
                   className={fieldClass}
                   type="number"
                   min={0}
+                  disabled={form.salaryNegotiable}
                   placeholder="45000000"
                   value={form.salaryMax}
                   onChange={(e) => onUpdateForm("salaryMax", e.target.value)}
@@ -235,24 +281,28 @@ export function RecruiterJobEditor({
 
               <label className={labelClass}>
                 Tiền tệ
-                <input
+                <select
                   className={fieldClass}
-                  maxLength={3}
+                  disabled={form.salaryNegotiable}
                   value={form.salaryCurrency}
-                  onChange={(e) => onUpdateForm("salaryCurrency", e.target.value.toUpperCase())}
-                />
+                  onChange={(e) => onUpdateForm("salaryCurrency", e.target.value)}
+                >
+                  <option value="VND">VND</option>
+                  <option value="USD">USD</option>
+                </select>
               </label>
 
               <label className={labelClass}>
                 Kỳ lương
                 <select
                   className={fieldClass}
+                  disabled={form.salaryNegotiable}
                   value={form.salaryPeriod}
                   onChange={(e) => onUpdateForm("salaryPeriod", e.target.value)}
                 >
-                  <option>HOUR</option>
-                  <option>MONTH</option>
-                  <option>YEAR</option>
+                  <option value="MONTH">Hàng tháng</option>
+                  <option value="YEAR">Hàng năm</option>
+                  <option value="HOUR">Theo giờ</option>
                 </select>
               </label>
             </div>
@@ -292,29 +342,40 @@ export function RecruiterJobEditor({
               jobId={selectedJobId}
               jobVersionId={selectedJob?.jobVersionId ?? null}
               accessToken={session.accessToken}
-              disabled={!canRecruit || saving || (!!selectedJob && selectedJob.status !== "DRAFT")}
+              disabled={fieldsDisabled || saving}
               onApply={onSuggestionApplied}
             />
           </section>
 
-          <div className="flex flex-wrap items-center gap-2.5 border-t border-border-subtle pt-4">
-            <Button type="submit" variant="primary" size="md" disabled={saving} loading={saving}>
-              {saving ? "Đang lưu…" : selectedJobId ? "Lưu JD" : "Tạo bản nháp"}
-            </Button>
+          {!lockedNonDraft && (
+            <div className="flex flex-wrap items-center gap-2.5 border-t border-border-subtle pt-4">
+              <Button type="submit" variant="primary" size="md" disabled={saving} loading={saving}>
+                {saving ? "Đang lưu…" : selectedJobId ? "Lưu JD" : "Tạo bản nháp"}
+              </Button>
 
-            {selectedJobId && selectedJob?.status === "DRAFT" && (
-              <Button variant="subtle" size="md" type="button" disabled={!canPublish || saving} onClick={() => onChangeState(selectedJob, "publish")}>
-                Đăng JD
+              {selectedJobId && selectedJob?.status === "DRAFT" && (
+                <Button variant="subtle" size="md" type="button" disabled={!canPublish || saving} onClick={() => onChangeState(selectedJob, "publish")}>
+                  Đăng JD
+                </Button>
+              )}
+            </div>
+          )}
+        </fieldset>
+
+        {canRecruit && selectedJobId && selectedJob && ((lockedNonDraft && Boolean(onDuplicate)) || selectedJob.status === "PUBLISHED") && (
+          <div className="flex flex-wrap items-center gap-2.5 border-t border-border-subtle pt-4">
+            {lockedNonDraft && onDuplicate && (
+              <Button variant="secondary" size="md" type="button" disabled={saving} onClick={() => onDuplicate(selectedJob)}>
+                Nhân bản thành bản nháp
               </Button>
             )}
-
-            {selectedJobId && selectedJob?.status === "PUBLISHED" && (
-              <Button variant="danger" size="md" type="button" onClick={() => onChangeState(selectedJob, "close")}>
+            {selectedJob.status === "PUBLISHED" && (
+              <Button variant="danger" size="md" type="button" disabled={saving} onClick={() => onChangeState(selectedJob, "close")}>
                 Đóng JD
               </Button>
             )}
           </div>
-        </fieldset>
+        )}
       </form>
     </Card>
   );

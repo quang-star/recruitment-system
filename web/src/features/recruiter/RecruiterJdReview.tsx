@@ -1,6 +1,7 @@
 import { DocumentReview } from "../../shared/components/DocumentReview";
 import { extractionNeedsManualReview, visibleQualityFlags } from "../../shared/components/ExternalAiConsent";
 import { CheckCircleIcon, SparklesIcon } from "../../shared/components/Icon";
+import { RichTextContent } from "../../shared/components/RichTextEditor";
 import { Badge, Button, Card, ErrorBanner } from "../../shared/ui";
 import { Job, ParsedJd } from "./recruiterJobTypes";
 
@@ -19,6 +20,7 @@ type Props = {
   onUpdateExperienceMonths: (months: number | null) => void;
   onSaveParsedJd: () => void;
   onConfirmParsedJd: () => void;
+  onRetryParsedJd?: () => void;
 };
 
 export function RecruiterJdReview({
@@ -35,7 +37,8 @@ export function RecruiterJdReview({
   onRemoveSkill,
   onUpdateExperienceMonths,
   onSaveParsedJd,
-  onConfirmParsedJd
+  onConfirmParsedJd,
+  onRetryParsedJd
 }: Props) {
   return (
     <Card padding="lg" className="space-y-4">
@@ -54,20 +57,16 @@ export function RecruiterJdReview({
             </div>
             <div className="space-y-1">
               <h4 className="text-xs font-bold uppercase tracking-wide text-ink-600 m-0">Mô tả công việc</h4>
-              <p className="text-sm text-ink-800 m-0 whitespace-pre-line leading-relaxed">{selectedRecord.description}</p>
+              <RichTextContent content={selectedRecord.description} className="text-ink-800" />
             </div>
             <div className="space-y-1">
               <h4 className="text-xs font-bold uppercase tracking-wide text-ink-600 m-0">Yêu cầu ứng viên</h4>
-              <p className="text-sm text-ink-800 m-0 whitespace-pre-line leading-relaxed">
-                {selectedRecord.requirementsText}
-              </p>
+              <RichTextContent content={selectedRecord.requirementsText} className="text-ink-800" />
             </div>
             {selectedRecord.benefitsText && (
               <div className="space-y-1">
                 <h4 className="text-xs font-bold uppercase tracking-wide text-ink-600 m-0">Quyền lợi</h4>
-                <p className="text-sm text-ink-800 m-0 whitespace-pre-line leading-relaxed">
-                  {selectedRecord.benefitsText}
-                </p>
+                <RichTextContent content={selectedRecord.benefitsText} className="text-ink-800" />
               </div>
             )}
           </Card>
@@ -235,9 +234,16 @@ export function RecruiterJdReview({
             )}
 
             {!parsedJd && !loadingParsedJd && (
-              <p className="text-sm text-ink-500 m-0">
-                Yêu cầu đang chờ phân tích. Bạn có thể quay lại tin tuyển dụng; chưa thể xác nhận khi chưa có kết quả.
-              </p>
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border-subtle bg-slate-50 p-3.5">
+                <p className="text-sm text-ink-600 m-0">
+                  Yêu cầu đang chờ phân tích. Bạn có thể bấm kiểm tra lại tại đây hoặc quay lại tin tuyển dụng.
+                </p>
+                {onRetryParsedJd && (
+                  <Button type="button" variant="secondary" size="sm" onClick={onRetryParsedJd}>
+                    Kiểm tra lại
+                  </Button>
+                )}
+              </div>
             )}
           </div>
         )}

@@ -7,18 +7,108 @@ import { GoogleSignIn } from "./GoogleSignIn";
 
 type LoginResponse = AuthSession;
 
+type GoogleProfileHint = {
+  displayName: string;
+  avatarUrl?: string | null;
+  email?: string | null;
+};
+
+type GoogleLoginResponse = AuthSession & {
+  newAccount?: boolean;
+  googleProfile?: GoogleProfileHint | null;
+};
+
+function toAuthSession(response: GoogleLoginResponse): AuthSession {
+  return {
+    userId: response.userId,
+    accessToken: response.accessToken,
+    refreshToken: response.refreshToken,
+    accessTokenExpiresAt: response.accessTokenExpiresAt,
+    refreshTokenExpiresAt: response.refreshTokenExpiresAt,
+    roles: response.roles,
+  };
+}
+
+async function bootstrapGoogleProfile(session: AuthSession, response: GoogleLoginResponse): Promise<void> {
+  const hint = response.googleProfile;
+  const displayName = hint?.displayName?.trim();
+  if (!displayName || session.roles.includes("SYSTEM_ADMIN")) return;
+
+  try {
+    if (session.roles.includes("RECRUITER")) {
+      if (!response.newAccount) {
+        try {
+          await apiRequest("/api/v2/recruiter/profile", { accessToken: session.accessToken });
+          return;
+        } catch (failure) {
+          if (!(failure instanceof ApiClientError) || failure.status !== 404) return;
+        }
+      }
+      await apiRequest("/api/v2/recruiter/profile", {
+        method: "PUT",
+        accessToken: session.accessToken,
+        body: JSON.stringify({
+          displayName: displayName.slice(0, 160),
+          businessTitle: null,
+          businessPhone: null,
+        }),
+      });
+      return;
+    }
+
+    if (session.roles.includes("CANDIDATE")) {
+      if (!response.newAccount) {
+        try {
+          await apiRequest("/api/v2/candidates/me", { accessToken: session.accessToken });
+          return;
+        } catch (failure) {
+          if (!(failure instanceof ApiClientError) || failure.status !== 404) return;
+        }
+      }
+      const rawEmail = hint?.email?.trim() ?? "";
+      const rawAvatar = hint?.avatarUrl?.trim() ?? "";
+      await apiRequest("/api/v2/candidates/me", {
+        method: "PUT",
+        accessToken: session.accessToken,
+        body: JSON.stringify({
+          displayName: displayName.slice(0, 120),
+          headline: null,
+          locationText: null,
+          visibility: "APPLICATION_ONLY",
+          phoneNumber: null,
+          contactEmail: rawEmail && rawEmail.length <= 255 ? rawEmail : null,
+          linkedinUrl: null,
+          githubUrl: null,
+          portfolioUrl: null,
+          avatarUrl: rawAvatar && rawAvatar.length <= 500 ? rawAvatar : null,
+          bio: null,
+          version: null,
+        }),
+      });
+    }
+  } catch {
+    // Profile bootstrap is best-effort; never block an authenticated Google sign-in.
+  }
+}
+
 type LoginPageProps = {
   onSuccess: (session: AuthSession) => void;
   initialEmail?: string;
   initialMode?: "login" | "register";
+  initialAccountType?: "CANDIDATE" | "RECRUITER";
 };
 
 const inputClass =
   "mt-1.5 h-10 w-full rounded-xl border border-border-strong bg-white px-3.5 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20";
 
-export function LoginPage({ onSuccess, initialEmail = "", initialMode = "login" }: LoginPageProps) {
+export function LoginPage({
+  onSuccess,
+  initialEmail = "",
+  initialMode = "login",
+  initialAccountType = "CANDIDATE"
+}: LoginPageProps) {
   const [mode, setMode] = useState<"login" | "register" | "forgot">(initialMode);
-  const [accountType, setAccountType] = useState<"CANDIDATE" | "RECRUITER">("CANDIDATE");
+  const [accountType, setAccountType] = useState<"CANDIDATE" | "RECRUITER">(initialAccountType);
   const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -30,10 +120,12 @@ export function LoginPage({ onSuccess, initialEmail = "", initialMode = "login" 
     setError(null);
     setRegistrationMessage(null);
     try {
-      const session = await apiRequest<LoginResponse>("/api/v2/auth/google/login", {
+      const response = await apiRequest<GoogleLoginResponse>("/api/v2/auth/google/login", {
         method: "POST",
         body: JSON.stringify({ credential, nonce, accountType: mode === "register" ? accountType : "CANDIDATE" })
       });
+      const session = toAuthSession(response);
+      await bootstrapGoogleProfile(session, response);
       saveSession(session);
       onSuccess(session);
     } finally {
@@ -201,9 +293,13 @@ export function LoginPage({ onSuccess, initialEmail = "", initialMode = "login" 
               onChange={(event) => setPassword(event.target.value)}
               autoComplete={mode === "register" ? "new-password" : "current-password"}
               minLength={8}
+              placeholder={mode === "register" ? "Tối thiểu 8 ký tự" : undefined}
               required
               className={inputClass}
             />
+            {mode === "register" && (
+              <p className="text-xs text-ink-500 mt-1 mb-0">Mật khẩu tài khoản mới tối thiểu 8 ký tự.</p>
+            )}
           </div>
         )}
 
@@ -240,18 +336,6 @@ export function LoginPage({ onSuccess, initialEmail = "", initialMode = "login" 
                 ? "Tạo tài khoản"
                 : "Gửi hướng dẫn"}
         </Button>
-
-        {mode === "forgot" && (
-          <div className="text-center">
-            <button
-              type="button"
-              onClick={() => switchMode("login")}
-              className="text-xs font-medium text-ink-600 hover:text-ink-900 hover:underline bg-transparent border-0 p-0 cursor-pointer"
-            >
-              Quay lại đăng nhập
-            </button>
-          </div>
-        )}
       </form>
 
       {mode !== "forgot" && <GoogleSignIn onCredential={googleLogin} disabled={submitting} />}

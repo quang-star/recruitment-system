@@ -21,6 +21,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -59,6 +60,7 @@ public class JooqApplicationRepository implements ApplicationRepository {
     private PageResult<Application> search(ApplicationSearch search, Condition visibility) {
         Condition filters = visibility;
         if (search.applicationId() != null) filters = filters.and(APPLICATIONS.ID.eq(search.applicationId()));
+        if (search.jobId() != null) filters = filters.and(JOBS.ID.eq(search.jobId()));
         if (search.status() != null) filters = filters.and(APPLICATIONS.STATUS.eq(search.status().name()));
         if (!search.q().isEmpty()) filters = filters.and(SearchText.contains(JOB_VERSIONS.TITLE, search.q())
                 .or(SearchText.contains(COMPANIES.DISPLAY_NAME, search.q()))
@@ -69,14 +71,23 @@ public class JooqApplicationRepository implements ApplicationRepository {
         var query = applicationQuery().leftJoin(APPLICATION_MATCHING_PROJECTIONS)
                 .on(APPLICATION_MATCHING_PROJECTIONS.APPLICATION_ID.eq(APPLICATIONS.ID)).where(filters);
         long total = dsl.fetchCount(query);
-        SortField<?> order = switch (search.sort()) {
-            case "oldest" -> APPLICATIONS.APPLIED_AT.asc();
-            case "score" -> DSL.when(APPLICATION_MATCHING_PROJECTIONS.STATUS.in("COMPLETED", "DEGRADED")
-                    .and(cvAccessGranted().isTrue()).and(JOB_VERSIONS.MATCHING_DOMAIN.eq("IT")),
-                    APPLICATION_MATCHING_PROJECTIONS.FINAL_SCORE).desc().nullsLast();
-            default -> APPLICATIONS.APPLIED_AT.desc();
-        };
-        var items = query.orderBy(order, APPLICATIONS.ID.asc()).limit(search.size()).offset(search.offset())
+        List<SortField<?>> orders = new ArrayList<>();
+        switch (search.sort()) {
+            case "oldest" -> orders.add(APPLICATIONS.APPLIED_AT.asc());
+            case "score" -> {
+                orders.add(DSL.when(APPLICATION_MATCHING_PROJECTIONS.STATUS.eq("COMPLETED")
+                        .and(cvAccessGranted().isTrue()).and(JOB_VERSIONS.MATCHING_DOMAIN.eq("IT")), 2)
+                        .when(APPLICATION_MATCHING_PROJECTIONS.STATUS.eq("DEGRADED")
+                                .and(cvAccessGranted().isTrue()).and(JOB_VERSIONS.MATCHING_DOMAIN.eq("IT")), 1)
+                        .otherwise(0).desc());
+                orders.add(DSL.when(APPLICATION_MATCHING_PROJECTIONS.STATUS.in("COMPLETED", "DEGRADED")
+                        .and(cvAccessGranted().isTrue()).and(JOB_VERSIONS.MATCHING_DOMAIN.eq("IT")),
+                        APPLICATION_MATCHING_PROJECTIONS.FINAL_SCORE).desc().nullsLast());
+            }
+            default -> orders.add(APPLICATIONS.APPLIED_AT.desc());
+        }
+        orders.add(APPLICATIONS.ID.asc());
+        var items = query.orderBy(orders).limit(search.size()).offset(search.offset())
                 .fetch(this::toDomain);
         return new PageResult<>(items, total, search.page(), search.size());
     }
@@ -201,6 +212,9 @@ public class JooqApplicationRepository implements ApplicationRepository {
                 .execute();
         if (updated != 1) return Optional.empty();
         history(internalId(applicationId), current.get().status(), status, recruiterUserId, reason, now);
+        if (status == ApplicationStatus.REJECTED) {
+            revokeGrant(applicationId, now);
+        }
         return findForReviewer(recruiterUserId, applicationId);
     }
 

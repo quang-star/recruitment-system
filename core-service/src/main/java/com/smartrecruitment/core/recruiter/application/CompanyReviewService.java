@@ -29,16 +29,58 @@ public class CompanyReviewService {
 
     @Transactional
     public Company approve(Long actorUserId, Long companyId, long expectedVersion, String reason, UUID correlationId) {
+        String normalizedReason = validateCommand(actorUserId, expectedVersion, reason, correlationId);
+        var company = requireTargetState(companyId, expectedVersion, CompanyStatus.PENDING,
+                "Company is no longer pending or has changed; reload before approval");
+        return companies.approvePending(company.id(), expectedVersion, actorUserId, normalizedReason, correlationId,
+                OffsetDateTime.now(clock)).orElseThrow(CompanyConflictException::new);
+    }
+
+    @Transactional
+    public Company reject(Long actorUserId, Long companyId, long expectedVersion, String reason, UUID correlationId) {
+        return transition(actorUserId, companyId, expectedVersion, reason, correlationId,
+                CompanyStatus.PENDING, CompanyStatus.CLOSED, "REJECT",
+                "Company is no longer pending or has changed; reload before rejection");
+    }
+
+    @Transactional
+    public Company suspend(Long actorUserId, Long companyId, long expectedVersion, String reason, UUID correlationId) {
+        return transition(actorUserId, companyId, expectedVersion, reason, correlationId,
+                CompanyStatus.ACTIVE, CompanyStatus.SUSPENDED, "SUSPEND",
+                "Company is no longer active or has changed; reload before suspension");
+    }
+
+    @Transactional
+    public Company reactivate(Long actorUserId, Long companyId, long expectedVersion, String reason, UUID correlationId) {
+        return transition(actorUserId, companyId, expectedVersion, reason, correlationId,
+                CompanyStatus.SUSPENDED, CompanyStatus.ACTIVE, "REACTIVATE",
+                "Company is no longer suspended or has changed; reload before reactivation");
+    }
+
+    private Company transition(Long actorUserId, Long companyId, long expectedVersion, String reason, UUID correlationId,
+                               CompanyStatus expectedStatus, CompanyStatus targetStatus, String action,
+                               String conflictMessage) {
+        String normalizedReason = validateCommand(actorUserId, expectedVersion, reason, correlationId);
+        var company = requireTargetState(companyId, expectedVersion, expectedStatus, conflictMessage);
+        return companies.transitionStatus(company.id(), expectedStatus, targetStatus, action, expectedVersion,
+                actorUserId, normalizedReason, correlationId, OffsetDateTime.now(clock))
+                .orElseThrow(CompanyConflictException::new);
+    }
+
+    private String validateCommand(Long actorUserId, long expectedVersion, String reason, UUID correlationId) {
         if (actorUserId == null || actorUserId <= 0 || expectedVersion < 0
                 || reason == null || reason.isBlank() || reason.strip().length() > 1000 || correlationId == null) {
-            throw new IllegalArgumentException("Approval requires an actor, version, reason and correlation ID");
+            throw new IllegalArgumentException("Review action requires an actor, version, reason and correlation ID");
         }
+        return reason.strip();
+    }
+
+    private Company requireTargetState(Long companyId, long expectedVersion, CompanyStatus expectedStatus, String message) {
         var company = companies.findById(companyId).orElseThrow(CompanyNotFoundException::new);
-        if (company.status() != CompanyStatus.PENDING || company.version() != expectedVersion) {
-            throw new CompanyConflictException("Company is no longer pending or has changed; reload before approval");
+        if (company.status() != expectedStatus || company.version() != expectedVersion) {
+            throw new CompanyConflictException(message);
         }
-        return companies.approvePending(companyId, expectedVersion, actorUserId, reason.strip(), correlationId,
-                OffsetDateTime.now(clock)).orElseThrow(CompanyConflictException::new);
+        return company;
     }
 
     @Transactional(readOnly = true)

@@ -1,4 +1,4 @@
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import { getCompanyCover, getCompanyLogo, mapCompanyRecord, resolveCompanyMeta, setLoadedCompaniesCache } from "./companyData";
 
 it.each([
@@ -15,6 +15,18 @@ it.each([
   expect(getCompanyCover(slug, name)).toBe("/companies/company-placeholder.svg");
   expect(getCompanyLogo(slug, name, "/saved-logo.png")).toBe("/saved-logo.png");
   expect(getCompanyCover(slug, name, "/saved-cover.webp")).toBe("/saved-cover.webp");
+});
+
+it("resolves uploaded company images through the configured gateway", () => {
+  vi.stubEnv("VITE_GATEWAY_URL", "https://gateway.example");
+  try {
+    const path = "/api/v2/public/companies/123/images/logo/abc";
+    expect(getCompanyLogo(undefined, undefined, path)).toBe(`https://gateway.example${path}`);
+    expect(getCompanyCover(undefined, undefined, path)).toBe(`https://gateway.example${path}`);
+    expect(getCompanyLogo(undefined, undefined, "/logos/example.svg")).toBe("/logos/example.svg");
+  } finally {
+    vi.unstubAllEnvs();
+  }
 });
 
 it("does not invent size, city, website, office image or a VIP affiliation", () => {

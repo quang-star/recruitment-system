@@ -1,5 +1,5 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import { PublicHomePage } from "./features/public/PublicHomePage";
 import { apiRequest } from "./shared/api/client";
@@ -33,7 +33,15 @@ const ResetPasswordPage = lazy(() =>
   import("./features/auth/ResetPasswordPage").then((m) => ({ default: m.ResetPasswordPage }))
 );
 
-type CurrentUser = { userId: string; status: string; emailVerified: boolean; roles: string[]; };
+type CurrentUser = {
+  userId: string;
+  email?: string;
+  status: string;
+  emailVerified: boolean;
+  roles: string[];
+  hasPassword?: boolean;
+  googleLinked?: boolean;
+};
 
 function WorkspaceLoadingFallback({ message = "Đang tải không gian làm việc…" }: { message?: string }) {
   return (
@@ -48,6 +56,9 @@ function WorkspaceLoadingFallback({ message = "Đang tải không gian làm vi�
 
 function AppContent() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const pathnameRef = useRef(location.pathname);
+  pathnameRef.current = location.pathname;
   const [session, setSession] = useState<AuthSession | null>(() => loadSession());
   const [sessionVerified, setSessionVerified] = useState(() => loadSession() === null);
   const [verificationError, setVerificationError] = useState<string | null>(null);
@@ -77,7 +88,13 @@ function AppContent() {
         const latest = loadSession();
         if (!latest || generation !== sessionGeneration()) return;
         if (currentUser.userId !== latest.userId) throw new Error("Unexpected current user");
-        const verified = { ...latest, roles: currentUser.roles };
+        const verified: AuthSession = {
+          ...latest,
+          roles: currentUser.roles,
+          ...(typeof currentUser.email === "string" ? { email: currentUser.email } : {}),
+          ...(typeof currentUser.hasPassword === "boolean" ? { hasPassword: currentUser.hasPassword } : {}),
+          ...(typeof currentUser.googleLinked === "boolean" ? { googleLinked: currentUser.googleLinked } : {})
+        };
         if (!updateSession(verified, latest.refreshToken, generation)) return;
         setSessionVerified(true);
       })
@@ -90,9 +107,13 @@ function AppContent() {
   }, [session?.userId, sessionEpoch, verificationAttempt]);
 
   const logout = useCallback(async () => {
+    const shouldReturnHome = /^\/(candidate|recruiter|admin|accept-invitation)(\/|$)/.test(pathnameRef.current);
     const current = loadSession();
     clearSession();
     setSession(null);
+    if (shouldReturnHome) {
+      navigate(routes.home, { replace: true });
+    }
     try {
       if (current?.refreshToken) {
         await apiRequest<void>("/api/v2/auth/logout", {
@@ -103,7 +124,7 @@ function AppContent() {
     } catch {
       // Always clear the local session even if the Gateway is unavailable.
     }
-  }, []);
+  }, [navigate]);
 
   if (location.pathname === routes.verifyEmail) {
     return (
@@ -152,7 +173,34 @@ function AppContent() {
         </div>
       ) : session ? (
         <Suspense fallback={<WorkspaceLoadingFallback />}>
-          {session.roles.includes("SYSTEM_ADMIN") ? (
+          {location.pathname === routes.acceptInvitation && !session.roles.includes("RECRUITER") ? (
+            <main className="mx-auto max-w-lg px-4 py-16">
+              <section
+                role="alert"
+                className="rounded-2xl border border-border-subtle bg-white p-6 shadow-card space-y-4"
+              >
+                <h1 className="text-lg font-bold text-ink-900 m-0">Liên kết mời thành viên công ty</h1>
+                <p className="text-sm text-ink-600 m-0">
+                  Tài khoản hiện tại không có vai trò nhà tuyển dụng. Hãy đăng xuất rồi đăng nhập bằng tài khoản nhà tuyển dụng được mời để chấp nhận lời mời này.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={logout}
+                    className="rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 cursor-pointer"
+                  >
+                    Đăng xuất để dùng tài khoản nhà tuyển dụng
+                  </button>
+                  <a
+                    href={routes.home}
+                    className="rounded-xl border border-border-strong px-4 py-2 text-sm font-semibold text-ink-700 no-underline hover:bg-slate-50"
+                  >
+                    Về trang chính
+                  </a>
+                </div>
+              </section>
+            </main>
+          ) : session.roles.includes("SYSTEM_ADMIN") ? (
             <AdminWorkspace session={session} onLogout={logout} />
           ) : session.roles.includes("RECRUITER") ? (
             location.pathname === routes.acceptInvitation ? (

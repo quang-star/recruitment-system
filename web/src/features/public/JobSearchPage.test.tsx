@@ -13,8 +13,27 @@ const job: PublicJob = { jobId: "42", companyId: "10", title: "Java Engineer", d
   openings: 1, salaryMin: 20000000, salaryMax: 30000000, salaryCurrency: "VND", salaryNegotiable: false };
 beforeEach(() => {
   vi.mocked(apiRequest).mockReset();
-  vi.mocked(apiRequest).mockResolvedValue({ items: [job], total: 13, page: 0, size: 12 });
+  vi.mocked(apiRequest).mockImplementation(async (path) => path === "/api/v2/public/job-categories"
+    ? [] : { items: [job], total: 13, page: 0, size: 12 });
   Element.prototype.scrollIntoView = vi.fn();
+});
+
+it("offers active industries beyond the discovery limit and searches the whole industry", async () => {
+  window.history.replaceState(null, "", "/?view=search");
+  const industries = Array.from({ length: 15 }, (_, index) => ({
+    id: String(index + 10), kind: "INDUSTRY", name: `Ngành ${index + 1}`, status: "ACTIVE"
+  }));
+  vi.mocked(apiRequest).mockImplementation(async (path) => path === "/api/v2/public/job-categories"
+    ? [...industries, { id: "99", kind: "INDUSTRY", name: "Chờ duyệt", status: "PENDING" }]
+    : { items: [job], total: 13, page: 0, size: 12 });
+  render(<JobSearchPage discovery={discovery} onSelectJob={vi.fn()} />);
+  await screen.findByRole("option", { name: "Ngành 15" });
+  expect(screen.queryByRole("option", { name: "Chờ duyệt" })).not.toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText("Lọc theo nhóm nghề"), { target: { value: "24:" } });
+  await waitFor(() => expect(vi.mocked(apiRequest).mock.calls.some(([path]) => {
+    const params = new URL(path, "http://test").searchParams;
+    return params.get("industryId") === "24" && !params.has("specializationId");
+  })).toBe(true));
 });
 
 it("combines API category identities, salary, location, work mode and paging without a detail preview", async () => {

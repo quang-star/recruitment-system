@@ -1,5 +1,6 @@
 package com.smartrecruitment.core.job.application.port;
 
+import com.smartrecruitment.core.job.application.JobAnalytics;
 import com.smartrecruitment.core.job.application.JobSearch;
 import com.smartrecruitment.core.job.application.JobDiscovery;
 import com.smartrecruitment.core.job.domain.Job;
@@ -33,4 +34,8 @@ public interface JobRepository {
      * The default keeps lightweight in-memory unit-test repositories source-compatible.
      */
     default boolean isParsedJdConfirmed(Long jobVersionId) { return true; }
+
+    default boolean canRecruitJobVersion(Long jobVersionId, Long userId) { return false; }
+
+    default Optional<JobAnalytics> analyticsForMember(Long jobId, Long userId) { return Optional.empty(); }
 }

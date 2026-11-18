@@ -26,7 +26,7 @@ class DashboardServiceTests {
         Long pendingJobId = com.smartrecruitment.core.support.TestIds.next();
 
         when(companies.isActiveMember(companyId, userId)).thenReturn(true);
-        when(dashboard.recruiterMetrics(userId, companyId)).thenReturn(Map.of(
+        when(dashboard.recruiterMetrics(userId, companyId, null)).thenReturn(Map.of(
                 "jobs", 5L,
                 "publishedJobs", 3L,
                 "draftJobs", 1L,
@@ -56,7 +56,7 @@ class DashboardServiceTests {
         Long companyId = com.smartrecruitment.core.support.TestIds.next();
 
         when(companies.isActiveMember(companyId, userId)).thenReturn(true);
-        when(dashboard.recruiterMetrics(userId, companyId)).thenReturn(Map.of(
+        when(dashboard.recruiterMetrics(userId, companyId, null)).thenReturn(Map.of(
                 "jobs", 2L,
                 "publishedJobs", 2L,
                 "draftJobs", 0L,

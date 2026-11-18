@@ -5,6 +5,7 @@ import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.proc.SecurityContext;
 import com.smartrecruitment.auth.user.application.AuthTokenProperties;
 import com.smartrecruitment.auth.user.application.port.AccessTokenIssuer;
+import com.smartrecruitment.auth.user.application.port.SessionRepository;
 import com.smartrecruitment.auth.user.domain.AuthUser;
 import com.smartrecruitment.auth.shared.api.SubjectId;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -33,6 +34,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -57,36 +59,77 @@ public class AuthSecurityConfig {
     }
 
     @Bean
+    JwtDecoder jwtDecoder(RSAKey signingKey, AuthTokenProperties properties,
+                          SessionRepository sessions, Clock clock) throws Exception {
+        return createJwtDecoder(signingKey, properties, sessions, clock);
+    }
+
     JwtDecoder jwtDecoder(RSAKey signingKey, AuthTokenProperties properties) throws Exception {
+        return createJwtDecoder(signingKey, properties, null, Clock.systemUTC());
+    }
+
+    private JwtDecoder createJwtDecoder(RSAKey signingKey, AuthTokenProperties properties,
+                                      SessionRepository sessions, Clock clock) throws Exception {
         NimbusJwtDecoder decoder = NimbusJwtDecoder.withPublicKey(signingKey.toRSAPublicKey()).build();
         OAuth2TokenValidator<Jwt> audienceValidator = jwt -> jwt.getAudience().contains(properties.jwt().audience())
                 ? OAuth2TokenValidatorResult.success()
                 : OAuth2TokenValidatorResult.failure(
                         new OAuth2Error("invalid_token", "JWT audience is not accepted", null));
+        OAuth2TokenValidator<Jwt> subjectValidator = jwt -> {
+            try {
+                SubjectId.parse(jwt.getSubject());
+                return OAuth2TokenValidatorResult.success();
+            } catch (org.springframework.security.oauth2.server.resource.InvalidBearerTokenException exception) {
+                return OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token", exception.getMessage(), null));
+            }
+        };
+        OAuth2TokenValidator<Jwt> sessionValidator = jwt -> {
+            String sid = jwt.getClaimAsString("sid");
+            if (sid == null || sessions == null) return OAuth2TokenValidatorResult.success();
+            Long sessionId;
+            try {
+                sessionId = SubjectId.parse(sid);
+            } catch (org.springframework.security.oauth2.server.resource.InvalidBearerTokenException exception) {
+                return OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token", "Invalid session identity", null));
+            }
+            Instant now = Instant.now(clock);
+            boolean active = sessions.findById(sessionId)
+                    .filter(value -> value.userId().toString().equals(jwt.getSubject()))
+                    .filter(value -> value.revokedAt() == null)
+                    .filter(value -> value.idleExpiresAt().isAfter(now))
+                    .filter(value -> value.absoluteExpiresAt().isAfter(now))
+                    .isPresent();
+            return active
+                    ? OAuth2TokenValidatorResult.success()
+                    : OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token", "Session has been revoked or expired", null));
+        };
         decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(
                 JwtValidators.createDefaultWithIssuer(properties.jwt().issuer()), audienceValidator,
-                jwt -> {
-                    try {
-                        SubjectId.parse(jwt.getSubject());
-                        return OAuth2TokenValidatorResult.success();
-                    } catch (org.springframework.security.oauth2.server.resource.InvalidBearerTokenException exception) {
-                        return OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token", exception.getMessage(), null));
-                    }
-                }));
+                subjectValidator, sessionValidator));
         return decoder;
     }
 
     @Bean
     AccessTokenIssuer accessTokenIssuer(JwtEncoder encoder, RSAKey signingKey, AuthTokenProperties properties) {
-        return (AuthUser user, List<String> roles, Instant issuedAt) -> {
-            Instant expiresAt = issuedAt.plus(properties.jwt().accessTokenTtl());
-            JwtClaimsSet claims = JwtClaimsSet.builder().issuer(properties.jwt().issuer())
-                    .audience(List.of(properties.jwt().audience()))
-                    .subject(user.id().toString()).claim("email", user.email()).claim("roles", roles)
-                    .issuedAt(issuedAt).expiresAt(expiresAt).id(UUID.randomUUID().toString()).build();
-            String value = encoder.encode(JwtEncoderParameters.from(
-                    JwsHeader.with(SignatureAlgorithm.RS256).keyId(signingKey.getKeyID()).build(), claims)).getTokenValue();
-            return new AccessTokenIssuer.IssuedAccessToken(value, expiresAt);
+        return new AccessTokenIssuer() {
+            @Override
+            public IssuedAccessToken issue(AuthUser user, List<String> roles, Instant issuedAt) {
+                return issue(user, roles, null, issuedAt);
+            }
+
+            @Override
+            public IssuedAccessToken issue(AuthUser user, List<String> roles, Long sessionId, Instant issuedAt) {
+                Instant expiresAt = issuedAt.plus(properties.jwt().accessTokenTtl());
+                JwtClaimsSet.Builder claims = JwtClaimsSet.builder().issuer(properties.jwt().issuer())
+                        .audience(List.of(properties.jwt().audience()))
+                        .subject(user.id().toString()).claim("email", user.email()).claim("roles", roles)
+                        .issuedAt(issuedAt).expiresAt(expiresAt).id(UUID.randomUUID().toString());
+                if (sessionId != null) claims.claim("sid", sessionId.toString());
+                String value = encoder.encode(JwtEncoderParameters.from(
+                        JwsHeader.with(SignatureAlgorithm.RS256).keyId(signingKey.getKeyID()).build(), claims.build()))
+                        .getTokenValue();
+                return new AccessTokenIssuer.IssuedAccessToken(value, expiresAt);
+            }
         };
     }
 

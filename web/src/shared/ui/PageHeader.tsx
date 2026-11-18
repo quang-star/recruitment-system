@@ -17,7 +17,7 @@ export function PageHeader({ eyebrow, title, subtitle, actions, backLink, classN
       <div className="min-w-0">
         {backLink && <div className="mb-2">{backLink}</div>}
         {eyebrow && (
-          <p className="text-[11px] font-bold uppercase tracking-wider text-brand-700 m-0 mb-1">
+          <p className="text-xs font-bold uppercase tracking-wider text-brand-700 m-0 mb-1">
             {eyebrow}
           </p>
         )}

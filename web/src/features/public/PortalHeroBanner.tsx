@@ -33,7 +33,7 @@ export function PortalHeroBanner({
     <section className="relative border-b border-border-subtle bg-slate-50/70 py-8 sm:py-11">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl space-y-5 text-left">
-            <div className="inline-flex items-center gap-2 rounded-md border border-border-subtle bg-white px-2.5 py-1 text-xs font-semibold text-ink-700 shadow-xs">
+            <div className="inline-flex items-center gap-2 rounded-md border border-border-subtle bg-white px-2.5 py-1 text-xs sm:text-sm font-semibold text-ink-700 shadow-xs">
               <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" aria-hidden="true" />
               <span>{jobCount} vị trí đang tuyển</span>
             </div>
@@ -95,14 +95,14 @@ export function PortalHeroBanner({
             </form>
 
             {suggestedKeywords.length > 0 && (
-              <div className="flex flex-wrap items-center gap-1.5 text-xs">
+              <div className="flex flex-wrap items-center gap-1.5 text-sm">
                 <span className="font-medium text-ink-500 mr-1">Tìm nhanh:</span>
                 {suggestedKeywords.map((term) => (
                   <button
                     key={term}
                     type="button"
                     onClick={() => (onSearch ? onSearch(term, location) : onExploreClick())}
-                    className="rounded-md border border-border-subtle bg-white px-2.5 py-1 font-medium text-ink-700 hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700 transition-colors cursor-pointer"
+                    className="rounded-md border border-border-subtle bg-white px-2.5 py-1 text-xs sm:text-sm font-medium text-ink-700 hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700 transition-colors cursor-pointer"
                   >
                     {term}
                   </button>

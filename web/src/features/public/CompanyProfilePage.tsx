@@ -1,5 +1,5 @@
 import { usePagedResource } from "../../shared/api/pagination";
-import { ArrowLeftIcon, CompanyIcon, ExternalLinkIcon, JobsIcon, MapPinIcon, UsersIcon } from "../../shared/components/Icon";
+import { CompanyIcon, ExternalLinkIcon, JobsIcon, MapPinIcon, UsersIcon } from "../../shared/components/Icon";
 import { PageControls } from "../../shared/components/PageControls";
 import { useUrlParams } from "../../shared/navigation";
 import { Badge, Button, Card, EmptyState, ErrorBanner } from "../../shared/ui";
@@ -9,7 +9,7 @@ import { CompanyInfo } from "./companyData";
 import { PublicJobListCard } from "./PublicJobListCard";
 import { PublicJob } from "./types";
 
-type Props = { company: CompanyInfo; onBack: () => void; onSelectJob: (job: PublicJob) => void };
+type Props = { company: CompanyInfo; onSelectJob: (job: PublicJob) => void };
 
 function safeWebsiteUrl(raw: string): string | null {
   const trimmed = raw.trim();
@@ -22,7 +22,7 @@ function safeWebsiteUrl(raw: string): string | null {
   }
 }
 
-export function CompanyProfilePage({ company, onBack, onSelectJob }: Props) {
+export function CompanyProfilePage({ company, onSelectJob }: Props) {
   const { params, navigate } = useUrlParams();
   const jobs = usePagedResource<PublicJob>(
     "/api/v2/public/jobs",
@@ -38,13 +38,6 @@ export function CompanyProfilePage({ company, onBack, onSelectJob }: Props) {
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
-      <nav aria-label="Điều hướng công ty">
-        <Button type="button" variant="secondary" size="md" onClick={onBack}>
-          <ArrowLeftIcon size={16} aria-hidden="true" />
-          <span>Danh sách công ty</span>
-        </Button>
-      </nav>
-
       <Card padding="none" className="overflow-hidden">
         <CompanyCover src={company.coverImage} className="h-44 sm:h-52 w-full" />
         <div className="p-6 sm:p-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-12 relative">

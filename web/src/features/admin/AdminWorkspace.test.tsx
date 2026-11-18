@@ -434,3 +434,66 @@ it("pre-fills merge target and returns to edit tab when selecting a candidate su
   expect(screen.getByLabelText("Gộp vào danh mục đã có")).toHaveValue("active");
   expect(screen.getByText(/Đã chọn "ActiveX" làm đích gộp/)).toBeInTheDocument();
 });
+
+it("opens the account security tab from navigation", async () => {
+  vi.mocked(apiRequest).mockImplementation(async (path) => {
+    if (path === "/api/v2/dashboard/catalog") return [];
+    if (path === "/api/v2/auth/sessions") return [];
+    return catalog;
+  });
+  renderWithRoute();
+  fireEvent.click(screen.getByRole("button", { name: "Bảo mật" }));
+  expect(await screen.findByText("Mật khẩu & phiên đăng nhập")).toBeInTheDocument();
+});
+
+it("omits the redundant top page heading banner across admin views", async () => {
+  vi.mocked(apiRequest).mockImplementation(async (path) => {
+    if (path === "/api/v2/dashboard/catalog") return [];
+    if (path === "/api/v2/auth/sessions") return [];
+    if (path.startsWith("/api/v2/dashboard/companies")) return { items: [], total: 0, page: 0, size: 20 };
+    if (path.includes("catalog/history?")) return { items: [], total: 0, page: 0, size: 20 };
+    const ledger = emptyLedger(path);
+    if (ledger) return ledger;
+    return catalog;
+  });
+  renderWithRoute();
+  expect(await screen.findByRole("heading", { name: "Danh mục nghề" })).toBeInTheDocument();
+  expect(screen.queryByText("Quản trị hệ thống")).not.toBeInTheDocument();
+  expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "Duyệt công ty" }));
+  expect(await screen.findByRole("heading", { name: "Danh sách công ty" })).toBeInTheDocument();
+  expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "Bảo mật" }));
+  expect(await screen.findByRole("heading", { name: "Mật khẩu & phiên đăng nhập" })).toBeInTheDocument();
+  expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument();
+});
+
+it("opens the sidebar Tài khoản popover for security navigation and logout", async () => {
+  const onLogout = vi.fn();
+  vi.mocked(apiRequest).mockImplementation(async (path) => {
+    if (path === "/api/v2/dashboard/catalog") return [];
+    if (path === "/api/v2/auth/sessions") return [];
+    return catalog;
+  });
+  render(
+    <MemoryRouter initialEntries={["/admin"]}>
+      <AdminWorkspace session={session} onLogout={onLogout} />
+    </MemoryRouter>
+  );
+
+  const accountTrigger = screen.getByRole("button", { name: "Tài khoản" });
+  expect(screen.queryByRole("button", { name: "Đăng xuất" })).not.toBeInTheDocument();
+
+  fireEvent.click(accountTrigger);
+  expect(screen.getByText("Admin")).toBeInTheDocument();
+  expect(screen.getByText("Quản trị viên")).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "Bảo mật tài khoản" }));
+  expect(await screen.findByText("Mật khẩu & phiên đăng nhập")).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "Tài khoản" }));
+  fireEvent.click(screen.getByRole("button", { name: "Đăng xuất" }));
+  expect(onLogout).toHaveBeenCalledOnce();
+});

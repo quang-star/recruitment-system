@@ -114,6 +114,27 @@ class CategoryServiceTests {
                 eq("Đề xuất từ phân loại nghề do recruiter nhập cho Job."), isNull());
     }
 
+    @Test
+    void approvesPendingChildWhenMergedParentResolvesToActiveCanonicalParent() {
+        Long mergedParentId = com.smartrecruitment.core.support.TestIds.next();
+        Long canonicalIndustryId = com.smartrecruitment.core.support.TestIds.next();
+        Long childId = com.smartrecruitment.core.support.TestIds.next();
+        var mergedParent = new CategoryEntry(mergedParentId, CategoryKind.INDUSTRY, null, "Old Industry", "MERGED", canonicalIndustryId, 1L);
+        var canonicalIndustry = new CategoryEntry(canonicalIndustryId, CategoryKind.INDUSTRY, null, "Canonical Industry", "ACTIVE", null, 0L);
+        var child = new CategoryEntry(childId, CategoryKind.SPECIALIZATION, mergedParentId, "Backend Engineering", "PENDING", null, 0L);
+
+        when(repository.find(childId)).thenReturn(Optional.of(child));
+        when(repository.find(mergedParentId)).thenReturn(Optional.of(mergedParent));
+        when(repository.find(canonicalIndustryId)).thenReturn(Optional.of(canonicalIndustry));
+        when(repository.update(any(), any(), anyString(), eq(actor), eq("APPROVE"), anyString(), eq(correlation))).thenReturn(true);
+
+        var approved = service.act(actor, childId, 0, "APPROVE", null, null, "Canonical parent active", correlation);
+
+        assertThat(approved.status()).isEqualTo("ACTIVE");
+        assertThat(approved.parentId()).isEqualTo(mergedParentId);
+        verify(repository).update(child, approved, "backend engineering", actor, "APPROVE", "Canonical parent active", correlation);
+    }
+
     private CategoryEntry entry(String status, long version) {
         return new CategoryEntry(com.smartrecruitment.core.support.TestIds.next(), CategoryKind.INDUSTRY, null, "Synthetic category", status, null, version);
     }

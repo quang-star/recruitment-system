@@ -6,5 +6,8 @@ import java.util.List;
 
 public interface AccessTokenIssuer {
     IssuedAccessToken issue(AuthUser user, List<String> roles, Instant issuedAt);
+    default IssuedAccessToken issue(AuthUser user, List<String> roles, Long sessionId, Instant issuedAt) {
+        return issue(user, roles, issuedAt);
+    }
     record IssuedAccessToken(String value, Instant expiresAt) {}
 }

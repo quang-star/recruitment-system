@@ -1,5 +1,5 @@
-import { ReactNode, useState } from "react";
-import { CloseIcon, LogoutIcon, MenuIcon } from "../components/Icon";
+import { ReactNode, useEffect, useId, useRef, useState } from "react";
+import { ChevronDownIcon, CloseIcon, LogoutIcon, MenuIcon, ProfileIcon } from "../components/Icon";
 import { BRAND_CONFIG } from "../config/brand";
 import { cn } from "../ui";
 
@@ -10,21 +10,171 @@ export type WorkspaceNavItem<T extends string> = {
   badge?: number;
 };
 
+export type WorkspaceAccountMenuItem = {
+  id: string;
+  label: string;
+  icon: ReactNode;
+  active?: boolean;
+  onSelect: () => void;
+};
+
 type WorkspaceShellProps<T extends string> = {
   activeItem: T;
   brandLabel: string;
   children: ReactNode;
-  eyebrow: string;
+  eyebrow?: string;
   navItems: WorkspaceNavItem<T>[];
   onLogout: () => void;
   onNavigate: (item: T) => void;
-  title: string;
+  title?: string;
   userLabel: string;
+  accountRoleLabel?: string;
+  accountMenuItems?: WorkspaceAccountMenuItem[];
   variant: "candidate" | "recruiter";
   headerActions?: ReactNode;
   hideDefaultAccountControls?: boolean;
   onBrandClick?: () => void;
 };
+
+function SidebarAccountMenu({
+  userLabel,
+  accountRoleLabel,
+  accountMenuItems,
+  onLogout
+}: {
+  userLabel: string;
+  accountRoleLabel?: string;
+  accountMenuItems?: WorkspaceAccountMenuItem[];
+  onLogout: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelId = useId();
+
+  useEffect(() => {
+    if (!open) return;
+    function handlePointerDown(event: PointerEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+        triggerRef.current?.focus();
+      }
+    }
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
+
+  const initial = (userLabel.trim().slice(0, 1) || "U").toUpperCase();
+  const hasMenuItems = Boolean(accountMenuItems && accountMenuItems.length > 0);
+
+  return (
+    <div
+      ref={rootRef}
+      className="pt-3 mt-3 border-t border-border-subtle relative shrink-0"
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+          setOpen(false);
+        }
+      }}
+    >
+      <button
+        type="button"
+        ref={triggerRef}
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={() => setOpen((value) => !value)}
+        className={cn(
+          "flex w-full items-center justify-between gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors text-left cursor-pointer",
+          open
+            ? "bg-brand-50 text-brand-700 font-semibold"
+            : "text-ink-600 hover:bg-slate-100 hover:text-ink-900"
+        )}
+      >
+        <span className="flex items-center gap-2.5 min-w-0">
+          <span className={cn("shrink-0", open ? "text-brand-600" : "text-ink-400")} aria-hidden="true">
+            <ProfileIcon size={18} />
+          </span>
+          <span className="truncate">Tài khoản</span>
+        </span>
+        <ChevronDownIcon
+          size={16}
+          aria-hidden="true"
+          className={cn("shrink-0 transition-transform", open ? "rotate-180 text-brand-600" : "text-ink-400")}
+        />
+      </button>
+
+      {open && (
+        <div
+          id={panelId}
+          className="absolute bottom-full left-0 right-0 mb-2 rounded-2xl border border-border-subtle bg-white p-1.5 shadow-dialog z-50"
+        >
+          <div className="flex items-center gap-2.5 px-2.5 py-2 border-b border-border-subtle mb-1">
+            <span
+              aria-hidden="true"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-600 text-xs font-bold text-white"
+            >
+              {initial}
+            </span>
+            <div className="min-w-0">
+              <strong className="block truncate text-sm font-bold text-ink-900">{userLabel}</strong>
+              {accountRoleLabel && (
+                <span className="block truncate text-xs text-ink-500">{accountRoleLabel}</span>
+              )}
+            </div>
+          </div>
+
+          {hasMenuItems && (
+            <nav aria-label="Menu tài khoản" className="space-y-0.5">
+              {accountMenuItems!.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  aria-current={item.active ? "page" : undefined}
+                  onClick={() => {
+                    setOpen(false);
+                    item.onSelect();
+                  }}
+                  className={cn(
+                    "flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors cursor-pointer text-left",
+                    item.active ? "bg-brand-50 text-brand-700 font-semibold" : "text-ink-700 hover:bg-slate-50"
+                  )}
+                >
+                  <span className={cn("shrink-0", item.active ? "text-brand-600" : "text-ink-400")} aria-hidden="true">
+                    {item.icon}
+                  </span>
+                  <span className="truncate">{item.label}</span>
+                </button>
+              ))}
+            </nav>
+          )}
+
+          <div className={cn(hasMenuItems && "mt-1 pt-1 border-t border-border-subtle")}>
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                onLogout();
+              }}
+              className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer text-left"
+            >
+              <span aria-hidden="true">
+                <LogoutIcon size={16} />
+              </span>
+              <span>Đăng xuất</span>
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 /** Unified application frame for Candidate top-bar portal and Recruiter/Admin sidebar workspaces. */
 export function WorkspaceShell<T extends string>({
@@ -37,6 +187,8 @@ export function WorkspaceShell<T extends string>({
   onNavigate,
   title,
   userLabel,
+  accountRoleLabel,
+  accountMenuItems,
   variant,
   headerActions,
   hideDefaultAccountControls = false,
@@ -64,7 +216,7 @@ export function WorkspaceShell<T extends string>({
               >
                 <img src="/logo.png" alt="" aria-hidden="true" className="h-9 w-9 shrink-0 object-contain" />
                 {displayBrand && (
-                  <span className="truncate text-sm font-bold tracking-tight text-ink-900">
+                  <span className="truncate text-base font-bold tracking-tight text-ink-900">
                     {displayBrand}
                   </span>
                 )}
@@ -73,7 +225,7 @@ export function WorkspaceShell<T extends string>({
               <div className="flex items-center gap-3 min-w-0">
                 <img src="/logo.png" alt="" aria-hidden="true" className="h-9 w-9 shrink-0 object-contain" />
                 {displayBrand && (
-                  <span className="truncate text-sm font-bold tracking-tight text-ink-900">
+                  <span className="truncate text-base font-bold tracking-tight text-ink-900">
                     {displayBrand}
                   </span>
                 )}
@@ -99,7 +251,7 @@ export function WorkspaceShell<T extends string>({
                     {item.icon}
                     <span>{item.label}</span>
                     {item.badge !== undefined && item.badge > 0 && (
-                      <span className="rounded-full bg-brand-600 px-1.5 py-0.5 text-[11px] font-bold text-white leading-none">
+                      <span className="rounded-full bg-brand-600 px-1.5 py-0.5 text-xs font-bold text-white leading-none">
                         {item.badge}
                       </span>
                     )}
@@ -112,13 +264,13 @@ export function WorkspaceShell<T extends string>({
               {headerActions}
               {!hideDefaultAccountControls && (
                 <>
-                  <span className="hidden sm:inline-flex items-center rounded-full border border-border-subtle bg-slate-50 px-3 py-1.5 text-xs font-semibold text-ink-700">
+                  <span className="hidden sm:inline-flex items-center rounded-full border border-border-subtle bg-slate-50 px-3 py-1.5 text-sm font-semibold text-ink-700">
                     {userLabel}
                   </span>
                   <button
                     type="button"
                     onClick={onLogout}
-                    className="hidden sm:inline-flex items-center gap-1.5 rounded-xl border border-border-subtle bg-white px-3 py-2 text-xs font-semibold text-ink-700 hover:bg-slate-50 hover:text-ink-900 cursor-pointer"
+                    className="hidden sm:inline-flex items-center gap-1.5 rounded-xl border border-border-subtle bg-white px-3 py-2 text-sm font-semibold text-ink-700 hover:bg-slate-50 hover:text-ink-900 cursor-pointer"
                   >
                     <LogoutIcon size={15} />
                     <span>Đăng xuất</span>
@@ -180,12 +332,16 @@ export function WorkspaceShell<T extends string>({
         </header>
 
         <div className="flex-1 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-          <div className="mb-6 flex flex-col gap-2 pb-5 border-b border-border-subtle sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-brand-700 m-0 mb-1">{eyebrow}</p>
-              <h1 className="text-2xl font-bold tracking-tight text-ink-900 m-0">{title}</h1>
+          {(eyebrow || title) && (
+            <div className="mb-6 flex flex-col gap-2 pb-5 border-b border-border-subtle sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                {eyebrow && (
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-brand-700 m-0 mb-1">{eyebrow}</p>
+                )}
+                {title && <h1 className="text-2xl font-bold tracking-tight text-ink-900 m-0">{title}</h1>}
+              </div>
             </div>
-          </div>
+          )}
           <div className="space-y-6">{children}</div>
         </div>
       </div>
@@ -196,9 +352,9 @@ export function WorkspaceShell<T extends string>({
     <div className="min-h-screen min-w-[1024px] flex bg-canvas text-ink-900">
       <aside
         aria-label="Điều hướng không gian làm việc"
-        className="sticky top-0 h-screen w-64 shrink-0 overflow-y-auto border-r border-border-subtle bg-white flex flex-col justify-between p-4"
+        className="sticky top-0 h-screen w-64 shrink-0 border-r border-border-subtle bg-white flex flex-col justify-between p-4"
       >
-        <div className="space-y-6">
+        <div className="space-y-6 flex-1 min-h-0 overflow-y-auto">
           <div className="flex items-center justify-between px-2 pt-1">
             <div className="flex items-center gap-3 min-w-0">
               <img src="/logo.png" alt="" aria-hidden="true" className="h-9 w-9 shrink-0 object-contain" />
@@ -246,32 +402,15 @@ export function WorkspaceShell<T extends string>({
           </nav>
         </div>
 
-        <div className="pt-4 mt-4 border-t border-border-subtle space-y-3">
-          <div className="rounded-xl bg-slate-50 border border-border-subtle px-3 py-2.5">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-400 m-0">Tài khoản</p>
-            <p className="text-sm font-semibold text-ink-800 m-0 mt-0.5 truncate">{userLabel}</p>
-          </div>
-          <button
-            type="button"
-            onClick={onLogout}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-border-subtle bg-white px-3 py-2 text-xs font-semibold text-ink-700 hover:bg-slate-50 hover:text-ink-900 cursor-pointer"
-          >
-            <LogoutIcon size={15} />
-            <span>Đăng xuất</span>
-          </button>
-        </div>
+        <SidebarAccountMenu
+          userLabel={userLabel}
+          accountRoleLabel={accountRoleLabel}
+          accountMenuItems={accountMenuItems}
+          onLogout={onLogout}
+        />
       </aside>
 
       <div className="flex-1 min-w-0 flex flex-col">
-        <div className="border-b border-border-subtle bg-white/80 backdrop-blur-xs">
-          <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-8 py-4">
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-brand-700 m-0">{eyebrow}</p>
-              <h1 className="text-2xl font-bold tracking-tight text-ink-900 m-0 mt-0.5">{title}</h1>
-            </div>
-            {headerActions && <div className="flex flex-wrap items-center gap-2">{headerActions}</div>}
-          </div>
-        </div>
         <div className="flex-1 mx-auto w-full max-w-7xl px-8 py-6 space-y-6">
           {children}
         </div>

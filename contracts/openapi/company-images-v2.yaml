@@ -1,0 +1,82 @@
+openapi: 3.1.0
+info:
+  title: Company branding images
+  version: 2.0.0
+paths:
+  /api/v2/companies/{companyId}/images/{kind}:
+    post:
+      summary: Upload and save a company logo or cover image
+      description: >-
+        An active OWNER or COMPANY_ADMIN uploads a JPEG or PNG of at most 2 MiB and
+        4096 by 4096 pixels. The service validates and converts it to PNG, updates
+        the selected image immediately, and increments the company version.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CompanyId'
+        - $ref: '#/components/parameters/Kind'
+        - name: version
+          in: query
+          required: true
+          schema: { type: integer, format: int64, minimum: 0 }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        '200':
+          description: Updated company including logoUrl, coverImageUrl and version
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: company-approval-v2.yaml#/components/schemas/Company
+                  - type: object
+                    properties:
+                      logoUrl: { type: [string, 'null'] }
+                      coverImageUrl: { type: [string, 'null'] }
+        '400': { description: Invalid or oversized image }
+        '403': { description: Recruiter role required }
+        '404': { description: Company or image kind not found or user cannot manage it }
+        '409': { description: Stale company version }
+  /api/v2/public/companies/{companyId}/images/{kind}/{id}:
+    get:
+      summary: Read the current company image
+      description: Only the image currently referenced by this company and image kind can be retrieved.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/CompanyId'
+        - $ref: '#/components/parameters/Kind'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: PNG image
+          content:
+            image/png:
+              schema: { type: string, format: binary }
+        '404': { description: Company or current image not found }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    CompanyId:
+      name: companyId
+      in: path
+      required: true
+      schema: { type: string, pattern: '^[1-9][0-9]*$' }
+    Kind:
+      name: kind
+      in: path
+      required: true
+      schema: { type: string, enum: [logo, cover] }
