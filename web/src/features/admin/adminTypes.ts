@@ -44,7 +44,7 @@ export type Skill = {
 
 export type SkillCatalog = { version: number; taxonomyVersion: string; skills: Skill[] };
 export type Action = "CREATE" | "EDIT" | "APPROVE" | "REJECT" | "MERGE" | "DEFER" | "REOPEN";
-export type AdminTab = "categories" | "skills" | "audit" | "companies";
+export type AdminTab = "categories" | "skills" | "audit" | "companies" | "security";
 
 export type HistoryEntry = {
   id?: string | number;
@@ -63,20 +63,14 @@ export type HistoryEntry = {
   occurredAt?: string;
 };
 
-export const validAdminTabs: readonly AdminTab[] = ["categories", "skills", "audit", "companies"];
+export const validAdminTabs: readonly AdminTab[] = ["categories", "skills", "audit", "companies", "security"];
 
 export const adminRouteMap: Record<AdminTab, string> = {
   categories: "/admin",
   skills: "/admin/skills",
   audit: "/admin/audit",
-  companies: "/admin/companies"
-};
-
-export const adminPageTitle: Record<AdminTab, string> = {
-  categories: "Ngành nghề và vị trí",
-  skills: "Kỹ năng và tên gọi khác",
-  audit: "Nhật ký thay đổi",
-  companies: "Duyệt công ty"
+  companies: "/admin/companies",
+  security: "/admin/security"
 };
 
 export const catalogStatusLabel: Record<string, string> = {
@@ -97,6 +91,7 @@ export function resolveAdminTab(pathname: string, search: string): AdminTab {
   if (normalized === "/admin/skills") return "skills";
   if (normalized === "/admin/audit") return "audit";
   if (normalized === "/admin/companies") return "companies";
+  if (normalized === "/admin/security") return "security";
   return "categories";
 }
 

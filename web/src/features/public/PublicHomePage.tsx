@@ -1,5 +1,5 @@
 import { FC, ReactNode, useEffect, useRef, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigationType } from "react-router-dom";
 import { apiRequest } from "../../shared/api/client";
 import { PageResult } from "../../shared/api/pagination";
 import { AuthSession } from "../../shared/auth/session";
@@ -93,11 +93,17 @@ function PublicHomePageInner({ onLoginSuccess, session, candidate, children }: P
   const profileCompany = companies.find((company) => company.id === requestedCompanyId);
   const detailJob = selectedJob?.jobId === requestedJobId ? selectedJob : null;
   const authMode = params.get("auth") === "register" ? "register" : "login";
-  const authOpen = !session && (location.pathname === routes.login || location.pathname === routes.acceptInvitation || params.has("auth"));
+  const isProtectedPath = /^\/(candidate|recruiter|admin)(\/|$)/.test(location.pathname);
+  const authOpen =
+    !session &&
+    (location.pathname === routes.login ||
+      location.pathname === routes.acceptInvitation ||
+      isProtectedPath ||
+      params.has("auth"));
   const accountOpen = !!candidate && candidate.activeView !== "jobs";
 
   function closeAuth() {
-    if (location.pathname === routes.login) {
+    if (location.pathname === routes.login || isProtectedPath) {
       safeNavigate(routes.home);
       return;
     }
@@ -107,11 +113,21 @@ function PublicHomePageInner({ onLoginSuccess, session, candidate, children }: P
   const [companiesError, setCompaniesError] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [detailError, setDetailError] = useState(false);
+  const [applicationRefreshKey, setApplicationRefreshKey] = useState(0);
+  const [authAccountType, setAuthAccountType] = useState<"CANDIDATE" | "RECRUITER">("CANDIDATE");
+  const [portalNotice, setPortalNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (session && params.has("auth")) {
+      navigate({ auth: null }, true);
+    }
+  }, [session, params, navigate]);
   const [applyingJob, setApplyingJob] = useState<PublicJob | null>(null);
   const [demoAccount, setDemoAccount] = useState({ email: "", revision: 0 });
   const [applicationJobId, setApplicationJobId] = useState<string | null>(() =>
     session ? getPendingJobId() : null
   );
+  const [applicationCv, setApplicationCv] = useState<{ cvId: string; cvVersionId?: string } | null>(null);
   const [applicationMessage, setApplicationMessage] = useState<string | null>(null);
 
   const loadedAttemptRef = useRef<number | null>(null);
@@ -191,14 +207,26 @@ function PublicHomePageInner({ onLoginSuccess, session, candidate, children }: P
   function selectDemoAccount(role: "CANDIDATE" | "RECRUITER") {
     const email = role === "CANDIDATE" ? "candidate.demo@smart.local" : "recruiter.demo@smart.local";
     setDemoAccount((current) => ({ email, revision: current.revision + 1 }));
-    handleOpenAuth();
+    handleOpenAuth("login", role);
   }
 
-  function handleOpenAuth(mode: "login" | "register" = "login") {
+  function handleOpenAuth(
+    mode: "login" | "register" = "login",
+    accountType: "CANDIDATE" | "RECRUITER" = "CANDIDATE"
+  ) {
+    setPortalNotice(null);
     if (candidate) {
+      if (accountType === "RECRUITER") {
+        setPortalNotice(
+          "Tính năng đăng tin và quản lý ứng viên dành cho tài khoản Nhà tuyển dụng. Hãy đăng xuất ở góc trên bên phải nếu bạn muốn dùng tài khoản Nhà tuyển dụng."
+        );
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
       candidate.onNavigate("cv");
       return;
     }
+    setAuthAccountType(accountType);
     navigate({ auth: mode });
   }
 
@@ -212,15 +240,17 @@ function PublicHomePageInner({ onLoginSuccess, session, candidate, children }: P
     window.scrollTo({ top: 0, behavior: "instant" });
   }
 
-  function handleApplyJob(job: PublicJob) {
+  function handleApplyJob(job: PublicJob, preferredCv?: { cvId: string; cvVersionId?: string }) {
     setSelectedJob(job);
     setApplicationMessage(null);
     if (session) {
+      setApplicationCv(preferredCv ?? null);
       setApplicationJobId(job.jobId);
       const qs = buildPreservedQuery(params);
       safeNavigate(`${routes.jobDetail(job.jobId)}${qs}`);
       return;
     }
+    setApplicationCv(null);
     setApplyingJob(job);
     setPendingJobId(job.jobId);
     const qs = new URLSearchParams(buildPreservedQuery(params));
@@ -262,24 +292,15 @@ function PublicHomePageInner({ onLoginSuccess, session, candidate, children }: P
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  function handleBackFromJob(fromJobId?: string) {
-    const cameFromSearch = activeTab === "search" && !companyPageOpen;
-    if (fromJobId && cameFromSearch) {
-      setRestoreFocusJobId(fromJobId);
-    } else {
-      setRestoreFocusJobId(null);
+  const navigationType = useNavigationType();
+  const prevRequestedJobIdRef = useRef(requestedJobId);
+  useEffect(() => {
+    const previousJobId = prevRequestedJobIdRef.current;
+    prevRequestedJobIdRef.current = requestedJobId;
+    if (previousJobId && !requestedJobId && navigationType === "POP" && activeTab === "search" && !companyPageOpen) {
+      setRestoreFocusJobId(previousJobId);
     }
-
-    if (companyPageOpen && requestedCompanyId) {
-      safeNavigate(routes.companyProfile(requestedCompanyId));
-    } else if (cameFromSearch) {
-      const qs = buildPreservedQuery(params);
-      safeNavigate(`${routes.jobs}${qs}`);
-    } else {
-      safeNavigate(routes.home);
-    }
-    window.scrollTo({ top: 0, behavior: "instant" });
-  }
+  }, [requestedJobId, navigationType, activeTab, companyPageOpen]);
 
   useEffect(() => {
     let active = true;
@@ -330,6 +351,24 @@ function PublicHomePageInner({ onLoginSuccess, session, candidate, children }: P
       />
 
       <div className="flex-1">
+        {portalNotice && (
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-4">
+            <div
+              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+              role="status"
+            >
+              <span>{portalNotice}</span>
+              <button
+                type="button"
+                aria-label="Đóng thông báo vai trò"
+                onClick={() => setPortalNotice(null)}
+                className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-amber-800 hover:bg-amber-100 cursor-pointer bg-transparent border-0"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        )}
         {applicationMessage && (
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-4">
             <div
@@ -361,11 +400,6 @@ function PublicHomePageInner({ onLoginSuccess, session, candidate, children }: P
 
         {accountOpen ? (
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 space-y-5">
-            <div>
-              <Button type="button" variant="secondary" size="md" onClick={() => candidate?.onNavigate("jobs")}>
-                <span aria-hidden="true">←</span> Quay lại trang chủ việc làm
-              </Button>
-            </div>
             {children}
           </div>
         ) : (
@@ -403,18 +437,22 @@ function PublicHomePageInner({ onLoginSuccess, session, candidate, children }: P
               companies={companies}
               restoreFocusJobId={restoreFocusJobId}
               onClearRestoreFocus={() => setRestoreFocusJobId(null)}
-              onBackFromJob={handleBackFromJob}
               onApplyJob={handleApplyJob}
               onSelectJob={handleSelectJob}
               onOpenCompany={openCompany}
               onOpenSearch={openSearch}
               onOpenAuth={handleOpenAuth}
               onOpenCvLibrary={() => candidate?.onNavigate("cv")}
+              applicationRefreshKey={applicationRefreshKey}
+              onViewApplication={(applicationId) =>
+                safeNavigate(`${routes.candidate.applications}?application=${encodeURIComponent(applicationId)}`)
+              }
             />
 
             <PublicAuthModal
               open={authOpen}
               authMode={authMode}
+              initialAccountType={authAccountType}
               demoAccount={demoAccount}
               applyingJob={applyingJob}
               onClose={closeAuth}
@@ -428,14 +466,26 @@ function PublicHomePageInner({ onLoginSuccess, session, candidate, children }: P
 
       {session && applicationJobId && (
         <CandidateJobsPanel
-          key={applicationJobId}
+          key={`${applicationJobId}:${applicationCv?.cvId ?? ""}:${applicationCv?.cvVersionId ?? ""}`}
           session={session}
           initialJobId={applicationJobId}
+          initialCvId={applicationCv?.cvId}
+          initialCvVersionId={applicationCv?.cvVersionId}
           dialogOnly
-          onClose={() => setApplicationJobId(null)}
+          onOpenCvLibrary={() => {
+            setApplicationJobId(null);
+            setApplicationCv(null);
+            candidate?.onNavigate("cv");
+          }}
+          onClose={() => {
+            setApplicationJobId(null);
+            setApplicationCv(null);
+          }}
           onApplied={(message) => {
             setApplicationJobId(null);
+            setApplicationCv(null);
             setApplicationMessage(message);
+            setApplicationRefreshKey((value) => value + 1);
           }}
         />
       )}

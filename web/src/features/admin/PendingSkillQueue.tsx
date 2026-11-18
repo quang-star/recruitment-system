@@ -284,7 +284,7 @@ export function PendingSkillQueue({
               <table className="w-full border-collapse text-left text-sm">
                 <caption className="sr-only">Đề xuất kỹ năng</caption>
                 <thead className="sticky top-0 z-10 bg-slate-50 shadow-[0_1px_0_0_var(--color-border-subtle)]">
-                  <tr className="text-[11px] font-semibold uppercase tracking-wider text-ink-500">
+                  <tr className="text-xs font-semibold uppercase tracking-wider text-ink-500">
                     <th className="px-4 py-2.5">Thuật ngữ</th>
                     <th className="px-3 py-2.5">Trạng thái</th>
                     <th className="px-4 py-2.5">Ghi nhận / nguồn</th>
@@ -317,7 +317,7 @@ export function PendingSkillQueue({
                           <small className="mt-0.5 block text-xs text-ink-600">
                             {typeLabel} · {catLabel}
                           </small>
-                          <small className="mt-0.5 block text-[11px] text-ink-500">
+                          <small className="mt-0.5 block text-xs text-ink-500">
                             Đầu tiên: {dateLabel(item.firstSeen)} · Gần nhất: {dateLabel(item.lastSeen)}
                           </small>
                         </td>

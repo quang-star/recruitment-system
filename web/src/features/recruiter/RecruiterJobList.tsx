@@ -1,7 +1,18 @@
-import { ReactNode } from "react";
-import { JobsIcon, SearchIcon } from "../../shared/components/Icon";
+import {
+  BanknoteIcon,
+  BarChartIcon,
+  CompanyIcon,
+  JobsIcon,
+  MapPinIcon,
+  PencilIcon,
+  SearchIcon,
+  TagIcon,
+  UsersIcon
+} from "../../shared/components/Icon";
 import { PageControls } from "../../shared/components/PageControls";
+import { richTextToPlainText } from "../../shared/components/RichTextEditor";
 import { Badge, Button, Card, EmptyState, ErrorBanner, Skeleton, cn } from "../../shared/ui";
+import { workModeLabel } from "../public/jobPresentation";
 import { CategoryFilterValue, JobCategoryFilter } from "./JobCategoryFilter";
 import {
   extractJobSkills,
@@ -20,9 +31,17 @@ type JobListPaging = {
   refresh: () => void;
 };
 
+type CompanyJobCounts = {
+  jobs?: number;
+  publishedJobs?: number;
+  draftJobs?: number;
+  closedJobs?: number;
+};
+
 type Props = {
   jobs: Job[];
   paging: JobListPaging;
+  companyCounts?: CompanyJobCounts | null;
   canRecruit: boolean;
   canPublish: boolean;
   jobSearch: string;
@@ -51,23 +70,16 @@ function KpiTile({ label, value, tone }: { label: string; value: number; tone?: 
           : "border-border-subtle bg-white text-ink-900";
   return (
     <div className={cn("rounded-xl border px-4 py-3.5 shadow-xs", toneClass)}>
-      <span className="block text-[11px] font-semibold uppercase tracking-wider text-ink-500">{label}</span>
+      <span className="block text-xs font-semibold uppercase tracking-wider text-ink-500">{label}</span>
       <strong className="mt-1 block text-2xl font-bold tabular-nums-kpi">{value}</strong>
     </div>
-  );
-}
-
-function MetaChip({ children }: { children: ReactNode }) {
-  return (
-    <span className="inline-flex items-center gap-1 rounded-lg border border-border-subtle bg-slate-50 px-2.5 py-1 text-xs font-medium text-ink-700">
-      {children}
-    </span>
   );
 }
 
 export function RecruiterJobList({
   jobs,
   paging,
+  companyCounts,
   canRecruit,
   canPublish,
   jobSearch,
@@ -104,10 +116,10 @@ export function RecruiterJobList({
       </header>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <KpiTile label="TỔNG TIN TUYỂN DỤNG" value={paging.total} />
-        <KpiTile label="ĐANG ĐĂNG TUYỂN" value={jobs.filter((j) => j.status === "PUBLISHED").length} tone="success" />
-        <KpiTile label="BẢN NHÁP" value={jobs.filter((j) => j.status === "DRAFT").length} tone="warning" />
-        <KpiTile label="ĐÃ ĐÓNG" value={jobs.filter((j) => j.status === "CLOSED").length} tone="muted" />
+        <KpiTile label="TỔNG TIN TUYỂN DỤNG" value={companyCounts?.jobs ?? paging.total} />
+        <KpiTile label="ĐANG ĐĂNG TUYỂN" value={companyCounts?.publishedJobs ?? jobs.filter((j) => j.status === "PUBLISHED").length} tone="success" />
+        <KpiTile label="BẢN NHÁP" value={companyCounts?.draftJobs ?? jobs.filter((j) => j.status === "DRAFT").length} tone="warning" />
+        <KpiTile label="ĐÃ ĐÓNG" value={companyCounts?.closedJobs ?? jobs.filter((j) => j.status === "CLOSED").length} tone="muted" />
       </div>
 
       <Card padding="md" className="space-y-4">
@@ -229,21 +241,30 @@ export function RecruiterJobList({
             return (
               <article
                 key={job.jobId}
-                className="ats-job-card-rich flex flex-col justify-between rounded-2xl border border-border-subtle bg-white p-5 shadow-card transition-all hover:border-brand-300 hover:shadow-card-hover gap-4"
+                className="ats-job-card-rich group flex flex-col justify-between rounded-xl border border-border-subtle bg-white p-5 shadow-card transition-all hover:border-brand-300 hover:shadow-card-hover gap-4"
               >
                 <div className="space-y-3">
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div className="space-y-1.5 min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-1.5">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Badge tone={isPublished ? "success" : isDraft ? "warning" : "neutral"}>
-                          {isPublished ? "🟢 Đang tuyển" : isDraft ? "🟡 Bản nháp" : "⚪ Đã đóng"}
+                          <span
+                            className={cn(
+                              "h-1.5 w-1.5 rounded-full shrink-0",
+                              isPublished ? "bg-emerald-600" : isDraft ? "bg-amber-600" : "bg-slate-400"
+                            )}
+                            aria-hidden="true"
+                          />
+                          <span>{isPublished ? "Đang tuyển" : isDraft ? "Bản nháp" : "Đã đóng"}</span>
                         </Badge>
-                        <Badge tone="neutral">v{job.jobVersionNumber}</Badge>
-                        {job.matchingSupported === false && <Badge tone="info">Review thủ công</Badge>}
+                        {job.matchingSupported === false && <Badge tone="info">Sàng lọc thủ công</Badge>}
+                        <span className="text-[11px] font-medium text-ink-400 tabular-nums-kpi">
+                          v{job.jobVersionNumber}
+                        </span>
                       </div>
                       <button
                         type="button"
-                        className="job-card-title-link block text-left text-base font-bold text-ink-900 hover:text-brand-700 cursor-pointer"
+                        className="job-card-title-link block bg-transparent border-0 p-0 text-left text-base font-bold text-ink-900 hover:text-brand-700 leading-snug cursor-pointer"
                         onClick={() => onSelectJob(job, "pipeline")}
                       >
                         <strong>{job.title}</strong>
@@ -262,7 +283,7 @@ export function RecruiterJobList({
                             onChangeState(job, "publish");
                           }}
                         >
-                          🚀 Đăng tin
+                          Đăng tin
                         </Button>
                       )}
                       {canRecruit && isPublished && (
@@ -275,45 +296,74 @@ export function RecruiterJobList({
                             onChangeState(job, "close");
                           }}
                         >
-                          🛑 Đóng tin
+                          Đóng tin
                         </Button>
                       )}
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-1.5">
-                    <MetaChip>📍 {job.locationText ?? "Linh hoạt"}</MetaChip>
-                    <MetaChip>🏢 {job.workMode ?? "Toàn thời gian"}</MetaChip>
-                    <MetaChip>🎯 {job.openings} chỉ tiêu</MetaChip>
-                    {formattedSalary && <MetaChip>💰 {formattedSalary}</MetaChip>}
-                    {job.category?.industryName && <MetaChip>🏷️ {job.category.industryName}</MetaChip>}
+                  <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-xs text-ink-600">
+                    <span className="inline-flex items-center gap-1.5">
+                      <MapPinIcon size={14} className="text-ink-400 shrink-0" aria-hidden="true" />
+                      <span>{job.locationText ?? "Linh hoạt"}</span>
+                    </span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <CompanyIcon size={14} className="text-ink-400 shrink-0" aria-hidden="true" />
+                      <span>{workModeLabel(job.workMode)}</span>
+                    </span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <UsersIcon size={14} className="text-ink-400 shrink-0" aria-hidden="true" />
+                      <span>{job.openings} chỉ tiêu</span>
+                    </span>
+                    {formattedSalary && (
+                      <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-700">
+                        <BanknoteIcon size={14} className="text-emerald-600 shrink-0" aria-hidden="true" />
+                        <span>{formattedSalary}</span>
+                      </span>
+                    )}
+                    {job.category?.industryName && (
+                      <span className="inline-flex items-center gap-1.5">
+                        <TagIcon size={14} className="text-ink-400 shrink-0" aria-hidden="true" />
+                        <span>{job.category.industryName}</span>
+                      </span>
+                    )}
                   </div>
 
                   {job.description && (
-                    <p className="text-xs text-ink-600 line-clamp-2 leading-relaxed m-0">{job.description}</p>
+                    <p className="text-[13px] text-ink-500 line-clamp-2 leading-relaxed m-0">
+                      {richTextToPlainText(job.description)}
+                    </p>
                   )}
 
                   {skills.length > 0 && (
                     <div className="flex flex-wrap gap-1.5">
                       {skills.slice(0, 5).map((s) => (
-                        <Badge key={s} tone="brand">
+                        <span
+                          key={s}
+                          className="rounded-md border border-border-subtle bg-slate-50 px-2 py-0.5 text-xs font-medium text-ink-700"
+                        >
                           {s}
-                        </Badge>
+                        </span>
                       ))}
                     </div>
                   )}
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2 border-t border-border-subtle pt-3">
-                  <Button variant="primary" size="sm" onClick={() => onSelectJob(job, "pipeline")}>
-                    👥 Ứng viên &amp; Pipeline
+                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border-subtle pt-3">
+                  <Button variant="subtle" size="sm" onClick={() => onSelectJob(job, "pipeline")}>
+                    <UsersIcon size={14} aria-hidden="true" />
+                    <span>Ứng viên &amp; Pipeline</span>
                   </Button>
-                  <Button variant="secondary" size="sm" onClick={() => onSelectJob(job, "analytics")}>
-                    📊 Thống kê
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => onSelectJob(job, "editor")}>
-                    ✏️ Chi tiết tin
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="sm" onClick={() => onSelectJob(job, "analytics")}>
+                      <BarChartIcon size={14} aria-hidden="true" />
+                      <span>Thống kê</span>
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => onSelectJob(job, "editor")}>
+                      <PencilIcon size={14} aria-hidden="true" />
+                      <span>Chi tiết tin</span>
+                    </Button>
+                  </div>
                 </div>
               </article>
             );

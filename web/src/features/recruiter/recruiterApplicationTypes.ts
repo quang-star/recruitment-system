@@ -32,10 +32,10 @@ export type StatusChange = {
 };
 
 export type PipelineStage = {
-  key: "SUBMITTED" | "UNDER_REVIEW" | "SHORTLISTED" | "INTERVIEW" | "OFFERED" | "HIRED" | "REJECTED";
+  key: "SUBMITTED" | "UNDER_REVIEW" | "SHORTLISTED" | "REJECTED";
   label: string;
-  icon: string;
   topBorderClass: string;
+  iconColorClass: string;
   countClass: string;
 };
 
@@ -43,50 +43,29 @@ export const PIPELINE_STAGES: PipelineStage[] = [
   {
     key: "SUBMITTED",
     label: "Mới ứng tuyển",
-    icon: "📥",
     topBorderClass: "border-t-sky-500",
+    iconColorClass: "text-sky-600",
     countClass: "bg-sky-50 text-sky-700 border-sky-200"
   },
   {
     key: "UNDER_REVIEW",
     label: "Đang xem xét",
-    icon: "🔍",
     topBorderClass: "border-t-amber-500",
+    iconColorClass: "text-amber-600",
     countClass: "bg-amber-50 text-amber-800 border-amber-200"
   },
   {
     key: "SHORTLISTED",
     label: "Danh sách rút gọn",
-    icon: "⭐",
     topBorderClass: "border-t-emerald-600",
+    iconColorClass: "text-emerald-600",
     countClass: "bg-emerald-50 text-emerald-700 border-emerald-200"
-  },
-  {
-    key: "INTERVIEW",
-    label: "Đang phỏng vấn",
-    icon: "💬",
-    topBorderClass: "border-t-violet-500",
-    countClass: "bg-violet-50 text-violet-700 border-violet-200"
-  },
-  {
-    key: "OFFERED",
-    label: "Đã gửi đề nghị",
-    icon: "✉️",
-    topBorderClass: "border-t-orange-500",
-    countClass: "bg-orange-50 text-orange-700 border-orange-200"
-  },
-  {
-    key: "HIRED",
-    label: "Đã tuyển dụng",
-    icon: "✅",
-    topBorderClass: "border-t-green-600",
-    countClass: "bg-green-50 text-green-700 border-green-200"
   },
   {
     key: "REJECTED",
     label: "Đã từ chối",
-    icon: "🚫",
     topBorderClass: "border-t-slate-400",
+    iconColorClass: "text-ink-500",
     countClass: "bg-slate-100 text-ink-700 border-slate-200"
   }
 ];
@@ -96,10 +75,8 @@ export const STAGE_PILLS = [
   { value: "SUBMITTED", label: "Mới nộp" },
   { value: "UNDER_REVIEW", label: "Đang xem xét" },
   { value: "SHORTLISTED", label: "Shortlist" },
-  { value: "INTERVIEW", label: "Phỏng vấn" },
-  { value: "OFFERED", label: "Đề nghị tuyển dụng" },
-  { value: "HIRED", label: "Đã tuyển dụng" },
-  { value: "REJECTED", label: "Đã từ chối" }
+  { value: "REJECTED", label: "Đã từ chối" },
+  { value: "WITHDRAWN", label: "Đã rút" }
 ];
 
 export const controlClass =
@@ -143,11 +120,16 @@ export type RecruiterTransition = Exclude<PipelineStage["key"], "SUBMITTED" | "R
 
 export const nextRecruitmentStage: Partial<Record<string, RecruiterTransition>> = {
   SUBMITTED: "UNDER_REVIEW",
-  UNDER_REVIEW: "SHORTLISTED",
-  SHORTLISTED: "INTERVIEW",
-  INTERVIEW: "OFFERED",
-  OFFERED: "HIRED"
+  UNDER_REVIEW: "SHORTLISTED"
 };
+
+export function screeningStageFor(status: string): string {
+  return ["INTERVIEW", "OFFERED", "HIRED"].includes(status) ? "SHORTLISTED" : status;
+}
+
+export function canRejectApplication(status: string): boolean {
+  return ["SUBMITTED", "UNDER_REVIEW", "SHORTLISTED", "INTERVIEW", "OFFERED"].includes(status);
+}
 
 export function getErrorMessage(error: unknown): string {
   return error instanceof ApiClientError ? error.error.message : "Không thể tải danh sách ứng viên.";

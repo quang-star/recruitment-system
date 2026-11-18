@@ -31,13 +31,14 @@ export function PublicHomeViews({
   companies,
   restoreFocusJobId,
   onClearRestoreFocus,
-  onBackFromJob,
   onApplyJob,
   onSelectJob,
   onOpenCompany,
   onOpenSearch,
   onOpenAuth,
-  onOpenCvLibrary
+  onOpenCvLibrary,
+  onViewApplication,
+  applicationRefreshKey
 }: {
   session?: AuthSession;
   activeTab: ActiveNavTab;
@@ -54,8 +55,7 @@ export function PublicHomeViews({
   companies: CompanyInfo[];
   restoreFocusJobId: string | null;
   onClearRestoreFocus: () => void;
-  onBackFromJob: (fromJobId?: string) => void;
-  onApplyJob: (job: PublicJob) => void;
+  onApplyJob: (job: PublicJob, preferredCv?: { cvId: string; cvVersionId?: string }) => void;
   onSelectJob: (job: PublicJob) => void;
   onOpenCompany: (companyId: string) => void;
   onOpenSearch: (
@@ -66,6 +66,8 @@ export function PublicHomeViews({
   ) => void;
   onOpenAuth: (mode?: "login" | "register") => void;
   onOpenCvLibrary: () => void;
+  onViewApplication?: (applicationId: string) => void;
+  applicationRefreshKey?: number;
 }) {
   return (
     <>
@@ -78,11 +80,6 @@ export function PublicHomeViews({
             >
               <h1 className="text-xl font-bold text-ink-900 m-0">Không mở được vị trí này</h1>
               <p className="text-sm text-ink-500 m-0">Tin có thể đã ngừng tuyển hoặc tạm thời chưa tải được.</p>
-              <div>
-                <Button type="button" variant="secondary" onClick={() => onBackFromJob()}>
-                  Quay lại danh sách
-                </Button>
-              </div>
             </section>
           </div>
         ) : detailJob ? (
@@ -90,12 +87,13 @@ export function PublicHomeViews({
             job={detailJob}
             company={companies.find((company) => company.id === detailJob.companyId)}
             session={session}
-            onBack={() => onBackFromJob(detailJob.jobId)}
             onApply={onApplyJob}
             onSelectJob={onSelectJob}
             onViewCompany={onOpenCompany}
             onRequireLogin={() => onOpenAuth("login")}
             onOpenCvLibrary={onOpenCvLibrary}
+            onViewApplication={onViewApplication}
+            applicationRefreshKey={applicationRefreshKey}
           />
         ) : (
           <div className="mx-auto max-w-4xl px-4 py-12">
@@ -114,7 +112,6 @@ export function PublicHomeViews({
           <CompanyProfilePage
             key={profileCompany.id}
             company={profileCompany}
-            onBack={() => onOpenCompany("")}
             onSelectJob={onSelectJob}
           />
         ) : loadingJobs ? (

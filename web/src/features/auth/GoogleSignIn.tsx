@@ -6,9 +6,16 @@ import { loadGoogleIdentity } from "../../shared/auth/google";
 type Props = {
   onCredential: (credential: string, nonce: string) => Promise<void>;
   disabled?: boolean;
+  promptText?: string;
+  showTopDivider?: boolean;
 };
 
-export function GoogleSignIn({ onCredential, disabled = false }: Props) {
+export function GoogleSignIn({
+  onCredential,
+  disabled = false,
+  promptText = "Hoặc tiếp tục với Google",
+  showTopDivider = true
+}: Props) {
   const container = useRef<HTMLDivElement>(null);
   const callback = useRef(onCredential);
   const blocked = useRef(disabled);
@@ -74,8 +81,14 @@ export function GoogleSignIn({ onCredential, disabled = false }: Props) {
 
   if (status === "disabled") return null;
   return (
-    <div className="mt-5 pt-4 border-t border-border-subtle flex flex-col items-center gap-3 text-center">
-      <p className="text-xs font-medium text-ink-500 m-0">Hoặc tiếp tục với Google</p>
+    <div
+      className={
+        showTopDivider
+          ? "mt-5 pt-4 border-t border-border-subtle flex flex-col items-center gap-3 text-center"
+          : "pt-1 flex flex-col items-center gap-3 text-center"
+      }
+    >
+      <p className="text-xs font-medium text-ink-500 m-0">{promptText}</p>
       <div
         ref={container}
         hidden={status !== "ready"}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { apiRequest } from "../../shared/api/client";
-import { Button, Card, Skeleton, cn } from "../../shared/ui";
+import { ApiClientError, apiRequest } from "../../shared/api/client";
+import { BarChartIcon, ClockIcon, StarIcon, UsersIcon } from "../../shared/components/Icon";
+import { Button, Card, ErrorBanner, Skeleton, cn } from "../../shared/ui";
 
 type Props = {
   jobId: string;
@@ -10,82 +11,104 @@ type Props = {
   onOpenPipeline: () => void;
 };
 
+type JobAnalyticsResponse = {
+  total: number;
+  pending: number;
+  currentSubmitted: number;
+  currentUnderReview: number;
+  reachedUnderReview: number;
+  reachedShortlisted: number;
+  rejected: number;
+  withdrawn: number;
+};
+
 function pct(part: number, total: number): number {
   return total > 0 ? Math.round((part / total) * 100) : 0;
 }
 
 export function RecruiterJobAnalytics({ jobId, jobTitle, openings, accessToken, onOpenPipeline }: Props) {
-  const [apps, setApps] = useState<Array<{ applicationId: string; status: string; appliedAt: string }>>([]);
+  const [analytics, setAnalytics] = useState<JobAnalyticsResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let active = true;
-    apiRequest<{ items: Array<{ applicationId: string; status: string; appliedAt: string }>; total: number }>(
-      `/api/v2/recruiter/applications?jobId=${jobId}&page=0&size=100`,
-      { accessToken }
-    )
+    setLoading(true);
+    setError(null);
+    apiRequest<JobAnalyticsResponse>(`/api/v2/jobs/${encodeURIComponent(jobId)}/analytics`, { accessToken })
       .then((data) => {
-        if (active) setApps(data.items);
+        if (active) setAnalytics(data);
       })
-      .catch(() => {})
+      .catch((failure) => {
+        if (active) {
+          setAnalytics(null);
+          setError(
+            failure instanceof ApiClientError
+              ? failure.error.message
+              : "Không tải được báo cáo thống kê. Vui lòng thử lại."
+          );
+        }
+      })
       .finally(() => {
         if (active) setLoading(false);
       });
     return () => {
       active = false;
     };
-  }, [jobId, accessToken]);
+  }, [jobId, accessToken, attempt]);
 
-  const total = apps.length;
-  const submitted = apps.filter((a) => a.status === "SUBMITTED").length;
-  const underReview = apps.filter((a) => a.status === "UNDER_REVIEW").length;
-  const shortlisted = apps.filter((a) => a.status === "SHORTLISTED").length;
-  const rejected = apps.filter((a) => a.status === "REJECTED").length;
-  const interviews = apps.filter((a) => a.status === "INTERVIEW").length;
-  const offered = apps.filter((a) => a.status === "OFFERED").length;
-  const hired = apps.filter((a) => a.status === "HIRED").length;
-  const conversionRate = pct(shortlisted, total);
-  const pending = submitted + underReview;
+  const total = analytics?.total ?? 0;
+  const submitted = analytics?.currentSubmitted ?? 0;
+  const underReview = analytics?.currentUnderReview ?? 0;
+  const pending = analytics?.pending ?? 0;
+  const reachedUnderReview = analytics?.reachedUnderReview ?? 0;
+  const reachedShortlisted = analytics?.reachedShortlisted ?? 0;
+  const rejected = analytics?.rejected ?? 0;
+  const withdrawn = analytics?.withdrawn ?? 0;
+  const conversionRate = pct(reachedShortlisted, total);
 
   const kpis = [
     {
-      icon: "👥",
+      icon: <UsersIcon size={16} />,
+      iconClass: "text-ink-500",
       value: total,
       label: "Tổng hồ sơ nộp",
       sub: `${openings} chỉ tiêu tuyển`,
       toneClass: "border-border-subtle bg-white"
     },
     {
-      icon: "⚡",
+      icon: <ClockIcon size={16} />,
+      iconClass: "text-amber-600",
       value: pending,
       label: "Chờ xử lý",
       sub: `${submitted} mới, ${underReview} xem xét`,
       toneClass: "border-amber-200/80 bg-amber-50/40"
     },
     {
-      icon: "⭐",
-      value: shortlisted,
+      icon: <StarIcon size={16} />,
+      iconClass: "text-emerald-600",
+      value: reachedShortlisted,
       label: "Vào Shortlist",
       sub: `Tỷ lệ: ${conversionRate}%`,
       toneClass: "border-emerald-200/80 bg-emerald-50/40"
     },
     {
-      icon: "📊",
+      icon: <BarChartIcon size={16} />,
+      iconClass: "text-ink-500",
       value: total > 0 ? (total / Math.max(1, openings)).toFixed(1) : "0",
       label: "Ứng viên / chỉ tiêu",
-      sub: `${rejected} hồ sơ từ chối`,
+      sub: `${rejected} từ chối · ${withdrawn} đã rút`,
       toneClass: "border-slate-200 bg-slate-50/70"
     }
   ];
 
   const steps = [
-    { num: 1, name: "Mới nộp", val: submitted, rate: pct(submitted, total), barClass: "bg-sky-500" },
-    { num: 2, name: "Đang xem xét", val: underReview, rate: pct(underReview, total), barClass: "bg-amber-500" },
-    { num: 3, name: "Shortlist", val: shortlisted, rate: conversionRate, barClass: "bg-emerald-500" },
-    { num: 4, name: "Phỏng vấn", val: interviews, rate: pct(interviews, total), barClass: "bg-violet-500" },
-    { num: 5, name: "Đề nghị tuyển dụng", val: offered, rate: pct(offered, total), barClass: "bg-orange-500" },
-    { num: 6, name: "Đã tuyển dụng", val: hired, rate: pct(hired, total), barClass: "bg-green-600" },
-    { num: 7, name: "Từ chối", val: rejected, rate: pct(rejected, total), barClass: "bg-slate-400" }
+    { num: 1, name: "Đã nộp hồ sơ", val: total, rate: total > 0 ? 100 : 0, barClass: "bg-sky-500" },
+    { num: 2, name: "Qua sơ loại", val: reachedUnderReview, rate: pct(reachedUnderReview, total), barClass: "bg-amber-500" },
+    { num: 3, name: "Vào Shortlist", val: reachedShortlisted, rate: conversionRate, barClass: "bg-emerald-500" },
+    { num: 4, name: "Đã từ chối", val: rejected, rate: pct(rejected, total), barClass: "bg-slate-400" },
+    { num: 5, name: "Ứng viên rút", val: withdrawn, rate: pct(withdrawn, total), barClass: "bg-rose-300" }
   ];
 
   return (
@@ -107,47 +130,62 @@ export function RecruiterJobAnalytics({ jobId, jobTitle, openings, accessToken, 
           <Skeleton className="h-24" />
           <Skeleton className="h-24" />
         </div>
+      ) : error ? (
+        <ErrorBanner
+          tone="error"
+          message={error}
+          action={
+            <Button type="button" size="sm" variant="secondary" onClick={() => setAttempt((v) => v + 1)}>
+              Thử lại
+            </Button>
+          }
+        />
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {kpis.map((item) => (
-            <div key={item.label} className={cn("rounded-2xl border p-4 space-y-2 shadow-xs", item.toneClass)}>
-              <div className="flex items-center justify-between">
-                <span className="text-lg" aria-hidden="true">
-                  {item.icon}
-                </span>
-                <span className="text-xs font-medium text-ink-500">{item.sub}</span>
+        <>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {kpis.map((item) => (
+              <div key={item.label} className={cn("rounded-xl border p-4 space-y-2 shadow-xs", item.toneClass)}>
+                <div className="flex items-center justify-between gap-2">
+                  <span className={cn("inline-flex items-center", item.iconClass)} aria-hidden="true">
+                    {item.icon}
+                  </span>
+                  <span className="text-xs font-medium text-ink-500">{item.sub}</span>
+                </div>
+                <div>
+                  <strong className="block text-2xl font-bold text-ink-900 tabular-nums-kpi">{item.value}</strong>
+                  <p className="text-xs font-semibold text-ink-700 m-0 mt-0.5">{item.label}</p>
+                </div>
               </div>
-              <div>
-                <strong className="block text-2xl font-bold text-ink-900 tabular-nums-kpi">{item.value}</strong>
-                <p className="text-xs font-semibold text-ink-700 m-0 mt-0.5">{item.label}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
 
-      <div className="rounded-2xl border border-border-subtle bg-slate-50/70 p-4 space-y-3">
-        <h4 className="text-sm font-bold text-ink-900 m-0">Phễu chuyển đổi ứng viên</h4>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {steps.map((step) => (
-            <div key={step.num} className="rounded-xl border border-border-subtle bg-white p-3.5 space-y-2">
-              <div className="flex items-center gap-2 text-xs font-semibold text-ink-600">
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-[11px] font-bold text-ink-800">
-                  {step.num}
-                </span>
-                <span>{step.name}</span>
-              </div>
-              <div className="flex items-baseline justify-between">
-                <strong className="text-xl font-bold text-ink-900 tabular-nums-kpi">{step.val}</strong>
-                <small className="text-xs font-medium text-ink-500 tabular-nums-kpi">{step.rate}%</small>
-              </div>
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
-                <div className={`h-full rounded-full ${step.barClass}`} style={{ width: `${step.rate}%` }} />
-              </div>
+          <div className="rounded-2xl border border-border-subtle bg-slate-50/70 p-4 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h4 className="text-sm font-bold text-ink-900 m-0">Phễu chuyển đổi ứng viên</h4>
+              <span className="text-xs text-ink-500">Số liệu cộng dồn các hồ sơ đã từng bước qua từng vòng</span>
             </div>
-          ))}
-        </div>
-      </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {steps.map((step) => (
+                <div key={step.num} className="rounded-xl border border-border-subtle bg-white p-3.5 space-y-2">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-ink-600">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-[11px] font-bold text-ink-800">
+                      {step.num}
+                    </span>
+                    <span>{step.name}</span>
+                  </div>
+                  <div className="flex items-baseline justify-between">
+                    <strong className="text-xl font-bold text-ink-900 tabular-nums-kpi">{step.val}</strong>
+                    <small className="text-xs font-medium text-ink-500 tabular-nums-kpi">{step.rate}%</small>
+                  </div>
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
+                    <div className={`h-full rounded-full ${step.barClass}`} style={{ width: `${step.rate}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
     </Card>
   );
 }

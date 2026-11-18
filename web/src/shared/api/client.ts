@@ -42,8 +42,14 @@ async function refreshSession(original: AuthSession, generation: number): Promis
       || typeof rotated.accessTokenExpiresAt !== "string" || typeof rotated.refreshTokenExpiresAt !== "string") {
       throw new Error("Không xác minh được phiên đăng nhập mới. Vui lòng thử lại.");
     }
-    if (!updateSession(rotated, original.refreshToken, generation)) throw new SessionChangedError();
-    return rotated;
+    const nextSession: AuthSession = {
+      ...(typeof original.email === "string" ? { email: original.email } : {}),
+      ...(typeof original.hasPassword === "boolean" ? { hasPassword: original.hasPassword } : {}),
+      ...(typeof original.googleLinked === "boolean" ? { googleLinked: original.googleLinked } : {}),
+      ...rotated
+    };
+    if (!updateSession(nextSession, original.refreshToken, generation)) throw new SessionChangedError();
+    return nextSession;
   })();
   refreshing = { generation, promise };
   try { return await promise; }

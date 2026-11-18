@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, within, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PublicHomePage } from "./PublicHomePage";
 import { apiRequest } from "../../shared/api/client";
@@ -125,9 +125,10 @@ describe("Public job discovery", () => {
     expect(screen.queryByRole("heading", { name: "React Engineer" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("link", { name: /Java Developer.*Xem chi tiết/ }));
     expect(await screen.findByRole("heading", { name: "Java Developer", level: 1 })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Quay lại danh sách" }));
+    expect(screen.queryByRole("button", { name: /Quay lại/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Xem hồ sơ công ty" }));
     expect(await screen.findByRole("heading", { name: "Alpha", level: 1 })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Danh sách công ty" }));
+    fireEvent.click(screen.getByRole("button", { name: "Công ty" }));
     expect(await screen.findByRole("heading", { name: "Tìm hiểu nhà tuyển dụng" })).toBeInTheDocument();
   });
 
@@ -155,11 +156,15 @@ describe("Public job discovery", () => {
     expect(screen.getByRole("heading", { name: "Java Developer", level: 1 })).toBeInTheDocument();
   });
   it("returns from the full page to the same search filters", async () => {
-    window.history.replaceState(null, "", "/?view=search&q=React&mode=REMOTE&job=react");
+    window.history.replaceState(null, "", "/?view=search&q=React&mode=REMOTE");
     render(<PublicHomePage onLoginSuccess={vi.fn()} />);
+    fireEvent.click(await screen.findByRole("link", { name: /React Engineer.*Xem chi tiết/ }));
     await screen.findByRole("heading", { name: "React Engineer", level: 1 });
-    fireEvent.click(screen.getByRole("button", { name: "Quay lại danh sách" }));
-    expect(screen.getByRole("textbox", { name: "Tìm kiếm việc làm" })).toHaveValue("React");
+    expect(screen.queryByRole("button", { name: /Quay lại/ })).not.toBeInTheDocument();
+    await act(async () => {
+      window.history.back();
+    });
+    expect(await screen.findByRole("textbox", { name: "Tìm kiếm việc làm" })).toHaveValue("React");
     expect(screen.getByLabelText("Lọc theo chế độ làm việc")).toHaveValue("REMOTE");
     expect(new URLSearchParams(window.location.search).get("job")).toBeNull();
     await waitFor(() => expect(screen.getByRole("link", { name: /React Engineer.*Xem chi tiết/ })).toHaveFocus());
@@ -208,7 +213,7 @@ describe("Public job discovery", () => {
     window.history.replaceState(null, "", "/?view=search&company=company-b");
     render(<PublicHomePage onLoginSuccess={vi.fn()} />);
     expect(await screen.findByRole("heading", { name: "Beta", level: 1 })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Danh sách công ty" }));
+    fireEvent.click(screen.getByRole("button", { name: "Công ty" }));
     fireEvent.click(screen.getByRole("button", { name: "Tìm việc làm" }));
     expect(await screen.findByRole("heading", { name: "React Engineer" })).toBeInTheDocument();
   });
@@ -218,5 +223,56 @@ describe("Public job discovery", () => {
     render(<PublicHomePage onLoginSuccess={vi.fn()} />);
     expect(await screen.findByRole("heading", { name: "Chưa mở được hồ sơ công ty", level: 1 })).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Java Developer" })).not.toBeInTheDocument();
+  });
+
+  it("clears the auth query parameter once signed in", async () => {
+    window.history.replaceState(null, "", "/?auth=login");
+    const session = {
+      userId: "cand-1",
+      accessToken: "token",
+      refreshToken: "refresh",
+      accessTokenExpiresAt: "2030-01-01T00:00:00Z",
+      refreshTokenExpiresAt: "2030-01-02T00:00:00Z",
+      roles: ["CANDIDATE"]
+    };
+    render(<PublicHomePage session={session} onLoginSuccess={vi.fn()} />);
+    await waitFor(() => expect(new URLSearchParams(window.location.search).has("auth")).toBe(false));
+    window.history.replaceState(null, "", "/");
+  });
+
+  it("opens auth modal when unauthenticated user visits a protected workspace URL directly", async () => {
+    window.history.replaceState(null, "", "/recruiter/jobs");
+    render(<PublicHomePage onLoginSuccess={vi.fn()} />);
+    expect(await screen.findByText("Biểu mẫu đăng nhập")).toBeVisible();
+    expect(window.location.pathname).toBe("/recruiter/jobs");
+    window.history.replaceState(null, "", "/");
+  });
+
+  it("warns signed-in candidates instead of misrouting recruiter footer actions to CV library", async () => {
+    const navigateSpy = vi.fn();
+    const session = {
+      userId: "cand-1",
+      accessToken: "token",
+      refreshToken: "refresh",
+      accessTokenExpiresAt: "2030-01-01T00:00:00Z",
+      refreshTokenExpiresAt: "2030-01-02T00:00:00Z",
+      roles: ["CANDIDATE"]
+    };
+    render(
+      <PublicHomePage
+        session={session}
+        onLoginSuccess={vi.fn()}
+        candidate={{
+          name: "Ứng viên",
+          activeView: "jobs",
+          onNavigate: navigateSpy,
+          onLogout: vi.fn()
+        }}
+      />
+    );
+    await screen.findByText("2 vị trí đang tuyển");
+    fireEvent.click(screen.getByRole("button", { name: "Đăng tin tuyển dụng" }));
+    expect(await screen.findByText(/Tính năng đăng tin và quản lý ứng viên dành cho tài khoản Nhà tuyển dụng/)).toBeInTheDocument();
+    expect(navigateSpy).not.toHaveBeenCalled();
   });
 });

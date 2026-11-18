@@ -92,7 +92,7 @@ export type ParsedJd = {
   version: number;
 };
 
-export type WorkspaceTab = "pipeline" | "editor" | "review" | "analytics";
+export type WorkspaceTab = "pipeline" | "editor" | "review" | "preview" | "analytics";
 
 export const emptyJob: JobForm = {
   title: "",
@@ -115,6 +115,14 @@ export const emptyJob: JobForm = {
   category: defaultCategory
 };
 
+function toLocalDateTimeInput(iso: string | null): string {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (!Number.isFinite(date.getTime())) return iso.slice(0, 16);
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 export function toForm(job: Job): JobForm {
   return {
     title: job.title,
@@ -132,7 +140,7 @@ export function toForm(job: Job): JobForm {
     salaryCurrency: job.salaryCurrency ?? "VND",
     salaryPeriod: job.salaryPeriod ?? "MONTH",
     salaryNegotiable: job.salaryNegotiable,
-    applicationDeadline: job.applicationDeadline ? job.applicationDeadline.slice(0, 16) : "",
+    applicationDeadline: toLocalDateTimeInput(job.applicationDeadline),
     externalAiConsent: job.externalAiConsent === true && job.externalAiPolicyVersion === externalAiPolicyVersion,
     category: job.category ?? { ...defaultCategory, positionName: job.title }
   };
@@ -167,11 +175,27 @@ export function extractJobSkills(text: string): string[] {
   return commonTechs.filter((tech) => new RegExp(`\\b${tech.replace(".", "\\.")}\\b`, "i").test(text));
 }
 
-export function formatJobSalary(job: Pick<Job, "salaryMin" | "salaryMax" | "salaryCurrency" | "salaryNegotiable">): string | null {
-  if (job.salaryMin && job.salaryMax) {
-    return `${(job.salaryMin / 1000000).toFixed(0)}M - ${(job.salaryMax / 1000000).toFixed(0)}M ${job.salaryCurrency ?? "VND"}`;
+function formatSalaryValue(amount: number, currency: string): string {
+  if (currency === "VND") {
+    return `${new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 1 }).format(amount / 1_000_000)} triệu`;
   }
-  return job.salaryNegotiable ? "Lương thỏa thuận" : null;
+  return new Intl.NumberFormat("vi-VN", { style: "currency", currency, maximumFractionDigits: 0 }).format(amount);
+}
+
+export function formatJobSalary(job: Pick<Job, "salaryMin" | "salaryMax" | "salaryCurrency" | "salaryPeriod" | "salaryNegotiable">): string | null {
+  if (job.salaryNegotiable) return "Lương thỏa thuận";
+  const currency = job.salaryCurrency ?? "VND";
+  const periodSuffix = job.salaryPeriod === "YEAR" ? "/năm" : job.salaryPeriod === "HOUR" ? "/giờ" : "/tháng";
+  if (job.salaryMin != null && job.salaryMax != null) {
+    return `${formatSalaryValue(job.salaryMin, currency)} - ${formatSalaryValue(job.salaryMax, currency)} ${currency === "VND" ? "VND" : ""}${periodSuffix}`.replace(/\s+/g, " ").trim();
+  }
+  if (job.salaryMin != null) {
+    return `Từ ${formatSalaryValue(job.salaryMin, currency)}${currency === "VND" ? " VND" : ""}${periodSuffix}`;
+  }
+  if (job.salaryMax != null) {
+    return `Đến ${formatSalaryValue(job.salaryMax, currency)}${currency === "VND" ? " VND" : ""}${periodSuffix}`;
+  }
+  return null;
 }
 
 export function jobStatusLabel(status: Job["status"]): string {

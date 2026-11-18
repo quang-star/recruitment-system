@@ -22,7 +22,7 @@ beforeEach(() => {
 
 it("shows supplied company information before paginated open jobs and opens a full detail link", async () => {
   const onSelectJob = vi.fn();
-  render(<CompanyProfilePage company={company} onBack={vi.fn()} onSelectJob={onSelectJob} />);
+  render(<CompanyProfilePage company={company} onSelectJob={onSelectJob} />);
   expect(screen.getByText(company.description)).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Website công ty" })).toHaveAttribute("href", "https://example.com/");
   expect(screen.getByRole("img", { name: "Example logo" })).toHaveAttribute("src", "/company-logo.webp");
@@ -39,7 +39,7 @@ it("shows supplied company information before paginated open jobs and opens a fu
 it("retries a failed company job request and distinguishes an empty list", async () => {
   vi.mocked(apiRequest).mockRejectedValueOnce(new Error("Unavailable"));
   vi.mocked(apiRequest).mockResolvedValue({ items: [], total: 0, page: 0, size: 12 });
-  render(<CompanyProfilePage company={company} onBack={vi.fn()} onSelectJob={vi.fn()} />);
+  render(<CompanyProfilePage company={company} onSelectJob={vi.fn()} />);
   expect(await screen.findByRole("alert")).toBeInTheDocument();
   expect(screen.queryByText("Chưa có vị trí đang tuyển")).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Thử lại" }));
@@ -48,7 +48,7 @@ it("retries a failed company job request and distinguishes an empty list", async
 });
 
 it("does not turn an unsafe company website into a clickable link", async () => {
-  render(<CompanyProfilePage company={{ ...company, website: "javascript:alert(1)" }} onBack={vi.fn()} onSelectJob={vi.fn()} />);
+  render(<CompanyProfilePage company={{ ...company, website: "javascript:alert(1)" }} onSelectJob={vi.fn()} />);
   expect(screen.queryByRole("link", { name: "Website công ty" })).not.toBeInTheDocument();
   await screen.findByRole("link", { name: /Java Engineer/ });
 });

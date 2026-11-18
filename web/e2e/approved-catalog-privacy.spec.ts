@@ -78,7 +78,7 @@ test("Admin reviews deferred proposals with reasons, versioned definitions and i
   await call(recruiter, `/api/v2/jobs/${job.jobId}/publish?version=${job.version}`, "POST");
   const admin = await browser.newPage();
   await login(admin, adminAccount.email, adminAccount.password);
-  await expect(admin.getByRole("heading", { name: "Ngành nghề và vị trí" })).toBeVisible();
+  await expect(admin.getByRole("heading", { name: "Danh mục nghề" })).toBeVisible();
   const categories = await call(admin, "/api/v2/dashboard/catalog");
   const proposed = categories.find((entry: { name: string }) => entry.name === industryName);
   expect(proposed.status).toBe("PENDING");
@@ -116,7 +116,7 @@ test("Admin reviews deferred proposals with reasons, versioned definitions and i
   await call(admin, `/api/v2/dashboard/catalog/${proposed.id}`, "PUT", { version: proposed.version,
     action: "APPROVE", reason: "Synthetic stale category review" }, 409);
   await admin.getByRole("button", { name: "Kỹ năng / tên gọi khác" }).click();
-  await expect(admin.getByRole("heading", { name: "Kỹ năng và tên gọi khác" })).toBeVisible();
+  await expect(admin.getByRole("heading", { name: "Hàng chờ kỹ năng" })).toBeVisible();
   const skillName = `SyntheticTool${Date.now()}`;
   const initialCatalog = await call(admin, "/api/v2/taxonomy/skills");
   const targetSkill = initialCatalog.skills.find((entry: { status: string }) => entry.status === "ACTIVE");

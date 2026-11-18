@@ -1,10 +1,20 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { ApiClientError, apiRequest } from "../../shared/api/client";
 import { usePagedResource } from "../../shared/api/pagination";
 import { AuthSession } from "../../shared/auth/session";
 import { externalAiPolicyVersion } from "../../shared/components/ExternalAiConsent";
+import {
+  BanknoteIcon,
+  BarChartIcon,
+  CompanyIcon,
+  MapPinIcon,
+  PencilIcon,
+  UsersIcon
+} from "../../shared/components/Icon";
+import { RichTextContent, richTextToPlainText } from "../../shared/components/RichTextEditor";
 import { useUnsavedChanges } from "../../shared/useUnsavedChanges";
-import { Badge, Button, ErrorBanner, cn } from "../../shared/ui";
+import { Badge, Button, Card, ErrorBanner, cn } from "../../shared/ui";
+import { workModeLabel } from "../public/jobPresentation";
 import { CategoryFilterValue, emptyCategoryFilter } from "./JobCategoryFilter";
 import { RecruiterApplicationsPanel } from "./RecruiterApplicationsPanel";
 import { RecruiterJdReview } from "./RecruiterJdReview";
@@ -45,15 +55,26 @@ export function RecruiterJobBoard({
   const [parsedJd, setParsedJd] = useState<ParsedJd | null>(null);
   const [parsedJdDraft, setParsedJdDraft] = useState<ParsedJd["payload"] | null>(null);
   const [loadingParsedJd, setLoadingParsedJd] = useState(false);
+  const [parsedJdRefreshTick, setParsedJdRefreshTick] = useState(0);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [viewMode, setViewMode] = useState<"list" | "workspace">(initialJobId ? "workspace" : "list");
   const [activeTab, setActiveTab] = useState<WorkspaceTab>(initialJobId ? "pipeline" : "editor");
   const [jobSearch, setJobSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [statusFilter, setStatusFilter] = useState<string>(() => {
+    const param = new URLSearchParams(window.location.search).get("status");
+    return param && ["DRAFT", "PUBLISHED", "CLOSED"].includes(param) ? param : "ALL";
+  });
   const [sort, setSort] = useState("newest");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilterValue>(emptyCategoryFilter);
+  const [companyCounts, setCompanyCounts] = useState<{
+    jobs?: number;
+    publishedJobs?: number;
+    draftJobs?: number;
+    closedJobs?: number;
+  } | null>(null);
+  const [countsTick, setCountsTick] = useState(0);
 
   const results = usePagedResource<Job>(
     companyId ? `/api/v2/companies/${companyId}/jobs` : null,
@@ -63,25 +84,65 @@ export function RecruiterJobBoard({
   const jobs = results.items;
 
   useEffect(() => {
+    if (!companyId) {
+      setCompanyCounts(null);
+      return;
+    }
+    let active = true;
+    void apiRequest<{ metrics?: Record<string, number> }>(`/api/v2/dashboard?companyId=${companyId}`, {
+      accessToken: session.accessToken
+    })
+      .then((res) => {
+        if (active && res?.metrics) setCompanyCounts(res.metrics);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [companyId, session.accessToken, countsTick]);
+  const handledInitialJobRef = useRef<string | null>(null);
+
+  useEffect(() => {
     setSelectedJobId(null);
     setSelectedRecord(null);
     setForm(emptyJob);
     setActiveTab("editor");
     setViewMode("list");
+    handledInitialJobRef.current = null;
   }, [companyId]);
 
   useEffect(() => {
-    if (initialJobId && jobs.length > 0) {
-      const target = jobs.find((j) => j.jobId === initialJobId);
-      if (target) {
-        setSelectedJobId(target.jobId);
-        setSelectedRecord(target);
-        setForm(toForm(target));
-        setActiveTab("pipeline");
-        setViewMode("workspace");
-      }
+    if (!initialJobId || !companyId) return;
+    const key = `${companyId}:${initialJobId}`;
+    if (handledInitialJobRef.current === key) return;
+    const target = jobs.find((j) => j.jobId === initialJobId);
+    if (target) {
+      handledInitialJobRef.current = key;
+      setSelectedJobId(target.jobId);
+      setSelectedRecord(target);
+      setForm(toForm(target));
+      setActiveTab(target.status === "DRAFT" ? "editor" : "pipeline");
+      setViewMode("workspace");
+      return;
     }
-  }, [initialJobId, jobs]);
+    let active = true;
+    void apiRequest<Job>(`/api/v2/jobs/${encodeURIComponent(initialJobId)}`, {
+      accessToken: session.accessToken
+    })
+      .then((fetched) => {
+        if (!active || fetched.companyId !== companyId) return;
+        handledInitialJobRef.current = key;
+        setSelectedJobId(fetched.jobId);
+        setSelectedRecord(fetched);
+        setForm(toForm(fetched));
+        setActiveTab(fetched.status === "DRAFT" ? "editor" : "pipeline");
+        setViewMode("workspace");
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [initialJobId, jobs, companyId, session.accessToken]);
 
   useEffect(() => {
     let active = true;
@@ -124,11 +185,14 @@ export function RecruiterJobBoard({
     return () => {
       active = false;
     };
-  }, [selectedRecord, session.accessToken, session.userId]);
+  }, [selectedRecord, session.accessToken, session.userId, parsedJdRefreshTick]);
 
   const reviewDirty =
     !!parsedJd && !!parsedJdDraft && JSON.stringify(parsedJdDraft) !== JSON.stringify(parsedJd.payload);
-  const formDirty = JSON.stringify(form) !== JSON.stringify(selectedRecord ? toForm(selectedRecord) : emptyJob);
+  const lockedNonDraftSelected = selectedRecord?.status === "PUBLISHED" || selectedRecord?.status === "CLOSED";
+  const formDirty = lockedNonDraftSelected
+    ? false
+    : JSON.stringify(form) !== JSON.stringify(selectedRecord ? toForm(selectedRecord) : emptyJob);
   useUnsavedChanges(reviewDirty || formDirty, () =>
     setError("Bạn còn thay đổi chưa lưu. Hãy lưu trước khi chuyển màn hình.")
   );
@@ -163,6 +227,28 @@ export function RecruiterJobBoard({
     setError(null);
   }
 
+  function duplicateJob(job: Job) {
+    if (!canLeaveDraft()) return;
+    if (companyId && initialJobId) {
+      handledInitialJobRef.current = `${companyId}:${initialJobId}`;
+    }
+    const base = toForm(job);
+    const today = new Date().toISOString().slice(0, 10);
+    setSelectedJobId(null);
+    setSelectedRecord(null);
+    setForm({
+      ...base,
+      title: `${base.title} (Bản sao)`.slice(0, 200),
+      applicationDeadline: base.applicationDeadline && base.applicationDeadline < today ? "" : base.applicationDeadline
+    });
+    setActiveTab("editor");
+    setViewMode("workspace");
+    setParsedJd(null);
+    setParsedJdDraft(null);
+    setMessage("Đã tạo bản sao vào biểu mẫu. Kiểm tra nội dung rồi bấm “Tạo bản nháp” để lưu.");
+    setError(null);
+  }
+
   function backToList() {
     if (!canLeaveDraft()) return;
     setViewMode("list");
@@ -180,6 +266,18 @@ export function RecruiterJobBoard({
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!companyId || saving) return;
+    if (!richTextToPlainText(form.description).trim()) {
+      setError("Vui lòng nhập Mô tả công việc.");
+      return;
+    }
+    if (!richTextToPlainText(form.requirementsText).trim()) {
+      setError("Vui lòng nhập Yêu cầu ứng viên.");
+      return;
+    }
+    if (form.salaryMin && form.salaryMax && Number(form.salaryMin) > Number(form.salaryMax)) {
+      setError("Lương tối thiểu không được lớn hơn lương tối đa.");
+      return;
+    }
     setSaving(true);
     setMessage(null);
     setError(null);
@@ -193,10 +291,10 @@ export function RecruiterJobBoard({
       workMode: form.workMode || null,
       employmentType: form.employmentType || null,
       seniorityLevel: form.seniorityLevel || null,
-      salaryMin: form.salaryMin ? Number(form.salaryMin) : null,
-      salaryMax: form.salaryMax ? Number(form.salaryMax) : null,
-      salaryCurrency: form.salaryMin || form.salaryMax ? form.salaryCurrency : null,
-      salaryPeriod: form.salaryMin || form.salaryMax ? form.salaryPeriod : null,
+      salaryMin: form.salaryNegotiable ? null : (form.salaryMin ? Number(form.salaryMin) : null),
+      salaryMax: form.salaryNegotiable ? null : (form.salaryMax ? Number(form.salaryMax) : null),
+      salaryCurrency: form.salaryNegotiable ? null : (form.salaryMin || form.salaryMax ? form.salaryCurrency : null),
+      salaryPeriod: form.salaryNegotiable ? null : (form.salaryMin || form.salaryMax ? form.salaryPeriod : null),
       applicationDeadline: form.applicationDeadline ? new Date(form.applicationDeadline).toISOString() : null,
       ...(selectedJobId ? { version: selectedRecord?.version } : {})
     };
@@ -211,6 +309,7 @@ export function RecruiterJobBoard({
       );
       setSelectedRecord(saved);
       results.refresh();
+      setCountsTick((v) => v + 1);
       setSelectedJobId(saved.jobId);
       setForm(toForm(saved));
       setActiveTab("editor");
@@ -244,13 +343,29 @@ export function RecruiterJobBoard({
     }
     setSaving(true);
     try {
-      if (action === "publish" && job.matchingSupported !== false) {
-        const currentParsedJd = await apiRequest<ParsedJd>(`/api/v2/parsed-jds/${job.jobVersionId}`, {
-          accessToken: session.accessToken
-        });
-        if (currentParsedJd.status !== "CONFIRMED") {
-          setError("Cần review và xác nhận ParsedJD trước khi đăng JD.");
+      if (action === "publish") {
+        if (job.applicationDeadline && Date.parse(job.applicationDeadline) <= Date.now()) {
+          setError("Hạn nhận hồ sơ đã qua. Hãy cập nhật hạn mới trước khi đăng tin.");
+          setSaving(false);
           return;
+        }
+        if (job.matchingSupported !== false) {
+          let currentParsedJd: ParsedJd;
+          try {
+            currentParsedJd = await apiRequest<ParsedJd>(`/api/v2/parsed-jds/${job.jobVersionId}`, {
+              accessToken: session.accessToken
+            });
+          } catch (parsedError) {
+            if (parsedError instanceof ApiClientError && parsedError.status === 404) {
+              setError("Yêu cầu công việc đang được hệ thống phân tích. Hãy mở tab 'Kiểm tra yêu cầu' và xác nhận ParsedJD trước khi đăng tin.");
+              return;
+            }
+            throw parsedError;
+          }
+          if (currentParsedJd.status !== "CONFIRMED") {
+            setError("Cần review và xác nhận ParsedJD trước khi đăng JD.");
+            return;
+          }
         }
       }
       const updated = await apiRequest<Job>(`/api/v2/jobs/${job.jobId}/${action}?version=${job.version}`, {
@@ -258,6 +373,7 @@ export function RecruiterJobBoard({
         accessToken: session.accessToken
       });
       results.refresh();
+      setCountsTick((v) => v + 1);
       if (selectedJobId === updated.jobId) {
         setSelectedRecord(updated);
         setForm(toForm(updated));
@@ -377,6 +493,7 @@ export function RecruiterJobBoard({
         <RecruiterJobList
           jobs={jobs}
           paging={results}
+          companyCounts={companyCounts}
           canRecruit={canRecruit}
           canPublish={canPublish}
           jobSearch={jobSearch}
@@ -403,28 +520,19 @@ export function RecruiterJobBoard({
             : "space-y-5"
         )}
       >
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <Button type="button" variant="secondary" size="sm" onClick={backToList}>
-            ← Quay lại danh sách tin
-          </Button>
-          <div className="flex items-center gap-2 text-xs text-ink-500">
-            <span
-              className="font-medium text-ink-700 hover:text-brand-700 cursor-pointer"
-              role="button"
-              tabIndex={0}
-              onClick={backToList}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") backToList();
-              }}
-            >
-              Danh sách tin tuyển dụng
-            </span>
-            <span>/</span>
-            <span className="font-semibold text-ink-900">
-              {selectedRecord ? selectedRecord.title : "Tạo tin tuyển dụng mới"}
-            </span>
-          </div>
-        </div>
+        <nav aria-label="Đường dẫn tin tuyển dụng" className="flex items-center gap-2 text-xs text-ink-500">
+          <button
+            type="button"
+            onClick={backToList}
+            className="font-medium text-ink-700 hover:text-brand-700 hover:underline cursor-pointer bg-transparent border-0 p-0"
+          >
+            Danh sách tin tuyển dụng
+          </button>
+          <span aria-hidden="true">/</span>
+          <span className="font-semibold text-ink-900">
+            {selectedRecord ? selectedRecord.title : "Tạo tin tuyển dụng mới"}
+          </span>
+        </nav>
 
         <main className="space-y-5">
           {selectedJobId && activeTab !== "editor" && activeTab !== "review" && (
@@ -434,7 +542,7 @@ export function RecruiterJobBoard({
             </>
           )}
           {selectedJob && (
-            <header className="rounded-2xl bg-slate-900 text-white px-6 py-5 shadow-card space-y-4">
+            <header className="rounded-xl bg-slate-900 text-white px-6 py-5 shadow-card space-y-4">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="space-y-2 min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
@@ -442,19 +550,33 @@ export function RecruiterJobBoard({
                       JD Tuyển dụng
                     </span>
                     <Badge tone={jobStatusTone(selectedJob.status)}>{jobStatusLabel(selectedJob.status)}</Badge>
-                    <Badge tone="neutral">v{selectedJob.jobVersionNumber}</Badge>
-                    {selectedJob.matchingSupported === false && <Badge tone="info">Review thủ công (Ngoài IT)</Badge>}
+                    {selectedJob.matchingSupported === false && (
+                      <Badge tone="info">Sàng lọc thủ công (Ngoài CNTT)</Badge>
+                    )}
+                    <span className="text-xs font-medium text-slate-400 tabular-nums-kpi">
+                      v{selectedJob.jobVersionNumber}
+                    </span>
                   </div>
                   <h3 className="text-xl font-bold text-white m-0">{selectedJob.title}</h3>
-                  <div className="flex flex-wrap gap-2 text-xs text-slate-300">
-                    <span className="rounded-lg bg-white/10 px-2.5 py-1">
-                      📍 {selectedJob.locationText ?? "Linh hoạt"}
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-slate-300">
+                    <span className="inline-flex items-center gap-1.5">
+                      <MapPinIcon size={14} className="text-slate-400 shrink-0" aria-hidden="true" />
+                      <span>{selectedJob.locationText ?? "Linh hoạt"}</span>
                     </span>
-                    <span className="rounded-lg bg-white/10 px-2.5 py-1">
-                      🏢 {selectedJob.workMode ?? "Toàn thời gian"}
+                    <span className="inline-flex items-center gap-1.5">
+                      <CompanyIcon size={14} className="text-slate-400 shrink-0" aria-hidden="true" />
+                      <span>{workModeLabel(selectedJob.workMode)}</span>
                     </span>
-                    <span className="rounded-lg bg-white/10 px-2.5 py-1">🎯 {selectedJob.openings} chỉ tiêu</span>
-                    {salaryLabel && <span className="rounded-lg bg-white/10 px-2.5 py-1">💰 {salaryLabel}</span>}
+                    <span className="inline-flex items-center gap-1.5">
+                      <UsersIcon size={14} className="text-slate-400 shrink-0" aria-hidden="true" />
+                      <span>{selectedJob.openings} chỉ tiêu</span>
+                    </span>
+                    {salaryLabel && (
+                      <span className="inline-flex items-center gap-1.5 font-medium text-emerald-300">
+                        <BanknoteIcon size={14} className="text-emerald-400 shrink-0" aria-hidden="true" />
+                        <span>{salaryLabel}</span>
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -462,12 +584,12 @@ export function RecruiterJobBoard({
                   <div className="flex flex-wrap items-center gap-2">
                     {selectedJob.status === "DRAFT" && (
                       <Button variant="primary" size="sm" disabled={!canPublish || saving} onClick={() => void changeState(selectedJob, "publish")}>
-                        🚀 Đăng JD
+                        Đăng JD
                       </Button>
                     )}
                     {selectedJob.status === "PUBLISHED" && (
                       <Button variant="danger" size="sm" onClick={() => void changeState(selectedJob, "close")}>
-                        🛑 Đóng JD
+                        Đóng JD
                       </Button>
                     )}
                   </div>
@@ -476,24 +598,25 @@ export function RecruiterJobBoard({
 
               <div className="flex flex-wrap gap-1.5 border-t border-white/10 pt-3">
                 {[
-                  { id: "pipeline" as const, label: "👥 Ứng viên & Pipeline" },
-                  { id: "analytics" as const, label: "📊 Thống kê tin này" },
-                  { id: "editor" as const, label: "✏️ Chi tiết tin tuyển dụng" }
-                ].map((tab) => (
+                  { id: "pipeline" as const, label: "Ứng viên & Pipeline", Icon: UsersIcon },
+                  { id: "analytics" as const, label: "Thống kê tin này", Icon: BarChartIcon },
+                  { id: "editor" as const, label: "Chi tiết tin tuyển dụng", Icon: PencilIcon }
+                ].map(({ id, label, Icon }) => (
                   <button
-                    key={tab.id}
+                    key={id}
                     type="button"
                     onClick={() => {
-                      if (tab.id === "editor" || canLeaveDraft()) setActiveTab(tab.id);
+                      if (id === "editor" || canLeaveDraft()) setActiveTab(id);
                     }}
                     className={cn(
-                      "rounded-xl px-3.5 py-2 text-xs font-semibold transition-colors cursor-pointer",
-                      activeTab === tab.id
+                      "inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold transition-colors cursor-pointer",
+                      activeTab === id
                         ? "bg-white text-ink-900 shadow-xs"
                         : "text-slate-300 hover:bg-white/10 hover:text-white"
                     )}
                   >
-                    {tab.label}
+                    <Icon size={14} aria-hidden="true" />
+                    <span>{label}</span>
                   </button>
                 ))}
                 {selectedRecord?.matchingSupported !== false && (
@@ -518,6 +641,68 @@ export function RecruiterJobBoard({
                 )}
               </div>
             </header>
+          )}
+
+          {(!selectedJob || selectedJob.status === "DRAFT") && (
+            <nav
+              aria-label="Tiến trình tạo và đăng tin"
+              className="flex flex-wrap items-center gap-2 rounded-xl border border-border-subtle bg-white px-4 py-3"
+            >
+              {[
+                { id: "editor" as const, num: 1, label: "Thông tin & Mô tả JD", enabled: true },
+                {
+                  id: "review" as const,
+                  num: 2,
+                  label:
+                    selectedRecord?.matchingSupported === false
+                      ? "Xét thủ công (Ngoài IT)"
+                      : "Xác nhận tiêu chí AI",
+                  enabled: Boolean(selectedRecord && selectedRecord.matchingSupported !== false)
+                },
+                {
+                  id: "preview" as const,
+                  num: 3,
+                  label: "Xem trước & Đăng tin",
+                  enabled: Boolean(selectedRecord)
+                }
+              ].map((step) => {
+                const active = activeTab === step.id || (!selectedJobId && step.id === "editor");
+                return (
+                  <button
+                    key={step.id}
+                    type="button"
+                    disabled={!step.enabled}
+                    onClick={() => {
+                      if (!step.enabled) return;
+                      if (step.id !== "editor" && formDirty) {
+                        setError("Lưu tin tuyển dụng trước khi chuyển sang bước tiếp theo.");
+                        return;
+                      }
+                      setError(null);
+                      setActiveTab(step.id);
+                    }}
+                    className={cn(
+                      "inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors",
+                      active
+                        ? "border-brand-600 bg-brand-50 text-brand-800"
+                        : step.enabled
+                          ? "border-border-subtle bg-white text-ink-700 hover:bg-slate-50 cursor-pointer"
+                          : "border-border-subtle bg-slate-50 text-ink-400 cursor-not-allowed"
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold",
+                        active ? "bg-brand-600 text-white" : "bg-slate-200 text-ink-700"
+                      )}
+                    >
+                      {step.num}
+                    </span>
+                    <span>{step.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
           )}
 
           {selectedJobId && activeTab === "pipeline" && (
@@ -564,7 +749,78 @@ export function RecruiterJobBoard({
               }}
               onSaveParsedJd={() => void saveParsedJd()}
               onConfirmParsedJd={() => void confirmParsedJd()}
+              onRetryParsedJd={() => setParsedJdRefreshTick((v) => v + 1)}
             />
+          )}
+
+          {selectedRecord && activeTab === "preview" && (
+            <Card padding="lg" className="space-y-5">
+              <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border-subtle pb-4">
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-brand-700 m-0">
+                    Xem trước góc nhìn ứng viên
+                  </p>
+                  <h3 className="text-xl font-bold text-ink-900 m-0">{selectedRecord.title}</h3>
+                  <p className="text-xs text-ink-500 m-0">
+                    {selectedRecord.locationText ?? "Linh hoạt"} · {workModeLabel(selectedRecord.workMode)} ·{" "}
+                    {salaryLabel || "Thỏa thuận"}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  <Badge tone={canPublish ? "success" : "warning"}>
+                    {canPublish ? "Công ty ACTIVE" : "Công ty chờ duyệt"}
+                  </Badge>
+                  {selectedRecord.matchingSupported === false ? (
+                    <Badge tone="info">Ngoài IT · Xét thủ công</Badge>
+                  ) : (
+                    <Badge tone={parsedJd?.status === "CONFIRMED" ? "success" : "warning"}>
+                      {parsedJd?.status === "CONFIRMED" ? "AI JD đã xác nhận" : "AI JD chưa xác nhận"}
+                    </Badge>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-1">
+                  <h4 className="text-xs font-bold uppercase tracking-wide text-ink-600 m-0">Mô tả công việc</h4>
+                  <RichTextContent content={selectedRecord.description} className="text-ink-800" />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="text-xs font-bold uppercase tracking-wide text-ink-600 m-0">Yêu cầu ứng viên</h4>
+                  <RichTextContent content={selectedRecord.requirementsText} className="text-ink-800" />
+                </div>
+                {selectedRecord.benefitsText && (
+                  <div className="space-y-1">
+                    <h4 className="text-xs font-bold uppercase tracking-wide text-ink-600 m-0">Quyền lợi</h4>
+                    <RichTextContent content={selectedRecord.benefitsText} className="text-ink-800" />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border-subtle pt-4">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() =>
+                    setActiveTab(selectedRecord.matchingSupported === false ? "editor" : "review")
+                  }
+                >
+                  ← Quay lại bước trước
+                </Button>
+                {canRecruit && selectedRecord.status === "DRAFT" && (
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    disabled={!canPublish || saving}
+                    onClick={() => void changeState(selectedRecord, "publish")}
+                  >
+                    Đăng tin tuyển dụng
+                  </Button>
+                )}
+              </div>
+            </Card>
           )}
 
           {(!selectedJobId || activeTab === "editor") && (
@@ -582,6 +838,7 @@ export function RecruiterJobBoard({
               onUpdateForm={updateForm}
               onSubmit={save}
               onChangeState={(job, action) => void changeState(job, action)}
+              onDuplicate={duplicateJob}
               onSuggestionApplied={(value) => {
                 updateForm("category", value);
                 setError(null);

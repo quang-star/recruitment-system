@@ -3,26 +3,29 @@ import { useEffect, useState } from "react";
 import { ApiClientError, apiDownload, apiRequest } from "../../shared/api/client";
 import { usePagedResource } from "../../shared/api/pagination";
 import { AuthSession } from "../../shared/auth/session";
-import { CvPreviewModal } from "../../shared/components/CvPreviewModal";
-import { CvIcon, SparklesIcon } from "../../shared/components/Icon";
+import { CvIcon, KanbanIcon, ListIcon, SparklesIcon } from "../../shared/components/Icon";
 import { PageControls } from "../../shared/components/PageControls";
 import { ReasonDialog } from "../../shared/components/ReasonDialog";
 import { Badge, Button, Card, EmptyState, ErrorBanner, cn } from "../../shared/ui";
 import { ApplicationMatch } from "../application/MatchBreakdown";
 import { RecruiterApplicationDetail } from "./RecruiterApplicationDetail";
 import { RecruiterApplicationsTable } from "./RecruiterApplicationsTable";
+import { RecruiterDossierSplitDrawer } from "./RecruiterDossierSplitDrawer";
 import { RecruiterKanbanBoard } from "./RecruiterKanbanBoard";
 import {
   Application,
   ApplicationWithMatch,
+  PIPELINE_STAGES,
   PipelineStage,
   RecruiterTransition,
   nextRecruitmentStage,
   STAGE_PILLS,
   StatusChange,
+  canRejectApplication,
   candidateDisplayName,
   controlClass,
   getErrorMessage,
+  screeningStageFor,
   translateApplicationStatus
 } from "./recruiterApplicationTypes";
 
@@ -60,7 +63,7 @@ export function RecruiterApplicationsPanel({
     jobId ? "/api/v2/recruiter/applications" : null,
     { jobId: jobId ?? "", status: viewMode === "kanban" ? "" : statusFilter, sort: sortBy, q: query, applicationId: linkedApplicationId },
     session.accessToken,
-    10
+    viewMode === "kanban" ? 100 : 10
   );
   const loading = results.loading;
 
@@ -182,12 +185,13 @@ export function RecruiterApplicationsPanel({
     setDragOverStage(null);
     const applicationId = e.dataTransfer.getData("text/plain");
     const app = applications.find((a) => a.applicationId === applicationId);
-    if (!app || !canTransition || app.status === targetStatus) return;
+    if (!app || !canTransition || !canRejectApplication(app.status) || screeningStageFor(app.status) === targetStatus) return;
 
+    const nextStatus = nextRecruitmentStage[app.status];
     if (targetStatus === "REJECTED") {
       setRejectTarget(app);
-    } else if (targetStatus === nextRecruitmentStage[app.status]) {
-      void transition(app, targetStatus as RecruiterTransition);
+    } else if (targetStatus === nextStatus) {
+      void transition(app, nextStatus);
     } else {
       setError(
         `Không thể chuyển trực tiếp từ ${translateApplicationStatus(app.status)} sang ${translateApplicationStatus(targetStatus)}.`
@@ -202,6 +206,9 @@ export function RecruiterApplicationsPanel({
   );
   const activeSelectedApp =
     visibleApplications.find((item) => item.applicationId === selectedId) ?? visibleApplications[0];
+  const hasMultiplePages = results.total > results.size;
+  const hasFilters = query.trim() !== "" || (viewMode === "table" && statusFilter !== "");
+  const withdrawnCount = visibleApplications.filter((app) => app.status === "WITHDRAWN").length;
 
   const renderDetail = (application: ApplicationWithMatch) => (
     <RecruiterApplicationDetail
@@ -235,22 +242,24 @@ export function RecruiterApplicationsPanel({
             <button
               type="button"
               className={cn(
-                "rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer",
+                "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer",
                 viewMode === "table" ? "bg-white text-ink-900 shadow-xs" : "text-ink-600 hover:text-ink-900"
               )}
               onClick={() => setViewMode("table")}
             >
-              📋 Danh sách
+              <ListIcon size={14} aria-hidden="true" />
+              <span>Danh sách</span>
             </button>
             <button
               type="button"
               className={cn(
-                "rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer",
+                "inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer",
                 viewMode === "kanban" ? "bg-white text-ink-900 shadow-xs" : "text-ink-600 hover:text-ink-900"
               )}
               onClick={() => setViewMode("kanban")}
             >
-              📊 Bảng Kanban
+              <KanbanIcon size={14} aria-hidden="true" />
+              <span>Bảng Kanban</span>
             </button>
           </div>
 
@@ -310,13 +319,7 @@ export function RecruiterApplicationsPanel({
             onChange={(event) => setStatusFilter(event.target.value)}
           >
             <option value="">Tất cả</option>
-            <option value="SUBMITTED">Mới ứng tuyển</option>
-            <option value="UNDER_REVIEW">Đang xem xét</option>
-            <option value="SHORTLISTED">Danh sách rút gọn</option>
-            <option value="INTERVIEW">Đang phỏng vấn</option>
-            <option value="OFFERED">Đã gửi đề nghị tuyển dụng</option>
-            <option value="HIRED">Đã tuyển dụng</option>
-            <option value="REJECTED">Đã từ chối</option>
+            {PIPELINE_STAGES.map(({ key, label }) => <option key={key} value={key}>{label}</option>)}
             <option value="WITHDRAWN">Đã rút</option>
           </select>
         </label>
@@ -333,29 +336,45 @@ export function RecruiterApplicationsPanel({
         </label>
       </div>
 
-      <PageControls {...results} onPageChange={results.setPage} label="Phân trang ứng viên" />
-      {viewMode === "kanban" && <p className="text-xs text-ink-500">Bảng hiển thị các hồ sơ trên trang hiện tại, ở mọi trạng thái. Dùng phân trang để xem thêm.</p>}
+      {(hasMultiplePages || loading) && (
+        <PageControls {...results} onPageChange={results.setPage} label="Phân trang ứng viên" />
+      )}
+      {viewMode === "kanban" && hasMultiplePages && (
+        <p className="text-xs text-ink-500">
+          Bảng hiển thị {results.items.length}/{results.total} hồ sơ. Dùng phân trang để xem thêm.
+        </p>
+      )}
       {results.error && <ErrorBanner tone="error" message={results.error} />}
 
-      <div className="flex items-start gap-2.5 rounded-xl border border-brand-200/70 bg-brand-50/50 px-3.5 py-2.5 text-xs text-ink-700">
-        <SparklesIcon size={15} className="text-brand-700 shrink-0 mt-0.5" />
-        <p className="m-0 leading-relaxed">
-          Mức độ phù hợp với vị trí trên thang 1–5 sao hỗ trợ xem hồ sơ, không phải xác suất trúng tuyển. Quyết định tuyển dụng do bạn thực hiện.
-        </p>
-      </div>
+      {results.items.some((item) => item.matchingSupported !== false && item.cvAccessGranted !== false) && (
+        <div className="flex items-start gap-2.5 rounded-xl border border-brand-200/70 bg-brand-50/50 px-3.5 py-2.5 text-xs text-ink-700">
+          <SparklesIcon size={15} className="text-brand-700 shrink-0 mt-0.5" />
+          <p className="m-0 leading-relaxed">
+            Mức độ phù hợp với vị trí trên thang 1–5 sao hỗ trợ xem hồ sơ, không phải xác suất trúng tuyển. Quyết định tuyển dụng do bạn thực hiện.
+          </p>
+        </div>
+      )}
 
-      {loading && <p className="text-sm text-ink-500 m-0">Đang tải hồ sơ…</p>}
       {error && <ErrorBanner tone="error" message={error} />}
       {message && <ErrorBanner tone="success" message={message} />}
       {!loading && !error && !results.error && results.total === 0 && (
         <EmptyState
           icon={<CvIcon size={24} />}
-          title="Không có hồ sơ phù hợp bộ lọc hiện tại."
-          description="Thử chọn trạng thái khác hoặc điều chỉnh từ khóa tìm kiếm."
+          title={hasFilters
+            ? "Không có hồ sơ phù hợp bộ lọc hiện tại."
+            : linkedApplicationId ? "Không tìm thấy hồ sơ ứng tuyển." : "Chưa có hồ sơ ứng tuyển"}
+          action={hasFilters && (
+            <Button variant="secondary" size="sm" onClick={() => {
+              setQuery("");
+              setStatusFilter("");
+            }}>
+              Xóa bộ lọc
+            </Button>
+          )}
         />
       )}
 
-      {viewMode === "table" && (
+      {viewMode === "table" && visibleApplications.length > 0 && (
         <div className="grid gap-5 xl:grid-cols-[1.15fr_1fr] items-start">
           <RecruiterApplicationsTable
             applications={visibleApplications}
@@ -368,22 +387,44 @@ export function RecruiterApplicationsPanel({
         </div>
       )}
 
-      {viewMode === "kanban" && (
+      {viewMode === "kanban" && visibleApplications.length > 0 && (
         <div className="space-y-6">
-          <RecruiterKanbanBoard
-            applications={visibleApplications}
-            selectedId={selectedId}
-            dragOverStage={dragOverStage}
-            canTransition={canTransition}
-            workingApplicationId={workingApplicationId}
-            onSelect={setSelectedId}
-            onDragOverStageChange={setDragOverStage}
-            onDragStart={handleDragStart}
-            onDrop={handleDrop}
-            onPreviewCv={setPreviewCvTarget}
-            onTransition={(app, status) => void transition(app, status)}
-            onRequestReject={setRejectTarget}
-          />
+          {withdrawnCount > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs text-ink-700">
+              <span>
+                Có{" "}
+                <strong>{withdrawnCount}</strong>{" "}
+                hồ sơ ứng viên đã rút.
+              </span>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  setViewMode("table");
+                  setStatusFilter("WITHDRAWN");
+                }}
+              >
+                Xem hồ sơ đã rút
+              </Button>
+            </div>
+          )}
+          {withdrawnCount < visibleApplications.length && (
+            <RecruiterKanbanBoard
+              applications={visibleApplications}
+              selectedId={selectedId}
+              dragOverStage={dragOverStage}
+              canTransition={canTransition}
+              workingApplicationId={workingApplicationId}
+              onSelect={setSelectedId}
+              onDragOverStageChange={setDragOverStage}
+              onDragStart={handleDragStart}
+              onDrop={handleDrop}
+              onPreviewCv={setPreviewCvTarget}
+              onTransition={(app, status) => void transition(app, status)}
+              onRequestReject={setRejectTarget}
+            />
+          )}
 
           {activeSelectedApp && (
             <div className="space-y-3 pt-2">
@@ -412,15 +453,27 @@ export function RecruiterApplicationsPanel({
         }}
       />
 
-      <CvPreviewModal
-        open={previewCvTarget !== null}
-        onClose={() => setPreviewCvTarget(null)}
-        downloadPath={previewCvTarget?.path ?? ""}
-        filename={previewCvTarget?.filename}
-        title={previewCvTarget?.title}
-        page={previewCvTarget?.page}
-        accessToken={session.accessToken}
-      />
+      {(() => {
+        const dossierApp = previewCvTarget
+          ? visibleApplications.find(
+              (item) => `/api/v2/recruiter/applications/${item.applicationId}/cv` === previewCvTarget.path
+            ) ?? activeSelectedApp
+          : null;
+        return (
+          <RecruiterDossierSplitDrawer
+            open={previewCvTarget !== null}
+            onClose={() => setPreviewCvTarget(null)}
+            candidateName={dossierApp ? candidateDisplayName(dossierApp) : (previewCvTarget?.title ?? "Hồ sơ ứng viên")}
+            stageLabel={dossierApp ? translateApplicationStatus(dossierApp.status) : ""}
+            cvAccessGranted={dossierApp ? dossierApp.cvAccessGranted !== false : true}
+            downloadPath={previewCvTarget?.path ?? ""}
+            accessToken={session.accessToken}
+            page={previewCvTarget?.page}
+          >
+            {dossierApp && renderDetail(dossierApp)}
+          </RecruiterDossierSplitDrawer>
+        );
+      })()}
     </Card>
   );
 }

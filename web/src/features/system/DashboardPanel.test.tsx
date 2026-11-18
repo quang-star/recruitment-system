@@ -75,6 +75,9 @@ describe("DashboardPanel Recruiter Action Center", () => {
     );
 
     expect(await screen.findByText("4 việc cần xử lý")).toBeInTheDocument();
+    expect(screen.queryByText("Tổng quan tuyển dụng")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Mở Pipeline ứng viên" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Quản lý tin tuyển dụng/ })).not.toBeInTheDocument();
     expect(screen.getByText("3 hồ sơ mới nộp, 1 hồ sơ đang xem xét")).toBeInTheDocument();
     expect(screen.getByText(/Ưu tiên xử lý vị trí: "Senior Java Backend Engineer"/)).toBeInTheDocument();
 
@@ -171,5 +174,45 @@ describe("DashboardPanel Recruiter Action Center", () => {
     expect(await screen.findByText("1 tin tuyển dụng ở trạng thái bản nháp")).toBeInTheDocument();
     expect(screen.getByText("Bản nháp")).toBeInTheDocument();
     expect(screen.getByText("Đã đóng")).toBeInTheDocument();
+  });
+
+  it("keeps cumulative shortlist rate and processed rate accurate when applications advance past SHORTLISTED", async () => {
+    vi.mocked(apiRequest).mockImplementation(async (path) => {
+      if (path.startsWith("/api/v2/dashboard")) {
+        return {
+          audience: "RECRUITER",
+          metrics: {
+            jobs: 1,
+            publishedJobs: 1,
+            draftJobs: 0,
+            closedJobs: 0,
+            applications: 2,
+            submitted: 0,
+            underReview: 0,
+            shortlisted: 0,
+            interview: 1,
+            offered: 0,
+            hired: 1,
+            rejected: 0,
+            withdrawn: 0,
+            reachedShortlisted: 2
+          }
+        };
+      }
+      return { items: [], total: 0, page: 0, size: 4 };
+    });
+
+    render(
+      <DashboardPanel
+        session={recruiterSession}
+        companyId="company-1"
+        onLogout={vi.fn()}
+      />
+    );
+
+    expect(await screen.findByText("Shortlist 100%")).toBeInTheDocument();
+    expect(screen.getAllByText("Phỏng vấn").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Đã tuyển dụng").length).toBeGreaterThan(0);
+    expect(screen.getByText(/Đã xử lý:/)).toHaveTextContent("Đã xử lý: 100% hồ sơ");
   });
 });

@@ -1,19 +1,23 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { apiRequest } from "../../shared/api/client";
+import { PageResult } from "../../shared/api/pagination";
 import { BanknoteIcon, BookmarkIcon, ClockIcon, MapPinIcon } from "../../shared/components/Icon";
 import { Card, cn } from "../../shared/ui";
 import { CompanyLogo } from "./CompanyLogo";
 import { resolveCompanyMeta } from "./companyData";
 import { extractSkillsFromJob, formatSalary, publishedLabel, workModeLabel } from "./jobPresentation";
+import { useSavedJobs } from "./savedJobs";
 import { PublicJob } from "./types";
 
-type QuickFilter = "ALL" | "REMOTE" | "HYBRID" | "JUNIOR" | "SENIOR";
+type QuickFilter = "ALL" | "REMOTE" | "HYBRID" | "JUNIOR" | "SENIOR" | "SAVED";
 
 const QUICK_FILTERS: Array<{ id: QuickFilter; label: string }> = [
   { id: "ALL", label: "Tất cả" },
   { id: "REMOTE", label: "Remote" },
   { id: "HYBRID", label: "Hybrid" },
   { id: "JUNIOR", label: "Junior / Fresher" },
-  { id: "SENIOR", label: "Senior" }
+  { id: "SENIOR", label: "Senior" },
+  { id: "SAVED", label: "Đã lưu" }
 ];
 
 type HotJobsVIPProps = {
@@ -24,35 +28,82 @@ type HotJobsVIPProps = {
 
 export function HotJobsVIP({ jobs, onSelectJob, onApplyJob }: HotJobsVIPProps) {
   const [quickFilter, setQuickFilter] = useState<QuickFilter>("ALL");
-  const [savedIds, setSavedIds] = useState<Record<string, boolean>>({});
+  const { savedIds, toggleSaved: toggleSavedJob } = useSavedJobs();
+  const [extraSavedJobs, setExtraSavedJobs] = useState<Record<string, PublicJob>>({});
+  const [loadingSaved, setLoadingSaved] = useState(false);
 
-  if (!jobs.length) return null;
+  const savedKeys = useMemo(
+    () => Object.keys(savedIds).filter((id) => Boolean(savedIds[id])),
+    [savedIds]
+  );
 
-  const filteredJobs = jobs.filter((job) => {
-    if (quickFilter === "ALL") return true;
-    if (quickFilter === "REMOTE") return job.workMode === "REMOTE";
-    if (quickFilter === "HYBRID") return job.workMode === "HYBRID";
-    if (quickFilter === "JUNIOR") {
-      return ["INTERN", "FRESHER", "JUNIOR"].includes((job.seniorityLevel ?? "").toUpperCase());
-    }
-    if (quickFilter === "SENIOR") {
-      return ["SENIOR", "LEAD", "MANAGER"].includes((job.seniorityLevel ?? "").toUpperCase());
-    }
-    return true;
-  });
+  useEffect(() => {
+    if (quickFilter !== "SAVED") return;
+    const missing = savedKeys.filter((id) => !jobs.some((job) => job.jobId === id) && !extraSavedJobs[id]);
+    if (!missing.length) return;
+    let active = true;
+    setLoadingSaved(true);
+    Promise.all(
+      missing.slice(0, 12).map((id) =>
+        apiRequest<PageResult<PublicJob>>(`/api/v2/public/jobs?page=0&size=1&jobId=${encodeURIComponent(id)}`)
+          .then((res) => res.items[0] ?? null)
+          .catch(() => null)
+      )
+    )
+      .then((found) => {
+        if (!active) return;
+        const map: Record<string, PublicJob> = {};
+        for (const job of found) {
+          if (job) map[job.jobId] = job;
+        }
+        if (Object.keys(map).length > 0) {
+          setExtraSavedJobs((prev) => ({ ...prev, ...map }));
+        }
+      })
+      .finally(() => {
+        if (active) setLoadingSaved(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [quickFilter, savedKeys, jobs, extraSavedJobs]);
 
-  const vipJobs = filteredJobs.slice(0, 6);
+  if (!jobs.length && quickFilter !== "SAVED") return null;
+
+  const filteredJobs =
+    quickFilter === "SAVED"
+      ? [
+          ...jobs.filter((job) => Boolean(savedIds[job.jobId])),
+          ...savedKeys
+            .filter((id) => !jobs.some((job) => job.jobId === id))
+            .map((id) => extraSavedJobs[id])
+            .filter((job): job is PublicJob => Boolean(job))
+        ]
+      : jobs.filter((job) => {
+          if (quickFilter === "ALL") return true;
+          if (quickFilter === "REMOTE") return job.workMode === "REMOTE";
+          if (quickFilter === "HYBRID") return job.workMode === "HYBRID";
+          if (quickFilter === "JUNIOR") {
+            return ["INTERN", "FRESHER", "JUNIOR"].includes((job.seniorityLevel ?? "").toUpperCase());
+          }
+          if (quickFilter === "SENIOR") {
+            return ["SENIOR", "LEAD", "MANAGER"].includes((job.seniorityLevel ?? "").toUpperCase());
+          }
+          return true;
+        });
+
+  const vipJobs = quickFilter === "SAVED" ? filteredJobs : filteredJobs.slice(0, 6);
 
   function toggleSaved(e: React.MouseEvent, jobId: string) {
     e.stopPropagation();
-    setSavedIds((prev) => ({ ...prev, [jobId]: !prev[jobId] }));
+    toggleSavedJob(jobId);
   }
 
   return (
     <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
       <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h2 className="text-lg sm:text-xl font-bold tracking-tight text-ink-900 m-0">
+          <h2 className="text-xl font-bold tracking-tight text-ink-900 m-0">
             Việc làm mới nhất
           </h2>
           <p className="text-sm text-ink-500 mt-1 mb-0">
@@ -70,7 +121,7 @@ export function HotJobsVIP({ jobs, onSelectJob, onApplyJob }: HotJobsVIPProps) {
                 aria-pressed={active}
                 onClick={() => setQuickFilter(filter.id)}
                 className={cn(
-                  "rounded-md border px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer",
+                  "rounded-md border px-2.5 py-1 text-xs sm:text-sm font-medium transition-colors cursor-pointer",
                   active
                     ? "border-brand-600 bg-brand-50 text-brand-700 font-semibold"
                     : "border-border-subtle bg-white text-ink-600 hover:border-border-strong hover:text-ink-900"
@@ -86,12 +137,16 @@ export function HotJobsVIP({ jobs, onSelectJob, onApplyJob }: HotJobsVIPProps) {
       {vipJobs.length === 0 ? (
         <div className="rounded-xl border border-border-subtle bg-white p-6 text-center space-y-2">
           <p className="text-sm text-ink-600 m-0">
-            Chưa có tin mới nhất khớp bộ lọc này trong nhóm nổi bật.
+            {quickFilter === "SAVED"
+              ? loadingSaved
+                ? "Đang tải việc làm đã lưu…"
+                : "Bạn chưa lưu vị trí nào."
+              : "Chưa có tin mới nhất khớp bộ lọc này trong nhóm nổi bật."}
           </p>
           <button
             type="button"
             onClick={() => setQuickFilter("ALL")}
-            className="text-xs font-semibold text-brand-700 hover:text-brand-800 underline underline-offset-4 bg-transparent border-0 p-0 cursor-pointer"
+            className="text-sm font-semibold text-brand-700 hover:text-brand-800 underline underline-offset-4 bg-transparent border-0 p-0 cursor-pointer"
           >
             Xem lại tất cả tin mới nhất
           </button>
@@ -152,20 +207,20 @@ export function HotJobsVIP({ jobs, onSelectJob, onApplyJob }: HotJobsVIPProps) {
                       <h3 className="text-base font-bold text-ink-900 group-hover:text-brand-700 transition-colors m-0 mt-0.5 leading-snug line-clamp-2">
                         {job.title}
                       </h3>
-                      <p className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-emerald-700 m-0 mt-1.5">
-                        <BanknoteIcon size={14} className="shrink-0 text-emerald-600" aria-hidden="true" />
+                      <p className="inline-flex items-center gap-1.5 text-sm font-bold text-emerald-700 m-0 mt-1.5">
+                        <BanknoteIcon size={15} className="shrink-0 text-emerald-600" aria-hidden="true" />
                         <span>{formatSalary(job)}</span>
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-600">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-600">
                     <span className="inline-flex items-center gap-1">
-                      <MapPinIcon size={13} className="text-ink-400" aria-hidden="true" />
+                      <MapPinIcon size={14} className="text-ink-400" aria-hidden="true" />
                       <span className="truncate max-w-[140px]">{job.locationText || "Linh hoạt"}</span>
                     </span>
                     <span className="inline-flex items-center gap-1">
-                      <ClockIcon size={13} className="text-ink-400" aria-hidden="true" />
+                      <ClockIcon size={14} className="text-ink-400" aria-hidden="true" />
                       <span>{workModeLabel(job.workMode)}</span>
                     </span>
                   </div>
@@ -175,7 +230,7 @@ export function HotJobsVIP({ jobs, onSelectJob, onApplyJob }: HotJobsVIPProps) {
                       {skills.map((skill) => (
                         <span
                           key={skill}
-                          className="rounded-md border border-border-subtle bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-ink-700"
+                          className="rounded-md border border-border-subtle bg-slate-50 px-2 py-0.5 text-xs font-medium text-ink-700"
                         >
                           {skill}
                         </span>
@@ -185,14 +240,14 @@ export function HotJobsVIP({ jobs, onSelectJob, onApplyJob }: HotJobsVIPProps) {
                 </div>
 
                 <div className="flex items-center justify-between gap-2 pt-3 border-t border-border-subtle/80">
-                  <span className="text-xs text-ink-400">{publishedLabel(job)}</span>
+                  <span className="text-sm text-ink-400">{publishedLabel(job)}</span>
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       onApplyJob(job);
                     }}
-                    className="rounded-md border border-brand-200 bg-white px-3 py-1.5 text-xs font-semibold text-brand-700 group-hover:border-brand-600 group-hover:bg-brand-600 group-hover:text-white transition-colors cursor-pointer"
+                    className="rounded-md border border-brand-200 bg-white px-3 py-1.5 text-sm font-semibold text-brand-700 group-hover:border-brand-600 group-hover:bg-brand-600 group-hover:text-white transition-colors cursor-pointer"
                   >
                     Ứng tuyển ngay
                   </button>

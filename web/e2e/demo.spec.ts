@@ -101,7 +101,7 @@ test("recruiter explicitly controls external AI consent per JD version", async (
       await expect(page.getByRole("button", { name: "Xác nhận yêu cầu tuyển dụng", exact: true })).toBeEnabled();
       await page.screenshot({ path: "test-results/external-ai-jd-consent.png", fullPage: true });
     }
-    await page.getByRole("button", { name: "← Quay lại danh sách tin", exact: true }).click();
+    await page.getByRole("button", { name: "Danh sách tin tuyển dụng", exact: true }).click();
   }
 });
 
@@ -203,7 +203,7 @@ test("complete recruitment workflow through UI with editable CV and evidence", a
   await page.screenshot({ path: "test-results/job-skills-jd-review.png", fullPage: true });
   await page.getByRole("button", { name: "Xác nhận yêu cầu tuyển dụng", exact: true }).click({ timeout: 45_000 });
   await expect(page.getByText("Dùng cho Job này · đối chiếu tên chính xác", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "✏️ Chi tiết tin tuyển dụng", exact: true }).click();
+  await page.getByRole("button", { name: "Chi tiết tin tuyển dụng", exact: true }).click();
   await expect(async () => {
     await page.getByRole("button", { name: "Đăng JD", exact: true }).click();
     await expect(page.getByRole("button", { name: "Đóng JD", exact: true })).toBeVisible({ timeout: 2000 });

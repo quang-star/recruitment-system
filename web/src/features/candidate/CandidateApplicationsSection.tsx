@@ -169,7 +169,11 @@ export function CandidateApplicationsSection({
                         <Badge tone={applicationStatusTone(application.status)}>
                           {applicationStatusLabel(application.status)}
                         </Badge>
-                        {application.cvAccessGranted === false && <Badge tone="neutral">Đã thu hồi quyền CV</Badge>}
+                        {application.cvAccessGranted === false && application.status !== "WITHDRAWN" && (
+                          <Badge tone="neutral">
+                            {application.status === "REJECTED" ? "Đã đóng quyền xem CV" : "Đã thu hồi quyền CV"}
+                          </Badge>
+                        )}
                       </div>
                       <p className="text-xs text-ink-500 m-0">
                         {application.companyName || `Hồ sơ #${application.applicationId}`} · Nộp ngày {new Date(application.appliedAt).toLocaleDateString("vi-VN")}

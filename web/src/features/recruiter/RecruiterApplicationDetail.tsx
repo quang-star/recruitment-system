@@ -1,12 +1,13 @@
+import { CvIcon, MailIcon, PhoneIcon } from "../../shared/components/Icon";
 import { Badge, Button, ErrorBanner } from "../../shared/ui";
 import { MatchBreakdown } from "../application/MatchBreakdown";
 import { matchSummary } from "../application/matchPresentation";
 import {
   Application,
   RecruiterTransition,
-  nextRecruitmentStage,
   ApplicationWithMatch,
   StatusChange,
+  canRejectApplication,
   candidateDisplayName,
   candidateInitials,
   statusTone,
@@ -56,10 +57,20 @@ export function RecruiterApplicationDetail({
             {application.candidateHeadline && (
               <p className="text-xs font-medium text-ink-600 m-0">{application.candidateHeadline}</p>
             )}
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-500">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-500">
               <span>Nộp ngày {new Date(application.appliedAt).toLocaleString("vi-VN")}</span>
-              {application.candidateEmail && <Badge tone="neutral">✉️ {application.candidateEmail}</Badge>}
-              {application.candidatePhone && <Badge tone="neutral">📞 {application.candidatePhone}</Badge>}
+              {application.candidateEmail && (
+                <span className="inline-flex items-center gap-1 text-ink-600">
+                  <MailIcon size={13} className="text-ink-400 shrink-0" aria-hidden="true" />
+                  <span>{application.candidateEmail}</span>
+                </span>
+              )}
+              {application.candidatePhone && (
+                <span className="inline-flex items-center gap-1 text-ink-600">
+                  <PhoneIcon size={13} className="text-ink-400 shrink-0" aria-hidden="true" />
+                  <span>{application.candidatePhone}</span>
+                </span>
+              )}
               <span>· Mã: {application.applicationId.slice(0, 8)}</span>
             </div>
           </div>
@@ -86,7 +97,11 @@ export function RecruiterApplicationDetail({
       ) : (
         <div className="rounded-xl border border-border-subtle bg-slate-50 px-4 py-3 text-sm text-ink-600">
           {application.cvAccessGranted === false
-            ? "Ứng viên đã thu hồi quyền xem CV và điểm."
+            ? application.status === "REJECTED"
+              ? "Hồ sơ đã bị từ chối nên quyền xem CV và điểm AI đã tự động đóng."
+              : application.status === "WITHDRAWN"
+                ? "Ứng viên đã rút hồ sơ; quyền xem CV và điểm AI đã tự động thu hồi."
+                : "Ứng viên đã thu hồi quyền xem CV và điểm."
             : application.matchingSupported === false
               ? "Ngành này chưa hỗ trợ AI; xem xét hồ sơ thủ công."
               : matchSummary(application)}
@@ -118,7 +133,8 @@ export function RecruiterApplicationDetail({
             })
           }
         >
-          📄 Xem CV trực tiếp
+          <CvIcon size={14} aria-hidden="true" />
+          <span>Xem CV trực tiếp</span>
         </Button>
 
         <Button
@@ -146,13 +162,7 @@ export function RecruiterApplicationDetail({
           </Button>
         )}
 
-        {canTransition && ["SHORTLISTED", "INTERVIEW", "OFFERED"].includes(application.status) && (
-          <Button variant="primary" size="sm" disabled={workingApplicationId === application.applicationId}
-            onClick={() => onTransition(application, nextRecruitmentStage[application.status]!)}>
-            {translateApplicationStatus(nextRecruitmentStage[application.status]!)}
-          </Button>
-        )}
-        {canTransition && ["SUBMITTED", "UNDER_REVIEW", "SHORTLISTED", "INTERVIEW", "OFFERED"].includes(application.status) && (
+        {canTransition && canRejectApplication(application.status) && (
           <Button variant="danger" size="sm" disabled={isBusy} onClick={() => onRequestReject(application)}>
             Từ chối
           </Button>

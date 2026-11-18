@@ -18,7 +18,8 @@ it("uses global server ranking, resets the page on filters and displays whole-st
   });
   const session = { accessToken: "fixture", roles: ["RECRUITER"] } as AuthSession;
   render(<RecruiterApplicationsPanel session={session} jobId="job" canTransition={false} />);
-  expect(await within(screen.getByRole("table", { name: "Danh sách ứng viên" })).findByRole("img", { name: "Mức độ phù hợp: 5/5 sao · Phù hợp rất cao" })).toBeInTheDocument();
+  const table = await screen.findByRole("table", { name: "Danh sách ứng viên" });
+  expect(await within(table).findByRole("img", { name: "Mức độ phù hợp: 5/5 sao · Phù hợp rất cao" })).toBeInTheDocument();
   expect(screen.getByText("21 hồ sơ")).toBeInTheDocument();
   const paging = screen.getByRole("navigation", { name: "Phân trang ứng viên" });
   fireEvent.click(within(paging).getByRole("button", { name: "Trang sau" }));
@@ -37,7 +38,7 @@ it("does not display a zero score for insufficient data and opens only the selec
     : { items: ["first", "second"].map((id) => ({ applicationId: id, candidateUserId: id, coverLetter: `Letter ${id}`,
       status: "SUBMITTED", appliedAt: "2026-10-01T00:00:00Z", version: 0 })), total: 2, page: 0, size: 10 });
   render(<RecruiterApplicationsPanel session={{ accessToken: "fixture" } as AuthSession} jobId="job" canTransition={false} />);
-  const table = screen.getByRole("table", { name: "Danh sách ứng viên" });
+  const table = await screen.findByRole("table", { name: "Danh sách ứng viên" });
   expect(await within(table).findAllByText("Chưa đủ dữ liệu")).toHaveLength(2);
   expect(screen.queryByText("0.0/100")).not.toBeInTheDocument();
   expect(within(table).queryByRole("img")).not.toBeInTheDocument();
@@ -60,8 +61,9 @@ it("distinguishes a failed match request from a pending result and can retry", a
   expect(await screen.findByRole("alert")).toHaveTextContent("Không tải được kết quả đối chiếu");
   fail = false;
   fireEvent.click(screen.getByRole("button", { name: "Thử lại điểm" }));
-  expect(await within(screen.getByRole("table")).findByRole("img", { name: "Mức độ phù hợp: 4/5 sao · Phù hợp cao" })).toBeInTheDocument();
-  expect(within(screen.getByRole("table")).getByText("Cần kiểm tra thêm")).toBeInTheDocument();
+  const table = await screen.findByRole("table");
+  expect(await within(table).findByRole("img", { name: "Mức độ phù hợp: 4/5 sao · Phù hợp cao" })).toBeInTheDocument();
+  expect(within(table).getByText("Chưa đủ căn cứ chấm điểm · Cần xem thủ công")).toBeInTheDocument();
 });
 
 it("does not request AI scores for manual industries or revoked CV access", async () => {
@@ -71,8 +73,9 @@ it("does not request AI scores for manual industries or revoked CV access", asyn
     { applicationId: "revoked", candidateUserId: "revoked", cvAccessGranted: false, status: "SUBMITTED", appliedAt: "2026-10-01T00:00:00Z", version: 0 },
   ], total: 2, page: 0, size: 10 }));
   render(<RecruiterApplicationsPanel session={{ accessToken: "fixture" } as AuthSession} jobId="job" canTransition={false} />);
-  expect(await within(screen.getByRole("table")).findByText("Xem xét thủ công")).toBeInTheDocument();
-  expect(within(screen.getByRole("table")).getByText("Đã thu hồi quyền xem")).toBeInTheDocument();
+  const table = await screen.findByRole("table");
+  expect(within(table).getByText("Xem xét thủ công")).toBeInTheDocument();
+  expect(within(table).getByText("Đã thu hồi quyền xem")).toBeInTheDocument();
   expect(vi.mocked(apiRequest).mock.calls.some(([path]) => path.endsWith("/match"))).toBe(false);
 });
 
@@ -92,15 +95,33 @@ it("switches to kanban board view, displays stages, and supports quick card stag
       return { finalScore: 92, status: "COMPLETED", qualityFlags: [], explanation: { components: [], claims: [] } };
     }
     return {
-      items: [{
-        applicationId: "app-kanban",
-        candidateUserId: "cand-kanban",
-        coverLetter: "Tôi muốn ứng tuyển vị trí này",
-        status: "SUBMITTED",
-        appliedAt: "2026-10-01T00:00:00Z",
-        version: 0
-      }],
-      total: 1,
+      items: [
+        {
+          applicationId: "app-kanban",
+          candidateUserId: "cand-kanban",
+          coverLetter: "Tôi muốn ứng tuyển vị trí này",
+          status: "SUBMITTED",
+          appliedAt: "2026-10-01T00:00:00Z",
+          version: 0
+        },
+        {
+          applicationId: "app-shortlisted",
+          candidateUserId: "cand-shortlisted",
+          candidateName: "Ứng viên đã qua vòng CV",
+          status: "SHORTLISTED",
+          appliedAt: "2026-10-01T00:00:00Z",
+          version: 2
+        },
+        {
+          applicationId: "app-hired",
+          candidateUserId: "cand-hired",
+          candidateName: "Ứng viên từ dữ liệu cũ",
+          status: "HIRED",
+          appliedAt: "2026-10-01T00:00:00Z",
+          version: 5
+        }
+      ],
+      total: 3,
       page: 0,
       size: 10
     };
@@ -109,22 +130,23 @@ it("switches to kanban board view, displays stages, and supports quick card stag
   render(<RecruiterApplicationsPanel session={{ accessToken: "fixture" } as AuthSession} jobId="job-1" canTransition={true} />);
 
   // Switch to Kanban board
-  fireEvent.click(screen.getByRole("button", { name: "📊 Bảng Kanban" }));
+  fireEvent.click(screen.getByRole("button", { name: "Bảng Kanban" }));
 
   // Verify Kanban region and stages
-  const kanban = screen.getByRole("region", { name: "Bảng Kanban tuyển dụng" });
-  expect(kanban).toBeInTheDocument();
+  const kanban = await screen.findByRole("region", { name: "Bảng Kanban tuyển dụng" });
   expect(within(kanban).getByText("Mới ứng tuyển")).toBeInTheDocument();
   expect(within(kanban).getByText("Đang xem xét")).toBeInTheDocument();
   expect(within(kanban).getByText("Danh sách rút gọn")).toBeInTheDocument();
   expect(within(kanban).getByText("Đã từ chối")).toBeInTheDocument();
-  expect(within(kanban).getByText("Đang phỏng vấn")).toBeInTheDocument();
-  expect(within(kanban).getByText("Đã gửi đề nghị")).toBeInTheDocument();
-  expect(within(kanban).getByText("Đã tuyển dụng")).toBeInTheDocument();
+  expect(within(kanban).getAllByRole("heading")).toHaveLength(4);
+  expect(within(kanban).getByText("Ứng viên từ dữ liệu cũ").closest("[data-stage]")).toHaveAttribute("data-stage", "SHORTLISTED");
+
+  fireEvent.click(within(kanban).getByText("Ứng viên đã qua vòng CV"));
+  expect(screen.queryByRole("button", { name: "Đang phỏng vấn" })).not.toBeInTheDocument();
 
   // Verify candidate card in Mới ứng tuyển
   expect(await within(kanban).findByText(/Ứng viên cand-kan/)).toBeInTheDocument();
-  expect(await within(kanban).findByRole("img", { name: "Mức độ phù hợp: 5/5 sao · Phù hợp rất cao" })).toBeInTheDocument();
+  expect(await within(kanban).findAllByRole("img", { name: "Mức độ phù hợp: 5/5 sao · Phù hợp rất cao" })).toHaveLength(3);
 
   // Click quick transition button ➡️ Xem xét
   const transitionBtn = within(kanban).getByRole("button", { name: /Xem xét/i });
@@ -146,11 +168,23 @@ it("clears the table status filter in Kanban so moved cards remain visible", asy
     ? { finalScore: 50, status: "COMPLETED", qualityFlags: [], explanation: { components: [], claims: [] } }
     : { items: [], total: 0, page: 0, size: 10 });
   render(<RecruiterApplicationsPanel session={{ accessToken: "fixture" } as AuthSession} jobId="42" canTransition />);
-  fireEvent.change(screen.getByLabelText("Trạng thái"), { target: { value: "SUBMITTED" } });
+  const status = screen.getByLabelText("Trạng thái");
+  expect(within(status).queryByRole("option", { name: "Đang phỏng vấn" })).not.toBeInTheDocument();
+  fireEvent.change(status, { target: { value: "SUBMITTED" } });
   await waitFor(() => expect(apiRequest).toHaveBeenCalledWith(expect.stringMatching(/status=SUBMITTED/), expect.anything()));
+  expect(await screen.findByText("Không có hồ sơ phù hợp bộ lọc hiện tại.")).toBeVisible();
   vi.mocked(apiRequest).mockClear();
-  fireEvent.click(screen.getByRole("button", { name: "📊 Bảng Kanban" }));
-  await waitFor(() => expect(apiRequest).toHaveBeenCalledWith(expect.stringMatching(/jobId=42&sort=newest.*page=0/), expect.anything()));
+  fireEvent.click(screen.getByRole("button", { name: "Bảng Kanban" }));
+  await waitFor(() => expect(apiRequest).toHaveBeenCalledWith(expect.stringMatching(/jobId=42&sort=newest.*page=0&size=100/), expect.anything()));
   expect(screen.getByLabelText("Trạng thái")).toBeDisabled();
-  expect(screen.getByText(/Bảng hiển thị các hồ sơ trên trang hiện tại/)).toBeVisible();
+  expect(await screen.findByText("Chưa có hồ sơ ứng tuyển")).toBeVisible();
+  expect(screen.queryByRole("region", { name: "Bảng Kanban tuyển dụng" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("navigation", { name: "Phân trang ứng viên" })).not.toBeInTheDocument();
+  expect(screen.queryByText(/thang 1–5 sao/)).not.toBeInTheDocument();
+
+  const search = screen.getByRole("textbox", { name: "Tìm hồ sơ" });
+  fireEvent.change(search, { target: { value: "không khớp" } });
+  fireEvent.click(await screen.findByRole("button", { name: "Xóa bộ lọc" }));
+  expect(search).toHaveValue("");
+  expect(await screen.findByText("Chưa có hồ sơ ứng tuyển")).toBeVisible();
 });

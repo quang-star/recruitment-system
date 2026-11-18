@@ -47,3 +47,24 @@ it("opens application history from the application metrics", async () => {
   fireEvent.click(screen.getByRole("button", { name: /Đơn đã gửi/ }));
   expect(navigate).toHaveBeenCalledWith("applications");
 });
+
+it("displays application jobTitle and companyName even when job is absent from recent jobs preview", async () => {
+  vi.mocked(apiRequest).mockImplementation(async (path) => {
+    if (path === "/api/v2/cvs") return [];
+    if (path === "/api/v2/dashboard") return { metrics: { applications: 1, underReview: 0, shortlisted: 0 } };
+    if (String(path).startsWith("/api/v2/candidate/applications?")) {
+      return {
+        items: [{ applicationId: "app-old", jobId: "old-job", jobTitle: "Principal Platform Engineer", companyName: "Acme Corp", status: "HIRED", appliedAt: "2026-10-01T00:00:00Z" }],
+        total: 1,
+        page: 0,
+        size: 4
+      };
+    }
+    return { items: [], total: 0, page: 0, size: 4 };
+  });
+
+  render(<CandidateDashboard session={session} profile={null} onNavigate={vi.fn()} onOpenJob={vi.fn()} />);
+  expect(await screen.findByText("Principal Platform Engineer")).toBeInTheDocument();
+  expect(screen.getByText(/Acme Corp/)).toBeInTheDocument();
+  expect(screen.getByText("Đã tuyển dụng")).toBeInTheDocument();
+});

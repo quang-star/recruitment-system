@@ -68,8 +68,9 @@ export function ResetPasswordPage() {
               <input
                 type="password"
                 required
-                minLength={8}
+                minLength={12}
                 maxLength={128}
+                placeholder="Tối thiểu 12 ký tự"
                 autoComplete="new-password"
                 value={newPassword}
                 onChange={(event) => setNewPassword(event.target.value)}
@@ -82,8 +83,9 @@ export function ResetPasswordPage() {
               <input
                 type="password"
                 required
-                minLength={8}
+                minLength={12}
                 maxLength={128}
+                placeholder="Nhập lại tối thiểu 12 ký tự"
                 autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(event) => setConfirmPassword(event.target.value)}

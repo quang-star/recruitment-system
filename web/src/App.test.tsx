@@ -64,3 +64,26 @@ it("clears local state immediately when the user logs out even if the server is 
   expect(await screen.findByText("Public home")).toBeInTheDocument();
   expect(loadSession()).toBeNull();
 });
+
+it("returns to the home route when logging out from a protected security route", async () => {
+  window.history.replaceState(null, "", "/candidate/security");
+  vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+    if (String(url).endsWith("/auth/me")) return json(me);
+    return new Response(null, { status: 204 });
+  });
+  render(<App />);
+  fireEvent.click(await screen.findByRole("button", { name: "Logout" }));
+  expect(await screen.findByText("Public home")).toBeInTheDocument();
+  expect(window.location.pathname).toBe("/");
+  expect(loadSession()).toBeNull();
+});
+
+it("shows a role switch notice when a non-recruiter visits accept-invitation while signed in", async () => {
+  window.history.replaceState(null, "", "/accept-invitation?token=invite-1");
+  vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(json(me));
+  render(<App />);
+  expect(await screen.findByRole("heading", { name: "Liên kết mời thành viên công ty" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Đăng xuất để dùng tài khoản nhà tuyển dụng" })).toBeInTheDocument();
+  expect(screen.queryByText("Candidate workspace")).not.toBeInTheDocument();
+  window.history.replaceState(null, "", "/");
+});
