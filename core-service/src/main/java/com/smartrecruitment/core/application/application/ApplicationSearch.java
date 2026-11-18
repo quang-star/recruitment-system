@@ -4,13 +4,18 @@ import com.smartrecruitment.core.application.domain.ApplicationStatus;
 import com.smartrecruitment.core.shared.application.PageRequest;
 import java.util.Set;
 
-public record ApplicationSearch(Integer page, Integer size, String q, String sort, ApplicationStatus status, Long applicationId) {
+public record ApplicationSearch(Integer page, Integer size, String q, String sort, ApplicationStatus status, Long applicationId, Long jobId) {
     public ApplicationSearch(Integer page, Integer size, String q, String sort, ApplicationStatus status) {
-        this(page, size, q, sort, status, null);
+        this(page, size, q, sort, status, null, null);
+    }
+
+    public ApplicationSearch(Integer page, Integer size, String q, String sort, ApplicationStatus status, Long applicationId) {
+        this(page, size, q, sort, status, applicationId, null);
     }
 
     public ApplicationSearch {
         if (applicationId != null && applicationId <= 0) throw new IllegalArgumentException("Application ID must be positive");
+        if (jobId != null && jobId <= 0) throw new IllegalArgumentException("Job ID must be positive");
         page = page == null ? 0 : page;
         size = size == null ? 10 : size;
         new PageRequest(page, size);

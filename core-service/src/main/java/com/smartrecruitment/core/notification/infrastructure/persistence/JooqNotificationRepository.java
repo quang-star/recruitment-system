@@ -3,10 +3,12 @@ package com.smartrecruitment.core.notification.infrastructure.persistence;
 import com.smartrecruitment.core.notification.application.port.NotificationRepository;
 import com.smartrecruitment.core.notification.domain.Notification;
 import com.smartrecruitment.core.shared.infrastructure.persistence.TimestampGuards;
+import org.jooq.Condition;
 import org.jooq.DSLContext;
 import org.springframework.stereotype.Repository;
 
 import java.time.OffsetDateTime;
+import java.util.Collection;
 import java.util.List;
 
 import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.Applications.APPLICATIONS;
@@ -68,14 +70,57 @@ public class JooqNotificationRepository implements NotificationRepository {
 
     @Override
     public List<Notification> findAll(Long userId, int limit) {
-        return dsl.selectFrom(NOTIFICATIONS).where(NOTIFICATIONS.USER_ID.eq(userId))
-                .orderBy(NOTIFICATIONS.CREATED_AT.desc()).limit(limit).fetch(this::toDomain);
+        return findAll(userId, limit, 0, false, List.of());
+    }
+
+    @Override
+    public List<Notification> findAll(Long userId, int limit, boolean unreadOnly) {
+        return findAll(userId, limit, 0, unreadOnly, List.of());
+    }
+
+    @Override
+    public List<Notification> findAll(Long userId, int limit, int offset, boolean unreadOnly,
+                                      Collection<String> types) {
+        Condition condition = NOTIFICATIONS.USER_ID.eq(userId);
+        if (unreadOnly) {
+            condition = condition.and(NOTIFICATIONS.READ_AT.isNull());
+        }
+        if (types != null && !types.isEmpty()) {
+            condition = condition.and(NOTIFICATIONS.TYPE.in(types));
+        }
+        return dsl.selectFrom(NOTIFICATIONS).where(condition)
+                .orderBy(NOTIFICATIONS.CREATED_AT.desc(), NOTIFICATIONS.ID.desc())
+                .limit(limit)
+                .offset(Math.max(0, offset))
+                .fetch(this::toDomain);
     }
 
     @Override
     public long countUnread(Long userId) {
-        return dsl.fetchCount(dsl.selectOne().from(NOTIFICATIONS)
-                .where(NOTIFICATIONS.USER_ID.eq(userId)).and(NOTIFICATIONS.READ_AT.isNull()));
+        return countWhere(NOTIFICATIONS.USER_ID.eq(userId).and(NOTIFICATIONS.READ_AT.isNull()));
+    }
+
+    @Override
+    public long countAll(Long userId) {
+        return countWhere(NOTIFICATIONS.USER_ID.eq(userId));
+    }
+
+    @Override
+    public long countByTypes(Long userId, Collection<String> types) {
+        if (types == null || types.isEmpty()) return 0L;
+        return countWhere(NOTIFICATIONS.USER_ID.eq(userId).and(NOTIFICATIONS.TYPE.in(types)));
+    }
+
+    @Override
+    public long countUnreadByTypes(Long userId, Collection<String> types) {
+        if (types == null || types.isEmpty()) return 0L;
+        return countWhere(NOTIFICATIONS.USER_ID.eq(userId)
+                .and(NOTIFICATIONS.READ_AT.isNull())
+                .and(NOTIFICATIONS.TYPE.in(types)));
+    }
+
+    private long countWhere(Condition condition) {
+        return dsl.fetchCount(dsl.selectOne().from(NOTIFICATIONS).where(condition));
     }
 
     @Override

@@ -97,7 +97,8 @@ public class CategoryService {
             }
             case "APPROVE" -> {
                 if (!"PENDING".equals(status)) throw new CategoryConflictException();
-                validateParent(before.kind(), before.parentId(), true);
+                Long parentId = before.parentId() == null ? null : canonicalId(before.parentId());
+                validateParent(before.kind(), parentId, true);
                 if (name != null) clean = cleanName(name);
                 status = "ACTIVE";
             }

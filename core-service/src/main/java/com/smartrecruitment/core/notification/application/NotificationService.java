@@ -12,6 +12,12 @@ import java.util.List;
 
 @Service
 public class NotificationService {
+    public static final List<String> APPLICATION_TYPES = List.of(
+            "APPLICATION_SUBMITTED",
+            "APPLICATION_STATUS_CHANGED",
+            "APPLICATION_WITHDRAWN"
+    );
+
     private final NotificationRepository notifications;
     private final Clock clock;
 
@@ -22,8 +28,31 @@ public class NotificationService {
 
     @Transactional(readOnly = true)
     public NotificationFeed feed(Long userId, int requestedLimit) {
+        return feed(userId, requestedLimit, 0, false, false);
+    }
+
+    @Transactional(readOnly = true)
+    public NotificationFeed feed(Long userId, int requestedLimit, boolean unreadOnly) {
+        return feed(userId, requestedLimit, 0, unreadOnly, false);
+    }
+
+    @Transactional(readOnly = true)
+    public NotificationFeed feed(Long userId, int requestedLimit, int requestedOffset,
+                                 boolean unreadOnly, boolean applicationsOnly) {
         int limit = Math.max(1, Math.min(requestedLimit, 100));
-        return new NotificationFeed(notifications.findAll(userId, limit), notifications.countUnread(userId));
+        int offset = Math.max(0, requestedOffset);
+        List<Notification> items = (offset == 0 && !applicationsOnly)
+                ? notifications.findAll(userId, limit, unreadOnly)
+                : notifications.findAll(userId, limit, offset, unreadOnly,
+                        applicationsOnly ? APPLICATION_TYPES : List.of());
+        long unreadCount = notifications.countUnread(userId);
+        long totalCount = notifications.countAll(userId);
+        long applicationCount = notifications.countByTypes(userId, APPLICATION_TYPES);
+        long filteredTotal = unreadOnly && applicationsOnly
+                ? notifications.countUnreadByTypes(userId, APPLICATION_TYPES)
+                : unreadOnly ? unreadCount : applicationsOnly ? applicationCount : totalCount;
+        boolean hasMore = (long) offset + items.size() < filteredTotal;
+        return new NotificationFeed(items, unreadCount, totalCount, applicationCount, hasMore);
     }
 
     @Transactional
@@ -58,7 +87,7 @@ public class NotificationService {
         String label = switch (application.status()) {
             case SUBMITTED -> "Đã nộp hồ sơ";
             case UNDER_REVIEW -> "Đang xem xét";
-            case SHORTLISTED -> "Được chọn vào vòng phỏng vấn";
+            case SHORTLISTED -> "Vào danh sách rút gọn (Shortlist)";
             case INTERVIEW -> "Đang phỏng vấn";
             case OFFERED -> "Đã gửi đề nghị tuyển dụng";
             case HIRED -> "Đã tuyển dụng";
@@ -79,9 +108,14 @@ public class NotificationService {
 
     public void invitationAccepted(Long inviterUserId, Long invitationId, String email) {
         notifications.insert(inviterUserId, "COMPANY_INVITATION_ACCEPTED", "Lời mời công ty đã được chấp nhận",
-                email + " đã tham gia công ty.", "/recruiter/company", "company-invitation-accepted:" + invitationId,
+                email + " đã tham gia công ty.", "/recruiter/company?tab=team", "company-invitation-accepted:" + invitationId,
                 OffsetDateTime.now(clock));
     }
 
-    public record NotificationFeed(List<Notification> items, long unreadCount) { }
+    public record NotificationFeed(List<Notification> items, long unreadCount,
+                                   long totalCount, long applicationCount, boolean hasMore) {
+        public NotificationFeed(List<Notification> items, long unreadCount) {
+            this(items, unreadCount, items.size(), 0L, false);
+        }
+    }
 }

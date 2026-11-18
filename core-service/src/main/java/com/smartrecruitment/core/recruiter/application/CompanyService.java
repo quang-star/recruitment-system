@@ -3,10 +3,13 @@ package com.smartrecruitment.core.recruiter.application;
 import com.smartrecruitment.core.recruiter.application.port.CompanyRepository;
 import com.smartrecruitment.core.recruiter.domain.Company;
 import com.smartrecruitment.core.recruiter.domain.CompanyMember;
+import com.smartrecruitment.core.recruiter.domain.CompanyStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Set;
@@ -73,6 +76,17 @@ public class CompanyService {
                 .orElseThrow(CompanyNotFoundException::new);
         if (expectedVersion == null || expectedVersion != existing.version()) {
             throw new CompanyConflictException();
+        }
+        if (existing.status() == CompanyStatus.ACTIVE) {
+            String nextLegal = legalName == null ? null : legalName.trim();
+            String nextCountry = countryCode == null ? null : countryCode.trim().toUpperCase(Locale.ROOT);
+            String nextReg = (registrationNumber == null || registrationNumber.isBlank()) ? null : registrationNumber.trim();
+            if (!Objects.equals(existing.legalName(), nextLegal)
+                    || !Objects.equals(existing.countryCode(), nextCountry)
+                    || !Objects.equals(existing.registrationNumber(), nextReg)) {
+                throw new IllegalArgumentException(
+                        "Approved companies cannot modify legal name, registration number or country");
+            }
         }
         Company updated = existing.update(legalName, displayName, slug, description, websiteUrl,
                 countryCode, registrationNumber, sizeRange, logoUrl, coverImageUrl);

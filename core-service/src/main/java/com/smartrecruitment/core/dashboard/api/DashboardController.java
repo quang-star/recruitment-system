@@ -20,9 +20,10 @@ public class DashboardController {
 
     @GetMapping
     public DashboardResponse get(@AuthenticationPrincipal Jwt jwt,
-                                 @RequestParam(required = false) Long companyId) {
+                                 @RequestParam(required = false) Long companyId,
+                                 @RequestParam(required = false) Integer days) {
         List<String> roles = jwt.getClaimAsStringList("roles");
-        var result = dashboard.get(com.smartrecruitment.core.shared.api.SubjectId.parse(jwt.getSubject()), roles == null ? List.of() : roles, companyId);
+        var result = dashboard.get(com.smartrecruitment.core.shared.api.SubjectId.parse(jwt.getSubject()), roles == null ? List.of() : roles, companyId, days);
         return new DashboardResponse(
                 result.audience(),
                 result.metrics(),

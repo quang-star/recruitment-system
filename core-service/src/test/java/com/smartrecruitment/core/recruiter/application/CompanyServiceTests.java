@@ -2,6 +2,8 @@ package com.smartrecruitment.core.recruiter.application;
 
 import com.smartrecruitment.core.recruiter.application.port.CompanyRepository;
 import com.smartrecruitment.core.recruiter.domain.Company;
+import com.smartrecruitment.core.recruiter.domain.CompanyStatus;
+import com.smartrecruitment.core.recruiter.domain.CompanyVerificationStatus;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -36,6 +38,28 @@ class CompanyServiceTests {
 
         assertThatThrownBy(() -> service.getMine(other, company.id()))
                 .isInstanceOf(CompanyNotFoundException.class);
+    }
+
+    @Test
+    void activeCompanyCannotChangeLegalIdentityFields() {
+        InMemoryCompanies repository = new InMemoryCompanies();
+        Long owner = com.smartrecruitment.core.support.TestIds.next();
+        Company active = new Company(com.smartrecruitment.core.support.TestIds.next(), "Acme Legal", "Acme", "acme",
+                null, null, "VN", "0101234567", null, null, null,
+                CompanyStatus.ACTIVE, CompanyVerificationStatus.UNVERIFIED, owner, 0);
+        repository.insertWithOwner(active, owner);
+        CompanyService service = new CompanyService(repository);
+
+        Company updated = service.updateMine(owner, active.id(), "Acme Legal", "Acme Updated", "acme",
+                "New desc", null, "VN", "0101234567", "51-200", "/logos/smartrecruitment.svg", null, 0L);
+        assertThat(updated.displayName()).isEqualTo("Acme Updated");
+
+        assertThatThrownBy(() -> service.updateMine(owner, active.id(), "Fake Other Corp", "Acme", "acme",
+                null, null, "VN", "0101234567", null, null, null, 0L))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.updateMine(owner, active.id(), "Acme Legal", "Acme", "acme",
+                null, null, "VN", "9999999999", null, null, null, 0L))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     private static final class InMemoryCompanies implements CompanyRepository {
@@ -73,7 +97,9 @@ class CompanyServiceTests {
         @Override
         public Optional<Company> update(Company company, long expectedVersion) {
             return companies.stream().filter(value -> value.id().equals(company.id()))
-                    .filter(value -> value.version() == expectedVersion).findFirst();
+                    .filter(value -> value.version() == expectedVersion)
+                    .map(ignored -> company)
+                    .findFirst();
         }
     }
 }

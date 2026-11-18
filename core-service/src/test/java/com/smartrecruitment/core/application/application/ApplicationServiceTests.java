@@ -6,6 +6,7 @@ import com.smartrecruitment.core.application.domain.ApplicationSource;
 import com.smartrecruitment.core.application.domain.ApplicationStatus;
 import com.smartrecruitment.core.application.domain.ApplicationStatusChange;
 import com.smartrecruitment.core.cv.application.CvUploadedEvent;
+import com.smartrecruitment.core.shared.application.PrivacyEvent;
 import com.smartrecruitment.core.shared.application.port.OutboxEventRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -144,6 +145,26 @@ class ApplicationServiceTests {
         assertThat(outbox.applicationEvents).isEqualTo(1);
     }
 
+    @Test
+    void rejectingApplicationAppendsPrivacyRevokedEvent() {
+        var repository = new FakeApplications(application(ApplicationStatus.UNDER_REVIEW));
+        var outbox = new RecordingOutbox();
+        var service = new ApplicationService(repository, outbox);
+
+        var updated = service.updateStatus(1L, repository.application.id(), ApplicationStatus.REJECTED, "Not a fit", 0);
+
+        assertThat(updated.status()).isEqualTo(ApplicationStatus.REJECTED);
+        assertThat(outbox.privacyEvents).isEqualTo(1);
+    }
+
+    @Test
+    void applicationSearchAcceptsOptionalPositiveJobIdAndRejectsNonPositiveValues() {
+        var search = new ApplicationSearch(0, 1, "", "newest", null, null, 42L);
+        assertThat(search.jobId()).isEqualTo(42L);
+        assertThatThrownBy(() -> new ApplicationSearch(0, 1, "", "newest", null, null, 0L))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
     private static Application application(ApplicationStatus status) {
         OffsetDateTime now = OffsetDateTime.now();
         return new Application(com.smartrecruitment.core.support.TestIds.next(), com.smartrecruitment.core.support.TestIds.next(), com.smartrecruitment.core.support.TestIds.next(), com.smartrecruitment.core.support.TestIds.next(), com.smartrecruitment.core.support.TestIds.next(),
@@ -196,7 +217,9 @@ class ApplicationServiceTests {
 
     private static final class RecordingOutbox implements OutboxEventRepository {
         private int applicationEvents;
+        private int privacyEvents;
         @Override public void append(CvUploadedEvent event) { }
         @Override public void append(ApplicationSubmittedEvent event) { applicationEvents++; }
+        @Override public void append(PrivacyEvent event) { privacyEvents++; }
     }
 }

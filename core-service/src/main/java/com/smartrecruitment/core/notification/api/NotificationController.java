@@ -26,10 +26,17 @@ public class NotificationController {
 
     @GetMapping
     public NotificationFeedResponse feed(@AuthenticationPrincipal Jwt jwt,
-                                         @RequestParam(defaultValue = "50") int limit) {
-        var feed = notifications.feed(userId(jwt), limit);
-        return new NotificationFeedResponse(feed.items().stream().map(NotificationResponse::from).toList(),
-                feed.unreadCount());
+                                         @RequestParam(defaultValue = "50") int limit,
+                                         @RequestParam(defaultValue = "0") int offset,
+                                         @RequestParam(defaultValue = "false") boolean unreadOnly,
+                                         @RequestParam(defaultValue = "false") boolean applicationsOnly) {
+        var feed = notifications.feed(userId(jwt), limit, offset, unreadOnly, applicationsOnly);
+        return new NotificationFeedResponse(
+                feed.items().stream().map(NotificationResponse::from).toList(),
+                feed.unreadCount(),
+                feed.totalCount(),
+                feed.applicationCount(),
+                feed.hasMore());
     }
 
     @PatchMapping("/{notificationId}/read")
@@ -45,7 +52,12 @@ public class NotificationController {
 
     private static Long userId(Jwt jwt) { return com.smartrecruitment.core.shared.api.SubjectId.parse(jwt.getSubject()); }
 
-    public record NotificationFeedResponse(List<NotificationResponse> items, long unreadCount) { }
+    public record NotificationFeedResponse(List<NotificationResponse> items, long unreadCount,
+                                           long totalCount, long applicationCount, boolean hasMore) {
+        public NotificationFeedResponse(List<NotificationResponse> items, long unreadCount) {
+            this(items, unreadCount, items.size(), 0L, false);
+        }
+    }
     public record NotificationResponse(Long notificationId, String type, String title, String message,
                                        String linkUrl, OffsetDateTime readAt, OffsetDateTime createdAt,
                                        long version) {

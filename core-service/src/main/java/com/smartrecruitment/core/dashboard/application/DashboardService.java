@@ -21,14 +21,20 @@ public class DashboardService {
 
     @Transactional(readOnly = true)
     public DashboardResult get(Long userId, List<String> roles, Long companyId) {
+        return get(userId, roles, companyId, null);
+    }
+
+    @Transactional(readOnly = true)
+    public DashboardResult get(Long userId, List<String> roles, Long companyId, Integer days) {
         if (roles.contains("RECRUITER")) {
             if (companyId == null || !companies.isActiveMember(companyId, userId)) {
                 throw new CompanyNotFoundException();
             }
+            Integer normalizedDays = days != null && days > 0 ? Math.min(days, 3650) : null;
             var pendingJob = dashboard.findPendingActionJob(userId, companyId);
             return new DashboardResult(
                     "RECRUITER",
-                    dashboard.recruiterMetrics(userId, companyId),
+                    dashboard.recruiterMetrics(userId, companyId, normalizedDays),
                     pendingJob != null ? pendingJob.jobId() : null,
                     pendingJob != null ? pendingJob.jobTitle() : null
             );

@@ -119,7 +119,7 @@ class CoreDatabaseMigrationTests {
 
         assertThat(Arrays.stream(applied).map(info -> info.getVersion().getVersion()))
                 .containsExactly(
-                        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35");
+                        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32", "33", "34", "35", "36");
     }
 
     @Test
@@ -544,6 +544,41 @@ class CoreDatabaseMigrationTests {
         assertThat(notifications.markRead(owner, feed.getFirst().id(), 0, now.plusSeconds(1))).isTrue();
         assertThat(notifications.countUnread(owner)).isZero();
         assertThat(notifications.markRead(owner, feed.getFirst().id(), 0, now.plusSeconds(2))).isFalse();
+    }
+
+    @Test
+    void notificationFeedSupportsGlobalCountsTypeFiltersAndOffsetPaginationOnPostgres() {
+        var dataSource = new PGSimpleDataSource();
+        dataSource.setURL(POSTGRES.getJdbcUrl());
+        dataSource.setUser(POSTGRES.getUsername());
+        dataSource.setPassword(POSTGRES.getPassword());
+        var notifications = new JooqNotificationRepository(DSL.using(dataSource, SQLDialect.POSTGRES));
+        Long owner = com.smartrecruitment.core.support.TestIds.next();
+        OffsetDateTime base = OffsetDateTime.now(ZoneOffset.UTC).minusMinutes(10);
+
+        notifications.insert(owner, "APPLICATION_SUBMITTED", "App 1", "Body 1", "/recruiter/jobs/1?application=1", "k1", base.plusSeconds(1));
+        notifications.insert(owner, "MATCHING_COMPLETED", "Match 1", "Body 2", "/recruiter/jobs/1?application=1", "k2", base.plusSeconds(2));
+        notifications.insert(owner, "APPLICATION_WITHDRAWN", "Withdrawn 1", "Body 3", "/recruiter/jobs/1?application=1", "k3", base.plusSeconds(3));
+        notifications.insert(owner, "COMPANY_INVITATION_ACCEPTED", "Team 1", "Body 4", "/recruiter/company?tab=team", "k4", base.plusSeconds(4));
+
+        var allFirst = notifications.findAll(owner, 2, 0, false, List.of());
+        assertThat(notifications.markRead(owner, allFirst.getFirst().id(), 0, base.plusMinutes(5))).isTrue();
+
+        assertThat(notifications.countAll(owner)).isEqualTo(4L);
+        assertThat(notifications.countUnread(owner)).isEqualTo(3L);
+        assertThat(notifications.countByTypes(owner, com.smartrecruitment.core.notification.application.NotificationService.APPLICATION_TYPES))
+                .isEqualTo(2L);
+        assertThat(notifications.countUnreadByTypes(owner, com.smartrecruitment.core.notification.application.NotificationService.APPLICATION_TYPES))
+                .isEqualTo(2L);
+
+        var pageTwo = notifications.findAll(owner, 2, 2, false, List.of());
+        assertThat(pageTwo).extracting(com.smartrecruitment.core.notification.domain.Notification::title)
+                .containsExactly("Match 1", "App 1");
+
+        var appPage = notifications.findAll(owner, 10, 0, false,
+                com.smartrecruitment.core.notification.application.NotificationService.APPLICATION_TYPES);
+        assertThat(appPage).extracting(com.smartrecruitment.core.notification.domain.Notification::title)
+                .containsExactly("Withdrawn 1", "App 1");
     }
 
     @Test

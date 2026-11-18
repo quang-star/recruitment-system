@@ -1,8 +1,13 @@
 package com.smartrecruitment.core.notification.application;
 
 import com.smartrecruitment.core.notification.application.port.NotificationRepository;
+import com.smartrecruitment.core.notification.domain.Notification;
 import org.junit.jupiter.api.Test;
 import java.time.Clock;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.List;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -51,7 +56,57 @@ class NotificationServiceTests {
                 java.time.OffsetDateTime.now(), java.time.OffsetDateTime.now(), 1L);
         service.applicationStatusChanged(application);
         verify(repository).insert(eq(candidate), eq("APPLICATION_STATUS_CHANGED"),
-                eq("Trạng thái ứng tuyển đã thay đổi"), contains("Được chọn vào vòng phỏng vấn"),
+                eq("Trạng thái ứng tuyển đã thay đổi"), contains("Vào danh sách rút gọn (Shortlist)"),
                 eq("/candidate/applications?application=" + app), eq("application-status:" + app + ":1"), any());
+    }
+
+    @Test
+    void unreadOnlyFeedPassesFilterToRepositoryAndClampsLimit() {
+        var repository = mock(NotificationRepository.class);
+        var service = new NotificationService(repository, Clock.systemUTC());
+        Long userId = com.smartrecruitment.core.support.TestIds.next();
+        when(repository.findAll(userId, 30, true)).thenReturn(java.util.List.of());
+        when(repository.countUnread(userId)).thenReturn(4L);
+
+        var feed = service.feed(userId, 30, true);
+
+        org.assertj.core.api.Assertions.assertThat(feed.unreadCount()).isEqualTo(4L);
+        verify(repository).findAll(userId, 30, true);
+    }
+
+    @Test
+    void feedReturnsGlobalCountsAndHasMoreAcrossOffsetAndApplicationsFilter() {
+        var repository = mock(NotificationRepository.class);
+        var service = new NotificationService(repository, Clock.systemUTC());
+        Long userId = com.smartrecruitment.core.support.TestIds.next();
+        var item = new Notification(101L, userId, "APPLICATION_SUBMITTED", "Có hồ sơ mới",
+                "Ứng viên mới", "/recruiter/jobs/1?application=9", null, OffsetDateTime.now(ZoneOffset.UTC), 0L);
+
+        when(repository.findAll(userId, 30, 30, false, NotificationService.APPLICATION_TYPES)).thenReturn(List.of(item));
+        when(repository.countUnread(userId)).thenReturn(58L);
+        when(repository.countAll(userId)).thenReturn(72L);
+        when(repository.countByTypes(userId, NotificationService.APPLICATION_TYPES)).thenReturn(41L);
+
+        var feed = service.feed(userId, 30, 30, false, true);
+
+        assertThat(feed.items()).containsExactly(item);
+        assertThat(feed.unreadCount()).isEqualTo(58L);
+        assertThat(feed.totalCount()).isEqualTo(72L);
+        assertThat(feed.applicationCount()).isEqualTo(41L);
+        assertThat(feed.hasMore()).isTrue();
+    }
+
+    @Test
+    void invitationAcceptedLinksDirectlyToCompanyTeamTab() {
+        var repository = mock(NotificationRepository.class);
+        var service = new NotificationService(repository, Clock.systemUTC());
+        Long inviter = com.smartrecruitment.core.support.TestIds.next();
+        Long invitationId = com.smartrecruitment.core.support.TestIds.next();
+
+        service.invitationAccepted(inviter, invitationId, "new.recruiter@company.test");
+
+        verify(repository).insert(eq(inviter), eq("COMPANY_INVITATION_ACCEPTED"),
+                eq("Lời mời công ty đã được chấp nhận"), contains("new.recruiter@company.test"),
+                eq("/recruiter/company?tab=team"), eq("company-invitation-accepted:" + invitationId), any());
     }
 }

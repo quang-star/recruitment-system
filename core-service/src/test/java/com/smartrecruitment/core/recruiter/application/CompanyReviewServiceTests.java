@@ -61,7 +61,41 @@ class CompanyReviewServiceTests {
     @ValueSource(strings = {"   "})
     void requiresAReason(String reason) {
         assertThatThrownBy(() -> service.approve(9L, 3L, 4, reason, UUID.randomUUID())).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.reject(9L, 3L, 4, reason, UUID.randomUUID())).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.suspend(9L, 3L, 4, reason, UUID.randomUUID())).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.reactivate(9L, 3L, 4, reason, UUID.randomUUID())).isInstanceOf(IllegalArgumentException.class);
         verifyNoInteractions(repository);
+    }
+
+    @Test
+    void rejectsPendingSuspendsActiveAndReactivatesSuspendedWithExpectedStatusGuards() {
+        var corr1 = UUID.randomUUID();
+        when(repository.findById(3L)).thenReturn(Optional.of(company(CompanyStatus.PENDING, 4)));
+        when(repository.transitionStatus(eq(3L), eq(CompanyStatus.PENDING), eq(CompanyStatus.CLOSED), eq("REJECT"),
+                eq(4L), eq(9L), eq("Spam profile"), eq(corr1), any()))
+                .thenReturn(Optional.of(company(CompanyStatus.CLOSED, 5)));
+        assertThat(service.reject(9L, 3L, 4, "  Spam profile  ", corr1).status()).isEqualTo(CompanyStatus.CLOSED);
+
+        var corr2 = UUID.randomUUID();
+        when(repository.findById(3L)).thenReturn(Optional.of(company(CompanyStatus.ACTIVE, 5)));
+        when(repository.transitionStatus(eq(3L), eq(CompanyStatus.ACTIVE), eq(CompanyStatus.SUSPENDED), eq("SUSPEND"),
+                eq(5L), eq(9L), eq("Policy violation"), eq(corr2), any()))
+                .thenReturn(Optional.of(company(CompanyStatus.SUSPENDED, 6)));
+        assertThat(service.suspend(9L, 3L, 5, "Policy violation", corr2).status()).isEqualTo(CompanyStatus.SUSPENDED);
+
+        var corr3 = UUID.randomUUID();
+        when(repository.findById(3L)).thenReturn(Optional.of(company(CompanyStatus.SUSPENDED, 6)));
+        when(repository.transitionStatus(eq(3L), eq(CompanyStatus.SUSPENDED), eq(CompanyStatus.ACTIVE), eq("REACTIVATE"),
+                eq(6L), eq(9L), eq("Resolved"), eq(corr3), any()))
+                .thenReturn(Optional.of(company(CompanyStatus.ACTIVE, 7)));
+        assertThat(service.reactivate(9L, 3L, 6, "Resolved", corr3).status()).isEqualTo(CompanyStatus.ACTIVE);
+
+        when(repository.findById(3L)).thenReturn(Optional.of(company(CompanyStatus.PENDING, 4)));
+        assertThatThrownBy(() -> service.suspend(9L, 3L, 4, "Invalid state", UUID.randomUUID()))
+                .isInstanceOf(CompanyConflictException.class);
+        when(repository.findById(3L)).thenReturn(Optional.of(company(CompanyStatus.ACTIVE, 5)));
+        assertThatThrownBy(() -> service.reactivate(9L, 3L, 5, "Invalid state", UUID.randomUUID()))
+                .isInstanceOf(CompanyConflictException.class);
     }
 
     static Company company(CompanyStatus status, long version) {
