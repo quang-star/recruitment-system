@@ -3,6 +3,7 @@ package com.smartrecruitment.core.job.infrastructure.persistence;
 import com.smartrecruitment.core.shared.domain.ExternalAiConsent;
 import com.smartrecruitment.core.job.domain.JobCategorySnapshot;
 
+import com.smartrecruitment.core.job.application.JobAnalytics;
 import com.smartrecruitment.core.job.application.JobSearch;
 import com.smartrecruitment.core.job.application.JobDiscovery;
 import com.smartrecruitment.core.job.application.port.JobRepository;
@@ -24,10 +25,13 @@ import org.springframework.stereotype.Repository;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.ApplicationStatusHistory.APPLICATION_STATUS_HISTORY;
+import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.Applications.APPLICATIONS;
 import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.Companies.COMPANIES;
 import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.CompanyMembers.COMPANY_MEMBERS;
 import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.JobVersions.JOB_VERSIONS;
@@ -129,29 +133,41 @@ public class JooqJobRepository implements JobRepository {
             filters = filters.and(levels);
         }
         if (search.employmentType() != null) filters = filters.and(JOB_VERSIONS.EMPLOYMENT_TYPE.eq(search.employmentType().name()));
+        if (search.minSalary() != null || search.maxSalary() != null) {
+            filters = filters.and(JOB_VERSIONS.SALARY_NEGOTIABLE.isFalse())
+                    .and(JOB_VERSIONS.SALARY_CURRENCY.eq("VND"))
+                    .and(JOB_VERSIONS.SALARY_PERIOD.eq("MONTH"));
+        }
         if (search.minSalary() != null) {
             var min = BigDecimal.valueOf(search.minSalary());
-            filters = filters.and(JOB_VERSIONS.SALARY_NEGOTIABLE.isTrue()
-                    .or(JOB_VERSIONS.SALARY_MAX.ge(min))
+            filters = filters.and(JOB_VERSIONS.SALARY_MAX.ge(min)
                     .or(JOB_VERSIONS.SALARY_MAX.isNull().and(JOB_VERSIONS.SALARY_MIN.ge(min))));
         }
         if (search.maxSalary() != null) {
             var max = BigDecimal.valueOf(search.maxSalary());
-            filters = filters.and(JOB_VERSIONS.SALARY_NEGOTIABLE.isTrue()
-                    .or(JOB_VERSIONS.SALARY_MIN.le(max))
+            filters = filters.and(JOB_VERSIONS.SALARY_MIN.le(max)
                     .or(JOB_VERSIONS.SALARY_MIN.isNull().and(JOB_VERSIONS.SALARY_MAX.le(max))));
         }
         var query = dsl.select(JOBS.fields()).select(JOB_VERSIONS.fields()).select(COMPANIES.ID)
                 .from(JOBS).join(COMPANIES).on(COMPANIES.ID.eq(JOBS.COMPANY_ID))
                 .join(JOB_VERSIONS).on(JOB_VERSIONS.ID.eq(JOBS.ACTIVE_VERSION_ID)).where(filters);
         long total = dsl.fetchCount(query);
-        SortField<?> order = switch (search.sort()) {
-            case "oldest" -> timestamp.asc().nullsLast();
-            case "title" -> DSL.lower(JOB_VERSIONS.TITLE).asc();
-            case "salary_desc" -> JOB_VERSIONS.SALARY_MAX.desc().nullsLast();
-            default -> timestamp.desc().nullsLast();
-        };
-        var items = query.orderBy(order, JOBS.ID.asc()).limit(search.size()).offset(search.offset())
+        List<SortField<?>> orders = new ArrayList<>();
+        switch (search.sort()) {
+            case "oldest" -> orders.add(timestamp.asc().nullsLast());
+            case "title" -> orders.add(DSL.lower(JOB_VERSIONS.TITLE).asc());
+            case "salary_desc" -> {
+                orders.add(DSL.when(JOB_VERSIONS.SALARY_NEGOTIABLE.isFalse()
+                        .and(JOB_VERSIONS.SALARY_CURRENCY.eq("VND"))
+                        .and(JOB_VERSIONS.SALARY_PERIOD.eq("MONTH"))
+                        .and(JOB_VERSIONS.SALARY_MAX.isNotNull().or(JOB_VERSIONS.SALARY_MIN.isNotNull())), 1)
+                        .otherwise(0).desc());
+                orders.add(DSL.coalesce(JOB_VERSIONS.SALARY_MAX, JOB_VERSIONS.SALARY_MIN).desc().nullsLast());
+            }
+            default -> orders.add(timestamp.desc().nullsLast());
+        }
+        orders.add(JOBS.ID.asc());
+        var items = query.orderBy(orders).limit(search.size()).offset(search.offset())
                 .fetch(record -> toDomain(record.into(JOBS), record.into(JOB_VERSIONS), record.get(COMPANIES.ID)));
         return new PageResult<>(items, total, search.page(), search.size());
     }
@@ -248,6 +264,65 @@ public class JooqJobRepository implements JobRepository {
                 null, closedAt);
     }
 
+    @Override
+    public boolean canRecruitJobVersion(Long jobVersionId, Long userId) {
+        return dsl.fetchExists(dsl.selectOne()
+                .from(JOB_VERSIONS)
+                .join(JOBS).on(JOBS.ID.eq(JOB_VERSIONS.JOB_ID))
+                .join(COMPANY_MEMBERS).on(COMPANY_MEMBERS.COMPANY_ID.eq(JOBS.COMPANY_ID))
+                .where(JOB_VERSIONS.ID.eq(jobVersionId))
+                .and(COMPANY_MEMBERS.USER_ID.eq(userId))
+                .and(COMPANY_MEMBERS.STATUS.eq("ACTIVE"))
+                .and(COMPANY_MEMBERS.ROLE.in("OWNER", "COMPANY_ADMIN", "RECRUITER")));
+    }
+
+    @Override
+    public Optional<JobAnalytics> analyticsForMember(Long jobId, Long userId) {
+        Long internalId = internalIdForMember(jobId, userId);
+        if (internalId == null) return Optional.empty();
+        var currentRows = dsl.select(APPLICATIONS.STATUS, DSL.count())
+                .from(APPLICATIONS)
+                .where(APPLICATIONS.JOB_ID.eq(internalId))
+                .groupBy(APPLICATIONS.STATUS)
+                .fetchMap(APPLICATIONS.STATUS, DSL.count());
+        long submitted = currentRows.getOrDefault("SUBMITTED", 0);
+        long underReview = currentRows.getOrDefault("UNDER_REVIEW", 0);
+        long shortlisted = currentRows.getOrDefault("SHORTLISTED", 0);
+        long interview = currentRows.getOrDefault("INTERVIEW", 0);
+        long offered = currentRows.getOrDefault("OFFERED", 0);
+        long hired = currentRows.getOrDefault("HIRED", 0);
+        long rejected = currentRows.getOrDefault("REJECTED", 0);
+        long withdrawn = currentRows.getOrDefault("WITHDRAWN", 0);
+        long total = submitted + underReview + shortlisted + interview + offered + hired + rejected + withdrawn;
+
+        var reachedRows = dsl.select(APPLICATION_STATUS_HISTORY.TO_STATUS, DSL.countDistinct(APPLICATION_STATUS_HISTORY.APPLICATION_ID))
+                .from(APPLICATION_STATUS_HISTORY)
+                .join(APPLICATIONS).on(APPLICATIONS.ID.eq(APPLICATION_STATUS_HISTORY.APPLICATION_ID))
+                .where(APPLICATIONS.JOB_ID.eq(internalId))
+                .groupBy(APPLICATION_STATUS_HISTORY.TO_STATUS)
+                .fetchMap(APPLICATION_STATUS_HISTORY.TO_STATUS, DSL.countDistinct(APPLICATION_STATUS_HISTORY.APPLICATION_ID));
+
+        long reachedUnderReview = Math.max(reachedRows.getOrDefault("UNDER_REVIEW", 0), underReview);
+        long reachedShortlisted = Math.max(reachedRows.getOrDefault("SHORTLISTED", 0), shortlisted);
+        long reachedInterview = Math.max(reachedRows.getOrDefault("INTERVIEW", 0), interview);
+        long reachedOffered = Math.max(reachedRows.getOrDefault("OFFERED", 0), offered);
+        long reachedHired = Math.max(reachedRows.getOrDefault("HIRED", 0), hired);
+
+        return Optional.of(new JobAnalytics(
+                total,
+                submitted + underReview,
+                submitted,
+                underReview,
+                reachedUnderReview,
+                reachedShortlisted,
+                reachedInterview,
+                reachedOffered,
+                reachedHired,
+                rejected,
+                withdrawn
+        ));
+    }
+
     private Optional<Job> changeLifecycle(Long jobId, Long userId, long expectedVersion, JobStatus from,
                                            JobStatus to, OffsetDateTime publishedAt, OffsetDateTime closedAt) {
         Long internalId = internalIdForMember(jobId, userId);
@@ -255,11 +330,13 @@ public class JooqJobRepository implements JobRepository {
         var closedField = closedAt == null
                 ? DSL.val((OffsetDateTime) null, JOBS.CLOSED_AT)
                 : TimestampGuards.atLeast(JOBS.PUBLISHED_AT, closedAt);
-        var update = dsl.update(JOBS).set(JOBS.STATUS, to.name())
+        var step = dsl.update(JOBS).set(JOBS.STATUS, to.name())
                 .set(JOBS.UPDATED_AT, TimestampGuards.atLeast(JOBS.CREATED_AT, OffsetDateTime.now(ZoneOffset.UTC)))
-                .set(JOBS.VERSION, JOBS.VERSION.plus(1L))
-                .set(JOBS.PUBLISHED_AT, publishedAt)
-                .set(JOBS.CLOSED_AT, closedField)
+                .set(JOBS.VERSION, JOBS.VERSION.plus(1L));
+        if (publishedAt != null) {
+            step = step.set(JOBS.PUBLISHED_AT, publishedAt);
+        }
+        var update = step.set(JOBS.CLOSED_AT, closedField)
                 .where(JOBS.ID.eq(internalId)).and(JOBS.STATUS.eq(from.name()))
                 .and(to == JobStatus.PUBLISHED ? DSL.exists(dsl.selectOne().from(COMPANIES)
                         .where(COMPANIES.ID.eq(JOBS.COMPANY_ID)).and(COMPANIES.STATUS.eq("ACTIVE"))) : DSL.trueCondition())

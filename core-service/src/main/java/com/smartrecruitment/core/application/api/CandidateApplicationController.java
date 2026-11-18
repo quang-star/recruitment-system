@@ -48,8 +48,9 @@ public class CandidateApplicationController {
             @RequestParam int page, @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "") String q, @RequestParam(defaultValue = "newest") String sort,
             @RequestParam(required = false) ApplicationStatus status,
-            @RequestParam(required = false) Long applicationId) {
-        var search = new ApplicationSearch(page, size, q, sort, status, applicationId);
+            @RequestParam(required = false) Long applicationId,
+            @RequestParam(required = false) Long jobId) {
+        var search = new ApplicationSearch(page, size, q, sort, status, applicationId, jobId);
         return applications.searchMine(userId(jwt), search).map(ApplicationResponse::from);
     }
 

@@ -203,10 +203,27 @@ public class JobService {
         if (existing.status() != JobStatus.DRAFT) {
             throw new JobStateException("Only draft jobs can be published");
         }
+        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        if (existing.activeVersion().applicationDeadline() != null
+                && !existing.activeVersion().applicationDeadline().isAfter(now)) {
+            throw new JobStateException("Application deadline has already passed");
+        }
         if (existing.activeVersion().category().supportsMatching() && !jobs.isParsedJdConfirmed(existing.activeVersion().id())) {
             throw new JobStateException("Parsed JD must be confirmed before publishing");
         }
-        return jobs.publish(jobId, userId, expectedVersion, OffsetDateTime.now()).orElseThrow(JobConflictException::new);
+        return jobs.publish(jobId, userId, expectedVersion, now).orElseThrow(JobConflictException::new);
+    }
+
+    @Transactional(readOnly = true)
+    public void requireRecruitAccessForVersion(Long userId, Long jobVersionId) {
+        if (!jobs.canRecruitJobVersion(jobVersionId, userId)) {
+            throw new JobNotFoundException();
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public JobAnalytics analytics(Long userId, Long jobId) {
+        return jobs.analyticsForMember(jobId, userId).orElseThrow(JobNotFoundException::new);
     }
 
     @Transactional

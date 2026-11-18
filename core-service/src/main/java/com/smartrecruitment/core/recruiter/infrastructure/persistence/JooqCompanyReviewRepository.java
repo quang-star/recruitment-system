@@ -48,19 +48,27 @@ public class JooqCompanyReviewRepository implements CompanyReviewRepository {
     @Override
     public Optional<Company> approvePending(Long companyId, long expectedVersion, Long actorUserId,
                                            String reason, UUID correlationId, OffsetDateTime now) {
-        var updated = dsl.update(COMPANIES).set(COMPANIES.STATUS, CompanyStatus.ACTIVE.name())
+        return transitionStatus(companyId, CompanyStatus.PENDING, CompanyStatus.ACTIVE, "APPROVE",
+                expectedVersion, actorUserId, reason, correlationId, now);
+    }
+
+    @Override
+    public Optional<Company> transitionStatus(Long companyId, CompanyStatus expectedStatus, CompanyStatus targetStatus,
+                                              String action, long expectedVersion, Long actorUserId,
+                                              String reason, UUID correlationId, OffsetDateTime now) {
+        var updated = dsl.update(COMPANIES).set(COMPANIES.STATUS, targetStatus.name())
                 .set(COMPANIES.UPDATED_AT, TimestampGuards.atLeast(COMPANIES.CREATED_AT, COMPANIES.UPDATED_AT, now))
                 .set(COMPANIES.VERSION, COMPANIES.VERSION.plus(1L))
-                .where(COMPANIES.ID.eq(companyId)).and(COMPANIES.STATUS.eq(CompanyStatus.PENDING.name()))
+                .where(COMPANIES.ID.eq(companyId)).and(COMPANIES.STATUS.eq(expectedStatus.name()))
                 .and(COMPANIES.VERSION.eq(expectedVersion)).returning().fetchOptional();
         if (updated.isEmpty()) return Optional.empty();
         var company = updated.get();
         dsl.insertInto(COMPANY_REVIEW_HISTORY)
                 .set(COMPANY_REVIEW_HISTORY.COMPANY_ID, companyId)
                 .set(COMPANY_REVIEW_HISTORY.ACTOR_USER_ID, actorUserId)
-                .set(COMPANY_REVIEW_HISTORY.ACTION, "APPROVE")
-                .set(COMPANY_REVIEW_HISTORY.FROM_STATUS, CompanyStatus.PENDING.name())
-                .set(COMPANY_REVIEW_HISTORY.TO_STATUS, CompanyStatus.ACTIVE.name())
+                .set(COMPANY_REVIEW_HISTORY.ACTION, action)
+                .set(COMPANY_REVIEW_HISTORY.FROM_STATUS, expectedStatus.name())
+                .set(COMPANY_REVIEW_HISTORY.TO_STATUS, targetStatus.name())
                 .set(COMPANY_REVIEW_HISTORY.VERSION, company.getVersion())
                 .set(COMPANY_REVIEW_HISTORY.REASON, reason)
                 .set(COMPANY_REVIEW_HISTORY.CORRELATION_ID, correlationId)

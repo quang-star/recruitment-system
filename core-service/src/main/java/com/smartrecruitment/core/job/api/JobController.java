@@ -4,6 +4,7 @@ import com.smartrecruitment.core.shared.domain.ExternalAiConsent;
 
 import com.smartrecruitment.core.job.api.dto.JobResponse;
 import com.smartrecruitment.core.job.api.dto.PutJobRequest;
+import com.smartrecruitment.core.job.application.JobAnalytics;
 import com.smartrecruitment.core.job.application.JobSearch;
 import com.smartrecruitment.core.job.application.JobService;
 import com.smartrecruitment.core.job.domain.EmploymentType;
@@ -122,6 +123,18 @@ public class JobController {
     public JobResponse close(@AuthenticationPrincipal Jwt jwt, @PathVariable Long jobId,
                              @RequestParam long version) {
         return JobResponse.from(jobs.close(userId(jwt), jobId, version));
+    }
+
+    @GetMapping("/api/v2/jobs/versions/{jobVersionId}/recruit-access")
+    public Map<String, Boolean> recruitAccessForVersion(@AuthenticationPrincipal Jwt jwt,
+                                                        @PathVariable Long jobVersionId) {
+        jobs.requireRecruitAccessForVersion(userId(jwt), jobVersionId);
+        return Map.of("allowed", true);
+    }
+
+    @GetMapping("/api/v2/jobs/{jobId}/analytics")
+    public JobAnalytics analytics(@AuthenticationPrincipal Jwt jwt, @PathVariable Long jobId) {
+        return jobs.analytics(userId(jwt), jobId);
     }
 
     private Long userId(Jwt jwt) { return com.smartrecruitment.core.shared.api.SubjectId.parse(jwt.getSubject()); }

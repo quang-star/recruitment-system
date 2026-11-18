@@ -328,6 +328,28 @@ class RecruitmentSearchTests {
         var withdrawn = service.withdraw(candidate, other.id(), "Changed plans", other.version());
         assertThat(withdrawn.cvAccessGranted()).isFalse();
         assertThat(repository.findCvSnapshotForRecruiter(owner, other.id())).isEmpty();
+
+        // Closing a published job must preserve published_at, satisfy ck_jobs_lifecycle, and block new applications.
+        var jobsRepo = new JooqJobRepository(dsl);
+        var closed = jobsRepo.close(job.id(), owner, job.version(), OffsetDateTime.now(ZoneOffset.UTC)).orElseThrow();
+        assertThat(closed.status()).isEqualTo(com.smartrecruitment.core.job.domain.JobStatus.CLOSED);
+        assertThat(closed.publishedAt()).isNotNull();
+        assertThat(closed.closedAt()).isNotNull();
+        assertThat(jobsRepo.canRecruitJobVersion(job.activeVersion().id(), owner)).isTrue();
+        assertThat(jobsRepo.canRecruitJobVersion(job.activeVersion().id(), com.smartrecruitment.core.support.TestIds.next())).isFalse();
+        var analytics = jobsRepo.analyticsForMember(job.id(), owner).orElseThrow();
+        assertThat(analytics.total()).isOne();
+        assertThat(analytics.reachedShortlisted()).isOne();
+        assertThat(analytics.reachedHired()).isOne();
+
+        // Rejecting an application keeps status + reason history while revoking PDF/score access.
+        var thirdJob = job(jobsRepo, company, owner, "Reject privacy check", null, true);
+        var thirdCandidate = com.smartrecruitment.core.support.TestIds.next();
+        var thirdApp = repository.insert(thirdCandidate, thirdJob.id(), confirmedCv(thirdCandidate));
+        var rejected = service.updateStatus(owner, thirdApp.id(), ApplicationStatus.REJECTED, "Not aligned", thirdApp.version());
+        assertThat(rejected.status()).isEqualTo(ApplicationStatus.REJECTED);
+        assertThat(repository.findCvSnapshotForRecruiter(owner, thirdApp.id())).isEmpty();
+        assertThat(repository.findHistoryForViewer(thirdCandidate, thirdApp.id())).hasSize(2);
     }
 
     private static Job job(JooqJobRepository repository, Company company, Long owner, String title,

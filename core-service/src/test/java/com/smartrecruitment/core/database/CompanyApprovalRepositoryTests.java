@@ -1,10 +1,12 @@
 package com.smartrecruitment.core.database;
 
+import com.smartrecruitment.core.application.domain.ApplicationStatus;
 import com.smartrecruitment.core.application.infrastructure.persistence.JooqApplicationRepository;
 import com.smartrecruitment.core.cv.domain.CandidateCv;
 import com.smartrecruitment.core.cv.domain.CvProcessingStatus;
 import com.smartrecruitment.core.cv.domain.CvVersion;
 import com.smartrecruitment.core.cv.infrastructure.persistence.JooqCandidateCvRepository;
+import com.smartrecruitment.core.dashboard.infrastructure.persistence.JooqDashboardRepository;
 import com.smartrecruitment.core.job.application.JobSearch;
 import com.smartrecruitment.core.job.domain.Job;
 import com.smartrecruitment.core.job.domain.JobVersion;
@@ -158,6 +160,83 @@ class CompanyApprovalRepositoryTests {
             assertThat(new JooqCompanyRepository(dsl).findById(company.id())).isPresent();
             assertThat(applications.insert(candidate, job.id(), cv).jobId()).isEqualTo(job.id());
         }
+    }
+
+    @Test
+    void adminCanRejectPendingOrSuspendAndReactivateWithAuditTrail() {
+        var toReject = pending();
+        transactions.executeWithoutResult(tx -> reviews.reject(11L, toReject.id(), 0, "Invalid business license", UUID.randomUUID()));
+        var rejected = new JooqCompanyReviewRepository(dsl).findById(toReject.id()).orElseThrow();
+        assertThat(rejected.status()).isEqualTo(CompanyStatus.CLOSED);
+        assertThat(rejected.version()).isEqualTo(1);
+        assertThat(reviews.history(toReject.id())).singleElement().satisfies(entry -> {
+            assertThat(entry.action()).isEqualTo("REJECT");
+            assertThat(entry.fromStatus()).isEqualTo(CompanyStatus.PENDING);
+            assertThat(entry.toStatus()).isEqualTo(CompanyStatus.CLOSED);
+        });
+
+        var toCycle = pending();
+        transactions.executeWithoutResult(tx -> {
+            var active = reviews.approve(11L, toCycle.id(), 0, "Initial approval", UUID.randomUUID());
+            var suspended = reviews.suspend(12L, toCycle.id(), active.version(), "Temporary hold", UUID.randomUUID());
+            reviews.reactivate(13L, toCycle.id(), suspended.version(), "Compliance confirmed", UUID.randomUUID());
+        });
+        var finalCompany = new JooqCompanyReviewRepository(dsl).findById(toCycle.id()).orElseThrow();
+        assertThat(finalCompany.status()).isEqualTo(CompanyStatus.ACTIVE);
+        assertThat(finalCompany.version()).isEqualTo(3);
+        assertThat(reviews.history(toCycle.id()))
+                .extracting(change -> change.action() + ":" + change.fromStatus() + "->" + change.toStatus())
+                .containsExactly("REACTIVATE:SUSPENDED->ACTIVE", "SUSPEND:ACTIVE->SUSPENDED", "APPROVE:PENDING->ACTIVE");
+    }
+
+    @Test
+    void dashboardMetricsIncludeFullPipelineStagesAndCumulativeShortlisted() {
+        var company = pending();
+        transactions.executeWithoutResult(tx -> reviews.approve(11L, company.id(), 0, "Approved", UUID.randomUUID()));
+        var jobs = new JooqJobRepository(dsl);
+        var version = new JobVersion(0L, 1, "Pipeline Job " + company.id(), "Backend services", "Java",
+                null, "Ha Noi", "VN", null, null, null, 2,
+                null, null, null, null, false, null, "c".repeat(64), company.createdByUserId());
+        var job = jobs.insert(Job.draft(company.id(), company.createdByUserId(), version));
+        jobs.publish(job.id(), company.createdByUserId(), 0, OffsetDateTime.now()).orElseThrow();
+
+        var applications = new JooqApplicationRepository(dsl);
+        Long c1 = TestIds.next(), c2 = TestIds.next(), c3 = TestIds.next();
+        var app1 = applications.insert(c1, job.id(), confirmedCv(c1));
+        var app2 = applications.insert(c2, job.id(), confirmedCv(c2));
+        var app3 = applications.insert(c3, job.id(), confirmedCv(c3));
+
+        app1 = applications.updateStatus(company.createdByUserId(), app1.id(), ApplicationStatus.UNDER_REVIEW, "Review", app1.version()).orElseThrow();
+        app1 = applications.updateStatus(company.createdByUserId(), app1.id(), ApplicationStatus.SHORTLISTED, "Shortlist", app1.version()).orElseThrow();
+        app1 = applications.updateStatus(company.createdByUserId(), app1.id(), ApplicationStatus.INTERVIEW, "Interview", app1.version()).orElseThrow();
+        app1 = applications.updateStatus(company.createdByUserId(), app1.id(), ApplicationStatus.OFFERED, "Offer", app1.version()).orElseThrow();
+        applications.updateStatus(company.createdByUserId(), app1.id(), ApplicationStatus.HIRED, "Hired", app1.version()).orElseThrow();
+
+        app2 = applications.updateStatus(company.createdByUserId(), app2.id(), ApplicationStatus.UNDER_REVIEW, "Review", app2.version()).orElseThrow();
+        app2 = applications.updateStatus(company.createdByUserId(), app2.id(), ApplicationStatus.SHORTLISTED, "Shortlist", app2.version()).orElseThrow();
+        applications.updateStatus(company.createdByUserId(), app2.id(), ApplicationStatus.REJECTED, "Declined", app2.version()).orElseThrow();
+
+        applications.withdraw(c3, app3.id(), "Accepted another offer", app3.version()).orElseThrow();
+
+        var dashboard = new JooqDashboardRepository(dsl);
+        var recruiterMetrics = dashboard.recruiterMetrics(company.createdByUserId(), company.id());
+        assertThat(recruiterMetrics)
+                .containsEntry("applications", 3L)
+                .containsEntry("submitted", 0L)
+                .containsEntry("underReview", 0L)
+                .containsEntry("shortlisted", 0L)
+                .containsEntry("interview", 0L)
+                .containsEntry("offered", 0L)
+                .containsEntry("hired", 1L)
+                .containsEntry("rejected", 1L)
+                .containsEntry("withdrawn", 1L)
+                .containsEntry("reachedShortlisted", 2L);
+
+        var candidateMetrics = dashboard.candidateMetrics(c1);
+        assertThat(candidateMetrics)
+                .containsEntry("applications", 1L)
+                .containsEntry("hired", 1L)
+                .containsEntry("reachedShortlisted", 1L);
     }
 
     private static Company pending() {

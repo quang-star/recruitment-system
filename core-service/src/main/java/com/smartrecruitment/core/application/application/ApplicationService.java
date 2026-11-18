@@ -160,6 +160,9 @@ public class ApplicationService {
         validateTransition(current.status(), target, reason);
         Application updated = applications.updateStatus(recruiterUserId, applicationId, target, reason, expectedVersion)
                 .orElseThrow(ApplicationConflictException::new);
+        if (target == ApplicationStatus.REJECTED) {
+            outbox.append(PrivacyEvent.revoked(applicationId));
+        }
         if (notifications != null) notifications.applicationStatusChanged(updated);
         return updated;
     }

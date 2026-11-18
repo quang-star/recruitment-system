@@ -45,6 +45,27 @@ public class CompanyReviewController {
                 UUID.fromString(CorrelationIdFilter.current(servletRequest))));
     }
 
+    @PostMapping("/{companyId}/reject")
+    public CompanyResponse reject(@AuthenticationPrincipal Jwt jwt, @PathVariable Long companyId,
+            @Valid @RequestBody Approval request, HttpServletRequest servletRequest) {
+        return CompanyResponse.from(companies.reject(requireAdmin(jwt), companyId, request.version(), request.reason(),
+                UUID.fromString(CorrelationIdFilter.current(servletRequest))));
+    }
+
+    @PostMapping("/{companyId}/suspend")
+    public CompanyResponse suspend(@AuthenticationPrincipal Jwt jwt, @PathVariable Long companyId,
+            @Valid @RequestBody Approval request, HttpServletRequest servletRequest) {
+        return CompanyResponse.from(companies.suspend(requireAdmin(jwt), companyId, request.version(), request.reason(),
+                UUID.fromString(CorrelationIdFilter.current(servletRequest))));
+    }
+
+    @PostMapping("/{companyId}/reactivate")
+    public CompanyResponse reactivate(@AuthenticationPrincipal Jwt jwt, @PathVariable Long companyId,
+            @Valid @RequestBody Approval request, HttpServletRequest servletRequest) {
+        return CompanyResponse.from(companies.reactivate(requireAdmin(jwt), companyId, request.version(), request.reason(),
+                UUID.fromString(CorrelationIdFilter.current(servletRequest))));
+    }
+
     @GetMapping("/{companyId}/history")
     public List<CompanyReviewChange> history(@AuthenticationPrincipal Jwt jwt, @PathVariable Long companyId) {
         requireAdmin(jwt);
