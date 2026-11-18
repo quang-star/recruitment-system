@@ -3,6 +3,9 @@ from datetime import UTC, datetime
 import json
 from pathlib import Path
 from typing import Any
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlsplit
+from urllib.request import Request as UrlRequest, build_opener
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, Request
@@ -10,12 +13,13 @@ from jsonschema import Draft202012Validator, FormatChecker
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from app.extraction.source_extraction import _NoRedirect
 from app.jd.repository import ParsedJdRevision, ParsedJdRevisionRepository
 from app.task.persistence import SqlAlchemyProcessingTaskRepository
 from app.task.domain import TaskType
 from app.outbox import enqueue
 from app.shared.api import ApiContractError
-from app.shared.config import get_settings
+from app.shared.config import Settings, get_settings
 from app.shared.database import get_session
 from app.shared.revision_status import ParsedRevisionStatus, validate_revision_status
 from app.extraction.evidence import inherit_review_evidence
@@ -37,6 +41,39 @@ def require_recruiter(principal: AuthenticatedPrincipal = Depends(require_access
     if "RECRUITER" not in principal.roles:
         raise ApiContractError(403, "RECRUITER_ROLE_REQUIRED", "Recruiter role is required")
     return principal
+
+
+def verify_jd_recruit_access(
+    job_version_id: BusinessId,
+    request: Request,
+    principal: AuthenticatedPrincipal = Depends(require_recruiter),
+    settings: Settings = Depends(get_settings),
+) -> AuthenticatedPrincipal:
+    base = settings.jd_core_access_base_url.rstrip("/")
+    parsed = urlsplit(base)
+    if parsed.scheme not in {"http", "https"} or not parsed.hostname or parsed.username or parsed.password:
+        raise ApiContractError(503, "CORE_ACCESS_CHECK_UNAVAILABLE", "Core access endpoint is invalid")
+    url = f"{base}/{job_version_id}/recruit-access"
+    headers = {
+        "Authorization": request.headers.get("Authorization", ""),
+        "Accept": "application/json",
+    }
+    correlation_id = getattr(request.state, "correlation_id", None)
+    if correlation_id:
+        headers["X-Correlation-Id"] = str(correlation_id)
+    req = UrlRequest(url, headers=headers, method="GET")
+    try:
+        with build_opener(_NoRedirect()).open(req, timeout=settings.jd_core_access_timeout_seconds) as response:
+            if response.status != 200:
+                raise ApiContractError(404, "PARSED_JD_NOT_FOUND", "Parsed JD was not found")
+        return principal
+    except HTTPError as error:
+        error.close()
+        if error.code in (401, 403, 404):
+            raise ApiContractError(404, "PARSED_JD_NOT_FOUND", "Parsed JD was not found") from None
+        raise ApiContractError(503, "CORE_ACCESS_CHECK_UNAVAILABLE", "Could not verify company access") from None
+    except (URLError, OSError):
+        raise ApiContractError(503, "CORE_ACCESS_CHECK_UNAVAILABLE", "Could not verify company access") from None
 
 
 class ConfirmParsedJdRequest(BaseModel):
@@ -74,9 +111,9 @@ class ParsedJdResponse(BaseModel):
 
 @router.get("/{job_version_id}", response_model=ParsedJdResponse)
 def get_parsed_jd(job_version_id: BusinessId,
-                  principal: AuthenticatedPrincipal = Depends(require_recruiter),
+                  principal: AuthenticatedPrincipal = Depends(verify_jd_recruit_access),
                   session: Session = Depends(get_session)) -> ParsedJdResponse:
-    revision = ParsedJdRevisionRepository(session).find_owned(job_version_id, principal.subject)
+    revision = ParsedJdRevisionRepository(session).find_by_version(job_version_id)
     if revision is None:
         raise ApiContractError(404, "PARSED_JD_NOT_FOUND", "Parsed JD was not found")
     return ParsedJdResponse.from_revision(revision)
@@ -87,12 +124,12 @@ async def update_parsed_jd(
     job_version_id: BusinessId,
     request_body: UpdateParsedJdRequest,
     request: Request,
-    principal: AuthenticatedPrincipal = Depends(require_recruiter),
+    principal: AuthenticatedPrincipal = Depends(verify_jd_recruit_access),
     session: Session = Depends(get_session),
 ) -> ParsedJdResponse:
     require_live_jd(session, job_version_id)
     repository = ParsedJdRevisionRepository(session)
-    latest = repository.find_owned(job_version_id, principal.subject)
+    latest = repository.find_by_version(job_version_id)
     if latest is None:
         raise ApiContractError(404, "PARSED_JD_NOT_FOUND", "Parsed JD was not found")
     with use_taxonomy(snapshot(session)):
@@ -104,6 +141,7 @@ async def update_parsed_jd(
             job_id=latest.job_id, job_version_id=job_version_id,
             owner_user_id=principal.subject, source_hash=latest.source_hash,
             payload=payload, expected_revision_id=request_body.expectedRevisionId,
+            enforce_owner=False,
         )
     except ValueError as exception:
         raise ApiContractError(409, "PARSED_JD_REVISION_CONFLICT", str(exception)) from exception
@@ -130,7 +168,7 @@ async def confirm_parsed_jd(
     job_version_id: BusinessId,
     request_body: ConfirmParsedJdRequest,
     request: Request,
-    principal: AuthenticatedPrincipal = Depends(require_recruiter),
+    principal: AuthenticatedPrincipal = Depends(verify_jd_recruit_access),
     session: Session = Depends(get_session),
 ) -> ParsedJdResponse:
     require_live_jd(session, job_version_id)
@@ -139,6 +177,7 @@ async def confirm_parsed_jd(
         revision = repository.confirm(
             job_version_id=job_version_id, owner_user_id=principal.subject,
             expected_revision_id=request_body.expectedRevisionId, confirmed_by=principal.subject,
+            enforce_owner=False,
         )
     except LookupError as exception:
         raise ApiContractError(404, "PARSED_JD_REVISION_NOT_FOUND", str(exception)) from exception

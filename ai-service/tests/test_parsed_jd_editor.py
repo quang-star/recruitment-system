@@ -145,6 +145,69 @@ def test_confirmation_and_supersede_respect_timestamp_constraint_under_clock_rol
         engine.dispose()
 
 
+def test_colleague_handoff_can_read_edit_and_confirm_when_core_grants_access() -> None:
+    from sqlalchemy import MetaData, create_engine
+    from sqlalchemy.orm import Session
+    from app.jd.repository import ParsedJdHeadRecord
+
+    engine = create_engine("sqlite://")
+    metadata = MetaData()
+    ParsedJdRevisionRecord.__table__.to_metadata(metadata)
+    ParsedJdHeadRecord.__table__.to_metadata(metadata)
+    metadata.create_all(engine)
+    creator = new_id()
+    colleague = new_id()
+    job_id = new_id()
+    now = datetime.now(UTC)
+    try:
+        with Session(engine) as session:
+            rev1 = ParsedJdRevisionRecord(
+                id=1, job_id=job_id, job_version_id=JOB_VERSION_ID, owner_user_id=creator,
+                revision_number=1, source_hash=SOURCE_HASH, payload=payload(),
+                status="PARSED", created_at=now, updated_at=now, version=0,
+            )
+            session.add(rev1)
+            session.commit()
+            repo = ParsedJdRevisionRepository(session)
+            assert repo.find_by_version(JOB_VERSION_ID) is not None
+            rev2 = repo.create_revision(
+                job_id=job_id, job_version_id=JOB_VERSION_ID, owner_user_id=colleague,
+                source_hash=SOURCE_HASH, payload=payload(), expected_revision_id=rev1.id,
+                enforce_owner=False,
+            )
+            confirmed = repo.confirm(
+                job_version_id=JOB_VERSION_ID, owner_user_id=colleague,
+                expected_revision_id=rev2.id, confirmed_by=colleague,
+                enforce_owner=False,
+            )
+            session.commit()
+            assert confirmed.status == "CONFIRMED"
+            assert confirmed.confirmed_by == colleague
+    finally:
+        engine.dispose()
+
+
+def test_verify_jd_recruit_access_rejects_former_member_when_core_returns_404(monkeypatch) -> None:
+    from types import SimpleNamespace
+    from urllib.error import HTTPError
+    from fastapi import Request
+    from app.jd.api import verify_jd_recruit_access
+    from app.shared.api import ApiContractError
+    from app.shared.config import Settings
+
+    class _RejectingOpener:
+        def open(self, *_args, **_kwargs):
+            raise HTTPError("http://core-service:8082", 404, "Not Found", {}, None)
+
+    monkeypatch.setattr("app.jd.api.build_opener", lambda *_args: _RejectingOpener())
+    fake_request = Request({"type": "http", "headers": [(b"authorization", b"Bearer token")], "state": {}})
+    fake_principal = SimpleNamespace(subject=new_id(), roles=["RECRUITER"])
+    settings = Settings(db_url="sqlite://", auth_jwks_uri="http://auth/jwks", auth_jwt_issuer="iss", auth_jwt_audience="aud")
+    with pytest.raises(ApiContractError) as exc:
+        verify_jd_recruit_access(JOB_VERSION_ID, fake_request, fake_principal, settings)
+    assert exc.value.status_code == 404
+
+
 class _ScalarSession:
     def __init__(self, value) -> None:
         self.value = value

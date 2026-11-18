@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import html
 from app.shared.identities import parse_id
 import re
 from typing import Any
@@ -13,6 +14,19 @@ from app.extraction.evidence import attach_source_evidence, skill_locations
 PARSER_VERSION = "rules-v0.4.2"
 _EVIDENCE_NAMESPACE = UUID("6d3d1b4f-1d29-4eaa-8a8f-bcc2a66f7ce4")
 _PREFERRED_MARKERS = ("nice to have", "preferred", "ưu tiên", "lợi thế", "điểm cộng")
+_HTML_TAG_RE = re.compile(r"</?(?:p|div|br|ul|ol|li|h[1-6]|strong|b|em|i|span|a)\b[^>]*>", re.I)
+_BLOCK_BREAK_RE = re.compile(r"</?(?:p|div|ul|ol|li|h[1-6]|br\s*/?)[^>]*>", re.I)
+
+
+def _normalize_jd_text(raw: str) -> str:
+    """Convert rich-text JD HTML to line-separated plain text while preserving list boundaries."""
+    if not raw or not _HTML_TAG_RE.search(raw):
+        return raw
+    with_breaks = _BLOCK_BREAK_RE.sub("\n", raw)
+    stripped = re.sub(r"<[^>]+>", "", with_breaks)
+    unescaped = html.unescape(stripped)
+    lines = [re.sub(r"[ \t]+", " ", line).strip() for line in unescaped.splitlines()]
+    return "\n".join(line for line in lines if line)
 
 
 def parse_jd(job_version_id: str, source_hash: str, title: str,
@@ -23,6 +37,8 @@ def parse_jd(job_version_id: str, source_hash: str, title: str,
     Unknown terms are intentionally left out instead of inventing taxonomy IDs.
     """
     parse_id(job_version_id)
+    description = _normalize_jd_text(description)
+    requirements_text = _normalize_jd_text(requirements_text)
     combined = f"{title}\n{description}\n{requirements_text}"
     lowered = combined.casefold()
     language = "vi" if any(character in lowered for character in "ăâđêôơư") else "en"
