@@ -9,7 +9,7 @@ Hệ thống tuyển dụng hỗ trợ ứng viên quản lý CV, nhà tuyển d
 | Người dùng | Chức năng chính |
 | --- | --- |
 | Ứng viên | Tìm việc, quản lý hồ sơ, tải CV PDF, kiểm tra và sửa thông tin trích xuất, ứng tuyển và theo dõi trạng thái. |
-| Nhà tuyển dụng | Quản lý công ty, tạo và xác nhận JD, đăng tin, xem hồ sơ ứng tuyển, kết quả đối chiếu và lịch sử xử lý. |
+| Nhà tuyển dụng | Quản lý công ty, tải logo và ảnh bìa, tạo và xác nhận JD, đăng tin, xem hồ sơ ứng tuyển, kết quả đối chiếu và lịch sử xử lý. |
 | Quản trị viên | Duyệt công ty hoạt động, duyệt danh mục ngành nghề và kỹ năng, quản lý tên gọi/alias, xem lịch sử thay đổi. |
 
 Giao diện khách tìm việc và ứng viên hỗ trợ mobile. Không gian nhà tuyển dụng và
@@ -34,7 +34,7 @@ Trình soạn thảo hỗ trợ **Tải xuống PDF** một chạm trực tiếp
 2. Ứng viên tải CV; hệ thống trích xuất kỹ năng, kinh nghiệm, học vấn, ngoại ngữ, dự án và chứng chỉ. PDF scan có thể được xử lý bằng OCR Việt/Anh.
 3. Ứng viên sửa và xác nhận kết quả, sau đó chọn CV để ứng tuyển và đồng ý chia sẻ hồ sơ.
 4. Hệ thống đối chiếu CV với JD bất đồng bộ, trả điểm thành phần, giải thích và tham chiếu nguồn cho nhà tuyển dụng xem xét.
-5. Nhà tuyển dụng cập nhật tiến trình: tiếp nhận → xem xét → shortlist → phỏng vấn → đề nghị tuyển dụng → đã tuyển dụng. Ứng viên theo dõi trong workspace; có thể rút đơn trước khi được tuyển.
+5. Nhà tuyển dụng xem xét CV và đưa hồ sơ vào danh sách rút gọn hoặc từ chối. Ứng viên theo dõi trạng thái trong workspace và có thể rút hồ sơ đang được xử lý.
 
 **Phạm vi AI:** đối chiếu và chấm điểm dành cho tuyển dụng CNTT. Công việc ngoài CNTT dùng quy trình xem xét hồ sơ thủ công. Điểm hỗ trợ sàng lọc; quyết định tuyển dụng thuộc người phụ trách.
 
@@ -258,6 +258,9 @@ của hệ thống và giữ nguyên cơ chế xoay vòng/thu hồi phiên.
 
 - Tài khoản mới ở trang đăng nhập mặc định là ứng viên. Khi đăng ký có thể chọn nhà tuyển dụng;
   lựa chọn này không thay đổi vai trò của tài khoản đã tồn tại.
+- Với tài khoản chưa có hồ sơ ở Core, đăng nhập Google trích xuất tên hiển thị, email và
+  URL ảnh đại diện HTTPS (`picture`, cho ứng viên) từ ID token đã xác minh để khởi tạo
+  hồ sơ lần đầu mà không lưu vào Auth DB và không ghi đè hồ sơ đã tồn tại.
 - Nếu email đã có tài khoản, đăng nhập bằng phương thức hiện có, mở **Mật khẩu & phiên đăng nhập →
   Liên kết Google**, rồi chọn tài khoản Google cùng email. Hệ thống không tự liên kết theo email.
 - Tài khoản chỉ dùng Google có thể tạo mật khẩu qua **Quên mật khẩu** và liên kết gửi tới email.

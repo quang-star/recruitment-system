@@ -5,11 +5,12 @@
 /local-reference/
 /.local/
 /.qa/
-# Only the two root project guides are public; keep other documents local.
+# Keep only the project guides and Coolify runbook public; other documents stay local.
 /docs/
 **/*.md
 !/README.md
 !/ARCHITECTURE.md
+!/COOLIFY_DEPLOY.md
 *.partial
 
 # Codex harness stays local.
