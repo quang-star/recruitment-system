@@ -8,6 +8,8 @@ import org.springframework.stereotype.Repository;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import static com.smartrecruitment.auth.infrastructure.jooq.generated.tables.AuthUsers.AUTH_USERS;
 @Repository
@@ -32,6 +34,14 @@ public class JooqAuthUserRepository implements AuthUserRepository {
     @Override
     public Optional<AuthUser> findById(Long id) {
         return dsl.selectFrom(AUTH_USERS).where(AUTH_USERS.ID.eq(id)).fetchOptional(this::toDomain);
+    }
+    @Override
+    public List<AuthUser> findByIds(Collection<Long> ids) {
+        if (ids == null || ids.isEmpty()) return List.of();
+        return dsl.selectFrom(AUTH_USERS)
+                .where(AUTH_USERS.ID.in(ids))
+                .orderBy(AUTH_USERS.ID.asc())
+                .fetch(this::toDomain);
     }
     @Override
     public boolean existsByNormalizedEmail(String normalizedEmail) {

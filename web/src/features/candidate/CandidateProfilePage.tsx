@@ -74,7 +74,7 @@ const emptyForm: ProfileFormState = {
 };
 
 const inputClass =
-  "mt-1.5 h-10 w-full rounded-xl border border-border-strong bg-white px-3.5 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20";
+  "mt-1.5 h-10 w-full rounded-md border border-border-strong bg-white px-3.5 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20";
 
 function safeExternalUrl(raw: string | null | undefined): string | null {
   if (!raw?.trim()) return null;
@@ -431,14 +431,14 @@ function CandidateProfilePageInner({ session, onLogout }: CandidateProfilePagePr
                         void uploadAvatar(files[0]);
                       }}
                       className={cn(
-                        "rounded-2xl border-2 border-dashed p-4 sm:p-5 transition-colors",
+                        "rounded-lg border-2 border-dashed p-4 sm:p-5 transition-colors",
                         draggingAvatar
                           ? "border-brand-600 bg-brand-50/70"
                           : "border-border-strong bg-slate-50/70"
                       )}
                     >
                       <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                        <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl border border-border-subtle bg-white shadow-xs">
+                        <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg border border-border-subtle bg-white shadow-xs">
                           {safeAvatar && !avatarHasError ? (
                             <img
                               src={safeAvatar}
@@ -472,7 +472,7 @@ function CandidateProfilePageInner({ session, onLogout }: CandidateProfilePagePr
                           <div className="flex flex-wrap items-center gap-2.5">
                             <label
                               className={cn(
-                                "inline-flex items-center gap-2 rounded-xl border px-3.5 py-2 text-sm font-semibold transition-colors focus-within:border-brand-600 focus-within:ring-2 focus-within:ring-brand-500/25",
+                                "inline-flex items-center gap-2 rounded-md border px-3.5 py-2 text-sm font-semibold transition-colors focus-within:border-brand-600 focus-within:ring-2 focus-within:ring-brand-500/25",
                                 uploadingAvatar || saving
                                   ? "cursor-not-allowed border-border-subtle bg-slate-100 text-ink-400"
                                   : "cursor-pointer border-brand-200 bg-white text-brand-700 shadow-xs hover:border-brand-400 hover:bg-brand-50"
@@ -663,7 +663,7 @@ function CandidateProfilePageInner({ session, onLogout }: CandidateProfilePagePr
                         value={form.bio}
                         onChange={(event) => setForm((prev) => ({ ...prev, bio: event.target.value }))}
                         placeholder="Tóm tắt định hướng nghề nghiệp, thế mạnh nổi bật hoặc dự án tiêu biểu của bạn…"
-                        className="mt-1.5 w-full rounded-xl border border-border-strong bg-white px-3.5 py-2.5 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                        className="mt-1.5 w-full rounded-md border border-border-strong bg-white px-3.5 py-2.5 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
                       />
                     </label>
 
@@ -692,7 +692,7 @@ function CandidateProfilePageInner({ session, onLogout }: CandidateProfilePagePr
                       onClick={() => avatarInputRef.current?.click()}
                       aria-label="Đổi ảnh đại diện từ thẻ xem trước"
                       title="Nhấn để chọn ảnh đại diện"
-                      className="group relative h-14 w-14 shrink-0 overflow-hidden rounded-2xl border border-border-subtle bg-transparent p-0 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 disabled:cursor-not-allowed"
+                      className="group relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-border-subtle bg-transparent p-0 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 disabled:cursor-not-allowed"
                     >
                       {safeAvatar && !avatarHasError ? (
                         <img

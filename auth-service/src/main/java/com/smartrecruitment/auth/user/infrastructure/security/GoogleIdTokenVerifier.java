@@ -19,6 +19,7 @@ import org.springframework.web.client.RestTemplate;
 import java.net.URI;
 import java.time.Clock;
 import java.time.Duration;
+import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -65,11 +66,16 @@ public class GoogleIdTokenVerifier implements GoogleIdentityVerifier {
             if (!validClaims(jwt, clientId) || !nonce.equals(jwt.getClaimAsString("nonce"))) {
                 throw new GoogleSignInException(INVALID_TOKEN);
             }
+            String email = jwt.getClaimAsString("email");
+            String hostedDomain = stringClaim(jwt, "hd");
+            boolean authoritativeEmail = email.toLowerCase(Locale.ROOT).endsWith("@gmail.com")
+                    || (hostedDomain != null && !hostedDomain.isBlank());
             return new VerifiedIdentity(
                     jwt.getSubject(),
-                    jwt.getClaimAsString("email"),
+                    email,
                     extractName(jwt),
-                    extractPictureUrl(jwt));
+                    extractPictureUrl(jwt),
+                    authoritativeEmail);
         } catch (JwtException | IllegalArgumentException exception) {
             // Never include the provider token, claims or decoder exception in responses/logs.
             throw new GoogleSignInException(INVALID_TOKEN);

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { ApiClientError, apiDownload, apiRequest } from "../../shared/api/client";
 import { usePagedResource } from "../../shared/api/pagination";
 import { AuthSession } from "../../shared/auth/session";
-import { CvIcon, KanbanIcon, ListIcon, SparklesIcon } from "../../shared/components/Icon";
+import { AlertCircleIcon, CvIcon, KanbanIcon, ListIcon } from "../../shared/components/Icon";
 import { PageControls } from "../../shared/components/PageControls";
 import { ReasonDialog } from "../../shared/components/ReasonDialog";
 import { Badge, Button, Card, EmptyState, ErrorBanner, cn } from "../../shared/ui";
@@ -235,7 +235,7 @@ export function RecruiterApplicationsPanel({
         </div>
         <div className="flex flex-wrap items-center gap-2.5">
           <div
-            className="inline-flex rounded-xl border border-border-subtle bg-slate-100 p-1"
+            className="inline-flex rounded-lg border border-border-subtle bg-slate-100 p-1"
             role="group"
             aria-label="Chế độ xem"
           >
@@ -286,7 +286,7 @@ export function RecruiterApplicationsPanel({
                 type="button"
                 onClick={() => setStatusFilter(pill.value)}
                 className={cn(
-                  "rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer",
+                  "rounded-md border px-3.5 py-1.5 text-xs font-semibold transition-colors cursor-pointer",
                   active
                     ? "border-brand-600 bg-brand-50 text-brand-700"
                     : "border-border-subtle bg-white text-ink-600 hover:border-border-strong hover:text-ink-900"
@@ -336,19 +336,16 @@ export function RecruiterApplicationsPanel({
         </label>
       </div>
 
-      {(hasMultiplePages || loading) && (
-        <PageControls {...results} onPageChange={results.setPage} label="Phân trang ứng viên" />
-      )}
       {viewMode === "kanban" && hasMultiplePages && (
         <p className="text-xs text-ink-500">
-          Bảng hiển thị {results.items.length}/{results.total} hồ sơ. Dùng phân trang để xem thêm.
+          Bảng hiển thị {results.items.length}/{results.total} hồ sơ. Dùng phân trang ở cuối danh sách để xem thêm.
         </p>
       )}
       {results.error && <ErrorBanner tone="error" message={results.error} />}
 
       {results.items.some((item) => item.matchingSupported !== false && item.cvAccessGranted !== false) && (
-        <div className="flex items-start gap-2.5 rounded-xl border border-brand-200/70 bg-brand-50/50 px-3.5 py-2.5 text-xs text-ink-700">
-          <SparklesIcon size={15} className="text-brand-700 shrink-0 mt-0.5" />
+        <div className="flex items-start gap-2.5 rounded-md border border-brand-200/70 bg-brand-50/50 px-3.5 py-2.5 text-xs text-ink-700">
+          <AlertCircleIcon size={16} className="text-brand-700 shrink-0 mt-0.5" aria-hidden="true" />
           <p className="m-0 leading-relaxed">
             Mức độ phù hợp với vị trí trên thang 1–5 sao hỗ trợ xem hồ sơ, không phải xác suất trúng tuyển. Quyết định tuyển dụng do bạn thực hiện.
           </p>
@@ -390,7 +387,7 @@ export function RecruiterApplicationsPanel({
       {viewMode === "kanban" && visibleApplications.length > 0 && (
         <div className="space-y-6">
           {withdrawnCount > 0 && (
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs text-ink-700">
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs text-ink-700">
               <span>
                 Có{" "}
                 <strong>{withdrawnCount}</strong>{" "}
@@ -440,6 +437,10 @@ export function RecruiterApplicationsPanel({
             </div>
           )}
         </div>
+      )}
+
+      {(hasMultiplePages || loading) && (
+        <PageControls {...results} onPageChange={results.setPage} label="Phân trang ứng viên" />
       )}
 
       <ReasonDialog

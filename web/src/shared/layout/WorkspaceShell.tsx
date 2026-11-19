@@ -1,4 +1,5 @@
 import { ReactNode, useEffect, useId, useRef, useState } from "react";
+import { BrandMark } from "../components/BrandMark";
 import { ChevronDownIcon, CloseIcon, LogoutIcon, MenuIcon, ProfileIcon } from "../components/Icon";
 import { BRAND_CONFIG } from "../config/brand";
 import { cn } from "../ui";
@@ -31,6 +32,7 @@ type WorkspaceShellProps<T extends string> = {
   accountRoleLabel?: string;
   accountMenuItems?: WorkspaceAccountMenuItem[];
   variant: "candidate" | "recruiter";
+  sidebarTop?: ReactNode;
   headerActions?: ReactNode;
   hideDefaultAccountControls?: boolean;
   onBrandClick?: () => void;
@@ -91,7 +93,7 @@ function SidebarAccountMenu({
         aria-controls={panelId}
         onClick={() => setOpen((value) => !value)}
         className={cn(
-          "flex w-full items-center justify-between gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors text-left cursor-pointer",
+          "flex w-full items-center justify-between gap-2.5 rounded-md px-3 py-2.5 text-sm font-medium transition-colors text-left cursor-pointer",
           open
             ? "bg-brand-50 text-brand-700 font-semibold"
             : "text-ink-600 hover:bg-slate-100 hover:text-ink-900"
@@ -113,7 +115,7 @@ function SidebarAccountMenu({
       {open && (
         <div
           id={panelId}
-          className="absolute bottom-full left-0 right-0 mb-2 rounded-2xl border border-border-subtle bg-white p-1.5 shadow-dialog z-50"
+          className="absolute bottom-full left-0 right-0 mb-2 rounded-lg border border-border-subtle bg-white p-1.5 shadow-dialog z-50"
         >
           <div className="flex items-center gap-2.5 px-2.5 py-2 border-b border-border-subtle mb-1">
             <span
@@ -142,7 +144,7 @@ function SidebarAccountMenu({
                     item.onSelect();
                   }}
                   className={cn(
-                    "flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors cursor-pointer text-left",
+                    "flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors cursor-pointer text-left",
                     item.active ? "bg-brand-50 text-brand-700 font-semibold" : "text-ink-700 hover:bg-slate-50"
                   )}
                 >
@@ -162,7 +164,7 @@ function SidebarAccountMenu({
                 setOpen(false);
                 onLogout();
               }}
-              className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer text-left"
+              className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer text-left"
             >
               <span aria-hidden="true">
                 <LogoutIcon size={16} />
@@ -190,6 +192,7 @@ export function WorkspaceShell<T extends string>({
   accountRoleLabel,
   accountMenuItems,
   variant,
+  sidebarTop,
   headerActions,
   hideDefaultAccountControls = false,
   onBrandClick
@@ -214,21 +217,11 @@ export function WorkspaceShell<T extends string>({
                 onClick={onBrandClick}
                 className="flex items-center gap-3 min-w-0 bg-transparent border-0 p-0 cursor-pointer text-left"
               >
-                <img src="/logo.png" alt="" aria-hidden="true" className="h-9 w-9 shrink-0 object-contain" />
-                {displayBrand && (
-                  <span className="truncate text-base font-bold tracking-tight text-ink-900">
-                    {displayBrand}
-                  </span>
-                )}
+                <BrandMark showWordmark />
               </button>
             ) : (
               <div className="flex items-center gap-3 min-w-0">
-                <img src="/logo.png" alt="" aria-hidden="true" className="h-9 w-9 shrink-0 object-contain" />
-                {displayBrand && (
-                  <span className="truncate text-base font-bold tracking-tight text-ink-900">
-                    {displayBrand}
-                  </span>
-                )}
+                <BrandMark showWordmark />
               </div>
             )}
 
@@ -242,7 +235,7 @@ export function WorkspaceShell<T extends string>({
                     aria-current={active ? "page" : undefined}
                     onClick={() => selectItem(item.id)}
                     className={cn(
-                      "inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-medium transition-colors whitespace-nowrap cursor-pointer",
+                      "inline-flex items-center gap-2 rounded-md px-3.5 py-2 text-sm font-medium transition-colors whitespace-nowrap cursor-pointer",
                       active
                         ? "bg-brand-50 text-brand-700 font-semibold"
                         : "text-ink-600 hover:bg-slate-100 hover:text-ink-900"
@@ -251,7 +244,7 @@ export function WorkspaceShell<T extends string>({
                     {item.icon}
                     <span>{item.label}</span>
                     {item.badge !== undefined && item.badge > 0 && (
-                      <span className="rounded-full bg-brand-600 px-1.5 py-0.5 text-xs font-bold text-white leading-none">
+                      <span className="rounded-sm bg-brand-600 px-1.5 py-0.5 text-xs font-bold text-white leading-none">
                         {item.badge}
                       </span>
                     )}
@@ -264,13 +257,13 @@ export function WorkspaceShell<T extends string>({
               {headerActions}
               {!hideDefaultAccountControls && (
                 <>
-                  <span className="hidden sm:inline-flex items-center rounded-full border border-border-subtle bg-slate-50 px-3 py-1.5 text-sm font-semibold text-ink-700">
+                  <span className="hidden sm:inline-flex items-center rounded-md border border-border-subtle bg-slate-50 px-3 py-1.5 text-sm font-semibold text-ink-700">
                     {userLabel}
                   </span>
                   <button
                     type="button"
                     onClick={onLogout}
-                    className="hidden sm:inline-flex items-center gap-1.5 rounded-xl border border-border-subtle bg-white px-3 py-2 text-sm font-semibold text-ink-700 hover:bg-slate-50 hover:text-ink-900 cursor-pointer"
+                    className="hidden sm:inline-flex items-center gap-1.5 rounded-md border border-border-subtle bg-white px-3 py-2 text-sm font-semibold text-ink-700 hover:bg-slate-50 hover:text-ink-900 cursor-pointer"
                   >
                     <LogoutIcon size={15} />
                     <span>Đăng xuất</span>
@@ -282,7 +275,7 @@ export function WorkspaceShell<T extends string>({
                 aria-label={mobileMenuOpen ? "Đóng menu" : "Mở menu điều hướng"}
                 aria-expanded={mobileMenuOpen}
                 onClick={() => setMobileMenuOpen((v) => !v)}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border-subtle bg-white text-ink-700 md:hidden cursor-pointer"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border-subtle bg-white text-ink-700 md:hidden cursor-pointer"
               >
                 {mobileMenuOpen ? <CloseIcon size={18} /> : <MenuIcon size={18} />}
               </button>
@@ -300,7 +293,7 @@ export function WorkspaceShell<T extends string>({
                     aria-current={active ? "page" : undefined}
                     onClick={() => selectItem(item.id)}
                     className={cn(
-                      "flex w-full items-center justify-between rounded-xl px-3.5 py-2.5 text-sm font-medium cursor-pointer",
+                      "flex w-full items-center justify-between rounded-md px-3.5 py-2.5 text-sm font-medium cursor-pointer",
                       active ? "bg-brand-50 text-brand-700 font-semibold" : "text-ink-700 hover:bg-slate-50"
                     )}
                   >
@@ -309,7 +302,7 @@ export function WorkspaceShell<T extends string>({
                       <span>{item.label}</span>
                     </span>
                     {item.badge !== undefined && item.badge > 0 && (
-                      <span className="rounded-full bg-brand-600 px-2 py-0.5 text-xs font-bold text-white">
+                      <span className="rounded-sm bg-brand-600 px-2 py-0.5 text-xs font-bold text-white">
                         {item.badge}
                       </span>
                     )}
@@ -355,21 +348,16 @@ export function WorkspaceShell<T extends string>({
         className="sticky top-0 h-screen w-64 shrink-0 border-r border-border-subtle bg-white flex flex-col justify-between p-4"
       >
         <div className="space-y-6 flex-1 min-h-0 overflow-y-auto">
-          <div className="flex items-center justify-between px-2 pt-1">
-            <div className="flex items-center gap-3 min-w-0">
-              <img src="/logo.png" alt="" aria-hidden="true" className="h-9 w-9 shrink-0 object-contain" />
-              <div className="min-w-0">
-                {BRAND_CONFIG.name ? (
-                  <>
-                    <strong className="block truncate text-sm font-bold text-ink-900">{BRAND_CONFIG.name}</strong>
-                    <span className="block truncate text-xs text-ink-500">{brandLabel}</span>
-                  </>
-                ) : (
-                  <strong className="block truncate text-sm font-bold text-ink-900">{brandLabel || eyebrow}</strong>
-                )}
-              </div>
-            </div>
+          <div className="px-2 pt-1 space-y-1.5">
+            <BrandMark showWordmark />
+            {(brandLabel || eyebrow) && (
+              <p className="m-0 truncate text-xs font-medium text-ink-500">
+                {brandLabel || eyebrow}
+              </p>
+            )}
           </div>
+
+          {sidebarTop}
 
           <nav aria-label="Điều hướng chức năng" className="space-y-1">
             {navItems.map((item) => {
@@ -381,7 +369,7 @@ export function WorkspaceShell<T extends string>({
                   aria-current={active ? "page" : undefined}
                   onClick={() => selectItem(item.id)}
                   className={cn(
-                    "flex w-full items-center justify-between gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors text-left cursor-pointer",
+                    "flex w-full items-center justify-between gap-2.5 rounded-md px-3 py-2.5 text-sm font-medium transition-colors text-left cursor-pointer",
                     active
                       ? "bg-brand-50 text-brand-700 font-semibold"
                       : "text-ink-600 hover:bg-slate-100 hover:text-ink-900"
@@ -392,7 +380,7 @@ export function WorkspaceShell<T extends string>({
                     <span className="truncate">{item.label}</span>
                   </span>
                   {item.badge !== undefined && item.badge > 0 && (
-                    <span className="rounded-full bg-brand-600 px-2 py-0.5 text-[11px] font-bold text-white leading-none">
+                    <span className="rounded-sm bg-brand-600 px-2 py-0.5 text-[11px] font-bold text-white leading-none">
                       {item.badge}
                     </span>
                   )}

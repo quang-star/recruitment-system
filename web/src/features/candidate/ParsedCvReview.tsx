@@ -203,7 +203,7 @@ export function ParsedCvReview({
             {draft.experiences.map((experience, index) => (
               <div
                 key={index}
-                className="rounded-xl border border-border-subtle bg-slate-50/70 p-4 space-y-3"
+                className="rounded-lg border border-border-subtle bg-slate-50/70 p-4 space-y-3"
               >
                 <input
                   aria-label={`Chức danh ${index + 1}`}

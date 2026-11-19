@@ -106,7 +106,7 @@ export function MatchBreakdown({ match, onViewCv }: { match: ApplicationMatch; o
 
   return (
     <div className="space-y-4">
-      <div className="match-summary rounded-xl border border-border-subtle bg-white p-4 space-y-1.5">
+      <div className="match-summary rounded-lg border border-border-subtle bg-white p-4 space-y-1.5">
         <div className="match-summary-score flex flex-wrap items-center justify-between gap-2">
           {match.status === "INSUFFICIENT_DATA" ? (
             <strong className="text-sm font-bold text-ink-900">Chưa đủ dữ liệu để đánh giá</strong>
@@ -142,7 +142,7 @@ export function MatchBreakdown({ match, onViewCv }: { match: ApplicationMatch; o
           {supportedClaims.map((claim, idx) => (
             <span
               key={`sup-pill-${idx}`}
-              className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-800"
+              className="inline-flex items-center gap-1 rounded-sm border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-800"
               title="Kỹ năng đã tìm thấy trong CV"
             >
               ✓ {claim.label ?? claim.skillId ?? claim.subject}
@@ -151,7 +151,7 @@ export function MatchBreakdown({ match, onViewCv }: { match: ApplicationMatch; o
           {missingClaims.map((claim, idx) => (
             <span
               key={`mis-pill-${idx}`}
-              className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-800"
+              className="inline-flex items-center gap-1 rounded-sm border border-rose-200 bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-800"
               title="Kỹ năng chưa tìm thấy trong CV"
             >
               ✗ {claim.label ?? claim.skillId ?? claim.subject}
@@ -160,7 +160,7 @@ export function MatchBreakdown({ match, onViewCv }: { match: ApplicationMatch; o
           {uncertainClaims.map((claim, idx) => (
             <span
               key={`unc-pill-${idx}`}
-              className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-800"
+              className="inline-flex items-center gap-1 rounded-sm border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-800"
               title="Cần phỏng vấn hoặc kiểm tra thêm"
             >
               ? {claim.label ?? claim.skillId ?? claim.subject}
@@ -169,7 +169,7 @@ export function MatchBreakdown({ match, onViewCv }: { match: ApplicationMatch; o
         </div>
       )}
 
-      <details className="rounded-xl border border-border-subtle bg-slate-50/70 px-3.5 py-2.5 text-xs text-ink-600">
+      <details className="rounded-md border border-border-subtle bg-slate-50/70 px-3.5 py-2.5 text-xs text-ink-600">
         <summary className="cursor-pointer font-semibold text-ink-800">Chi tiết phương pháp &amp; chất lượng dữ liệu</summary>
         <div className="mt-2 space-y-1">
           <small className="block text-xs text-ink-500">
@@ -187,7 +187,7 @@ export function MatchBreakdown({ match, onViewCv }: { match: ApplicationMatch; o
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           {components.map((component) => (
             <div
-              className="flex items-center justify-between gap-2 rounded-xl border border-border-subtle bg-white px-3.5 py-2.5 text-xs"
+              className="flex items-center justify-between gap-2 rounded-md border border-border-subtle bg-white px-3.5 py-2.5 text-xs"
               key={component.name}
             >
               <span className="font-medium text-ink-800">{componentLabels[component.name] ?? component.name}</span>
@@ -215,7 +215,7 @@ export function MatchBreakdown({ match, onViewCv }: { match: ApplicationMatch; o
           {claimGroups.map(
             (group) =>
               group.items.length > 0 && (
-                <div key={group.key} className={`rounded-xl border p-3.5 space-y-2 ${group.boxClass}`}>
+                <div key={group.key} className={`rounded-lg border p-3.5 space-y-2 ${group.boxClass}`}>
                   <span className={`block text-xs font-bold uppercase tracking-wide ${group.headingClass}`}>
                     {group.heading}
                   </span>
@@ -265,7 +265,7 @@ export function MatchBreakdown({ match, onViewCv }: { match: ApplicationMatch; o
       )}
 
       {componentClaims.length > 0 && (
-        <div className="rounded-xl border border-border-subtle bg-slate-50/50 p-3.5 space-y-2">
+        <div className="rounded-lg border border-border-subtle bg-slate-50/50 p-3.5 space-y-2">
           <strong className="block text-xs font-bold uppercase tracking-wide text-ink-700">
             Căn cứ từng tiêu chí &amp; giới hạn đánh giá
           </strong>

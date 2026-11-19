@@ -130,7 +130,7 @@ export function CandidateApplyModal({
               <div
                 role="tablist"
                 aria-label="Phương thức chọn CV ứng tuyển"
-                className="grid grid-cols-2 gap-1.5 rounded-xl bg-slate-100 p-1"
+                className="grid grid-cols-2 gap-1.5 rounded-lg bg-slate-100 p-1"
               >
                 <button
                   type="button"
@@ -192,7 +192,7 @@ export function CandidateApplyModal({
                         onClick={() => onPreviewCv(selectedCv)}
                         className="text-xs font-semibold text-brand-700 hover:text-brand-800 cursor-pointer bg-transparent border-0 p-0"
                       >
-                        👁 Xem CV
+                        Xem CV
                       </button>
                     )}
                     {canQuickUpload && confirmedCvs.length > 0 && (
@@ -280,11 +280,11 @@ export function CandidateApplyModal({
               value={coverLetter}
               onChange={(event) => onCoverLetterChange(event.target.value)}
               placeholder="Giới thiệu ngắn gọn kinh nghiệm nổi bật hoặc lý do bạn phù hợp với vị trí này…"
-              className="w-full rounded-xl border border-border-strong bg-white px-3.5 py-2.5 text-sm font-normal text-ink-900 placeholder:text-ink-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              className="w-full rounded-md border border-border-strong bg-white px-3.5 py-2.5 text-sm font-normal text-ink-900 placeholder:text-ink-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
             />
           </label>
 
-          <label className="flex items-start gap-2.5 rounded-xl border border-brand-200 bg-brand-50/60 p-3.5 text-xs sm:text-sm text-ink-800 cursor-pointer">
+          <label className="flex items-start gap-2.5 rounded-md border border-brand-200 bg-brand-50/60 p-3.5 text-xs sm:text-sm text-ink-800 cursor-pointer">
             <input
               type="checkbox"
               checked={consentAccepted}
@@ -292,7 +292,7 @@ export function CandidateApplyModal({
               className="mt-0.5 h-4 w-4 shrink-0 rounded border-border-strong text-brand-600 focus:ring-brand-500"
             />
             <span>
-              Tôi đồng ý chia sẻ CV đã chọn và thông tin liên hệ với nhà tuyển dụng cho vị trí này theo chính sách quyền riêng tư (phiên bản cv-sharing-v1).
+              Tôi đồng ý chia sẻ CV đã chọn và thông tin liên hệ với nhà tuyển dụng cho vị trí này theo chính sách quyền riêng tư.
             </span>
           </label>
 

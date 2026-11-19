@@ -180,6 +180,7 @@ CREATE TABLE job_versions (
     position_id BIGINT,
     position_name VARCHAR(240) NOT NULL,
     matching_domain VARCHAR(20) NOT NULL,
+    province VARCHAR(120),
     PRIMARY KEY (id)
 );
 

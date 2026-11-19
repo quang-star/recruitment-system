@@ -27,7 +27,7 @@ it("requires a separate review and reason, preserves the shown version and displ
   });
   render(<CompanyReviewPanel accessToken="synthetic" />);
   expect(screen.queryByRole("button", { name: "Duyệt hoạt động" })).not.toBeInTheDocument();
-  fireEvent.click(await screen.findByRole("button", { name: "Xem xét Synthetic Company" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Chi tiết Synthetic Company" }));
   const approve = screen.getByRole("button", { name: "Duyệt hoạt động" });
   expect(approve).toBeDisabled();
   fireEvent.change(screen.getByLabelText("Lý do duyệt"), { target: { value: "  Đã kiểm tra  " } });
@@ -46,7 +46,7 @@ it("keeps the reason after a conflict and requires an explicit reload before fur
     return path.endsWith("/history") ? [] : { items: [company], total: 1, page: 0, size: 20 };
   });
   render(<CompanyReviewPanel accessToken="synthetic" />);
-  fireEvent.click(await screen.findByRole("button", { name: "Xem xét Synthetic Company" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Chi tiết Synthetic Company" }));
   fireEvent.change(screen.getByLabelText("Lý do duyệt"), { target: { value: "Reviewed reason" } });
   fireEvent.click(screen.getByRole("button", { name: "Duyệt hoạt động" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("Công ty đã thay đổi");
@@ -63,7 +63,7 @@ it("filters the paged queue and does not offer approval for ACTIVE companies", a
   fireEvent.change(screen.getByLabelText("Trạng thái công ty"), { target: { value: "ACTIVE" } });
   fireEvent.change(screen.getByLabelText("Tìm công ty"), { target: { value: "Synthetic" } });
   await waitFor(() => expect(apiRequest).toHaveBeenCalledWith(expect.stringMatching(/status=ACTIVE&q=Synthetic&page=0&size=20/), expect.anything()));
-  fireEvent.click(await screen.findByRole("button", { name: "Xem xét Synthetic Company" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Chi tiết Synthetic Company" }));
   expect(screen.queryByRole("button", { name: "Duyệt hoạt động" })).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Tạm ngưng hoạt động" })).toBeDisabled();
 });
@@ -79,13 +79,13 @@ it("supports rejecting pending, suspending active, and reactivating suspended co
   });
 
   render(<CompanyReviewPanel accessToken="synthetic" />);
-  fireEvent.click(await screen.findByRole("button", { name: "Xem xét Synthetic Company" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Chi tiết Synthetic Company" }));
   fireEvent.change(screen.getByLabelText("Lý do duyệt"), { target: { value: "Hồ sơ không hợp lệ" } });
   fireEvent.click(screen.getByRole("button", { name: "Từ chối đăng ký" }));
   expect(await screen.findByText(/Đã từ chối đăng ký công ty Synthetic Company/)).toBeVisible();
 
   fireEvent.change(screen.getByLabelText("Trạng thái công ty"), { target: { value: "ACTIVE" } });
-  fireEvent.click(await screen.findByRole("button", { name: "Xem xét Synthetic Company" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Chi tiết Synthetic Company" }));
   fireEvent.change(screen.getByLabelText("Lý do tạm ngưng"), { target: { value: "Vi phạm chính sách" } });
   fireEvent.click(screen.getByRole("button", { name: "Tạm ngưng hoạt động" }));
   expect(await screen.findByText(/Đã tạm ngưng hoạt động Synthetic Company/)).toBeVisible();
@@ -93,4 +93,7 @@ it("supports rejecting pending, suspending active, and reactivating suspended co
   fireEvent.change(screen.getByLabelText("Lý do kích hoạt lại"), { target: { value: "Đã khắc phục" } });
   fireEvent.click(screen.getByRole("button", { name: "Kích hoạt lại" }));
   expect(await screen.findByText(/Đã kích hoạt lại Synthetic Company/)).toBeVisible();
+
+  fireEvent.click(screen.getByRole("button", { name: "Đóng" }));
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 });

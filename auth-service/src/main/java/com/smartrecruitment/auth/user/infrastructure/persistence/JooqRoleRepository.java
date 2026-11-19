@@ -7,7 +7,11 @@ import org.springframework.stereotype.Repository;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static com.smartrecruitment.auth.infrastructure.jooq.generated.tables.Roles.ROLES;
@@ -22,6 +26,22 @@ public class JooqRoleRepository implements RoleRepository {
         return dsl.select(ROLES.CODE).from(USER_ROLES).join(ROLES).on(ROLES.ID.eq(USER_ROLES.ROLE_ID))
                 .where(USER_ROLES.USER_ID.eq(userId)).and(ROLES.STATUS.eq("ACTIVE"))
                 .orderBy(ROLES.CODE.asc()).fetch(ROLES.CODE);
+    }
+
+    @Override
+    public Map<Long, List<String>> findActiveRoleCodesByUserIds(Collection<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) return Map.of();
+        Map<Long, List<String>> result = new LinkedHashMap<>();
+        dsl.select(USER_ROLES.USER_ID, ROLES.CODE)
+                .from(USER_ROLES)
+                .join(ROLES).on(ROLES.ID.eq(USER_ROLES.ROLE_ID))
+                .where(USER_ROLES.USER_ID.in(userIds))
+                .and(ROLES.STATUS.eq("ACTIVE"))
+                .orderBy(USER_ROLES.USER_ID.asc(), ROLES.CODE.asc())
+                .forEach(row -> result
+                        .computeIfAbsent(row.get(USER_ROLES.USER_ID), ignored -> new ArrayList<>())
+                        .add(row.get(ROLES.CODE)));
+        return result;
     }
     @Override
     public void assignCandidateRole(Long userId, Instant assignedAt) {

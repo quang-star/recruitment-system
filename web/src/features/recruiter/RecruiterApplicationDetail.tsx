@@ -45,7 +45,7 @@ export function RecruiterApplicationDetail({
   return (
     <article
       key={application.applicationId}
-      className="application-detail rounded-2xl border border-border-subtle bg-white p-5 shadow-xs space-y-5"
+      className="application-detail rounded-lg border border-border-subtle bg-white p-5 shadow-xs space-y-5"
     >
       <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border-subtle pb-4">
         <div className="flex items-start gap-3 min-w-0">
@@ -79,7 +79,7 @@ export function RecruiterApplicationDetail({
       </div>
 
       {application.coverLetter && (
-        <div className="rounded-xl border border-border-subtle bg-slate-50/80 p-3.5 space-y-1">
+        <div className="rounded-lg border border-border-subtle bg-slate-50/80 p-3.5 space-y-1">
           <strong className="block text-xs font-semibold uppercase tracking-wide text-ink-600">
             Thư ứng tuyển:
           </strong>
@@ -88,14 +88,14 @@ export function RecruiterApplicationDetail({
       )}
 
       {application.match ? (
-        <div className="rounded-xl border border-border-subtle bg-slate-50/50 p-4">
+        <div className="rounded-lg border border-border-subtle bg-slate-50/50 p-4">
           <MatchBreakdown
             match={application.match}
             onViewCv={(page) => onViewCvEvidence(application.applicationId, page)}
           />
         </div>
       ) : (
-        <div className="rounded-xl border border-border-subtle bg-slate-50 px-4 py-3 text-sm text-ink-600">
+        <div className="rounded-lg border border-border-subtle bg-slate-50 px-4 py-3 text-sm text-ink-600">
           {application.cvAccessGranted === false
             ? application.status === "REJECTED"
               ? "Hồ sơ đã bị từ chối nên quyền xem CV và điểm AI đã tự động đóng."

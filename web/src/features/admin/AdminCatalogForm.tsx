@@ -40,6 +40,7 @@ export function AdminCatalogForm({
   busy,
   loadedTab,
   needsReload,
+  embedded = false,
   onSelect,
   onKindChange,
   onParentChange,
@@ -73,6 +74,7 @@ export function AdminCatalogForm({
   busy: boolean;
   loadedTab: AdminTab | null;
   needsReload: boolean;
+  embedded?: boolean;
   onSelect: (id: string) => void;
   onKindChange: (value: CategoryEntry["kind"]) => void;
   onParentChange: (value: string) => void;
@@ -86,40 +88,69 @@ export function AdminCatalogForm({
   onAction: (action: Action) => void;
   onLoadHistory: () => void;
 }) {
-  return (
-    <Card padding="md" className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-subtle pb-3">
-        <div className="min-w-0">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-ink-500 m-0">
-            {selected ? (tab === "skills" ? "Chỉnh sửa & duyệt kỹ năng" : "Chỉnh sửa & duyệt danh mục") : tab === "skills" ? "Thêm kỹ năng mới" : "Thêm danh mục mới"}
-          </p>
-          <div className="mt-1 flex flex-wrap items-center gap-2">
-            <h3 className="text-base font-bold text-ink-900 m-0 truncate">
-              {current ? current.name : tab === "skills" ? "Tạo kỹ năng chuẩn hóa" : "Tạo danh mục nghề"}
-            </h3>
-            {current && (
-              <Badge
-                tone={
-                  current.status === "ACTIVE"
-                    ? "success"
-                    : current.status === "PENDING"
-                      ? "warning"
-                      : current.status === "REJECTED"
-                        ? "danger"
-                        : "neutral"
-                }
-              >
-                {catalogStatusLabel[current.status] ?? current.status}
-              </Badge>
+  const content = (
+    <div className="space-y-4">
+      {embedded ? (
+        (current || selected) && (
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {current && (
+                <Badge
+                  tone={
+                    current.status === "ACTIVE"
+                      ? "success"
+                      : current.status === "PENDING"
+                        ? "warning"
+                        : current.status === "REJECTED"
+                          ? "danger"
+                          : "neutral"
+                  }
+                >
+                  {catalogStatusLabel[current.status] ?? current.status}
+                </Badge>
+              )}
+            </div>
+            {selected && (
+              <Button type="button" variant="secondary" size="sm" disabled={busy} onClick={() => onSelect("")}>
+                + Thêm mới
+              </Button>
             )}
           </div>
+        )
+      ) : (
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-subtle pb-3">
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-ink-500 m-0">
+              {selected ? (tab === "skills" ? "Chỉnh sửa & duyệt kỹ năng" : "Chỉnh sửa & duyệt danh mục") : tab === "skills" ? "Thêm kỹ năng mới" : "Thêm danh mục mới"}
+            </p>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <h3 className="text-base font-bold text-ink-900 m-0 truncate">
+                {current ? current.name : tab === "skills" ? "Tạo kỹ năng chuẩn hóa" : "Tạo danh mục nghề"}
+              </h3>
+              {current && (
+                <Badge
+                  tone={
+                    current.status === "ACTIVE"
+                      ? "success"
+                      : current.status === "PENDING"
+                        ? "warning"
+                        : current.status === "REJECTED"
+                          ? "danger"
+                          : "neutral"
+                  }
+                >
+                  {catalogStatusLabel[current.status] ?? current.status}
+                </Badge>
+              )}
+            </div>
+          </div>
+          {selected && (
+            <Button type="button" variant="secondary" size="sm" disabled={busy} onClick={() => onSelect("")}>
+              + Thêm mới
+            </Button>
+          )}
         </div>
-        {selected && (
-          <Button type="button" variant="secondary" size="sm" disabled={busy} onClick={() => onSelect("")}>
-            + Thêm mới
-          </Button>
-        )}
-      </div>
+      )}
 
       <label className={labelClass}>
         Danh mục
@@ -149,7 +180,7 @@ export function AdminCatalogForm({
           {tab === "skills" && catalog?.skills.find((skill) => skill.stableId === selected)?.redacted && (
             <p
               role="status"
-              className="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs text-amber-900 m-0"
+              className="rounded-md border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs text-amber-900 m-0"
             >
               Tên hoặc tên gọi khác có thông tin liên hệ đã được che. Thay bằng tên kỹ năng hợp lệ trước khi sửa hoặc duyệt.
             </p>
@@ -281,7 +312,7 @@ export function AdminCatalogForm({
           </div>
 
           {active && (
-            <div className="rounded-xl border border-border-subtle bg-slate-50/70 p-3.5 space-y-2.5">
+            <div className="rounded-lg border border-border-subtle bg-slate-50/70 p-3.5 space-y-2.5">
               <label className={labelClass}>
                 Gộp vào danh mục đã có
                 <select
@@ -318,6 +349,8 @@ export function AdminCatalogForm({
           )}
         </fieldset>
       </form>
-    </Card>
+    </div>
   );
+
+  return embedded ? content : <Card padding="md">{content}</Card>;
 }

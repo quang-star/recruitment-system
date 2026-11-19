@@ -130,7 +130,7 @@ export function AvatarCropModal({ file, onCancel, onConfirm }: Props) {
         {error && <ErrorBanner message={error} />}
 
         <div className="flex flex-col items-center gap-3">
-          <div className="relative h-60 w-60 overflow-hidden rounded-xl border border-border-strong bg-slate-100">
+          <div className="relative h-60 w-60 overflow-hidden rounded-lg border border-border-strong bg-slate-100">
             <canvas
               ref={canvasRef}
               width={CANVAS_SIZE}

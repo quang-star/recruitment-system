@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { apiRequest } from "../../shared/api/client";
 import { externalAiPolicyVersion } from "../../shared/components/ExternalAiConsent";
-import { SparklesIcon } from "../../shared/components/Icon";
+import { LayersIcon } from "../../shared/components/Icon";
 import { Badge, Button } from "../../shared/ui";
 import type { CategoryChoice } from "./JobCategoryFields";
 
@@ -81,13 +81,13 @@ export function CareerCategorySuggestions({ draft, userId, companyId, jobId, job
 
   return (
     <section
-      className="rounded-xl border border-brand-200/80 bg-brand-50/40 p-4 space-y-3"
+      className="rounded-lg border border-brand-200/80 bg-brand-50/40 p-4 space-y-3"
       aria-label="Gợi ý phân loại nghề"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1 max-w-2xl">
           <div className="flex items-center gap-2">
-            <SparklesIcon size={15} className="text-brand-700" />
+            <LayersIcon size={16} className="text-brand-700 shrink-0" aria-hidden="true" />
             <h4 className="text-sm font-bold text-ink-900 m-0">Gợi ý phân loại nghề từ JD</h4>
           </div>
           <p className="text-xs text-ink-600 m-0 leading-relaxed">
@@ -119,7 +119,7 @@ export function CareerCategorySuggestions({ draft, userId, companyId, jobId, job
       {visible?.status === "SUGGESTED" && (
         <ol className="space-y-3 pl-0 list-none m-0">
           {visible.suggestions.map((suggestion, index) => (
-            <li key={index} className="rounded-xl border border-border-subtle bg-white p-3.5 shadow-xs space-y-2">
+            <li key={index} className="rounded-lg border border-border-subtle bg-white p-3.5 shadow-xs space-y-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-sm font-semibold text-ink-900 m-0">
                   <strong>{suggestion.category.industryName}</strong> · {suggestion.category.specializationName} · {suggestion.category.positionName}

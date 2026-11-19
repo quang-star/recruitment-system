@@ -385,7 +385,7 @@ function NotificationCenterInner({ session, onLogout }: Props) {
                   aria-disabled={isMarking || undefined}
                   onClick={() => void openNotification(notification)}
                   onKeyDown={(event) => handleCardKeyDown(event, notification)}
-                  className={`rounded-xl border p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500/30 ${
+                  className={`rounded-lg border p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-500/30 ${
                     notification.readAt
                       ? "border-border-subtle bg-white hover:border-brand-300 hover:bg-slate-50/80"
                       : "border-brand-200 bg-brand-50/40 hover:border-brand-400 hover:bg-brand-50/70"

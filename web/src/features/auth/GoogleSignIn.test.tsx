@@ -87,14 +87,12 @@ describe("Google sign-in", () => {
     expect(screen.getByRole("button", { name: "Thử lại Google" })).toBeEnabled();
   });
 
-  it("links Google with the current application bearer token", async () => {
-    const fetchMock = setupFetch();
+  it("does not render the Google account linking section in AccountSecurityPanel", async () => {
+    setupFetch();
     render(<AccountSecurityPanel session={session} onLogout={vi.fn()} />);
-    fireEvent.click(await screen.findByRole("button", { name: "Google popup" }));
-    expect(await screen.findByText(/Đã liên kết Google/)).toBeInTheDocument();
-    const call = fetchMock.mock.calls.find(([url]) => String(url).endsWith("/google/link"));
-    expect(new Headers(call?.[1]?.headers).get("Authorization")).toBe("Bearer app-access");
-    expect(JSON.parse(String(call?.[1]?.body))).toEqual({ credential: "google-id-token", nonce: "server-nonce" });
+    await screen.findByRole("heading", { name: "Mật khẩu & phiên đăng nhập" });
+    expect(screen.queryByRole("heading", { name: "Liên kết Google" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Google popup" })).not.toBeInTheDocument();
   });
 
   it("hides the button when unconfigured and never loads the external script", async () => {
@@ -277,7 +275,8 @@ describe("Google sign-in", () => {
     });
     render(<AccountSecurityPanel session={session} onLogout={vi.fn()} />);
 
-    expect(await screen.findByText(/Đã liên kết Google \(google-user@example\.com\)/)).toBeInTheDocument();
+    expect(await screen.findByText("Chưa đặt mật khẩu riêng")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Liên kết Google" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Google popup" })).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Mật khẩu hiện tại")).not.toBeInTheDocument();
 

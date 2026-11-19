@@ -49,7 +49,10 @@ public class JooqJobRepository implements JobRepository {
                 .and(COMPANIES.STATUS.eq("ACTIVE"))
                 .and(JOB_VERSIONS.APPLICATION_DEADLINE.isNull()
                         .or(JOB_VERSIONS.APPLICATION_DEADLINE.gt(OffsetDateTime.now(ZoneOffset.UTC))));
-        var location = DSL.trim(JOB_VERSIONS.LOCATION_TEXT);
+        var location = DSL.trim(DSL.coalesce(
+                DSL.nullif(DSL.trim(JOB_VERSIONS.PROVINCE), DSL.inline("")),
+                JOB_VERSIONS.LOCATION_TEXT
+        ));
         var locations = dsl.select(location).from(JOBS)
                 .join(COMPANIES).on(COMPANIES.ID.eq(JOBS.COMPANY_ID))
                 .join(JOB_VERSIONS).on(JOB_VERSIONS.ID.eq(JOBS.ACTIVE_VERSION_ID))
@@ -114,6 +117,7 @@ public class JooqJobRepository implements JobRepository {
                 .or(SearchText.contains(JOB_VERSIONS.POSITION_NAME, search.q()))
                 .or(SearchText.contains(JOB_VERSIONS.DESCRIPTION, search.q()))
                 .or(SearchText.contains(JOB_VERSIONS.REQUIREMENTS_TEXT, search.q()))
+                .or(SearchText.contains(JOB_VERSIONS.PROVINCE, search.q()))
                 .or(SearchText.contains(JOB_VERSIONS.LOCATION_TEXT, search.q()))
                 .or(SearchText.contains(COMPANIES.DISPLAY_NAME, search.q()))
                 .or(SearchText.contains(COMPANIES.LEGAL_NAME, search.q())));
@@ -122,7 +126,12 @@ public class JooqJobRepository implements JobRepository {
         if (search.positionId() != null) filters = filters.and(categoryFilter(JOB_VERSIONS.POSITION_ID, search.positionId()));
         if (search.companyId() != null) filters = filters.and(COMPANIES.ID.eq(search.companyId()));
         if (search.jobId() != null) filters = filters.and(JOBS.ID.eq(search.jobId()));
-        if (!search.location().isEmpty()) filters = filters.and(SearchText.contains(JOB_VERSIONS.LOCATION_TEXT, search.location()));
+        if (!search.location().isEmpty()) {
+            filters = filters.and(
+                    SearchText.contains(JOB_VERSIONS.PROVINCE, search.location())
+                            .or(SearchText.contains(JOB_VERSIONS.LOCATION_TEXT, search.location()))
+            );
+        }
         if (search.workMode() != null) filters = filters.and(JOB_VERSIONS.WORK_MODE.eq(search.workMode().name()));
         if (search.status() != null) filters = filters.and(JOBS.STATUS.eq(search.status().name()));
         if (!search.seniority().isEmpty()) {
@@ -382,6 +391,7 @@ public class JooqJobRepository implements JobRepository {
                 .set(JOB_VERSIONS.REQUIREMENTS_TEXT, version.requirementsText())
                 .set(JOB_VERSIONS.BENEFITS_TEXT, version.benefitsText())
                 .set(JOB_VERSIONS.LOCATION_TEXT, version.locationText())
+                .set(JOB_VERSIONS.PROVINCE, version.province())
                 .set(JOB_VERSIONS.COUNTRY_CODE, version.countryCode())
                 .set(JOB_VERSIONS.WORK_MODE, version.workMode() == null ? null : version.workMode().name())
                 .set(JOB_VERSIONS.EMPLOYMENT_TYPE, version.employmentType() == null ? null : version.employmentType().name())
@@ -429,7 +439,8 @@ public class JooqJobRepository implements JobRepository {
                 new ExternalAiConsent(record.getExternalAiConsent(), record.getExternalAiPolicyVersion()),
                 new JobCategorySnapshot(record.getIndustryId(), record.getIndustryName(), record.getSpecializationId(),
                         record.getSpecializationName(), record.getPositionId(), record.getPositionName(),
-                        JobCategorySnapshot.MatchingDomain.valueOf(record.getMatchingDomain())));
+                        JobCategorySnapshot.MatchingDomain.valueOf(record.getMatchingDomain())),
+                record.getProvince());
     }
 
     private <T extends Enum<T>> T enumValue(Class<T> type, String value) {

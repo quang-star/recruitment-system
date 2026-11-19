@@ -14,6 +14,7 @@ import java.util.List;
 import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.Applications.APPLICATIONS;
 import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.Companies.COMPANIES;
 import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.CompanyMembers.COMPANY_MEMBERS;
+import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.JobVersions.JOB_VERSIONS;
 import static com.smartrecruitment.core.infrastructure.jooq.generated.tables.Notifications.NOTIFICATIONS;
 
 @Repository
@@ -54,10 +55,19 @@ public class JooqNotificationRepository implements NotificationRepository {
     @Override
     public void insertForApplicationParticipants(Long applicationId, String type, String title, String message,
                                                   String linkUrl, String key, OffsetDateTime createdAt) {
-        var application = dsl.select(APPLICATIONS.CANDIDATE_USER_ID, APPLICATIONS.JOB_ID).from(APPLICATIONS)
-                .where(APPLICATIONS.ID.eq(applicationId)).fetchOne();
+        var application = dsl.select(
+                        APPLICATIONS.CANDIDATE_USER_ID,
+                        APPLICATIONS.JOB_ID,
+                        JOB_VERSIONS.TITLE,
+                        COMPANIES.DISPLAY_NAME)
+                .from(APPLICATIONS)
+                .leftJoin(JOB_VERSIONS).on(JOB_VERSIONS.ID.eq(APPLICATIONS.JOB_VERSION_ID))
+                .leftJoin(COMPANIES).on(COMPANIES.ID.eq(APPLICATIONS.COMPANY_ID))
+                .where(APPLICATIONS.ID.eq(applicationId))
+                .fetchOne();
         if (application == null) return;
-        insert(application.value1(), type, title, message, linkUrl, key, createdAt);
+        String contextualMessage = enrichWithJobContext(message, application.value3(), application.value4());
+        insert(application.value1(), type, title, contextualMessage, linkUrl, key, createdAt);
         String recruiterLink = "/recruiter/jobs/" + application.value2() + "?application=" + applicationId;
         dsl.select(COMPANY_MEMBERS.USER_ID).from(COMPANY_MEMBERS)
                 .join(APPLICATIONS).on(APPLICATIONS.COMPANY_ID.eq(COMPANY_MEMBERS.COMPANY_ID))
@@ -65,7 +75,17 @@ public class JooqNotificationRepository implements NotificationRepository {
                 .and(COMPANY_MEMBERS.STATUS.eq("ACTIVE"))
                 .and(COMPANY_MEMBERS.ROLE.in("OWNER", "COMPANY_ADMIN", "RECRUITER"))
                 .fetch(COMPANY_MEMBERS.USER_ID)
-                .forEach(userId -> insert(userId, type, title, message, recruiterLink, key, createdAt));
+                .forEach(userId -> insert(userId, type, title, contextualMessage, recruiterLink, key, createdAt));
+    }
+
+    private static String enrichWithJobContext(String message, String jobTitle, String companyName) {
+        if (jobTitle == null || jobTitle.isBlank()) {
+            return message;
+        }
+        String context = (companyName != null && !companyName.isBlank())
+                ? "Vị trí: " + jobTitle + " (" + companyName + "). "
+                : "Vị trí: " + jobTitle + ". ";
+        return context + message;
     }
 
     @Override

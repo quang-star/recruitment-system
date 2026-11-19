@@ -82,4 +82,12 @@ describe("WorkspaceShell sidebar account menu", () => {
     fireEvent.pointerDown(document.body);
     expect(screen.queryByRole("button", { name: "Đăng xuất" })).not.toBeInTheDocument();
   });
+
+  it("renders the unified BrandMark wordmark alongside the workspace label", () => {
+    const { container } = renderSidebarShell();
+
+    expect(container.querySelector("img")).toHaveAttribute("src", "/logo.png");
+    expect(container.querySelector("strong")).toHaveTextContent("Jobs.");
+    expect(screen.getByText("Recruiter ATS")).toBeInTheDocument();
+  });
 });

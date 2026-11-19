@@ -2,7 +2,7 @@ import { FC, useEffect, useRef, useState } from "react";
 import { PublicJob } from "../public/types";
 import { AuthSession } from "../../shared/auth/session";
 import { apiRequest, ApiClientError } from "../../shared/api/client";
-import { SparklesIcon, CheckCircleIcon } from "../../shared/components/Icon";
+import { AlertCircleIcon, CheckCircleIcon, CvIcon } from "../../shared/components/Icon";
 import { ApplicationMatch, MatchBreakdown } from "./MatchBreakdown";
 import { MatchRating } from "./MatchRating";
 import { CvPreviewModal } from "../../shared/components/CvPreviewModal";
@@ -171,7 +171,7 @@ export const PreApplyMatchWidget: FC<Props> = ({
 
   if (job.matchingSupported === false) {
     return (
-      <section className="rounded-2xl border border-border-subtle bg-slate-50 p-5">
+      <section className="rounded-lg border border-border-subtle bg-slate-50 p-5">
         <p className="text-sm text-ink-600 m-0">
           Vị trí này thuộc nhóm xem xét hồ sơ thủ công, không áp dụng chấm điểm AI tự động.
         </p>
@@ -182,25 +182,23 @@ export const PreApplyMatchWidget: FC<Props> = ({
   return (
     <section
       aria-labelledby="pre-match-title"
-      className="rounded-2xl border border-brand-200 bg-brand-50/45 p-5 sm:p-6 space-y-4"
+      className="rounded-lg border border-brand-200 bg-brand-50/45 p-5 sm:p-6 space-y-4"
     >
-      <div className="flex items-start gap-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-600 text-white shadow-xs">
-          <SparklesIcon size={20} aria-hidden="true" />
-        </span>
+      <div className="flex items-start gap-2.5">
+        <CvIcon size={18} className="text-brand-700 shrink-0 mt-0.5" aria-hidden="true" />
         <div>
           <h3 id="pre-match-title" className="text-base sm:text-lg font-bold text-ink-900 m-0">
             Đánh giá độ phù hợp với CV trước khi nộp
           </h3>
           <p className="text-xs sm:text-sm text-ink-600 m-0 mt-0.5">
-            Đối chiếu kỹ năng, kinh nghiệm và nhận lời khuyên từ AI
+            Đối chiếu kỹ năng, kinh nghiệm từ CV với yêu cầu vị trí này
           </p>
         </div>
       </div>
 
       {session && loadingCvs && <p className="text-sm text-ink-500 m-0" role="status">Đang tải danh sách CV…</p>}
       {session && cvError && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-sm text-rose-900 flex flex-wrap items-center justify-between gap-2" role="alert">
+        <div className="rounded-md border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-sm text-rose-900 flex flex-wrap items-center justify-between gap-2" role="alert">
           <span>{cvError}</span>
           <button
             type="button"
@@ -212,7 +210,7 @@ export const PreApplyMatchWidget: FC<Props> = ({
         </div>
       )}
       {error && (
-        <p className="rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-sm text-rose-900 m-0" role="alert">
+        <p className="rounded-md border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-sm text-rose-900 m-0" role="alert">
           {error}
         </p>
       )}
@@ -221,23 +219,22 @@ export const PreApplyMatchWidget: FC<Props> = ({
       )}
 
       {!session && (
-        <div className="space-y-3 rounded-xl border border-border-subtle bg-white p-4">
+        <div className="space-y-3 rounded-lg border border-border-subtle bg-white p-4">
           <p className="text-sm text-ink-600 m-0 leading-relaxed">
             Đăng nhập và dùng CV của bạn để AI kiểm tra ngay mức độ phù hợp, chỉ ra kỹ năng đã có và kỹ năng còn thiếu trước khi ứng tuyển.
           </p>
           <button
             type="button"
             onClick={onRequireLogin}
-            className="inline-flex h-10 items-center gap-2 rounded-xl border border-brand-200 bg-brand-50 px-4 text-sm font-semibold text-brand-700 hover:bg-brand-100 cursor-pointer"
+            className="inline-flex h-10 items-center gap-2 rounded-lg border border-brand-200 bg-brand-50 px-4 text-sm font-semibold text-brand-700 hover:bg-brand-100 cursor-pointer"
           >
-            <SparklesIcon size={16} aria-hidden="true" />
             <span>Đăng nhập để kiểm tra độ phù hợp</span>
           </button>
         </div>
       )}
 
       {session && !loadingCvs && !cvError && cvs.length === 0 && (
-        <div className="space-y-3 rounded-xl border border-border-subtle bg-white p-4">
+        <div className="space-y-3 rounded-lg border border-border-subtle bg-white p-4">
           <p className="text-sm text-ink-600 m-0 leading-relaxed">
             Bạn chưa có CV nào ở trạng thái <strong>Đã xác nhận</strong>. Hãy tải lên và xác nhận CV để AI có thể đánh giá mức độ phù hợp với vị trí này.
           </p>
@@ -245,7 +242,7 @@ export const PreApplyMatchWidget: FC<Props> = ({
             <button
               type="button"
               onClick={onOpenCvLibrary}
-              className="inline-flex h-9 items-center rounded-xl border border-border-strong bg-white px-3.5 text-xs font-semibold text-ink-800 hover:bg-slate-50 cursor-pointer"
+              className="inline-flex h-9 items-center rounded-md border border-border-strong bg-white px-3.5 text-xs font-semibold text-ink-800 hover:bg-slate-50 cursor-pointer"
             >
               Quản lý CV của tôi
             </button>
@@ -255,7 +252,7 @@ export const PreApplyMatchWidget: FC<Props> = ({
 
       {session && cvs.length > 0 && (
         <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 rounded-xl border border-border-subtle bg-white p-3">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 rounded-lg border border-border-subtle bg-white p-3">
             <label htmlFor="pre-match-cv-select" className="text-xs font-semibold text-ink-700 shrink-0">
               Chọn CV đối chiếu:
             </label>
@@ -289,7 +286,7 @@ export const PreApplyMatchWidget: FC<Props> = ({
                 title="Xem trước tệp PDF CV này"
                 className="inline-flex h-9 items-center rounded-lg border border-border-strong bg-white px-3 text-xs font-semibold text-ink-800 hover:bg-slate-50 disabled:opacity-50 cursor-pointer"
               >
-                👁 Xem CV
+                Xem CV
               </button>
 
               <button
@@ -298,16 +295,16 @@ export const PreApplyMatchWidget: FC<Props> = ({
                 disabled={evaluating || loadingCvs || !selectedCvId || !job.jobVersionId}
                 className="inline-flex h-9 items-center rounded-lg bg-brand-600 px-3.5 text-xs font-semibold text-white hover:bg-brand-700 disabled:opacity-50 cursor-pointer"
               >
-                {evaluating ? "AI đang đối chiếu…" : "⚡ Kiểm tra ngay"}
+                {evaluating ? "AI đang đối chiếu…" : "Kiểm tra ngay"}
               </button>
             </div>
           </div>
 
           {previewResult && (
-            <div className="rounded-2xl border border-border-subtle bg-white p-5 shadow-card space-y-4" role="region" aria-label="Kết quả đối chiếu">
+            <div className="rounded-lg border border-border-subtle bg-white p-5 shadow-card space-y-4" role="region" aria-label="Kết quả đối chiếu">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border-subtle">
-                <div className="rounded-xl border border-brand-200 bg-brand-50/70 px-4 py-3 shrink-0">
-                  <span className="block text-[11px] font-bold uppercase tracking-wider text-brand-800 mb-1">
+                <div className="rounded-lg border border-brand-200 bg-brand-50/70 px-4 py-3 shrink-0">
+                  <span className="block text-xs font-semibold text-brand-800 mb-1">
                     Mức độ phù hợp với vị trí
                   </span>
                   <MatchRating match={previewResult} />
@@ -331,8 +328,8 @@ export const PreApplyMatchWidget: FC<Props> = ({
                 Mức độ phù hợp trên thang 1–5 sao chỉ hỗ trợ đối chiếu CV với vị trí, không phải xác suất trúng tuyển.
               </p>
 
-              <div className="flex items-start gap-2.5 rounded-xl border border-border-subtle bg-slate-50 p-3.5 text-sm text-ink-700">
-                <SparklesIcon size={18} className="text-brand-600 shrink-0 mt-0.5" aria-hidden="true" />
+              <div className="flex items-start gap-2.5 rounded-lg border border-border-subtle bg-slate-50 p-3.5 text-sm text-ink-700">
+                <AlertCircleIcon size={17} className="text-brand-700 shrink-0 mt-0.5" aria-hidden="true" />
                 <p className="m-0 leading-relaxed">
                   {previewResult.status === "INSUFFICIENT_DATA"
                     ? "Kiểm tra thông tin CV và yêu cầu công việc trước khi đối chiếu lại."
@@ -390,14 +387,14 @@ export const PreApplyMatchWidget: FC<Props> = ({
               <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-border-subtle">
                 {existingApplication ? (
                   <div className="flex flex-wrap items-center gap-2.5">
-                    <span className="inline-flex h-10 items-center rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 text-sm font-semibold text-emerald-800">
+                    <span className="inline-flex h-10 items-center rounded-md border border-emerald-200 bg-emerald-50 px-3.5 text-sm font-semibold text-emerald-800">
                       Bạn đã ứng tuyển vị trí này
                     </span>
                     {onViewApplication && (
                       <button
                         type="button"
                         onClick={() => onViewApplication(existingApplication.applicationId)}
-                        className="inline-flex h-10 items-center rounded-xl border border-border-strong bg-white px-4 text-sm font-semibold text-ink-800 hover:bg-slate-50 cursor-pointer"
+                        className="inline-flex h-10 items-center rounded-md border border-border-strong bg-white px-4 text-sm font-semibold text-ink-800 hover:bg-slate-50 cursor-pointer"
                       >
                         Xem đơn ứng tuyển
                       </button>
@@ -414,7 +411,7 @@ export const PreApplyMatchWidget: FC<Props> = ({
                           : undefined
                       )
                     }
-                    className="inline-flex h-10 items-center rounded-xl bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700 cursor-pointer"
+                    className="inline-flex h-10 items-center rounded-md bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700 cursor-pointer"
                   >
                     Ứng tuyển vị trí này với CV đã chọn
                   </button>

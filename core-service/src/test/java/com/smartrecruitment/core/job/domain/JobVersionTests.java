@@ -19,6 +19,21 @@ class JobVersionTests {
     }
 
     @Test
+    void normalizesProvince() {
+        var consent = com.smartrecruitment.core.shared.domain.ExternalAiConsent.declined();
+        var category = JobCategorySnapshot.legacyIt("Backend");
+        JobVersion withProvince = new JobVersion(com.smartrecruitment.core.support.TestIds.next(), 1, "Backend", "Build APIs", "Java", null,
+                "Tòa FPT Tower, Cầu Giấy", "vn", WorkMode.ONSITE, EmploymentType.FULL_TIME, null, 1, null, null, "vnd", null,
+                false, null, "a".repeat(64), com.smartrecruitment.core.support.TestIds.next(), consent, category, "  Hà Nội  ");
+        JobVersion blankProvince = new JobVersion(com.smartrecruitment.core.support.TestIds.next(), 1, "Backend", "Build APIs", "Java", null,
+                "Tòa FPT Tower", "vn", WorkMode.ONSITE, EmploymentType.FULL_TIME, null, 1, null, null, "vnd", null,
+                false, null, "a".repeat(64), com.smartrecruitment.core.support.TestIds.next(), consent, category, "   ");
+
+        assertThat(withProvince.province()).isEqualTo("Hà Nội");
+        assertThat(blankProvince.province()).isNull();
+    }
+
+    @Test
     void rejectsInvalidHashAndSalaryRange() {
         assertThatThrownBy(() -> new JobVersion(com.smartrecruitment.core.support.TestIds.next(), 1, "Title", "Description", "Requirements",
                 null, null, null, null, null, null, 1, null, null, null, null, false, null, "bad", com.smartrecruitment.core.support.TestIds.next()))

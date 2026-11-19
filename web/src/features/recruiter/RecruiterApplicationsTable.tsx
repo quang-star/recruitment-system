@@ -19,7 +19,7 @@ export function RecruiterApplicationsTable({
   onSelect: (applicationId: string) => void;
 }) {
   return (
-    <div className="overflow-x-auto rounded-2xl border border-border-subtle bg-white">
+    <div className="overflow-x-auto rounded-lg border border-border-subtle bg-white">
       <table className="w-full border-collapse text-left text-sm">
         <caption className="sr-only">Danh sách ứng viên</caption>
         <thead>

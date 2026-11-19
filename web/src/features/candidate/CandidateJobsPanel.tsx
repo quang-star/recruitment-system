@@ -514,7 +514,7 @@ function CandidateJobsPanelInner({
                   </select>
                 </label>
               </div>
-              <div className="[&_.job-filters]:grid [&_.job-filters]:grid-cols-1 sm:[&_.job-filters]:grid-cols-3 [&_.job-filters]:gap-3 [&_.job-filters]:m-0 [&_label]:flex [&_label]:flex-col [&_label]:gap-1.5 [&_label]:text-xs [&_label]:font-semibold [&_label]:text-ink-700 [&_select]:h-10 [&_select]:rounded-xl [&_select]:border [&_select]:border-border-strong [&_select]:bg-white [&_select]:px-3 [&_select]:text-sm [&_select]:font-normal [&_select]:text-ink-900">
+              <div className="[&_.job-filters]:grid [&_.job-filters]:grid-cols-1 sm:[&_.job-filters]:grid-cols-3 [&_.job-filters]:gap-3 [&_.job-filters]:m-0 [&_label]:flex [&_label]:flex-col [&_label]:gap-1.5 [&_label]:text-xs [&_label]:font-semibold [&_label]:text-ink-700 [&_select]:h-10 [&_select]:rounded-md [&_select]:border [&_select]:border-border-strong [&_select]:bg-white [&_select]:px-3 [&_select]:text-sm [&_select]:font-normal [&_select]:text-ink-900">
                 <JobCategoryFilter value={categoryFilter} onChange={setCategoryFilter} />
               </div>
             </CardContent>

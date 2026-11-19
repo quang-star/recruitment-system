@@ -2,7 +2,7 @@ import { ArrowRightIcon, BanknoteIcon, BookmarkIcon, ClockIcon, MapPinIcon } fro
 import { Card } from "../../shared/ui";
 import { CompanyLogo } from "./CompanyLogo";
 import { resolveCompanyMeta } from "./companyData";
-import { employmentTypeLabel, extractSkillsFromJob, formatSalary, publishedLabel, workModeLabel } from "./jobPresentation";
+import { employmentTypeLabel, extractSkillsFromJob, formatJobLocation, formatSalary, publishedLabel, workModeLabel } from "./jobPresentation";
 import { useSavedJobs } from "./savedJobs";
 import { PublicJob } from "./types";
 
@@ -28,7 +28,7 @@ export function PublicJobListCard({
   const shareHref = `${window.location.pathname}?${shareParams.toString()}`;
 
   return (
-    <Card as="article" interactive padding="md" className="group">
+    <Card as="article" interactive padding="md" className="group hover:bg-slate-50/70">
       <a
         href={shareHref}
         data-job-id={job.jobId}
@@ -42,12 +42,12 @@ export function PublicJobListCard({
           <CompanyLogo
             src={job.companyLogo || company.logo}
             name={job.companyName || company.shortName}
-            className="h-12 w-12 rounded-lg"
+            className="h-12 w-12 rounded-md"
           />
 
           <div className="min-w-0 flex-1 space-y-2">
             <div>
-              <h3 className="text-base font-bold text-ink-900 group-hover:text-brand-700 transition-colors m-0 leading-snug">
+              <h3 className="text-base font-bold text-ink-900 m-0 leading-snug">
                 {job.title}
               </h3>
               <p className="text-xs sm:text-sm font-medium text-ink-500 m-0 mt-0.5 truncate">
@@ -62,7 +62,7 @@ export function PublicJobListCard({
               </span>
               <span className="inline-flex items-center gap-1">
                 <MapPinIcon size={14} className="text-ink-400" aria-hidden="true" />
-                <span>{job.locationText || "Linh hoạt"}</span>
+                <span>{formatJobLocation(job)}</span>
               </span>
               <span className="inline-flex items-center gap-1">
                 <ClockIcon size={14} className="text-ink-400" aria-hidden="true" />
@@ -84,14 +84,14 @@ export function PublicJobListCard({
                         event.stopPropagation();
                         onSelectSkill(skill);
                       }}
-                      className="rounded-md border border-border-subtle bg-slate-50 px-2 py-0.5 text-xs font-medium text-ink-700 hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700 transition-colors cursor-pointer"
+                      className="rounded-sm border border-border-subtle bg-slate-50 px-2 py-0.5 text-xs font-medium text-ink-700 hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700 transition-colors cursor-pointer"
                     >
                       {skill}
                     </button>
                   ) : (
                     <span
                       key={skill}
-                      className="rounded-md border border-border-subtle bg-slate-50 px-2 py-0.5 text-xs font-medium text-ink-700"
+                      className="rounded-sm border border-border-subtle bg-slate-50 px-2 py-0.5 text-xs font-medium text-ink-700"
                     >
                       {skill}
                     </span>
@@ -113,11 +113,10 @@ export function PublicJobListCard({
                 event.stopPropagation();
                 toggleSaved(job.jobId);
               }}
-              className={`inline-flex h-9 w-9 items-center justify-center rounded-md border transition-colors cursor-pointer ${
-                isSaved
-                  ? "border-brand-300 bg-brand-50 text-brand-700"
-                  : "border-border-subtle bg-white text-ink-500 hover:border-brand-200 hover:text-brand-700"
-              }`}
+              className={`inline-flex h-9 w-9 items-center justify-center rounded-md border transition-colors cursor-pointer ${isSaved
+                ? "border-brand-300 bg-brand-50 text-brand-700"
+                : "border-border-subtle bg-white text-ink-500 hover:border-brand-200 hover:text-brand-700"
+                }`}
             >
               <BookmarkIcon size={16} filled={isSaved} aria-hidden="true" />
             </button>

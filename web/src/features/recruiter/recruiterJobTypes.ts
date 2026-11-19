@@ -15,6 +15,7 @@ export type Job = {
   requirementsText: string;
   benefitsText: string | null;
   locationText: string | null;
+  province?: string | null;
   countryCode: string | null;
   workMode: "ONSITE" | "HYBRID" | "REMOTE" | null;
   employmentType: "FULL_TIME" | "PART_TIME" | "CONTRACT" | "INTERNSHIP" | null;
@@ -39,6 +40,7 @@ export type JobForm = {
   requirementsText: string;
   benefitsText: string;
   locationText: string;
+  province: string;
   countryCode: string;
   workMode: string;
   employmentType: string;
@@ -100,6 +102,7 @@ export const emptyJob: JobForm = {
   requirementsText: "",
   benefitsText: "",
   locationText: "",
+  province: "",
   countryCode: "VN",
   workMode: "",
   employmentType: "FULL_TIME",
@@ -130,6 +133,7 @@ export function toForm(job: Job): JobForm {
     requirementsText: job.requirementsText,
     benefitsText: job.benefitsText ?? "",
     locationText: job.locationText ?? "",
+    province: job.province ?? "",
     countryCode: job.countryCode ?? "VN",
     workMode: job.workMode ?? "",
     employmentType: job.employmentType ?? "FULL_TIME",

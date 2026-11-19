@@ -1,3 +1,4 @@
+import { BrandMark } from "../../shared/components/BrandMark";
 import { BRAND_CONFIG } from "../../shared/config/brand";
 import { CandidateNavigation } from "./PublicNavbar";
 
@@ -21,16 +22,14 @@ export function PublicFooter({
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 sm:py-12">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           <div className="space-y-3">
-            {(BRAND_CONFIG.name || BRAND_CONFIG.defaultPortalLabel) && (
-              <h3 className="text-base font-bold text-white m-0">
-                {BRAND_CONFIG.name || BRAND_CONFIG.defaultPortalLabel}
-              </h3>
-            )}
+            <BrandMark
+              size="sm"
+              showWordmark
+              dark
+              wordmark={BRAND_CONFIG.name || BRAND_CONFIG.defaultPortalLabel || undefined}
+            />
             <p className="text-xs sm:text-sm text-slate-400 leading-relaxed m-0">
-              Hệ thống Tuyển dụng Thông minh với Công nghệ Bóc tách CV (OCR/NLP) và So khớp Giải trình được.
-            </p>
-            <p className="text-xs text-slate-400 m-0">
-              Kết nối ứng viên và nhà tuyển dụng bằng thông tin rõ ràng.
+              Nền tảng tìm việc, quản lý CV và hỗ trợ đối chiếu hồ sơ tuyển dụng.
             </p>
             <div className="text-xs text-slate-500 pt-1">
               © 2026 Smart Recruitment. Tất cả quyền được bảo lưu.
@@ -38,7 +37,7 @@ export function PublicFooter({
           </div>
 
           <div className="space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-white m-0">DÀNH CHO ỨNG VIÊN</h4>
+            <h4 className="text-sm font-semibold text-white m-0">Dành cho ứng viên</h4>
             <ul className="space-y-2 list-none p-0 m-0 text-sm">
               <li>
                 <button type="button" onClick={onOpenSearch} className={linkClass}>
@@ -72,7 +71,7 @@ export function PublicFooter({
           </div>
 
           <div className="space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-white m-0">DÀNH CHO NHÀ TUYỂN DỤNG</h4>
+            <h4 className="text-sm font-semibold text-white m-0">Dành cho nhà tuyển dụng</h4>
             <ul className="space-y-2 list-none p-0 m-0 text-sm">
               <li>
                 <button type="button" onClick={() => onOpenAuth("register", "RECRUITER")} className={linkClass}>
@@ -93,7 +92,7 @@ export function PublicFooter({
           </div>
 
           <div className="space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-white m-0">QUẢN LÝ TÀI KHOẢN</h4>
+            <h4 className="text-sm font-semibold text-white m-0">Quản lý tài khoản</h4>
             <ul className="space-y-2 list-none p-0 m-0 text-sm">
               {candidate ? (
                 <>

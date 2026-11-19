@@ -6,6 +6,7 @@ import { PageControls } from "../../shared/components/PageControls";
 import { useUrlParams } from "../../shared/navigation";
 import { Badge, Button, Card, EmptyState, ErrorBanner } from "../../shared/ui";
 import { SALARY_FILTER_OPTIONS } from "./jobSearchFilters";
+import { CatalogCategoryEntry, PublicCategoryPicker } from "./PublicCategoryPicker";
 import { PublicJobListCard } from "./PublicJobListCard";
 import { JobDiscovery, PublicJob } from "./types";
 
@@ -18,15 +19,13 @@ type Props = {
   onFocusRestored?: () => void;
 };
 
-type Industry = { id: string; kind: string; name: string; status: string };
-
 export function JobSearchPage({ discovery, onSelectJob, restoreFocusJobId, onFocusRestored }: Props) {
   const pageRef = useRef<HTMLDivElement>(null);
   const { params, navigate } = useUrlParams();
   const keyword = params.get("q") ?? "";
   const [draftKeyword, setDraftKeyword] = useState(keyword);
   const [showAdvancedMobile, setShowAdvancedMobile] = useState(false);
-  const [industries, setIndustries] = useState<Industry[]>([]);
+  const [catalogEntries, setCatalogEntries] = useState<CatalogCategoryEntry[]>([]);
   const [industryLoadFailed, setIndustryLoadFailed] = useState(false);
   useEffect(() => { setDraftKeyword(keyword); }, [keyword]);
 
@@ -39,16 +38,6 @@ export function JobSearchPage({ discovery, onSelectJob, restoreFocusJobId, onFoc
   const specialization = params.get("specialization") ?? "";
   const sort = params.get("sort") === "salary_desc" ? "salary_desc" : "newest";
   const categoryValue = industry ? `${industry}:${specialization}` : "";
-  const categories = discovery.categories.map((category) => ({
-    ...category,
-    value: `${category.industryId}:${category.specializationId ?? ""}`
-  }));
-  for (const entry of industries) {
-    const value = `${entry.id}:`;
-    if (!categories.some((category) => category.value === value)) {
-      categories.push({ industryId: entry.id, specializationId: null, name: entry.name, jobCount: 0, value });
-    }
-  }
   const salaryRange = SALARY_FILTER_OPTIONS[salary];
 
   const updateFilter = (key: string, value: string) => navigate({ [key]: value || null, page: null, job: null });
@@ -92,9 +81,9 @@ export function JobSearchPage({ discovery, onSelectJob, restoreFocusJobId, onFoc
 
   useEffect(() => {
     let active = true;
-    void apiRequest<Industry[]>("/api/v2/public/job-categories").then((entries) => {
+    void apiRequest<CatalogCategoryEntry[]>("/api/v2/public/job-categories").then((entries) => {
       if (!Array.isArray(entries)) throw new Error("Invalid category response");
-      if (active) setIndustries(entries.filter((entry) => entry.kind === "INDUSTRY" && entry.status === "ACTIVE"));
+      if (active) setCatalogEntries(entries.filter((entry) => entry.status === "ACTIVE"));
     }).catch(() => { if (active) setIndustryLoadFailed(true); });
     return () => { active = false; };
   }, []);
@@ -107,7 +96,18 @@ export function JobSearchPage({ discovery, onSelectJob, restoreFocusJobId, onFoc
     onFocusRestored?.();
   }, [restoreFocusJobId, results.loading, results.items, onFocusRestored]);
 
-  const activeCategoryName = categories.find((item) => item.value === categoryValue)?.name;
+  const activeCategoryName = (() => {
+    if (!industry) return undefined;
+    const specMatch = specialization
+      ? catalogEntries.find((entry) => entry.kind === "SPECIALIZATION" && entry.id === specialization)?.name ??
+        discovery.categories.find((item) => item.industryId === industry && item.specializationId === specialization)?.name
+      : undefined;
+    const industryMatch =
+      catalogEntries.find((entry) => entry.kind === "INDUSTRY" && entry.id === industry)?.name ??
+      discovery.categories.find((item) => item.industryId === industry && !item.specializationId)?.name;
+    if (industryMatch && specMatch) return `${industryMatch} · ${specMatch}`;
+    return specMatch ?? industryMatch ?? params.get("categoryName") ?? undefined;
+  })();
   const chips: Array<{ key: string; name: string; label: string }> = [
     ...(keyword ? [{ key: "q", name: "bộ lọc từ khóa", label: `Từ khóa: ${keyword}` }] : []),
     ...(categoryValue ? [{ key: "category", name: "bộ lọc nhóm nghề", label: `Ngành: ${activeCategoryName ?? categoryValue}` }] : []),
@@ -121,7 +121,7 @@ export function JobSearchPage({ discovery, onSelectJob, restoreFocusJobId, onFoc
   const activeAdvancedCount = [salary, level, mode, type].filter(Boolean).length;
 
   const selectClass = (active = false, tall = false) =>
-    `${tall ? "h-10" : "h-9"} w-full rounded-xl border px-3 text-sm transition-colors focus:border-brand-600 focus:outline-none ${
+    `${tall ? "h-10" : "h-9"} w-full rounded-md border px-3 text-sm transition-colors focus:border-brand-600 focus:outline-none ${
       active
         ? "border-brand-500 bg-brand-50/70 font-semibold text-brand-800"
         : "border-border-strong bg-white text-ink-900"
@@ -136,14 +136,9 @@ export function JobSearchPage({ discovery, onSelectJob, restoreFocusJobId, onFoc
     <div ref={pageRef} className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
       <section aria-labelledby="job-search-title" className="space-y-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-brand-700 m-0 mb-1">
-              Tìm kiếm cơ hội
-            </p>
-            <h1 id="job-search-title" className="text-2xl sm:text-3xl font-bold tracking-tight text-ink-900 m-0">
-              Tìm việc làm đang tuyển
-            </h1>
-          </div>
+          <h1 id="job-search-title" className="text-2xl sm:text-3xl font-bold tracking-tight text-ink-900 m-0">
+            Tìm việc làm đang tuyển
+          </h1>
           {chips.length > 0 && (
             <Button type="button" variant="secondary" size="sm" onClick={resetFilters}>
               Xóa bộ lọc
@@ -169,7 +164,7 @@ export function JobSearchPage({ discovery, onSelectJob, restoreFocusJobId, onFoc
                   value={draftKeyword}
                   maxLength={200}
                   onChange={(event) => setDraftKeyword(event.target.value)}
-                  className="h-10 w-full rounded-xl border border-border-strong bg-white pl-10 pr-8 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-600 focus:outline-none"
+                  className="h-10 w-full rounded-md border border-border-strong bg-white pl-10 pr-8 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-600 focus:outline-none"
                 />
                 {draftKeyword && (
                   <button
@@ -188,27 +183,20 @@ export function JobSearchPage({ discovery, onSelectJob, restoreFocusJobId, onFoc
             </form>
 
             <div className="lg:col-span-3">
-              <select
-                aria-label="Lọc theo nhóm nghề"
-                value={categoryValue}
-                onChange={(event) => {
-                  const category = categories.find((item) => item.value === event.target.value);
+              <PublicCategoryPicker
+                catalogEntries={catalogEntries}
+                discoveryCategories={discovery.categories}
+                industryId={industry}
+                specializationId={specialization}
+                onSelect={({ industryId: nextIndustry, specializationId: nextSpec }) =>
                   navigate({
-                    industry: category?.industryId ?? null,
-                    specialization: category?.specializationId ?? null,
+                    industry: nextIndustry,
+                    specialization: nextSpec,
                     page: null,
                     job: null
-                  });
-                }}
-                className={selectClass(Boolean(categoryValue), true)}
-              >
-                <option value="">Tất cả nhóm nghề</option>
-                {categories.map((category) => (
-                  <option key={category.value} value={category.value}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
+                  })
+                }
+              />
               {industryLoadFailed && <p className="text-xs text-ink-500 mt-1 mb-0">Chưa tải được tất cả ngành nghề; đang hiển thị các nhóm phổ biến.</p>}
             </div>
 
@@ -244,7 +232,7 @@ export function JobSearchPage({ discovery, onSelectJob, restoreFocusJobId, onFoc
                         updateFilter("q", tag);
                       }
                     }}
-                    className={`rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors cursor-pointer ${
+                    className={`rounded-sm border px-2.5 py-0.5 text-xs font-medium transition-colors cursor-pointer ${
                       isSelected
                         ? "border-brand-500 bg-brand-600 text-white"
                         : "border-border-subtle bg-slate-50 text-ink-600 hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700"
@@ -260,11 +248,11 @@ export function JobSearchPage({ discovery, onSelectJob, restoreFocusJobId, onFoc
               type="button"
               aria-expanded={showAdvancedMobile}
               onClick={() => setShowAdvancedMobile((prev) => !prev)}
-              className="sm:hidden inline-flex items-center gap-1.5 rounded-lg border border-border-strong bg-white px-3 py-1.5 text-xs font-semibold text-ink-700 cursor-pointer"
+              className="sm:hidden inline-flex items-center gap-1.5 rounded-md border border-border-strong bg-white px-3 py-1.5 text-xs font-semibold text-ink-700 cursor-pointer"
             >
               <span>{showAdvancedMobile ? "Ẩn bộ lọc" : "Bộ lọc nâng cao"}</span>
               {activeAdvancedCount > 0 && (
-                <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-600 px-1 text-[10px] font-bold text-white">
+                <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-sm bg-brand-600 px-1 text-[10px] font-bold text-white">
                   {activeAdvancedCount}
                 </span>
               )}
@@ -324,7 +312,7 @@ export function JobSearchPage({ discovery, onSelectJob, restoreFocusJobId, onFoc
               {chips.map((chip) => (
                 <span
                   key={chip.key}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-brand-200 bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700"
+                  className="inline-flex items-center gap-1.5 rounded-sm border border-brand-200 bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-700"
                 >
                   <span>{chip.label}</span>
                   <button
@@ -361,7 +349,7 @@ export function JobSearchPage({ discovery, onSelectJob, restoreFocusJobId, onFoc
               aria-label="Sắp xếp danh sách việc làm"
               value={sort}
               onChange={(e) => updateFilter("sort", e.target.value === "newest" ? "" : e.target.value)}
-              className="h-9 rounded-xl border border-border-strong bg-white px-3 text-xs sm:text-sm font-medium text-ink-800 focus:border-brand-600 focus:outline-none"
+              className="h-9 rounded-md border border-border-strong bg-white px-3 text-xs sm:text-sm font-medium text-ink-800 focus:border-brand-600 focus:outline-none"
             >
               <option value="newest">Mới nhất</option>
               <option value="salary_desc">Lương cao đến thấp</option>
@@ -381,7 +369,7 @@ export function JobSearchPage({ discovery, onSelectJob, restoreFocusJobId, onFoc
             {[0, 1, 2].map((item) => (
               <div
                 key={item}
-                className="h-28 rounded-xl border border-border-subtle bg-white p-4 animate-pulse"
+                className="h-28 rounded-lg border border-border-subtle bg-white p-4 animate-pulse"
               >
                 <div className="flex items-start gap-4">
                   <div className="h-12 w-12 rounded-lg bg-slate-200 shrink-0" />

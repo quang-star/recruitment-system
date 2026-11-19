@@ -28,7 +28,7 @@ export function CatalogChangeHistoryCard({
             return (
               <li
                 key={item.id ?? i}
-                className="rounded-xl border border-border-subtle bg-slate-50/70 p-3.5 space-y-2 break-words text-xs"
+                className="rounded-lg border border-border-subtle bg-slate-50/70 p-3.5 space-y-2 break-words text-xs"
               >
                 <div className="flex flex-wrap items-center gap-2">
                   <strong className="text-brand-700">{actionLabel[item.action] ?? item.action}</strong>

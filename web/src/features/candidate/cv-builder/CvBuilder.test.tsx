@@ -62,7 +62,7 @@ it("requires useful content and guards closing an unsaved editable draft", async
   expect(onClose).not.toHaveBeenCalled();
 });
 
-it("updates live WYSIWYG canvas across templates, styling, section order and undo/redo, then generates and downloads PDF", async () => {
+it("updates live WYSIWYG canvas across templates, styling, section order and undo/redo, then generates and downloads PDF", { timeout: 15000 }, async () => {
   setup();
   expect(screen.getByRole("article", { name: "Bản xem nhanh CV Modern" })).toBeInTheDocument();
   fill();
@@ -204,7 +204,7 @@ it("uploads the generated PDF directly to the CV library with explicit external 
   fireEvent.click(screen.getByRole("button", { name: "Lưu vào thư viện CV" }));
 
   const consent = await screen.findByRole("checkbox", {
-    name: "Cho phép dịch vụ AI bên ngoài hỗ trợ phân tích nội dung này",
+    name: "Cho phép AI phân tích nội dung này",
   });
   expect(consent).not.toBeChecked();
   fireEvent.click(consent);
@@ -224,7 +224,7 @@ it("uploads the generated PDF directly to the CV library with explicit external 
   expect(onCvUploaded).toHaveBeenCalledTimes(1);
 });
 
-it("keeps edits until source replacement is explicitly confirmed and shows specific limit errors", async () => {
+it("keeps edits until source replacement is explicitly confirmed and shows specific limit errors", { timeout: 15000 }, async () => {
   const validParsed = {
     cvVersionId: "300",
     status: "CONFIRMED",

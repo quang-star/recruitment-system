@@ -22,11 +22,12 @@ class GoogleSignInServiceTests {
     private final GoogleIdentityRepository identities = mock(GoogleIdentityRepository.class);
     private final GoogleLoginChallengeRepository challenges = mock(GoogleLoginChallengeRepository.class);
     private final AuthUserRepository users = mock(AuthUserRepository.class);
+    private final PasswordCredentialRepository credentials = mock(PasswordCredentialRepository.class);
     private final RoleRepository roles = mock(RoleRepository.class);
     private final VerificationTokenGenerator tokens = mock(VerificationTokenGenerator.class);
     private final AuthAuthenticationService authentication = mock(AuthAuthenticationService.class);
     private final GoogleSignInService service = new GoogleSignInService(verifier, identities, challenges, users,
-            roles, tokens, authentication, Clock.fixed(NOW, ZoneOffset.UTC));
+            credentials, roles, tokens, authentication, Clock.fixed(NOW, ZoneOffset.UTC));
 
     @BeforeEach
     void configure() {
@@ -86,12 +87,30 @@ class GoogleSignInServiceTests {
     }
 
     @Test
-    void emailCollisionRequiresAuthenticatedLinkAndNeverIssuesSession() {
-        when(users.existsByNormalizedEmail("candidate@example.com")).thenReturn(true);
+    void nonAuthoritativeEmailCannotActivatePendingAccount() {
+        AuthUser pending = persisted(AuthUser.pending("candidate@example.com"));
+        when(users.findByNormalizedEmail(pending.normalizedEmail())).thenReturn(Optional.of(pending));
         assertThatThrownBy(() -> service.login("credential", "nonce", null, null, null))
-                .isInstanceOf(GoogleSignInException.class).hasMessageContaining("hiện có");
-        verifyNoInteractions(authentication, roles);
+                .isInstanceOfSatisfying(GoogleSignInException.class, exception ->
+                        assertThat(exception.reason()).isEqualTo(GoogleSignInException.Reason.ACCOUNT_CONFLICT));
+        verifyNoInteractions(authentication, roles, credentials);
         verify(users, never()).insert(any());
+        verify(identities, never()).link(anyString(), anyLong());
+    }
+
+    @Test
+    void conflictingGoogleSubjectLeavesPendingAccountAndPasswordUntouched() {
+        AuthUser pending = persisted(AuthUser.pending("candidate@example.com"));
+        when(users.findByNormalizedEmail(pending.normalizedEmail())).thenReturn(Optional.of(pending));
+        when(verifier.verify("credential", "nonce")).thenReturn(
+                new GoogleIdentityVerifier.VerifiedIdentity("subject", pending.email(), null, null, true));
+        when(identities.link("subject", pending.id())).thenReturn(false);
+
+        assertThatThrownBy(() -> service.login("credential", "nonce", null, null, null))
+                .isInstanceOfSatisfying(GoogleSignInException.class, exception ->
+                        assertThat(exception.reason()).isEqualTo(GoogleSignInException.Reason.ACCOUNT_CONFLICT));
+        verify(users, never()).activateById(anyLong(), any());
+        verifyNoInteractions(authentication, credentials);
     }
 
     @Test

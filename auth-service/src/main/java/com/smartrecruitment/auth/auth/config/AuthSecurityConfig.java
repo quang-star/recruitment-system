@@ -161,6 +161,7 @@ public class AuthSecurityConfig {
                                 "/api/v2/auth/logout").permitAll()
                         .requestMatchers(HttpMethod.GET, "/.well-known/jwks.json", "/actuator/health",
                                 "/api/v2/auth/google/config").permitAll()
+                        .requestMatchers("/api/v2/auth/admin/**").hasRole("SYSTEM_ADMIN")
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt ->
                         jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())));

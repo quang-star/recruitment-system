@@ -5,6 +5,7 @@ export type PublicJob = {
   requirementsText: string;
   benefitsText: string | null;
   locationText: string | null;
+  province?: string | null;
   workMode: string | null;
   employmentType: string | null;
   seniorityLevel: string | null;

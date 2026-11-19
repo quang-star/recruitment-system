@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ApiClientError, apiRequest } from "../../shared/api/client";
+import { BrandMark } from "../../shared/components/BrandMark";
 import { CheckCircleIcon } from "../../shared/components/Icon";
 import { Card, ErrorBanner } from "../../shared/ui";
 
@@ -38,7 +39,7 @@ export function VerifyEmailPage() {
     <main className="min-h-screen flex items-center justify-center bg-canvas px-4 py-12">
       <Card padding="lg" className="w-full max-w-md space-y-5">
         <div className="flex items-center gap-3">
-          <img src="/logo.png" alt="" aria-hidden="true" className="h-10 w-10 shrink-0 object-contain" />
+          <BrandMark size="lg" />
           <div>
             <p className="text-[11px] font-bold uppercase tracking-wider text-brand-700 m-0">Xác thực tài khoản</p>
             <h1 className="text-xl font-bold text-ink-900 m-0">Xác minh email</h1>
@@ -46,7 +47,7 @@ export function VerifyEmailPage() {
         </div>
 
         {status === "pending" && (
-          <div className="flex items-center gap-3 rounded-xl border border-border-subtle bg-slate-50 px-4 py-3 text-sm text-ink-700" role="status">
+          <div className="flex items-center gap-3 rounded-lg border border-border-subtle bg-slate-50 px-4 py-3 text-sm text-ink-700" role="status">
             <span className="h-4 w-4 animate-spin rounded-full border-2 border-brand-600 border-t-transparent shrink-0" />
             <span>{message}</span>
           </div>
@@ -54,7 +55,7 @@ export function VerifyEmailPage() {
 
         {status === "ok" && (
           <div className="space-y-3">
-            <div className="flex items-start gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900" role="status">
+            <div className="flex items-start gap-2.5 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900" role="status">
               <CheckCircleIcon size={18} className="shrink-0 mt-0.5 text-emerald-600" />
               <span>{message}</span>
             </div>
@@ -66,7 +67,7 @@ export function VerifyEmailPage() {
         <div className="pt-2">
           <a
             href="/"
-            className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700 transition-colors no-underline"
+            className="inline-flex h-10 w-full items-center justify-center rounded-md bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700 transition-colors no-underline"
           >
             Quay lại trang chủ đăng nhập
           </a>

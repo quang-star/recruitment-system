@@ -205,7 +205,7 @@ it("handles parse failure with retry recovery and external AI consent flag", asy
     screen.getByLabelText("File PDF CV (tối đa 10 MiB)"),
     new File(["%PDF-1.7\nscan"], "scan.pdf", { type: "application/pdf" })
   );
-  await user.click(screen.getByRole("checkbox", { name: /Cho phép dịch vụ AI bên ngoài/ }));
+  await user.click(screen.getByRole("checkbox", { name: /Cho phép AI phân tích nội dung này/ }));
   await user.click(screen.getByRole("button", { name: /Tải lên & phân tích CV/ }));
 
   expect(await screen.findByText(/Dịch vụ lưu trữ chưa kết nối được/)).toBeInTheDocument();

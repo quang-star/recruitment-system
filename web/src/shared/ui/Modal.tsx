@@ -64,7 +64,7 @@ export function Modal({
         aria-modal="true"
         aria-labelledby={title ? titleId : undefined}
         className={cn(
-          "relative w-full bg-surface border border-border-subtle rounded-2xl shadow-dialog p-6 text-ink-900 outline-none flex flex-col max-h-[90vh]",
+          "relative w-full bg-surface border border-border-subtle rounded-lg shadow-dialog p-6 text-ink-900 outline-none flex flex-col max-h-[90vh]",
           sizeClasses[size],
           className
         )}
@@ -89,7 +89,7 @@ export function Modal({
               aria-label={closeLabel}
               disabled={closeDisabled}
               onClick={handleClose}
-              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border-subtle bg-slate-50 text-ink-700 hover:bg-slate-100 hover:text-ink-900 disabled:opacity-50 cursor-pointer"
+              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border-subtle bg-slate-50 text-ink-700 hover:bg-slate-100 hover:text-ink-900 disabled:opacity-50 cursor-pointer"
             >
               ×
             </button>

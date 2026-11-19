@@ -26,9 +26,6 @@ export function CompanyDirectoryView({ companies, onSelectCompany }: CompanyDire
     <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-10 space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between border-b border-border-subtle pb-6">
         <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-brand-700 m-0 mb-1">
-            Doanh nghiệp đối tác
-          </p>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink-900 m-0">
             Tìm hiểu nhà tuyển dụng
           </h1>
@@ -45,7 +42,7 @@ export function CompanyDirectoryView({ companies, onSelectCompany }: CompanyDire
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Tìm theo tên công ty, địa điểm…"
-            className="h-10 w-full rounded-xl border border-border-strong bg-white pl-10 pr-3.5 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-600 focus:outline-none"
+            className="h-10 w-full rounded-md border border-border-strong bg-white pl-10 pr-3.5 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-600 focus:outline-none"
           />
         </div>
       </div>
@@ -60,7 +57,7 @@ export function CompanyDirectoryView({ companies, onSelectCompany }: CompanyDire
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filtered.map((company) => (
             <Card key={company.id} as="article" interactive padding="none" className="overflow-hidden flex flex-col">
-              <CompanyCover src={company.coverImage} className="h-32 w-full" />
+              <CompanyCover src={company.coverImage} name={company.shortName} className="h-32 w-full" />
 
               <div className="p-5 flex-1 flex flex-col justify-between gap-4 -mt-8 relative">
                 <div className="space-y-3">
@@ -68,7 +65,7 @@ export function CompanyDirectoryView({ companies, onSelectCompany }: CompanyDire
                     <CompanyLogo
                       src={company.logo}
                       name={company.shortName || company.name}
-                      className="h-14 w-14 rounded-lg border-2 border-white shadow-card"
+                      className="h-14 w-14 rounded-md border-2 border-white shadow-card"
                       textClassName="text-sm font-bold"
                     />
                     {company.openJobsCount != null && (

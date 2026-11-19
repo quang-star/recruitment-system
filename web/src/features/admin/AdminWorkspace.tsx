@@ -1,12 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 
 import { ApiClientError, apiRequest } from "../../shared/api/client";
 import { AuthSession } from "../../shared/auth/session";
-import { CompanyIcon, HistoryIcon, LayersIcon, SecurityIcon, SparklesIcon } from "../../shared/components/Icon";
+import { CompanyIcon, HistoryIcon, LayersIcon, SecurityIcon, SlidersIcon } from "../../shared/components/Icon";
 import { WorkspaceNavItem, WorkspaceShell } from "../../shared/layout/WorkspaceShell";
 import { EnsureRouter, useSafeNavigate } from "../../shared/router";
-import { Badge, Button, Card, EmptyState, ErrorBanner, Tabs, cn } from "../../shared/ui";
+import { Badge, Button, Card, EmptyState, ErrorBanner, Modal, Tabs, cn } from "../../shared/ui";
 import { AccountSecurityPanel } from "../auth/AccountSecurityPanel";
 import { CategoryEntry } from "../recruiter/JobCategoryFields";
 import { AdminAuditPanel } from "./AdminAuditPanel";
@@ -35,7 +35,7 @@ import {
 
 const adminNavItems: WorkspaceNavItem<AdminTab>[] = [
   { id: "categories", label: "Ngành / nhóm / vị trí", icon: <LayersIcon size={18} /> },
-  { id: "skills", label: "Kỹ năng / tên gọi khác", icon: <SparklesIcon size={18} /> },
+  { id: "skills", label: "Kỹ năng / tên gọi khác", icon: <SlidersIcon size={18} /> },
   { id: "audit", label: "Nhật ký thay đổi", icon: <HistoryIcon size={18} /> },
   { id: "companies", label: "Duyệt công ty", icon: <CompanyIcon size={18} /> },
   { id: "security", label: "Bảo mật", icon: <SecurityIcon size={18} /> }
@@ -68,14 +68,7 @@ function AdminWorkspaceEditor({ session, onLogout, tab }: { session: AuthSession
   const [catQuery, setCatQuery] = useState("");
   const [catKind, setCatKind] = useState<"" | CategoryEntry["kind"]>("");
   const [catStatus, setCatStatus] = useState("");
-  const editorRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (selected && window.innerWidth < 1280) {
-      editorRef.current?.querySelector<HTMLInputElement | HTMLSelectElement>("input:not(:disabled), select:not(:disabled)")?.focus({ preventScroll: true });
-      editorRef.current?.scrollIntoView?.({ block: "start" });
-    }
-  }, [selected]);
+  const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -155,14 +148,38 @@ function AdminWorkspaceEditor({ session, onLogout, tab }: { session: AuthSession
     setRelations(skill?.relations.map((relation) => ({ ...relation })) ?? []);
   }
 
+  function openCreate() {
+    if (busy) return;
+    select("");
+    setModalOpen(true);
+  }
+
+  function openEdit(id: string) {
+    if (busy || loadedTab !== tab) return;
+    select(id);
+    setModalOpen(true);
+  }
+
+  function closeModal() {
+    if (busy) return;
+    setModalOpen(false);
+    setNeedsReload(false);
+    setReviewRequired(false);
+  }
+
   async function selectQueuedSkill(id: string) {
-    if (busy || needsReload || reviewRequired || id === selected) return;
+    if (busy || needsReload || reviewRequired) return;
+    if (id === selected) {
+      setModalOpen(true);
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
       const latest = await apiRequest<SkillCatalog>("/api/v2/taxonomy/skills", { accessToken: session.accessToken });
       setCatalog(latest);
       select(id, latest);
+      setModalOpen(true);
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : "Không mở được đề xuất kỹ năng");
     } finally {
@@ -246,6 +263,7 @@ function AdminWorkspaceEditor({ session, onLogout, tab }: { session: AuthSession
       setLoadedTab(null);
       setAttempt((n) => n + 1);
       select("");
+      setModalOpen(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Không lưu được danh mục");
       if (e instanceof ApiClientError && e.status === 409) setNeedsReload(true);
@@ -309,109 +327,57 @@ function AdminWorkspaceEditor({ session, onLogout, tab }: { session: AuthSession
       ) : tab === "audit" ? (
         <AdminAuditPanel accessToken={session.accessToken} />
       ) : (
+        (() => {
+          const reloadButton =
+            !modalOpen && (error || needsReload) ? (
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={busy}
+                onClick={() => {
+                  setReviewRequired(needsReload);
+                  setNotice(
+                    needsReload
+                      ? "Bản nháp được giữ lại. Kiểm tra phiên bản và trạng thái mới trước khi lưu lại."
+                      : null
+                  );
+                  setAttempt((n) => n + 1);
+                }}
+              >
+                Tải lại
+              </Button>
+            ) : null;
+
+          const statusBanners = (
+            <>
+              {!modalOpen && error && <ErrorBanner tone="error" message={error} />}
+              {!modalOpen && needsReload && (
+                <p
+                  role="status"
+                  className="rounded-md border border-amber-200 bg-amber-50 px-3.5 py-2 text-xs text-amber-900 m-0"
+                >
+                  Danh mục đã thay đổi. Tải lại trước khi lưu; bản nháp của bạn vẫn được giữ.
+                </p>
+              )}
+              {!modalOpen && notice && (
+                <p
+                  role="status"
+                  className="rounded-md border border-sky-200 bg-sky-50 px-3.5 py-2 text-xs text-sky-900 m-0"
+                >
+                  {notice}
+                </p>
+              )}
+              {loadedTab !== tab && !error && (
+                <p role="status" className="text-xs font-medium text-ink-500 m-0">
+                  Đang tải danh mục…
+                </p>
+              )}
+            </>
+          );
+
+          return (
         <div className="space-y-5">
-          <Card padding="sm" className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-sm text-ink-600 m-0">
-                  Thay đổi áp dụng cho dữ liệu xử lý mới. Các JD, CV và điểm đã lưu giữ nguyên phiên bản.
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                {tab === "categories" && loadedTab === "categories" && (
-                  <>
-                    <Badge tone="neutral">{categories.length} danh mục</Badge>
-                    {categories.some((c) => c.status === "PENDING") && (
-                      <Badge tone="warning">
-                        {categories.filter((c) => c.status === "PENDING").length} chờ duyệt
-                      </Badge>
-                    )}
-                  </>
-                )}
-                {catalog && tab === "skills" && (
-                  <>
-                    <Badge tone="brand">Phiên bản taxonomy: {catalog.taxonomyVersion}</Badge>
-                    <Badge tone="neutral">{catalog.skills.length} kỹ năng</Badge>
-                  </>
-                )}
-                {(error || needsReload) && (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    disabled={busy}
-                    onClick={() => {
-                      setReviewRequired(needsReload);
-                      setNotice(
-                        needsReload
-                          ? "Bản nháp được giữ lại. Kiểm tra phiên bản và trạng thái mới trước khi lưu lại."
-                          : null
-                      );
-                      setAttempt((n) => n + 1);
-                    }}
-                  >
-                    Tải lại
-                  </Button>
-                )}
-              </div>
-            </div>
-
-            {error && <ErrorBanner tone="error" message={error} />}
-            {needsReload && (
-              <p
-                role="status"
-                className="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2 text-xs text-amber-900 m-0"
-              >
-                Danh mục đã thay đổi. Tải lại trước khi lưu; bản nháp của bạn vẫn được giữ.
-              </p>
-            )}
-            {notice && (
-              <p
-                role="status"
-                className="rounded-xl border border-sky-200 bg-sky-50 px-3.5 py-2 text-xs text-sky-900 m-0"
-              >
-                {notice}
-              </p>
-            )}
-            {reviewRequired && !needsReload && loadedTab === tab && (
-              <section aria-label="Đối chiếu phiên bản mới" className="rounded-xl border border-amber-200 bg-amber-50 p-4 space-y-3">
-                <p className="text-sm font-semibold text-amber-900 m-0">
-                  Dữ liệu đã thay đổi. Đối chiếu thông tin mới nhất bên dưới với bản nháp trước khi tiếp tục.
-                </p>
-                <dl className="grid gap-2 text-sm sm:grid-cols-2 m-0">
-                  <div><dt>Phiên bản mới nhất</dt><dd className="ml-0">{tab === "skills" ? catalog?.version : currentCategory?.version ?? "Chưa chọn danh mục"}</dd></div>
-                  {selected && <>
-                    <div><dt>Tên mới nhất</dt><dd className="ml-0">{current?.name ?? "Danh mục không còn trong danh sách"}</dd></div>
-                    <div><dt>Trạng thái mới nhất</dt><dd className="ml-0">{current ? catalogStatusLabel[current.status] ?? current.status : "Không còn khả dụng"}</dd></div>
-                  </>}
-                  {currentSkill && <>
-                    <div><dt>Tên gọi khác mới nhất</dt><dd className="ml-0">{currentSkill.aliases.map(alias => alias.value).join(", ") || "Không có"}</dd></div>
-                    <div><dt>Loại / nhóm mới nhất</dt><dd className="ml-0">{skillTypeLabel[currentSkill.type]} · {skillCategoryLabel[currentSkill.category]}</dd></div>
-                    <div className="sm:col-span-2"><dt>Quan hệ mới nhất</dt><dd className="ml-0">{currentSkill.relations.map(relation => `${relationLabel[relation.type]}: ${catalog?.skills.find(entry => entry.stableId === relation.targetSkillId)?.canonicalName ?? relation.targetSkillId}`).join("; ") || "Không có"}</dd></div>
-                  </>}
-                </dl>
-                <div className="flex flex-wrap gap-2">
-                  <Button size="sm" disabled={busy || Boolean(selected && !current)} onClick={() => {
-                    setReviewRequired(false);
-                    setNotice("Đã giữ bản nháp sau đối chiếu. Kiểm tra các giá trị trước khi lưu vào phiên bản mới.");
-                  }}>Giữ bản nháp sau đối chiếu</Button>
-                  {selected && current && <Button size="sm" variant="secondary" disabled={busy} onClick={() => {
-                    const draftReason = reason;
-                    select(selected);
-                    setReason(draftReason);
-                    setNotice("Đã điền dữ liệu mới nhất vào biểu mẫu; lý do của bạn được giữ lại.");
-                  }}>Dùng dữ liệu mới nhất</Button>}
-                </div>
-              </section>
-            )}
-            {loadedTab !== tab && !error && (
-              <p role="status" className="text-xs font-medium text-ink-500 m-0">
-                Đang tải danh mục…
-              </p>
-            )}
-          </Card>
-
-          <div className="grid gap-6 xl:grid-cols-[1.05fr_1fr] items-start">
-            <aside className="space-y-4 min-w-0">
+          <div className="space-y-4 min-w-0">
               {tab === "categories" && (() => {
                 const categoryById = new Map(categories.map((c) => [c.id, c]));
                 const q = catQuery.trim().toLowerCase();
@@ -428,7 +394,7 @@ function AdminWorkspaceEditor({ session, onLogout, tab }: { session: AuthSession
                 const hasFilter = Boolean(q || catKind || catStatus);
                 return (
                   <Card padding="md" className="space-y-3.5">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-subtle pb-3">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="text-base font-bold text-ink-900 m-0">Danh mục nghề</h3>
                         <Badge tone="neutral">
@@ -439,7 +405,7 @@ function AdminWorkspaceEditor({ session, onLogout, tab }: { session: AuthSession
                             type="button"
                             onClick={() => setCatStatus((prev) => (prev === "PENDING" ? "" : "PENDING"))}
                             className={cn(
-                              "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors cursor-pointer",
+                              "inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-semibold transition-colors cursor-pointer",
                               catStatus === "PENDING"
                                 ? "bg-amber-600 text-white"
                                 : "bg-amber-100 text-amber-900 hover:bg-amber-200"
@@ -449,14 +415,16 @@ function AdminWorkspaceEditor({ session, onLogout, tab }: { session: AuthSession
                           </button>
                         )}
                       </div>
-                      {selected && (
-                        <Button variant="secondary" size="sm" disabled={busy} onClick={() => select("")}>
-                          + Thêm mới
+                      <div className="flex flex-wrap items-center gap-2">
+                        {reloadButton}
+                        <Button variant="primary" size="sm" disabled={busy} onClick={openCreate}>
+                          + Thêm danh mục
                         </Button>
-                      )}
+                      </div>
                     </div>
+                    {statusBanners}
 
-                    <div className="grid gap-2 sm:grid-cols-[1.2fr_0.9fr_0.9fr] rounded-xl border border-border-subtle bg-slate-50/70 p-2.5">
+                    <div className="grid gap-2 sm:grid-cols-[1.5fr_1fr_1fr] rounded-md border border-border-subtle bg-slate-50/70 p-2.5">
                       <input
                         type="search"
                         aria-label="Tìm danh mục nghề"
@@ -507,14 +475,15 @@ function AdminWorkspaceEditor({ session, onLogout, tab }: { session: AuthSession
                     )}
 
                     {filteredCategories.length ? (
-                      <div className="max-h-[540px] overflow-auto rounded-xl border border-border-subtle bg-white">
+                      <div className="overflow-x-auto rounded-lg border border-border-subtle bg-white">
                         <table className="w-full border-collapse text-left text-sm">
                           <caption className="sr-only">Danh mục nghề</caption>
-                          <thead className="sticky top-0 z-10 bg-slate-50 shadow-[0_1px_0_0_var(--color-border-subtle)]">
+                          <thead className="bg-slate-50 border-b border-border-subtle">
                             <tr className="text-xs font-semibold uppercase tracking-wider text-ink-500">
                               <th className="px-4 py-2.5">Tên danh mục</th>
-                              <th className="px-3 py-2.5">Cấp</th>
-                              <th className="px-4 py-2.5">Trạng thái</th>
+                              <th className="px-3 py-2.5 whitespace-nowrap">Cấp</th>
+                              <th className="px-3 py-2.5 whitespace-nowrap">Trạng thái</th>
+                              <th className="px-4 py-2.5 text-right whitespace-nowrap">Thao tác</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-border-subtle">
@@ -534,7 +503,7 @@ function AdminWorkspaceEditor({ session, onLogout, tab }: { session: AuthSession
                                       type="button"
                                       aria-pressed={isSelected}
                                       disabled={busy || loadedTab !== tab}
-                                      onClick={() => select(entry.id)}
+                                      onClick={() => openEdit(entry.id)}
                                       className="text-left text-sm font-semibold text-ink-900 hover:text-brand-700 cursor-pointer disabled:cursor-not-allowed"
                                     >
                                       {entry.name}
@@ -548,7 +517,7 @@ function AdminWorkspaceEditor({ session, onLogout, tab }: { session: AuthSession
                                   <td className="px-3 py-2.5 text-xs text-ink-600 whitespace-nowrap">
                                     {categoryLabel[entry.kind]}
                                   </td>
-                                  <td className="px-4 py-2.5 whitespace-nowrap">
+                                  <td className="px-3 py-2.5 whitespace-nowrap">
                                     <Badge
                                       tone={
                                         entry.status === "ACTIVE"
@@ -562,6 +531,17 @@ function AdminWorkspaceEditor({ session, onLogout, tab }: { session: AuthSession
                                     >
                                       {catalogStatusLabel[entry.status] ?? entry.status}
                                     </Badge>
+                                  </td>
+                                  <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                                    <Button
+                                      type="button"
+                                      variant="secondary"
+                                      size="sm"
+                                      disabled={busy || loadedTab !== tab}
+                                      onClick={() => openEdit(entry.id)}
+                                    >
+                                      Chi tiết
+                                    </Button>
                                   </td>
                                 </tr>
                               );
@@ -579,7 +559,7 @@ function AdminWorkspaceEditor({ session, onLogout, tab }: { session: AuthSession
                 );
               })()}
 
-              {catalog && tab === "skills" && loadedTab === tab && (
+              {tab === "skills" && catalog && loadedTab === tab ? (
                 <PendingSkillQueue
                   accessToken={session.accessToken}
                   catalogVersion={catalog.version}
@@ -588,11 +568,122 @@ function AdminWorkspaceEditor({ session, onLogout, tab }: { session: AuthSession
                   onSelect={selectQueuedSkill}
                   types={skillTypes.map((value) => ({ value, label: skillTypeLabel[value] }))}
                   categories={skillCategories.map((value) => ({ value, label: skillCategoryLabel[value] }))}
+                  headerBadges={
+                    <>
+                      <Badge tone="brand">Phiên bản taxonomy: {catalog.taxonomyVersion}</Badge>
+                      <Badge tone="neutral">{catalog.skills.length} kỹ năng</Badge>
+                    </>
+                  }
+                  headerActions={
+                    <>
+                      {reloadButton}
+                      <Button variant="primary" size="sm" disabled={busy} onClick={openCreate}>
+                        + Thêm kỹ năng mới
+                      </Button>
+                    </>
+                  }
+                  statusContent={statusBanners}
                 />
-              )}
-            </aside>
+              ) : tab === "skills" ? (
+                <Card padding="md" className="space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="text-base font-bold text-ink-900 m-0">Hàng chờ kỹ năng</h3>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {reloadButton}
+                      <Button variant="primary" size="sm" disabled={busy} onClick={openCreate}>
+                        + Thêm kỹ năng mới
+                      </Button>
+                    </div>
+                  </div>
+                  {statusBanners}
+                </Card>
+              ) : null}
+          </div>
 
-            <div ref={editorRef} className="space-y-4 min-w-0 scroll-mt-6">
+          <Modal
+            open={modalOpen}
+            onClose={closeModal}
+            size="xl"
+            closeDisabled={busy}
+            eyebrow={
+              selected
+                ? tab === "skills"
+                  ? "Chỉnh sửa & duyệt kỹ năng"
+                  : "Chỉnh sửa & duyệt danh mục"
+                : tab === "skills"
+                  ? "Thêm kỹ năng mới"
+                  : "Thêm danh mục mới"
+            }
+            title={
+              current
+                ? current.name
+                : tab === "skills"
+                  ? "Tạo kỹ năng chuẩn hóa"
+                  : "Tạo danh mục nghề"
+            }
+          >
+            <div className="space-y-4 pt-4">
+              {error && <ErrorBanner tone="error" message={error} />}
+              {needsReload && (
+                <div
+                  role="status"
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-200 bg-amber-50 px-3.5 py-2 text-xs text-amber-900"
+                >
+                  <span>Danh mục đã thay đổi. Tải lại trước khi lưu; bản nháp của bạn vẫn được giữ.</span>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    disabled={busy}
+                    onClick={() => {
+                      setReviewRequired(true);
+                      setNotice("Bản nháp được giữ lại. Kiểm tra phiên bản và trạng thái mới trước khi lưu lại.");
+                      setAttempt((n) => n + 1);
+                    }}
+                  >
+                    Tải lại
+                  </Button>
+                </div>
+              )}
+              {notice && (
+                <p
+                  role="status"
+                  className="rounded-md border border-sky-200 bg-sky-50 px-3.5 py-2 text-xs text-sky-900 m-0"
+                >
+                  {notice}
+                </p>
+              )}
+              {reviewRequired && !needsReload && loadedTab === tab && (
+                <section aria-label="Đối chiếu phiên bản mới" className="rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-3">
+                  <p className="text-sm font-semibold text-amber-900 m-0">
+                    Dữ liệu đã thay đổi. Đối chiếu thông tin mới nhất bên dưới với bản nháp trước khi tiếp tục.
+                  </p>
+                  <dl className="grid gap-2 text-sm sm:grid-cols-2 m-0">
+                    <div><dt>Phiên bản mới nhất</dt><dd className="ml-0">{tab === "skills" ? catalog?.version : currentCategory?.version ?? "Chưa chọn danh mục"}</dd></div>
+                    {selected && <>
+                      <div><dt>Tên mới nhất</dt><dd className="ml-0">{current?.name ?? "Danh mục không còn trong danh sách"}</dd></div>
+                      <div><dt>Trạng thái mới nhất</dt><dd className="ml-0">{current ? catalogStatusLabel[current.status] ?? current.status : "Không còn khả dụng"}</dd></div>
+                    </>}
+                    {currentSkill && <>
+                      <div><dt>Tên gọi khác mới nhất</dt><dd className="ml-0">{currentSkill.aliases.map(alias => alias.value).join(", ") || "Không có"}</dd></div>
+                      <div><dt>Loại / nhóm mới nhất</dt><dd className="ml-0">{skillTypeLabel[currentSkill.type]} · {skillCategoryLabel[currentSkill.category]}</dd></div>
+                      <div className="sm:col-span-2"><dt>Quan hệ mới nhất</dt><dd className="ml-0">{currentSkill.relations.map(relation => `${relationLabel[relation.type]}: ${catalog?.skills.find(entry => entry.stableId === relation.targetSkillId)?.canonicalName ?? relation.targetSkillId}`).join("; ") || "Không có"}</dd></div>
+                    </>}
+                  </dl>
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" disabled={busy || Boolean(selected && !current)} onClick={() => {
+                      setReviewRequired(false);
+                      setNotice("Đã giữ bản nháp sau đối chiếu. Kiểm tra các giá trị trước khi lưu vào phiên bản mới.");
+                    }}>Giữ bản nháp sau đối chiếu</Button>
+                    {selected && current && <Button size="sm" variant="secondary" disabled={busy} onClick={() => {
+                      const draftReason = reason;
+                      select(selected);
+                      setReason(draftReason);
+                      setNotice("Đã điền dữ liệu mới nhất vào biểu mẫu; lý do của bạn được giữ lại.");
+                    }}>Dùng dữ liệu mới nhất</Button>}
+                  </div>
+                </section>
+              )}
+
               {selected && catalog && tab === "skills" && (
                 <Tabs
                   ariaLabel="Chi tiết kỹ năng"
@@ -605,8 +696,9 @@ function AdminWorkspaceEditor({ session, onLogout, tab }: { session: AuthSession
                   ]}
                 />
               )}
-              <div hidden={tab === "skills" && skillPanel !== "edit"}>
+              <div hidden={tab === "skills" && skillPanel !== "edit"} className="space-y-4">
                 <AdminCatalogForm
+                  embedded
                   tab={tab}
                   entries={entries}
                   categories={categories}
@@ -677,8 +769,10 @@ function AdminWorkspaceEditor({ session, onLogout, tab }: { session: AuthSession
                 </div>
               )}
             </div>
-          </div>
+          </Modal>
         </div>
+          );
+        })()
       )}
     </WorkspaceShell>
   );

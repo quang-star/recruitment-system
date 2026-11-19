@@ -4,6 +4,7 @@ import com.smartrecruitment.auth.user.application.port.AuthUserRepository;
 import com.smartrecruitment.auth.user.application.port.GoogleIdentityRepository;
 import com.smartrecruitment.auth.user.application.port.GoogleIdentityVerifier;
 import com.smartrecruitment.auth.user.application.port.GoogleLoginChallengeRepository;
+import com.smartrecruitment.auth.user.application.port.PasswordCredentialRepository;
 import com.smartrecruitment.auth.user.application.port.RoleRepository;
 import com.smartrecruitment.auth.user.application.port.VerificationTokenGenerator;
 import com.smartrecruitment.auth.user.domain.AuthUser;
@@ -24,6 +25,7 @@ public class GoogleSignInService {
     private final GoogleIdentityRepository identities;
     private final GoogleLoginChallengeRepository challenges;
     private final AuthUserRepository users;
+    private final PasswordCredentialRepository credentials;
     private final RoleRepository roles;
     private final VerificationTokenGenerator tokens;
     private final AuthAuthenticationService authentication;
@@ -31,12 +33,14 @@ public class GoogleSignInService {
 
     public GoogleSignInService(GoogleIdentityVerifier verifier, GoogleIdentityRepository identities,
                                GoogleLoginChallengeRepository challenges, AuthUserRepository users,
+                               PasswordCredentialRepository credentials,
                                RoleRepository roles, VerificationTokenGenerator tokens,
                                AuthAuthenticationService authentication, Clock clock) {
         this.verifier = verifier;
         this.identities = identities;
         this.challenges = challenges;
         this.users = users;
+        this.credentials = credentials;
         this.roles = roles;
         this.tokens = tokens;
         this.authentication = authentication;
@@ -62,18 +66,40 @@ public class GoogleSignInService {
         Instant now = clock.instant();
         consume(nonce, now);
         Long userId = identities.findUserId(identity.subject()).orElse(null);
-        boolean newAccount = userId == null;
-        if (newAccount) {
+        boolean newAccount = false;
+        if (userId == null) {
             String normalizedEmail = identity.email().trim().toLowerCase(Locale.ROOT);
-            if (users.existsByNormalizedEmail(normalizedEmail)) throw new GoogleSignInException(LINK_REQUIRED);
-            String role = accountType == null ? "CANDIDATE" : accountType;
-            if (!role.equals("CANDIDATE") && !role.equals("RECRUITER")) {
-                throw new IllegalArgumentException("Unsupported account type");
+            AuthUser existingUser = users.findByNormalizedEmail(normalizedEmail).orElse(null);
+            if (existingUser != null) {
+                boolean pending = existingUser.status() == UserStatus.PENDING;
+                boolean verifiedActive = existingUser.status() == UserStatus.ACTIVE
+                        && existingUser.emailVerifiedAt() != null;
+                if (!identity.authoritativeEmail() || (!pending && !verifiedActive)) {
+                    throw new GoogleSignInException(ACCOUNT_CONFLICT);
+                }
+                userId = existingUser.id();
+                if (!identities.link(identity.subject(), userId)) {
+                    throw new GoogleSignInException(ACCOUNT_CONFLICT);
+                }
+                if (pending) {
+                    // A concurrent email verification may already have activated the account.
+                    users.activateById(userId, now)
+                            .orElseThrow(() -> new GoogleSignInException(ACCOUNT_CONFLICT));
+                    credentials.deleteByUserId(userId);
+                }
+            } else {
+                String role = accountType == null ? "CANDIDATE" : accountType;
+                if (!role.equals("CANDIDATE") && !role.equals("RECRUITER")) {
+                    throw new IllegalArgumentException("Unsupported account type");
+                }
+                userId = users.insert(AuthUser.verified(identity.email(), now)).id();
+                if (role.equals("RECRUITER")) roles.assignRecruiterRole(userId, now);
+                else roles.assignCandidateRole(userId, now);
+                if (!identities.link(identity.subject(), userId)) {
+                    throw new GoogleSignInException(ACCOUNT_CONFLICT);
+                }
+                newAccount = true;
             }
-            userId = users.insert(AuthUser.verified(identity.email(), now)).id();
-            if (role.equals("RECRUITER")) roles.assignRecruiterRole(userId, now);
-            else roles.assignCandidateRole(userId, now);
-            if (!identities.link(identity.subject(), userId)) throw new GoogleSignInException(ACCOUNT_CONFLICT);
         }
         // Existing identities keep their roles, account email and ID even if Google email changes.
         AuthenticationResult session = authentication.loginVerifiedIdentity(userId, userAgent, ipAddress);

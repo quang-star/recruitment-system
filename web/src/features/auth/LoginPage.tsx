@@ -99,7 +99,7 @@ type LoginPageProps = {
 };
 
 const inputClass =
-  "mt-1.5 h-10 w-full rounded-xl border border-border-strong bg-white px-3.5 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20";
+  "mt-1.5 h-10 w-full rounded-md border border-border-strong bg-white px-3.5 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20";
 
 export function LoginPage({
   onSuccess,
@@ -205,15 +205,8 @@ export function LoginPage({
 
   return (
     <section className="space-y-5" aria-labelledby="login-title">
-      <div className="space-y-1">
-        <p className="text-[11px] font-bold uppercase tracking-wider text-brand-700 m-0">
-          {mode === "login"
-            ? "CHÀO MỪNG TRỞ LẠI"
-            : mode === "register"
-              ? "BẮT ĐẦU TẠO TÀI KHOẢN"
-              : "KHÔI PHỤC TÀI KHOẢN"}
-        </p>
-        <h2 id="login-title" className="text-xl font-bold tracking-tight text-ink-900 m-0">
+      <div className="space-y-1 pr-10">
+        <h2 id="login-title" className="text-2xl font-bold tracking-tight text-ink-900 m-0">
           {mode === "login" ? "Đăng nhập" : mode === "register" ? "Tạo tài khoản" : "Quên mật khẩu"}
         </h2>
         {mode === "forgot" && (
@@ -227,7 +220,7 @@ export function LoginPage({
       </div>
 
       <div
-        className="grid grid-cols-2 rounded-xl bg-slate-100 p-1 gap-1"
+        className="grid grid-cols-2 rounded-lg bg-slate-100 p-1 gap-1"
         role="tablist"
         aria-label="Account action"
       >
@@ -235,7 +228,7 @@ export function LoginPage({
           type="button"
           onClick={() => switchMode("login")}
           className={cn(
-            "rounded-lg px-3 py-1.5 text-sm font-medium transition-all cursor-pointer",
+            "rounded-md px-3 py-1.5 text-sm font-medium transition-all cursor-pointer",
             mode === "login"
               ? "bg-white text-ink-900 shadow-xs font-semibold"
               : "text-ink-600 hover:text-ink-900"
@@ -247,7 +240,7 @@ export function LoginPage({
           type="button"
           onClick={() => switchMode("register")}
           className={cn(
-            "rounded-lg px-3 py-1.5 text-sm font-medium transition-all cursor-pointer",
+            "rounded-md px-3 py-1.5 text-sm font-medium transition-all cursor-pointer",
             mode === "register"
               ? "bg-white text-ink-900 shadow-xs font-semibold"
               : "text-ink-600 hover:text-ink-900"
@@ -319,7 +312,7 @@ export function LoginPage({
 
         {registrationMessage && (
           <p
-            className="rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-sm text-emerald-900 m-0"
+            className="rounded-md border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-sm text-emerald-900 m-0"
             role="status"
           >
             {registrationMessage}

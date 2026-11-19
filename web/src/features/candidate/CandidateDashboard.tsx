@@ -135,23 +135,20 @@ export function CandidateDashboard({ session, profile, onNavigate, onOpenJob }: 
               src={profile.avatarUrl}
               alt="Avatar"
               referrerPolicy="no-referrer"
-              className="h-14 w-14 rounded-2xl border border-border-subtle object-cover shrink-0"
+              className="h-14 w-14 rounded-lg border border-border-subtle object-cover shrink-0"
               onError={() => setFailedAvatar(profile.avatarUrl ?? null)}
             />
           ) : (
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand-600 text-base font-bold text-white">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-brand-600 text-base font-bold text-white">
               {(profile?.displayName || "U").trim().slice(0, 1).toUpperCase()}
             </span>
           )}
           <div className="min-w-0">
-            <p className="text-xs font-bold uppercase tracking-wider text-brand-700 m-0">
-              KHÔNG GIAN ỨNG VIÊN
-            </p>
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-ink-900 m-0 truncate">
               Xin chào, {profile?.displayName || "bạn"}
             </h1>
             <p className="text-sm text-ink-500 m-0 mt-0.5">
-              Theo dõi hồ sơ và bước tiếp theo trên hành trình tìm việc.
+              Tổng quan hồ sơ, CV và trạng thái ứng tuyển.
             </p>
           </div>
         </div>
@@ -180,18 +177,13 @@ export function CandidateDashboard({ session, profile, onNavigate, onOpenJob }: 
 
           <section
             aria-labelledby="next-step-title"
-            className="rounded-2xl border border-brand-200 bg-gradient-to-r from-brand-50 via-white to-teal-50/70 p-5 sm:p-6 shadow-card flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+            className="rounded-lg border border-brand-200 bg-brand-50/40 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
           >
-            <div className="flex items-start gap-3.5 min-w-0">
-              <div className="min-w-0">
-                <p className="text-xs font-bold uppercase tracking-wider text-brand-700 m-0">
-                  BƯỚC TIẾP THEO
-                </p>
-                <h2 id="next-step-title" className="text-base sm:text-lg font-bold text-ink-900 m-0 mt-0.5">
-                  {next.title}
-                </h2>
-                <p className="text-sm text-ink-600 m-0 mt-1 leading-relaxed">{next.text}</p>
-              </div>
+            <div className="min-w-0">
+              <h2 id="next-step-title" className="text-base sm:text-lg font-bold text-ink-900 m-0">
+                {next.title}
+              </h2>
+              <p className="text-sm text-ink-600 m-0 mt-1 leading-relaxed">{next.text}</p>
             </div>
             <Button type="button" onClick={() => onNavigate(next.view)} className="shrink-0">
               {next.action} →
@@ -209,7 +201,7 @@ export function CandidateDashboard({ session, profile, onNavigate, onOpenJob }: 
                 type="button"
                 key={stat.label}
                 onClick={() => onNavigate(stat.view)}
-                className="group rounded-2xl border border-border-subtle bg-white p-4 sm:p-5 text-left shadow-card hover:border-brand-300 hover:shadow-card-hover transition-all cursor-pointer flex flex-col gap-1.5"
+                className="group rounded-lg border border-border-subtle bg-white p-4 sm:p-5 text-left shadow-card hover:border-brand-300 hover:shadow-card-hover transition-all cursor-pointer flex flex-col gap-1.5"
               >
                 <span className="text-xs font-medium text-ink-500">{stat.label}</span>
                 <strong className="text-2xl sm:text-3xl font-extrabold text-ink-900 tabular-nums-kpi">
@@ -293,7 +285,7 @@ export function CandidateDashboard({ session, profile, onNavigate, onOpenJob }: 
                         type="button"
                         key={job.jobId}
                         onClick={() => onOpenJob(job.jobId)}
-                        className="w-full flex items-center justify-between gap-3 rounded-xl border border-border-subtle bg-slate-50/70 px-4 py-3 text-left hover:border-brand-300 hover:bg-white transition-colors cursor-pointer"
+                        className="w-full flex items-center justify-between gap-3 rounded-lg border border-border-subtle bg-slate-50/70 px-4 py-3 text-left hover:border-brand-300 hover:bg-white transition-colors cursor-pointer"
                       >
                         <span className="min-w-0">
                           <strong className="block text-sm font-semibold text-ink-900 truncate">{job.title}</strong>
@@ -355,7 +347,7 @@ export function CandidateDashboard({ session, profile, onNavigate, onOpenJob }: 
                       <button
                         type="button"
                         onClick={() => onNavigate(step.view)}
-                        className="flex-1 min-w-0 text-left rounded-xl border border-transparent hover:border-border-subtle hover:bg-slate-50 px-2.5 py-2 transition-colors bg-transparent cursor-pointer"
+                        className="flex-1 min-w-0 text-left rounded-md border border-transparent hover:border-border-subtle hover:bg-slate-50 px-2.5 py-2 transition-colors bg-transparent cursor-pointer"
                       >
                         <strong className="block text-sm font-semibold text-ink-900">{step.title}</strong>
                         <small className="block text-xs text-ink-500">{step.text}</small>

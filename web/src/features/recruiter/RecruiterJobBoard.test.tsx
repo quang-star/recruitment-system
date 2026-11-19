@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import { beforeEach, expect, it, vi } from "vitest";
 import { RecruiterJobBoard } from "./RecruiterJobBoard";
 import { apiRequest } from "../../shared/api/client";
@@ -99,6 +100,7 @@ it("reviews the saved JD beside editable requirements and requires saving before
 });
 
 beforeEach(() => {
+  window.history.replaceState(null, "", "/");
   vi.mocked(apiRequest).mockClear();
   vi.mocked(apiRequest).mockImplementation(async (_path, options) => {
     if (_path === "/api/v2/public/job-categories") return [];
@@ -138,7 +140,7 @@ it("submits a new outside industry without waiting for catalog approval or Parse
 it.each([false, true])("submits the explicit JD external AI choice (%s) with the displayed policy", async (consented) => {
   render(<RecruiterJobBoard session={session} companyId="company" canRecruit />);
   fireEvent.click(screen.getByRole("button", { name: "+ Tạo JD mới" }));
-  const checkbox = screen.getByRole("checkbox", { name: "Cho phép dịch vụ AI bên ngoài hỗ trợ phân tích nội dung này" });
+  const checkbox = screen.getByRole("checkbox", { name: "Cho phép AI phân tích nội dung này" });
   expect(checkbox).not.toBeChecked();
   if (consented) fireEvent.click(checkbox);
   fireEvent.change(screen.getByLabelText("Tiêu đề"), { target: { value: "Backend" } });
@@ -164,14 +166,14 @@ it("starts a clean JD after returning from a saved job and still protects an uns
   fireEvent.change(screen.getByLabelText("Tiêu đề"), { target: { value: "Saved job" } });
   await setRichText("Mô tả công việc", "Build services");
   await setRichText("Yêu cầu", "Java");
-  fireEvent.click(screen.getByRole("checkbox", { name: "Cho phép dịch vụ AI bên ngoài hỗ trợ phân tích nội dung này" }));
+  fireEvent.click(screen.getByRole("checkbox", { name: "Cho phép AI phân tích nội dung này" }));
   fireEvent.click(screen.getByRole("button", { name: "Tạo bản nháp" }));
   await screen.findByText("Đã lưu tin. Ngành này chưa hỗ trợ AI; có thể đăng tin và tuyển dụng thủ công.");
   expect(screen.queryByRole("button", { name: /Quay lại/ })).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Danh sách tin tuyển dụng" }));
   fireEvent.click(screen.getByRole("button", { name: "+ Tạo JD mới" }));
   expect(screen.getByLabelText("Tiêu đề")).toHaveValue("");
-  expect(screen.getByRole("checkbox", { name: "Cho phép dịch vụ AI bên ngoài hỗ trợ phân tích nội dung này" })).not.toBeChecked();
+  expect(screen.getByRole("checkbox", { name: "Cho phép AI phân tích nội dung này" })).not.toBeChecked();
   fireEvent.change(screen.getByLabelText("Tiêu đề"), { target: { value: "Unsaved next job" } });
   fireEvent.click(screen.getByRole("button", { name: "Danh sách tin tuyển dụng" }));
   expect(screen.getByRole("alert")).toHaveTextContent("Bạn còn thay đổi chưa lưu hoặc đang xử lý.");
@@ -195,14 +197,14 @@ it("applies a career suggestion to the unsaved draft and persists it only throug
   fireEvent.change(screen.getByLabelText("Tiêu đề"), { target: { value: "Kế toán tổng hợp" } });
   await setRichText("Mô tả công việc", "Lập báo cáo tài chính");
   await setRichText("Yêu cầu", "Kinh nghiệm kế toán");
-  fireEvent.click(screen.getByRole("checkbox", { name: "Cho phép dịch vụ AI bên ngoài hỗ trợ phân tích nội dung này" }));
+  fireEvent.click(screen.getByRole("checkbox", { name: "Cho phép AI phân tích nội dung này" }));
   fireEvent.click(screen.getByRole("button", { name: "Gợi ý phân loại nghề" }));
   await screen.findByRole("button", { name: "Áp dụng gợi ý 1" });
   expect(screen.getByLabelText("Ngành", { exact: true })).toHaveValue("1");
   fireEvent.click(screen.getByRole("button", { name: "Áp dụng gợi ý 1" }));
   expect(screen.getByLabelText("Tên ngành mới")).toHaveValue("Kế toán");
   expect(screen.getByLabelText("Tên vị trí mới")).toHaveValue("Kế toán tổng hợp");
-  expect(screen.getByRole("checkbox", { name: "Cho phép dịch vụ AI bên ngoài hỗ trợ phân tích nội dung này" })).toBeChecked();
+  expect(screen.getByRole("checkbox", { name: "Cho phép AI phân tích nội dung này" })).toBeChecked();
   expect(vi.mocked(apiRequest).mock.calls.filter(([, options]) => options?.method === "POST")).toHaveLength(1);
   expect(vi.mocked(apiRequest).mock.calls.some(([path]) => /\/dashboard\/catalog/.test(path))).toBe(false);
   fireEvent.click(screen.getByRole("button", { name: "Tạo bản nháp" }));
@@ -227,6 +229,9 @@ it("renders job specific analytics tab with KPI metrics and conversion funnel", 
         rejected: 0,
         withdrawn: 0
       };
+    }
+    if (path.includes("/applications")) {
+      return { items: [], total: 0, page: 0, size: 12 };
     }
     return {
       items: [{
@@ -474,4 +479,69 @@ it("renders clean recruiter job card metadata and action buttons without decorat
   expect(within(card).getByRole("button", { name: "Ứng viên & Pipeline" })).toBeInTheDocument();
   expect(within(card).getByRole("button", { name: "Thống kê" })).toBeInTheDocument();
   expect(within(card).getByRole("button", { name: "Chi tiết tin" })).toBeInTheDocument();
+});
+
+function LocationProbe() {
+  const location = useLocation();
+  return <output data-testid="location-probe">{`${location.pathname}${location.search}`}</output>;
+}
+
+it("syncs URL when creating, saving, and returning to the recruiter job list", async () => {
+  vi.mocked(apiRequest).mockImplementation(async (path, options) => {
+    if (path === "/api/v2/public/job-categories") return [];
+    if (options?.method === "POST") {
+      return {
+        ...JSON.parse(options.body as string),
+        jobId: "job-123",
+        jobVersionId: "ver-1",
+        jobVersionNumber: 1,
+        companyId: "company",
+        status: "DRAFT",
+        version: 0,
+        matchingSupported: false
+      };
+    }
+    return { items: [], total: 0, page: 0, size: 12 };
+  });
+
+  render(
+    <MemoryRouter initialEntries={["/recruiter/jobs"]}>
+      <LocationProbe />
+      <RecruiterJobBoard session={session} companyId="company" canRecruit />
+    </MemoryRouter>
+  );
+
+  expect(screen.getByTestId("location-probe")).toHaveTextContent("/recruiter/jobs");
+  fireEvent.click(screen.getByRole("button", { name: "+ Tạo JD mới" }));
+  expect(screen.getByTestId("location-probe")).toHaveTextContent("/recruiter/jobs/new");
+
+  fireEvent.change(screen.getByLabelText("Tiêu đề"), { target: { value: "Frontend Engineer" } });
+  fireEvent.change(screen.getByLabelText("Tỉnh / Thành phố"), { target: { value: "Hà Nội" } });
+  fireEvent.change(screen.getByLabelText("Địa chỉ cụ thể"), { target: { value: "Tòa FPT Tower, Cầu Giấy" } });
+  await setRichText("Mô tả công việc", "Build React UI");
+  await setRichText("Yêu cầu", "TypeScript");
+  fireEvent.click(screen.getByRole("button", { name: "Tạo bản nháp" }));
+
+  await waitFor(() => expect(screen.getByTestId("location-probe")).toHaveTextContent("/recruiter/jobs/job-123?tab=editor"));
+  expect(apiRequest).toHaveBeenCalledWith(
+    "/api/v2/companies/company/jobs",
+    expect.objectContaining({
+      method: "POST",
+      body: expect.stringContaining("\"province\":\"Hà Nội\"")
+    })
+  );
+
+  fireEvent.click(screen.getByRole("button", { name: "Danh sách tin tuyển dụng" }));
+  expect(screen.getByTestId("location-probe")).toHaveTextContent("/recruiter/jobs");
+});
+
+it("opens the new-job workspace directly when mounted at /recruiter/jobs/new", () => {
+  render(
+    <MemoryRouter initialEntries={["/recruiter/jobs/new"]}>
+      <RecruiterJobBoard session={session} companyId="company" canRecruit initialNewJob />
+    </MemoryRouter>
+  );
+
+  expect(screen.getByRole("heading", { name: "Tạo tin tuyển dụng mới" })).toBeVisible();
+  expect(screen.queryByRole("button", { name: "+ Tạo JD mới" })).not.toBeInTheDocument();
 });

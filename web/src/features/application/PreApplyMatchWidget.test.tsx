@@ -186,7 +186,7 @@ describe("PreApplyMatchWidget", () => {
     });
 
     // Click "Kiểm tra ngay"
-    const runBtn = screen.getByRole("button", { name: "⚡ Kiểm tra ngay" });
+    const runBtn = screen.getByRole("button", { name: "Kiểm tra ngay" });
     fireEvent.click(runBtn);
 
     // Results display
@@ -247,7 +247,7 @@ describe("PreApplyMatchWidget", () => {
     expect(screen.getByText(/Vị trí này thuộc nhóm xem xét hồ sơ thủ công/)).toBeInTheDocument();
     fetchMock.mockResolvedValue(jsonResponse(confirmedCvs));
     expect(() => rerender(<PreApplyMatchWidget job={sampleJob} session={sampleSession} onApplyJob={vi.fn()} />)).not.toThrow();
-    expect(await screen.findByRole("button", { name: "⚡ Kiểm tra ngay" })).toBeEnabled();
+    expect(await screen.findByRole("button", { name: "Kiểm tra ngay" })).toBeEnabled();
   });
 
   it("shows CV loading failures and lets the candidate retry instead of claiming there are no CVs", async () => {
@@ -272,10 +272,10 @@ describe("PreApplyMatchWidget", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
     const { rerender } = render(<PreApplyMatchWidget job={sampleJob} session={sampleSession} onApplyJob={vi.fn()} />);
-    fireEvent.click(await screen.findByRole("button", { name: "⚡ Kiểm tra ngay" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Kiểm tra ngay" }));
     expect(screen.getByRole("button", { name: "AI đang đối chiếu…" })).toBeDisabled();
     rerender(<PreApplyMatchWidget job={nextJob} session={sampleSession} onApplyJob={vi.fn()} />);
-    fireEvent.click(screen.getByRole("button", { name: "⚡ Kiểm tra ngay" }));
+    fireEvent.click(screen.getByRole("button", { name: "Kiểm tra ngay" }));
     expect(await screen.findByRole("img", { name: "Mức độ phù hợp: 2/5 sao · Phù hợp thấp" })).toBeInTheDocument();
     await act(async () => { finishFirst(jsonResponse(previewResponse(sampleJob.jobVersionId!, 90))); });
     expect(screen.queryByRole("img", { name: "Mức độ phù hợp: 5/5 sao · Phù hợp rất cao" })).not.toBeInTheDocument();
@@ -290,12 +290,12 @@ describe("PreApplyMatchWidget", () => {
         : jsonResponse({ code: "JD_NOT_FOUND", message: "Confirmed JD was not found for this position" }, 404);
     }));
     render(<PreApplyMatchWidget job={sampleJob} session={sampleSession} onApplyJob={vi.fn()} />);
-    fireEvent.click(await screen.findByRole("button", { name: "⚡ Kiểm tra ngay" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Kiểm tra ngay" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Tin tuyển dụng này chưa có dữ liệu JD đã xác nhận");
     expect(screen.getByRole("alert")).toHaveTextContent("JD_NOT_FOUND");
     expect(screen.queryByRole("region", { name: "Kết quả đối chiếu" })).not.toBeInTheDocument();
     available = true;
-    fireEvent.click(screen.getByRole("button", { name: "⚡ Kiểm tra ngay" }));
+    fireEvent.click(screen.getByRole("button", { name: "Kiểm tra ngay" }));
     expect(await screen.findByRole("img", { name: "Mức độ phù hợp: 4/5 sao · Phù hợp cao" })).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
@@ -304,8 +304,8 @@ describe("PreApplyMatchWidget", () => {
     const fetchMock = vi.fn().mockImplementation(async () => jsonResponse(confirmedCvs));
     vi.stubGlobal("fetch", fetchMock);
     render(<PreApplyMatchWidget job={{ ...sampleJob, jobVersionId: undefined }} session={sampleSession} onApplyJob={vi.fn()} />);
-    expect(await screen.findByRole("button", { name: "⚡ Kiểm tra ngay" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "👁 Xem CV" })).toBeEnabled();
+    expect(await screen.findByRole("button", { name: "Kiểm tra ngay" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Xem CV" })).toBeEnabled();
     expect(screen.getByText("Chưa có phiên bản JD được xác nhận để đối chiếu.")).toBeInTheDocument();
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
@@ -328,7 +328,7 @@ describe("PreApplyMatchWidget", () => {
         onViewApplication={onViewApplication}
       />
     );
-    fireEvent.click(await screen.findByRole("button", { name: "⚡ Kiểm tra ngay" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Kiểm tra ngay" }));
     expect(await screen.findByText("Bạn đã ứng tuyển vị trí này")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Ứng tuyển vị trí này với CV đã chọn" })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Xem đơn ứng tuyển" }));

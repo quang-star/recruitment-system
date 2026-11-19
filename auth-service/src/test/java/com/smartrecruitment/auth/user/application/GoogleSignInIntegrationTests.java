@@ -3,10 +3,12 @@ package com.smartrecruitment.auth.user.application;
 import com.smartrecruitment.auth.support.PostgresTestConfiguration;
 import com.smartrecruitment.auth.user.application.port.*;
 import com.smartrecruitment.auth.user.domain.AuthUser;
+import com.smartrecruitment.auth.user.domain.UserStatus;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.time.Instant;
@@ -27,6 +29,8 @@ class GoogleSignInIntegrationTests {
     @Autowired private GoogleLoginChallengeRepository challenges;
     @Autowired private VerificationTokenGenerator tokens;
     @Autowired private AuthCurrentUserService currentUsers;
+    @Autowired private RoleRepository roles;
+    @Autowired private PasswordEncoder passwordEncoder;
     @MockitoBean private GoogleIdentityVerifier verifier;
 
     @Test
@@ -58,21 +62,51 @@ class GoogleSignInIntegrationTests {
     }
 
     @Test
-    void emailCollisionCannotTakeOverExistingAccountButAuthenticatedUserCanLink() {
-        String email = "link-" + UUID.randomUUID() + "@example.com";
-        String subject = UUID.randomUUID().toString();
-        AuthUser user = users.insert(AuthUser.verified(email, Instant.now()));
+    void verifiedActiveAccountAutoLinksByEmailAndKeepsPassword() {
+        Instant now = Instant.now();
+        String verifiedEmail = "verified-" + UUID.randomUUID() + "@example.com";
+        String verifiedSubject = UUID.randomUUID().toString();
+        AuthUser verifiedUser = users.insert(AuthUser.verified(verifiedEmail, now));
+        roles.assignRecruiterRole(verifiedUser.id(), now);
+        credentials.insert(verifiedUser.id(), passwordEncoder.encode("existing-password"), now);
+
         when(verifier.clientId()).thenReturn("client");
-        when(verifier.verify(eq(subject), anyString()))
-                .thenReturn(new GoogleIdentityVerifier.VerifiedIdentity(subject, email));
-        assertThatThrownBy(() -> google.login(subject, google.challenge().nonce(), "CANDIDATE", null, null))
-                .isInstanceOf(GoogleSignInException.class).hasMessageContaining("hiện có");
-        assertThat(identities.findUserId(subject)).isEmpty();
-        var challenge = google.challenge();
-        google.link(user.id(), subject, challenge.nonce());
-        assertThat(identities.findUserId(subject)).contains(user.id());
-        assertThatThrownBy(() -> google.link(user.id(), subject, challenge.nonce()))
-                .isInstanceOf(GoogleSignInException.class);
+        when(verifier.verify(eq(verifiedSubject), anyString()))
+                .thenReturn(new GoogleIdentityVerifier.VerifiedIdentity(verifiedSubject, verifiedEmail, null, null, true));
+
+        GoogleSignInService.GoogleLoginResult linkedLogin =
+                google.login(verifiedSubject, google.challenge().nonce(), "CANDIDATE", "JUnit", "127.0.0.1");
+        assertThat(linkedLogin.newAccount()).isFalse();
+        assertThat(linkedLogin.session().userId()).isEqualTo(verifiedUser.id());
+        assertThat(linkedLogin.session().roles()).containsExactly("RECRUITER");
+        assertThat(identities.findUserId(verifiedSubject)).contains(verifiedUser.id());
+        assertThat(currentUsers.get(verifiedUser.id()).hasPassword()).isTrue();
+    }
+
+    @Test
+    void googleActivatesPendingAccountAndRemovesRegistrationPassword() {
+        Instant now = Instant.now();
+        String pendingEmail = "pending-" + UUID.randomUUID() + "@example.com";
+        String pendingSubject = UUID.randomUUID().toString();
+        AuthUser pending = users.insert(AuthUser.pending(pendingEmail));
+        roles.assignCandidateRole(pending.id(), now);
+        credentials.insert(pending.id(), passwordEncoder.encode("registration-password"), now);
+        when(verifier.clientId()).thenReturn("client");
+        when(verifier.verify(eq(pendingSubject), anyString()))
+                .thenReturn(new GoogleIdentityVerifier.VerifiedIdentity(pendingSubject, pendingEmail, null, null, true));
+
+        var login = google.login(pendingSubject, google.challenge().nonce(), "RECRUITER", null, null);
+
+        assertThat(login.newAccount()).isFalse();
+        assertThat(login.session().userId()).isEqualTo(pending.id());
+        assertThat(login.session().roles()).containsExactly("CANDIDATE");
+        AuthUser activated = users.findById(pending.id()).orElseThrow();
+        assertThat(activated.status()).isEqualTo(UserStatus.ACTIVE);
+        assertThat(activated.emailVerifiedAt()).isNotNull();
+        assertThat(identities.findUserId(pendingSubject)).contains(pending.id());
+        assertThat(credentials.findByUserId(pending.id())).isEmpty();
+        assertThatThrownBy(() -> authentication.login(pendingEmail, "registration-password", "WEB", null, null, null))
+                .isInstanceOf(InvalidCredentialsException.class);
     }
 
     @Test

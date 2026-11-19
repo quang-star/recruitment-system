@@ -35,13 +35,13 @@ export function CvDetailsEditor({
 }) {
   return (
     <div className="space-y-5">
-      <fieldset className="rounded-xl border border-border-subtle bg-slate-50/70 p-4 m-0 space-y-3">
+      <fieldset className="rounded-lg border border-border-subtle bg-slate-50/70 p-4 m-0 space-y-3">
         <legend className="px-2 text-xs font-bold uppercase tracking-wider text-ink-700">Học vấn</legend>
         {(value.education ?? []).map((item, index) => {
           const update = (patch: Partial<Education>) =>
             onChange({ education: value.education.map((entry, i) => (i === index ? { ...entry, ...patch } : entry)) });
           return (
-            <div className="rounded-xl border border-border-subtle bg-white p-3.5 space-y-3" key={index}>
+            <div className="rounded-lg border border-border-subtle bg-white p-3.5 space-y-3" key={index}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <label className={labelClass}>
                   Bằng cấp {index + 1}
@@ -134,14 +134,14 @@ export function CvDetailsEditor({
         </Button>
       </fieldset>
 
-      <fieldset className="rounded-xl border border-border-subtle bg-slate-50/70 p-4 m-0 space-y-3">
+      <fieldset className="rounded-lg border border-border-subtle bg-slate-50/70 p-4 m-0 space-y-3">
         <legend className="px-2 text-xs font-bold uppercase tracking-wider text-ink-700">Ngoại ngữ</legend>
         {(value.languages ?? []).map((item, index) => {
           const update = (patch: Partial<Language>) =>
             onChange({ languages: value.languages.map((entry, i) => (i === index ? { ...entry, ...patch } : entry)) });
           return (
             <div
-              className="rounded-xl border border-border-subtle bg-white p-3.5 grid grid-cols-1 sm:grid-cols-3 gap-3 items-end"
+              className="rounded-lg border border-border-subtle bg-white p-3.5 grid grid-cols-1 sm:grid-cols-3 gap-3 items-end"
               key={index}
             >
               <label className={labelClass}>
@@ -195,13 +195,13 @@ export function CvDetailsEditor({
         </Button>
       </fieldset>
 
-      <fieldset className="rounded-xl border border-border-subtle bg-slate-50/70 p-4 m-0 space-y-3">
+      <fieldset className="rounded-lg border border-border-subtle bg-slate-50/70 p-4 m-0 space-y-3">
         <legend className="px-2 text-xs font-bold uppercase tracking-wider text-ink-700">Dự án</legend>
         {(value.projects ?? []).map((item, index) => {
           const update = (patch: Partial<Project>) =>
             onChange({ projects: value.projects.map((entry, i) => (i === index ? { ...entry, ...patch } : entry)) });
           return (
-            <div className="rounded-xl border border-border-subtle bg-white p-3.5 space-y-3" key={index}>
+            <div className="rounded-lg border border-border-subtle bg-white p-3.5 space-y-3" key={index}>
               <label className={labelClass}>
                 Tên dự án {index + 1}
                 <input
@@ -253,7 +253,7 @@ export function CvDetailsEditor({
         </Button>
       </fieldset>
 
-      <fieldset className="rounded-xl border border-border-subtle bg-slate-50/70 p-4 m-0 space-y-3">
+      <fieldset className="rounded-lg border border-border-subtle bg-slate-50/70 p-4 m-0 space-y-3">
         <legend className="px-2 text-xs font-bold uppercase tracking-wider text-ink-700">Chứng chỉ</legend>
         {(value.certificates ?? []).map((item, index) => {
           const update = (patch: Partial<Certificate>) =>
@@ -261,7 +261,7 @@ export function CvDetailsEditor({
               certificates: value.certificates.map((entry, i) => (i === index ? { ...entry, ...patch } : entry))
             });
           return (
-            <div className="rounded-xl border border-border-subtle bg-white p-3.5 space-y-3" key={index}>
+            <div className="rounded-lg border border-border-subtle bg-white p-3.5 space-y-3" key={index}>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <label className={labelClass}>
                   Tên chứng chỉ {index + 1}

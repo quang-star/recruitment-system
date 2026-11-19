@@ -3,7 +3,7 @@ import { apiRequest } from "../../shared/api/client";
 import { CategoryEntry } from "./JobCategoryFields";
 
 const filterSelectClass =
-  "mt-1 h-9 w-full rounded-xl border border-border-strong bg-white px-3 text-xs font-medium text-ink-800 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:bg-slate-50 disabled:text-ink-400";
+  "mt-1 h-9 w-full rounded-md border border-border-strong bg-white px-3 text-xs font-medium text-ink-800 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:bg-slate-50 disabled:text-ink-400";
 
 export type CategoryFilterValue = { industryId: string; specializationId: string; positionId: string };
 export const emptyCategoryFilter: CategoryFilterValue = { industryId: "", specializationId: "", positionId: "" };

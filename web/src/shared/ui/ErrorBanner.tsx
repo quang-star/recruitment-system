@@ -24,7 +24,7 @@ export function ErrorBanner({ tone = "error", title, message, action, className 
     <div
       role={tone === "error" || tone === "warning" ? "alert" : "status"}
       className={cn(
-        "flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-xl border px-4 py-3 text-sm leading-relaxed",
+        "flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-lg border px-4 py-3 text-sm leading-relaxed",
         toneStyles[tone],
         className
       )}

@@ -62,8 +62,9 @@ it("identifies legacy metadata and renders only the bounded audit state fields",
   vi.mocked(apiRequest).mockResolvedValue({ items: [{ ...core, version: null, reason: null, correlationId: null,
     beforeState: "invalid-json", afterState: '{"name":"Legacy category","rawContext":"DO_NOT_RENDER_CONTEXT"}' }], total: 1, page: 0, size: 20 });
   render(<AdminAuditPanel accessToken="synthetic-admin" />);
+  fireEvent.click(await screen.findByRole("button", { name: "Xem chi tiết Legacy category #9223372036854775807" }));
   await screen.findByText("Chưa được ghi (dữ liệu cũ) → Legacy category");
-  expect(screen.getAllByText("Chưa được ghi (dữ liệu cũ)")).toHaveLength(3);
+  expect(screen.getAllByText("Chưa được ghi (dữ liệu cũ)")).toHaveLength(5);
   expect(screen.queryByText(/DO_NOT_RENDER_CONTEXT/)).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Trang nhật ký sau" })).toBeDisabled();
 });
@@ -76,8 +77,9 @@ it("labels the redacted AI projection without exposing extra historical fields",
     reason: "Source [REDACTED_EMAIL]", correlationId: null, createdAt: "2026-10-02T00:00:00Z", before: null,
     after: { canonicalName: "[REDACTED_EMAIL]", privateSourceText: "DO_NOT_RENDER_SOURCE" }, redacted: true }], total: 1, page: 0, size: 20 });
   fireEvent.change(screen.getByLabelText("Nguồn nhật ký"), { target: { value: "AI" } });
+  fireEvent.click(await screen.findByRole("button", { name: "Xem chi tiết [REDACTED_EMAIL] #9223372036854775807" }));
   await screen.findByText("Thông tin liên hệ đã được che trong bản ghi này.");
-  expect(screen.getByText("Source [REDACTED_EMAIL]")).toBeInTheDocument();
+  expect(screen.getAllByText("Source [REDACTED_EMAIL]").length).toBeGreaterThanOrEqual(1);
   expect(screen.queryByText(/DO_NOT_RENDER_SOURCE/)).not.toBeInTheDocument();
 });
 
@@ -105,7 +107,7 @@ it("retries the same applied filters after an API failure", async () => {
   expect(screen.getByLabelText("ID danh mục / kỹ năng")).toHaveValue(resourceId);
 });
 
-it("keeps the highlighted audit row aligned with the detail after paging away from a selection", async () => {
+it("closes the audit detail modal when paging away and supports quick correlation filtering", async () => {
   vi.mocked(apiRequest).mockImplementation(async (path) => {
     const page = Number(new URL(path, "http://synthetic.local").searchParams.get("page") ?? "0");
     return { items: page === 0 ? [core, { ...core, id: 2, reason: "Selected old page" }]
@@ -114,10 +116,32 @@ it("keeps the highlighted audit row aligned with the detail after paging away fr
   });
   render(<AdminAuditPanel accessToken="synthetic-admin" />);
   await screen.findByText("Synthetic Core edit");
-  fireEvent.click(screen.getAllByRole("button", { name: "Sửa" })[1]);
-  expect(screen.getByText("Selected old page")).toBeVisible();
+  fireEvent.click(screen.getAllByRole("button", { name: /Xem chi tiết/ })[1]);
+  expect(screen.getByRole("dialog")).toBeVisible();
+  expect(screen.getByRole("button", { name: "Lọc theo mã này" })).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "Đóng" }));
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getAllByRole("button", { name: /Xem chi tiết/ })[1]);
+  fireEvent.click(screen.getByRole("button", { name: "Lọc theo mã này" }));
+  await waitFor(() => expect(lastQuery().searchParams.get("correlationId")).toBe(correlationId));
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
   fireEvent.click(screen.getByRole("button", { name: "Trang nhật ký sau" }));
   await screen.findByText("First on new page");
-  expect(screen.getAllByRole("button", { name: "Sửa" })[0].closest("tr")).toHaveClass("bg-brand-50/50");
   expect(screen.queryByText("Selected old page")).not.toBeInTheDocument();
+});
+
+it("resolves and displays actor email and role from auth admin lookup", async () => {
+  vi.mocked(apiRequest).mockImplementation(async (path) => {
+    if (path.startsWith("/api/v2/auth/admin/users")) {
+      return [{ userId: actorId, email: "recruiter@demo.local", roles: ["RECRUITER"], status: "ACTIVE" }];
+    }
+    return { items: [core], total: 1, page: 0, size: 20 };
+  });
+  render(<AdminAuditPanel accessToken="synthetic-admin" />);
+  expect(await screen.findByText("recruiter@demo.local")).toBeVisible();
+  expect(screen.getByText(/Nhà tuyển dụng/)).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: /Xem chi tiết/ }));
+  expect(screen.getAllByText("recruiter@demo.local").length).toBeGreaterThanOrEqual(2);
 });

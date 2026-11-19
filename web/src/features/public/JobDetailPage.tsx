@@ -24,6 +24,7 @@ import {
   deadlineRemainingLabel,
   employmentTypeLabel,
   extractSkillsFromJob,
+  formatJobLocation,
   formatSalary,
   formatSalaryWithPeriod,
   publishedLabel,
@@ -68,14 +69,14 @@ function CompanyInfoSidebarCard({ meta, job, openJobsCount, onViewCompany }: Com
 
   return (
     <Card padding="none" className="overflow-hidden">
-      <CompanyCover src={meta.coverImage} className="h-24 w-full" />
+      <CompanyCover src={meta.coverImage} name={meta.shortName} className="h-24 w-full" />
       <div className="px-5 pb-5 -mt-7 relative space-y-4">
         <div className="space-y-2.5">
-          <div className="inline-flex rounded-xl border-2 border-white bg-white shadow-card">
+          <div className="inline-flex rounded-lg border-2 border-white bg-white shadow-card">
             <CompanyLogo
               src={job.companyLogo || meta.logo}
               name={meta.shortName || meta.name}
-              className="h-14 w-14 rounded-lg"
+              className="h-14 w-14 rounded-md"
               textClassName="text-sm font-bold"
             />
           </div>
@@ -121,7 +122,7 @@ function RelatedJobItem({ job, onSelectJob }: { job: PublicJob; onSelectJob: (jo
   const shareHref = `${window.location.pathname}?${shareParams.toString()}`;
 
   return (
-    <Card as="article" interactive padding="sm" className="group">
+    <Card as="article" interactive padding="sm" className="group hover:bg-slate-50/70">
       <a
         href={shareHref}
         data-job-id={job.jobId}
@@ -131,7 +132,7 @@ function RelatedJobItem({ job, onSelectJob }: { job: PublicJob; onSelectJob: (jo
         }}
         className="block space-y-1.5 no-underline text-inherit outline-none"
       >
-        <h3 className="text-sm font-bold text-ink-900 group-hover:text-brand-700 transition-colors m-0 leading-snug line-clamp-2">
+        <h3 className="text-sm font-bold text-ink-900 m-0 leading-snug line-clamp-2">
           {job.title}
         </h3>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
@@ -141,7 +142,7 @@ function RelatedJobItem({ job, onSelectJob }: { job: PublicJob; onSelectJob: (jo
           </span>
           <span className="inline-flex items-center gap-1 text-ink-500">
             <MapPinIcon size={13} className="text-ink-400 shrink-0" aria-hidden="true" />
-            <span>{job.locationText || "Linh hoạt"}</span>
+            <span>{formatJobLocation(job)}</span>
           </span>
           <span className="text-ink-400">{publishedLabel(job)}</span>
         </div>
@@ -177,9 +178,8 @@ export function JobDetailPage({
   const isSaved = Boolean(savedIds[job.jobId]);
   const skills = job.skills ?? extractSkillsFromJob(job.requirementsText, job.description, job.title);
   const remainingLabel = deadlineRemainingLabel(job.applicationDeadline);
-  const locationSummary = job.locationText
-    ? `${job.locationText} · ${workModeLabel(job.workMode)}`
-    : workModeLabel(job.workMode);
+  const fullLocation = formatJobLocation(job, "full");
+  const locationSummary = `${fullLocation} · ${workModeLabel(job.workMode)}`;
 
   useEffect(() => { titleRef.current?.focus(); }, [job.jobId]);
 
@@ -283,7 +283,7 @@ export function JobDetailPage({
                   {skills.map((skill) => (
                     <span
                       key={skill}
-                      className="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-ink-700"
+                      className="rounded-sm bg-slate-100 px-2.5 py-1 text-xs font-medium text-ink-700"
                     >
                       {skill}
                     </span>

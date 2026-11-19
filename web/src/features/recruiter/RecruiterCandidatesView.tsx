@@ -108,7 +108,7 @@ export function RecruiterCandidatesView({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border-subtle bg-white px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border-subtle bg-white px-4 py-3">
         <div className="flex flex-wrap items-center gap-3 min-w-0">
           <label htmlFor="recruiter-pipeline-job-select" className="text-xs font-semibold text-ink-600 shrink-0">
             Tin tuyển dụng

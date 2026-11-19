@@ -75,7 +75,7 @@ export function RecruiterKanbanBoard({
             }}
             onDrop={(e) => onDrop(e, stage.key)}
             className={cn(
-              "flex flex-col rounded-xl border border-border-subtle border-t-4 bg-slate-50/80 p-3 min-h-[260px] transition-colors",
+              "flex flex-col rounded-lg border border-border-subtle border-t-4 bg-slate-50/80 p-3 min-h-[260px] transition-colors",
               stage.topBorderClass,
               isOver && "ring-2 ring-brand-500/40 bg-brand-50/40"
             )}
@@ -87,7 +87,7 @@ export function RecruiterKanbanBoard({
               </div>
               <span
                 className={cn(
-                  "inline-flex h-5 min-w-5 items-center justify-center rounded-full border px-1.5 text-[11px] font-bold tabular-nums-kpi",
+                  "inline-flex h-5 min-w-5 items-center justify-center rounded-sm border px-1.5 text-[11px] font-bold tabular-nums-kpi",
                   stage.countClass
                 )}
               >
@@ -97,7 +97,7 @@ export function RecruiterKanbanBoard({
 
             <div className="space-y-2.5 flex-1">
               {stageApps.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-border-subtle bg-white/60 py-6 text-center text-xs text-ink-400">
+                <div className="rounded-lg border border-dashed border-border-subtle bg-white/60 py-6 text-center text-xs text-ink-400">
                   Chưa có hồ sơ
                 </div>
               ) : (
@@ -109,7 +109,7 @@ export function RecruiterKanbanBoard({
                     onDragStart={(e) => onDragStart(e, application)}
                     onClick={() => onSelect(application.applicationId)}
                     className={cn(
-                      "rounded-xl border bg-white p-3 shadow-xs space-y-2.5 transition-all cursor-pointer",
+                      "rounded-lg border bg-white p-3 shadow-xs space-y-2.5 transition-all cursor-pointer",
                       selectedId === application.applicationId
                         ? "border-brand-600 ring-2 ring-brand-500/20"
                         : "border-border-subtle hover:border-border-strong",

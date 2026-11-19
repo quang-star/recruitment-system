@@ -35,7 +35,16 @@ class GoogleIdTokenVerifierTests {
         assertThat(identity.email()).isEqualTo("candidate@example.com");
         assertThat(identity.name()).isNull();
         assertThat(identity.pictureUrl()).isNull();
+        assertThat(identity.authoritativeEmail()).isFalse();
         assertThat(verifier.verify(sign(claims().issuer("accounts.google.com")), NONCE)).isEqualTo(identity);
+    }
+
+    @Test
+    void recognizesGoogleHostedEmailAddresses() throws Exception {
+        assertThat(verifier.verify(sign(claims().claim("email", "candidate@GMAIL.COM")), NONCE)
+                .authoritativeEmail()).isTrue();
+        assertThat(verifier.verify(sign(claims().claim("hd", "example.com")), NONCE)
+                .authoritativeEmail()).isTrue();
     }
 
     @Test

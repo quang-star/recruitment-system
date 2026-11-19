@@ -71,6 +71,25 @@ export function countryLabel(countryCode?: string): string | null {
   return trimmed;
 }
 
+export function formatJobLocation(
+  job: { province?: string | null; locationText?: string | null },
+  mode: "short" | "full" = "short",
+  fallback = "Linh hoạt"
+): string {
+  const province = job.province?.trim() || "";
+  const locationText = job.locationText?.trim() || "";
+  if (mode === "short") {
+    return province || locationText || fallback;
+  }
+  if (locationText && province) {
+    if (locationText.toLowerCase().includes(province.toLowerCase())) {
+      return locationText;
+    }
+    return `${locationText}, ${province}`;
+  }
+  return province || locationText || fallback;
+}
+
 export function workModeLabel(value: string | null) {
   return ({ REMOTE: "Từ xa", HYBRID: "Hybrid", ONSITE: "Tại văn phòng" } as Record<string, string>)[value ?? ""] ?? value ?? "Linh hoạt";
 }

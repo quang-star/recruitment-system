@@ -92,7 +92,7 @@ describe("Public job discovery", () => {
   });
   it("selects a demo email without sending credentials or losing the chosen job", async () => {
     await openPortal();
-    fireEvent.click(screen.getAllByRole("button", { name: /Java Developer.*Ứng tuyển/ })[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Java Developer" }));
     fireEvent.click(screen.getByRole("button", { name: "Ứng tuyển vị trí này" }));
     fireEvent.click(screen.getByRole("button", { name: /Chọn tài khoản ứng viên/ }));
     expect(screen.getByTestId("login-email")).toHaveTextContent("candidate.demo@smart.local");
@@ -147,11 +147,11 @@ describe("Public job discovery", () => {
 
   it("keeps the job detail page behind the existing sign-in step", async () => {
     await openPortal();
-    fireEvent.click(screen.getAllByRole("button", { name: /Java Developer.*Ứng tuyển/ })[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Java Developer" }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Ứng tuyển vị trí này" }));
     expect(screen.queryByRole("dialog", { name: "Java Developer" })).not.toBeInTheDocument();
-    expect(screen.getByRole("dialog", { name: "Bước tiếp theo cho sự nghiệp của bạn" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Đăng nhập" })).toBeInTheDocument();
     expect(getPendingJobId()).toBe("java");
     expect(screen.getByRole("heading", { name: "Java Developer", level: 1 })).toBeInTheDocument();
   });
@@ -274,5 +274,23 @@ describe("Public job discovery", () => {
     fireEvent.click(screen.getByRole("button", { name: "Đăng tin tuyển dụng" }));
     expect(await screen.findByText(/Tính năng đăng tin và quản lý ứng viên dành cho tài khoản Nhà tuyển dụng/)).toBeInTheDocument();
     expect(navigateSpy).not.toHaveBeenCalled();
+  });
+
+  it("keeps the public navigation focused on jobs and companies while still rendering /ai directly", async () => {
+    await openPortal();
+    expect(screen.getByRole("heading", { name: "Tìm việc theo kỹ năng và địa điểm", level: 1 })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Tìm việc" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Thêm cơ hội cho bạn" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Đối chiếu CV–JD" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Xem tất cả việc làm" }));
+    expect(await screen.findByRole("heading", { name: "Tìm việc làm đang tuyển", level: 1 })).toBeInTheDocument();
+
+    window.history.replaceState(null, "", "/ai");
+    render(<PublicHomePage onLoginSuccess={vi.fn()} />);
+    expect(await screen.findByRole("heading", { name: "Đối chiếu CV với yêu cầu công việc", level: 1 })).toBeInTheDocument();
+    expect(screen.getByText("Ví dụ minh họa")).toBeInTheDocument();
+    expect(screen.queryByText("Service boundaries")).not.toBeInTheDocument();
+    window.history.replaceState(null, "", "/");
   });
 });

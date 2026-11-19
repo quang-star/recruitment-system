@@ -14,7 +14,7 @@ Hệ thống tuyển dụng hỗ trợ ứng viên quản lý CV, nhà tuyển d
 
 Giao diện khách tìm việc và ứng viên hỗ trợ mobile. Không gian nhà tuyển dụng và
 quản trị viên dành cho laptop/desktop, với bố cục tối thiểu 1024 px và thanh điều
-hướng cố định; màn hình hẹp sử dụng cuộn ngang thay vì menu/bố cục mobile riêng.
+hướng cố định; màn hình dưới 1024 px hiển thị thông báo yêu cầu dùng máy tính kèm nút đăng xuất.
 
 Ứng viên có thể cập nhật ảnh đại diện tài khoản bằng ảnh JPEG/PNG (tối đa 2 MiB) trong Hồ sơ, rút đơn, thu hồi quyền chia sẻ hoặc xóa CV. Quyền truy cập tài liệu được kiểm tra theo tài khoản và hồ sơ ứng tuyển.
 
@@ -261,8 +261,7 @@ của hệ thống và giữ nguyên cơ chế xoay vòng/thu hồi phiên.
 - Với tài khoản chưa có hồ sơ ở Core, đăng nhập Google trích xuất tên hiển thị, email và
   URL ảnh đại diện HTTPS (`picture`, cho ứng viên) từ ID token đã xác minh để khởi tạo
   hồ sơ lần đầu mà không lưu vào Auth DB và không ghi đè hồ sơ đã tồn tại.
-- Nếu email đã có tài khoản, đăng nhập bằng phương thức hiện có, mở **Mật khẩu & phiên đăng nhập →
-  Liên kết Google**, rồi chọn tài khoản Google cùng email. Hệ thống không tự liên kết theo email.
+- Khi đăng nhập Google với email Gmail hoặc Google Workspace trùng email đã đăng ký, tài khoản `ACTIVE` đã xác minh email được tự động liên kết và giữ nguyên mật khẩu. Tài khoản `PENDING` được xác minh, kích hoạt và xóa mật khẩu lúc đăng ký. Cả hai trường hợp giữ nguyên vai trò và hồ sơ. Tài khoản bị vô hiệu hóa hoặc đã liên kết với một Google `sub` khác sẽ bị từ chối. Với email bên thứ ba, hãy xác minh qua email nếu cần, rồi đăng nhập bằng mật khẩu và liên kết Google trong phần bảo mật tài khoản.
 - Tài khoản chỉ dùng Google có thể tạo mật khẩu qua **Quên mật khẩu** và liên kết gửi tới email.
 - Migration Auth `V5__google_sign_in.sql` bổ sung bảng identity/challenge, giữ nguyên dữ liệu cũ.
   Backend cần truy cập HTTPS tới JWKS của Google; trình duyệt cần tải `accounts.google.com/gsi/client`.

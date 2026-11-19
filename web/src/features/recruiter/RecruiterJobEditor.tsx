@@ -1,18 +1,27 @@
 import { FormEvent } from "react";
 import { ExternalAiConsent } from "../../shared/components/ExternalAiConsent";
-import { SparklesIcon } from "../../shared/components/Icon";
+import { LayersIcon } from "../../shared/components/Icon";
 import { RichTextEditor } from "../../shared/components/RichTextEditor";
 import { AuthSession } from "../../shared/auth/session";
+import { VIETNAM_PROVINCES, normalizeProvinceName } from "../../shared/constants/provinces";
 import { Badge, Button, Card, ErrorBanner } from "../../shared/ui";
 import { CareerCategorySuggestions } from "./CareerCategorySuggestions";
 import { CategoryChoice, JobCategoryFields } from "./JobCategoryFields";
 import { Job, JobForm } from "./recruiterJobTypes";
+
+type EditorCompanyOption = {
+  companyId: string;
+  displayName: string;
+};
 
 type Props = {
   form: JobForm;
   selectedJob: Job | null;
   selectedJobId: string | null;
   companyId: string;
+  companyName?: string | null;
+  companies?: EditorCompanyOption[];
+  onSelectDraftCompany?: (companyId: string) => void;
   session: AuthSession;
   canRecruit: boolean;
   canPublish: boolean;
@@ -27,7 +36,7 @@ type Props = {
 };
 
 const fieldClass =
-  "mt-1 h-10 w-full rounded-xl border border-border-strong bg-white px-3 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:bg-slate-50 disabled:text-ink-500";
+  "mt-1 h-10 w-full rounded-md border border-border-strong bg-white px-3 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:bg-slate-50 disabled:text-ink-500";
 const labelClass = "block text-xs font-semibold text-ink-700";
 
 const SENIORITY_OPTIONS = [
@@ -45,6 +54,9 @@ export function RecruiterJobEditor({
   selectedJob,
   selectedJobId,
   companyId,
+  companyName = null,
+  companies = [],
+  onSelectDraftCompany,
   session,
   canRecruit,
   canPublish,
@@ -60,6 +72,8 @@ export function RecruiterJobEditor({
   const lockedNonDraft = Boolean(selectedJob && selectedJob.status !== "DRAFT");
   const fieldsDisabled = !canRecruit || lockedNonDraft;
   const knownSeniority = !form.seniorityLevel || SENIORITY_OPTIONS.some((item) => item.value === form.seniorityLevel);
+  const normalizedProvince = normalizeProvinceName(form.province);
+  const knownProvince = !normalizedProvince || VIETNAM_PROVINCES.some((item) => item === normalizedProvince);
 
   return (
     <Card padding="lg">
@@ -91,10 +105,44 @@ export function RecruiterJobEditor({
           />
         )}
 
+        {message && <ErrorBanner tone="success" message={message} />}
+        {error && <ErrorBanner tone="error" message={error} />}
+
         <fieldset className="border-0 p-0 m-0 min-w-0 space-y-6" disabled={fieldsDisabled}>
-          <section className="rounded-2xl border border-border-subtle bg-slate-50/50 p-5 space-y-4">
+          <section className="rounded-lg border border-border-subtle bg-slate-50/50 p-5 space-y-4">
             <h4 className="text-sm font-bold text-ink-900 m-0">1. Thông tin chung</h4>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {(companies.length > 0 || companyName) && (
+                <label className={labelClass + " sm:col-span-2 lg:col-span-4"}>
+                  Công ty
+                  {!selectedJobId && companies.length > 1 && onSelectDraftCompany ? (
+                    <select
+                      className={fieldClass}
+                      value={companyId}
+                      onChange={(e) => onSelectDraftCompany(e.target.value)}
+                    >
+                      {companies.map((company) => (
+                        <option key={company.companyId} value={company.companyId}>
+                          {company.displayName}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      className={fieldClass}
+                      type="text"
+                      readOnly
+                      disabled
+                      value={
+                        companies.find((company) => company.companyId === companyId)?.displayName ??
+                        companyName ??
+                        ""
+                      }
+                    />
+                  )}
+                </label>
+              )}
+
               <label className={labelClass + " sm:col-span-2"}>
                 Tiêu đề
                 <input
@@ -107,15 +155,23 @@ export function RecruiterJobEditor({
                 />
               </label>
 
-              <label className={labelClass + " sm:col-span-2"}>
-                Địa điểm
-                <input
+              <label className={labelClass}>
+                Tỉnh / Thành phố
+                <select
                   className={fieldClass}
-                  maxLength={300}
-                  placeholder="Ví dụ: Tòa FPT Tower, Cầu Giấy, Hà Nội"
-                  value={form.locationText}
-                  onChange={(e) => onUpdateForm("locationText", e.target.value)}
-                />
+                  value={normalizedProvince}
+                  onChange={(e) => onUpdateForm("province", e.target.value)}
+                >
+                  <option value="">Chọn tỉnh / thành phố</option>
+                  {!knownProvince && (
+                    <option value={normalizedProvince}>{normalizedProvince}</option>
+                  )}
+                  {VIETNAM_PROVINCES.map((province) => (
+                    <option key={province} value={province}>
+                      {province}
+                    </option>
+                  ))}
+                </select>
               </label>
 
               <label className={labelClass}>
@@ -126,6 +182,17 @@ export function RecruiterJobEditor({
                   maxLength={2}
                   value={form.countryCode}
                   onChange={(e) => onUpdateForm("countryCode", e.target.value.toUpperCase())}
+                />
+              </label>
+
+              <label className={labelClass + " sm:col-span-2"}>
+                Địa chỉ cụ thể
+                <input
+                  className={fieldClass}
+                  maxLength={300}
+                  placeholder="Ví dụ: Tòa FPT Tower, Cầu Giấy"
+                  value={form.locationText}
+                  onChange={(e) => onUpdateForm("locationText", e.target.value)}
                 />
               </label>
 
@@ -188,7 +255,7 @@ export function RecruiterJobEditor({
                 />
               </label>
 
-              <label className={labelClass + " sm:col-span-2 lg:col-span-3"}>
+              <label className={labelClass + " sm:col-span-2 lg:col-span-2"}>
                 Hạn nhận hồ sơ
                 <input
                   className={fieldClass}
@@ -200,7 +267,7 @@ export function RecruiterJobEditor({
             </div>
           </section>
 
-          <section className="rounded-2xl border border-border-subtle bg-slate-50/50 p-5 space-y-4">
+          <section className="rounded-lg border border-border-subtle bg-slate-50/50 p-5 space-y-4">
             <h4 className="text-sm font-bold text-ink-900 m-0">2. Bản mô tả &amp; Tiêu chuẩn ứng viên</h4>
             <div className="space-y-4">
               <div className={labelClass}>
@@ -239,7 +306,7 @@ export function RecruiterJobEditor({
             </div>
           </section>
 
-          <section className="rounded-2xl border border-border-subtle bg-slate-50/50 p-5 space-y-4">
+          <section className="rounded-lg border border-border-subtle bg-slate-50/50 p-5 space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h4 className="text-sm font-bold text-ink-900 m-0">3. Mức lương &amp; Đãi ngộ</h4>
               <label className="inline-flex items-center gap-2 text-xs font-semibold text-ink-700 cursor-pointer">
@@ -308,14 +375,9 @@ export function RecruiterJobEditor({
             </div>
           </section>
 
-          {message && <ErrorBanner tone="success" message={message} />}
-          {error && <ErrorBanner tone="error" message={error} />}
-
-          <section className="rounded-2xl border border-brand-200/80 bg-white p-5 space-y-4">
+          <section className="rounded-lg border border-brand-200/80 bg-white p-5 space-y-4">
             <div className="flex items-center gap-2">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-600 text-white">
-                <SparklesIcon size={14} />
-              </span>
+              <LayersIcon size={16} className="text-brand-700 shrink-0" aria-hidden="true" />
               <h4 className="text-sm font-bold text-ink-900 m-0">4. Ngành nghề &amp; Hỗ trợ sàng lọc tự động</h4>
             </div>
 
@@ -327,7 +389,7 @@ export function RecruiterJobEditor({
               </p>
             )}
 
-            <div className="rounded-xl border border-border-subtle bg-slate-50/70 p-3.5">
+            <div className="rounded-lg border border-border-subtle bg-slate-50/70 p-3.5">
               <ExternalAiConsent
                 checked={form.externalAiConsent}
                 disabled={saving}

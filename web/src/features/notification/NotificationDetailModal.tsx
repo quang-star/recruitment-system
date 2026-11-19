@@ -177,7 +177,7 @@ export function NotificationDetailModal({
             </div>
           </div>
 
-          <div className="rounded-xl border border-border-subtle bg-slate-50/70 p-4">
+          <div className="rounded-lg border border-border-subtle bg-slate-50/70 p-4">
             <p className="text-sm text-ink-800 m-0 leading-relaxed whitespace-pre-line">
               {notification.message}
             </p>
@@ -214,7 +214,7 @@ export function NotificationDetailModal({
                 />
               ) : application ? (
                 <div className="space-y-4">
-                  <div className="rounded-xl border border-border-subtle bg-white p-4 space-y-2">
+                  <div className="rounded-lg border border-border-subtle bg-white p-4 space-y-2">
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div className="min-w-0 space-y-1">
                         <strong className="block text-base font-bold text-ink-900 break-words">
@@ -238,7 +238,7 @@ export function NotificationDetailModal({
                   </div>
 
                   {application.cvAccessGranted === false ? (
-                    <div className="rounded-xl border border-border-subtle bg-slate-50 px-4 py-3 text-xs sm:text-sm text-ink-600">
+                    <div className="rounded-lg border border-border-subtle bg-slate-50 px-4 py-3 text-xs sm:text-sm text-ink-600">
                       {application.status === "REJECTED"
                         ? "Hồ sơ đã bị từ chối nên quyền xem CV và kết quả đối sánh đã đóng."
                         : application.status === "WITHDRAWN"
@@ -246,7 +246,7 @@ export function NotificationDetailModal({
                           : "Quyền chia sẻ CV đã được thu hồi nên kết quả đối sánh không còn hiển thị."}
                     </div>
                   ) : application.matchingSupported === false ? (
-                    <div className="rounded-xl border border-border-subtle bg-slate-50 px-4 py-3 text-xs sm:text-sm text-ink-600">
+                    <div className="rounded-lg border border-border-subtle bg-slate-50 px-4 py-3 text-xs sm:text-sm text-ink-600">
                       Vị trí này áp dụng quy trình xem xét hồ sơ thủ công (không chấm điểm AI).
                     </div>
                   ) : matchState === "loading" ? (
@@ -254,17 +254,17 @@ export function NotificationDetailModal({
                   ) : match ? (
                     <MatchBreakdown match={match} />
                   ) : matchState === "waiting" ? (
-                    <div className="rounded-xl border border-border-subtle bg-slate-50 px-4 py-3 text-xs sm:text-sm text-ink-600">
+                    <div className="rounded-lg border border-border-subtle bg-slate-50 px-4 py-3 text-xs sm:text-sm text-ink-600">
                       Kết quả đối sánh đang được xử lý hoặc chưa khả dụng.
                     </div>
                   ) : (
-                    <div className="rounded-xl border border-border-subtle bg-slate-50 px-4 py-3 text-xs sm:text-sm text-ink-600">
+                    <div className="rounded-lg border border-border-subtle bg-slate-50 px-4 py-3 text-xs sm:text-sm text-ink-600">
                       Không thể tải kết quả đối sánh ngay lúc này.
                     </div>
                   )}
 
                   {history.length > 0 && (
-                    <div className="rounded-xl border border-border-subtle bg-white p-4">
+                    <div className="rounded-lg border border-border-subtle bg-white p-4">
                       <p className="text-xs font-bold uppercase tracking-wider text-ink-500 m-0 mb-2.5">
                         Lịch sử trạng thái
                       </p>
@@ -288,7 +288,7 @@ export function NotificationDetailModal({
               ) : null}
             </section>
           ) : (
-            <div className="rounded-xl border border-border-subtle bg-slate-50/70 px-4 py-3 text-xs sm:text-sm text-ink-600">
+            <div className="rounded-lg border border-border-subtle bg-slate-50/70 px-4 py-3 text-xs sm:text-sm text-ink-600">
               {notification.type === "COMPANY_INVITATION_ACCEPTED"
                 ? "Thành viên mới đã chấp nhận lời mời tham gia công ty. Mở trang Công ty & Đội ngũ để xem danh sách thành viên và vai trò."
                 : !notification.linkUrl || notification.linkUrl === "/"

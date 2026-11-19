@@ -353,7 +353,7 @@ export function QuickCvUploadSection({
     return (
       <div
         role="status"
-        className="rounded-xl border border-brand-200 bg-brand-50/45 p-4 space-y-2.5"
+        className="rounded-lg border border-brand-200 bg-brand-50/45 p-4 space-y-2.5"
       >
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
@@ -381,7 +381,7 @@ export function QuickCvUploadSection({
     const emptyExtraction = skills.length === 0 && experiences.length === 0;
 
     return (
-      <div className="rounded-xl border border-brand-200 bg-white p-4 space-y-3">
+      <div className="rounded-lg border border-brand-200 bg-white p-4 space-y-3">
         {localError && <ErrorBanner tone="error" message={localError} />}
 
         <div className="flex flex-wrap items-start justify-between gap-2 pb-2.5 border-b border-border-subtle">
@@ -517,7 +517,7 @@ export function QuickCvUploadSection({
   }
 
   return (
-    <div className="rounded-xl border border-border-subtle bg-slate-50/60 p-3.5 space-y-3">
+    <div className="rounded-lg border border-border-subtle bg-slate-50/60 p-3.5 space-y-3">
       {localError && <ErrorBanner tone="error" message={localError} />}
 
       <label
@@ -527,7 +527,7 @@ export function QuickCvUploadSection({
         }}
         onDragLeave={() => setDragging(false)}
         onDrop={handleDrop}
-        className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed px-4 py-4 text-center transition cursor-pointer ${
+        className={`flex flex-col items-center justify-center gap-1.5 rounded-lg border-2 border-dashed px-4 py-4 text-center transition cursor-pointer ${
           dragging
             ? "border-brand-500 bg-brand-50/70"
             : "border-border-strong bg-white hover:border-brand-400 hover:bg-brand-50/30"
@@ -541,9 +541,11 @@ export function QuickCvUploadSection({
           onChange={(event) => handleFilePicked(event.target.files?.[0] ?? null)}
           className="sr-only"
         />
-        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
-          {selectedFile ? <CvIcon size={18} aria-hidden="true" /> : <UploadIcon size={18} aria-hidden="true" />}
-        </span>
+        {selectedFile ? (
+          <CvIcon size={18} className="text-brand-700 shrink-0" aria-hidden="true" />
+        ) : (
+          <UploadIcon size={18} className="text-brand-700 shrink-0" aria-hidden="true" />
+        )}
         {selectedFile ? (
           <div className="space-y-0.5">
             <p className="text-sm font-semibold text-ink-900 m-0 break-all">{selectedFile.name}</p>

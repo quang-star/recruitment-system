@@ -10,14 +10,17 @@ import {
   JobsIcon,
   NotificationIcon,
   ProfileIcon,
+  SearchIcon,
   SecurityIcon
 } from "../../shared/components/Icon";
 import { BRAND_CONFIG } from "../../shared/config/brand";
 import { WorkspaceNavItem, WorkspaceShell } from "../../shared/layout/WorkspaceShell";
 import { EnsureRouter, routes, useSafeNavigate } from "../../shared/router";
-import { Badge, Button, Card, ErrorBanner, Skeleton, cn } from "../../shared/ui";
+import { Badge, Button, Card, ErrorBanner, Modal, Skeleton, cn } from "../../shared/ui";
 import { AccountSecurityPanel } from "../auth/AccountSecurityPanel";
 import { NotificationCenter } from "../notification/NotificationCenter";
+import { CompanyCover } from "../public/CompanyCover";
+import { CompanyLogo } from "../public/CompanyLogo";
 import { getCompanyCover, getCompanyLogo } from "../public/companyData";
 import { DashboardPanel } from "../system/DashboardPanel";
 import { CompanyAccessPanel, CompanyMember } from "./CompanyAccessPanel";
@@ -116,8 +119,10 @@ function resolveRecruiterView(
 ): {
   view: RecruiterView;
   jobId: string | null;
+  isNewJob?: boolean;
   settingsTab?: "profile" | "security";
   companyTab?: "brand" | "legal" | "team";
+  openCompanyModal?: boolean;
 } {
   const searchParams = new URLSearchParams(search);
   const queryView = searchParams.get("recruiter");
@@ -131,17 +136,25 @@ function resolveRecruiterView(
   if (normalized === routes.recruiter.applications) {
     return { view: "candidates", jobId: null };
   }
-  if (normalized === routes.recruiter.jobs || normalized === routes.recruiter.newJob) {
-    return { view: "jobs", jobId: null };
+  if (normalized === routes.recruiter.jobs) {
+    return { view: "jobs", jobId: null, isNewJob: false };
+  }
+  if (normalized === routes.recruiter.newJob) {
+    return { view: "jobs", jobId: null, isNewJob: true };
   }
   if (normalized.startsWith(`${routes.recruiter.jobs}/`)) {
-    return { view: "jobs", jobId: normalized.slice(`${routes.recruiter.jobs}/`.length) || null };
+    return { view: "jobs", jobId: decodeURIComponent(normalized.slice(`${routes.recruiter.jobs}/`.length)) || null, isNewJob: false };
   }
   if (normalized === routes.recruiter.company) {
     const tabParam = searchParams.get("tab");
-    const companyTab =
+    const explicitCompanyTab =
       tabParam === "brand" || tabParam === "legal" || tabParam === "team" ? tabParam : undefined;
-    return { view: "company", jobId: null, companyTab };
+    return {
+      view: "company",
+      jobId: null,
+      companyTab: explicitCompanyTab ?? "brand",
+      openCompanyModal: Boolean(explicitCompanyTab)
+    };
   }
   if (normalized === "/recruiter/profile") return { view: "settings", jobId: null, settingsTab: "profile" };
   if (normalized === routes.recruiter.notifications) return { view: "notifications", jobId: null };
@@ -150,25 +163,10 @@ function resolveRecruiterView(
 }
 
 const inputClass =
-  "mt-1 h-10 w-full rounded-xl border border-border-strong bg-white px-3 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:bg-slate-50 disabled:text-ink-500";
+  "mt-1 h-10 w-full rounded-md border border-border-strong bg-white px-3 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:bg-slate-50 disabled:text-ink-500";
 const textareaClass =
-  "mt-1 w-full rounded-xl border border-border-strong bg-white p-3 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:bg-slate-50 disabled:text-ink-500 leading-relaxed";
+  "mt-1 w-full rounded-md border border-border-strong bg-white p-3 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:bg-slate-50 disabled:text-ink-500 leading-relaxed";
 const labelClass = "block text-xs font-semibold text-ink-700";
-
-function CompanyLogo({ src, alt, className }: { src: string; alt: string; className?: string }) {
-  const [failedSrc, setFailedSrc] = useState<string | null>(null);
-  const effectiveSrc = failedSrc === src ? "/logos/smartrecruitment.svg" : src;
-  return (
-    <img
-      src={effectiveSrc}
-      alt={alt}
-      className={className}
-      onError={() => {
-        if (src !== "/logos/smartrecruitment.svg") setFailedSrc(src);
-      }}
-    />
-  );
-}
 
 function slugifyCompanyName(value: string): string {
   return value
@@ -206,6 +204,10 @@ function RecruiterWorkspaceContent({ session, onLogout }: RecruiterWorkspaceProp
   const [selectedDashboardJobId, setSelectedDashboardJobId] = useState<string | null>(resolved.jobId);
   const [companyTab, setCompanyTab] = useState<"brand" | "legal" | "team">(resolved.companyTab ?? "brand");
   const [settingsTab, setSettingsTab] = useState<"profile" | "security">(resolved.settingsTab ?? "profile");
+  const [companyModalOpen, setCompanyModalOpen] = useState<boolean>(Boolean(resolved.openCompanyModal));
+  const [companySearch, setCompanySearch] = useState("");
+  const [companyStatusFilter, setCompanyStatusFilter] = useState<"ALL" | "ACTIVE" | "PENDING" | "SUSPENDED" | "CLOSED">("ALL");
+  const [visibleCompanyCount, setVisibleCompanyCount] = useState(24);
 
   const activeView = resolved.view;
 
@@ -214,6 +216,16 @@ function RecruiterWorkspaceContent({ session, onLogout }: RecruiterWorkspaceProp
       setCompanyTab(resolved.companyTab);
     }
   }, [resolved.companyTab]);
+
+  useEffect(() => {
+    if (resolved.openCompanyModal) {
+      setCompanyModalOpen(true);
+    }
+  }, [resolved.openCompanyModal]);
+
+  useEffect(() => {
+    setVisibleCompanyCount(24);
+  }, [companySearch, companyStatusFilter]);
 
   useEffect(() => {
     if (resolved.settingsTab) {
@@ -468,7 +480,7 @@ function RecruiterWorkspaceContent({ session, onLogout }: RecruiterWorkspaceProp
     );
   }
 
-  const brandLabel = BRAND_CONFIG.name ? `${BRAND_CONFIG.name} · ATS` : "Recruiter ATS";
+  const brandLabel = BRAND_CONFIG.name ? `${BRAND_CONFIG.name} · Tuyển dụng` : BRAND_CONFIG.defaultRecruiterLabel;
 
   return (
     <WorkspaceShell
@@ -529,7 +541,11 @@ function RecruiterWorkspaceContent({ session, onLogout }: RecruiterWorkspaceProp
                 "rounded-md px-3.5 py-1.5 transition-colors cursor-pointer",
                 settingsTab === "profile" ? "bg-slate-100 text-ink-900" : "text-ink-600 hover:text-ink-900"
               )}
-              onClick={() => setSettingsTab("profile")}
+              onClick={() => {
+                if (navigate("/recruiter/profile", { replace: true })) {
+                  setSettingsTab("profile");
+                }
+              }}
             >
               Hồ sơ recruiter
             </button>
@@ -539,7 +555,11 @@ function RecruiterWorkspaceContent({ session, onLogout }: RecruiterWorkspaceProp
                 "rounded-md px-3.5 py-1.5 transition-colors cursor-pointer",
                 settingsTab === "security" ? "bg-slate-100 text-ink-900" : "text-ink-600 hover:text-ink-900"
               )}
-              onClick={() => setSettingsTab("security")}
+              onClick={() => {
+                if (navigate(routes.recruiter.security, { replace: true })) {
+                  setSettingsTab("security");
+                }
+              }}
             >
               Bảo mật tài khoản
             </button>
@@ -607,93 +627,250 @@ function RecruiterWorkspaceContent({ session, onLogout }: RecruiterWorkspaceProp
         </div>
       )}
 
-      {activeView === "company" && (
-        <div className="grid gap-6 lg:grid-cols-[300px_1fr] items-start">
-          <aside className="space-y-4">
-            <Card padding="md" className="space-y-4">
-              <div className="flex items-center justify-between gap-2 border-b border-border-subtle pb-3">
+      {activeView === "company" && (() => {
+        const normalizedQuery = companySearch.trim().toLowerCase();
+        const filteredCompanies = companies.filter((company) => {
+          if (companyStatusFilter !== "ALL" && company.status !== companyStatusFilter) {
+            return false;
+          }
+          if (!normalizedQuery) return true;
+          return (
+            company.displayName.toLowerCase().includes(normalizedQuery) ||
+            company.legalName.toLowerCase().includes(normalizedQuery) ||
+            company.slug.toLowerCase().includes(normalizedQuery)
+          );
+        });
+        const visibleCompanies = filteredCompanies.slice(0, visibleCompanyCount);
+        const remainingCompanies = filteredCompanies.length - visibleCompanies.length;
+
+        return (
+        <div className="space-y-5">
+          <Card padding="md" className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-brand-700 m-0">Enterprise</p>
-                  <h3 className="text-base font-bold text-ink-900 m-0 mt-0.5">Công ty của tôi</h3>
+                  <h3 className="text-lg font-bold text-ink-900 m-0">Công ty của tôi</h3>
                 </div>
-                <Badge tone="neutral">{companies.length} công ty</Badge>
+                <Badge tone="neutral">
+                  {normalizedQuery || companyStatusFilter !== "ALL"
+                    ? `${filteredCompanies.length}/${companies.length} công ty`
+                    : `${companies.length} công ty`}
+                </Badge>
               </div>
 
-              {companies.length === 0 ? (
-                <p className="text-xs text-ink-500 m-0">Chưa có công ty. Tạo công ty đầu tiên ở bên cạnh.</p>
-              ) : (
-                <div className="space-y-2">
-                  {companies.map((company) => {
-                    const selected = company.companyId === selectedCompanyId;
-                    return (
-                      <button
-                        key={company.companyId}
-                        type="button"
-                        disabled={!!uploadingCompanyImage || savingCompany}
-                        onClick={() => selectCompany(company)}
-                        className={cn(
-                          "flex w-full items-center justify-between gap-2 rounded-xl border p-2.5 text-left transition-colors cursor-pointer",
-                          selected
-                            ? "border-brand-600 bg-brand-50/60"
-                            : "border-border-subtle bg-white hover:border-border-strong hover:bg-slate-50"
-                        )}
-                      >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <CompanyLogo
-                            src={getCompanyLogo(company.slug, company.displayName, company.logoUrl)}
-                            alt={company.displayName}
-                            className="h-9 w-9 shrink-0 rounded-lg border border-border-subtle object-contain bg-white p-1"
-                          />
-                          <div className="min-w-0">
-                            <strong className="block text-sm font-semibold text-ink-900 truncate">
-                              {company.displayName}
-                            </strong>
-                            <small className="block text-xs text-ink-500 truncate">{company.slug}</small>
-                          </div>
-                        </div>
-                        <Badge
-                          tone={
-                            company.status === "ACTIVE"
-                              ? "success"
-                              : company.status === "PENDING"
-                                ? "warning"
-                                : "danger"
-                          }
-                        >
-                          {company.status === "ACTIVE"
-                            ? "Đang hoạt động"
-                            : company.status === "PENDING"
-                              ? "Chờ duyệt"
-                              : company.status === "SUSPENDED"
-                                ? "Tạm ngưng"
-                                : "Đã đóng"}
-                        </Badge>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-
               <Button
-                variant="secondary"
+                variant="primary"
                 size="sm"
-                className="w-full"
                 disabled={!!uploadingCompanyImage || savingCompany}
                 onClick={() => {
                   clearFeedback();
                   setSelectedCompanyId(null);
                   setCompanyForm(emptyCompany);
                   setSlugEdited(false);
+                  setCompanyTab("brand");
+                  setCompanyModalOpen(true);
                 }}
               >
                 + Tạo công ty mới
               </Button>
-            </Card>
-          </aside>
+            </div>
 
-          <div className="space-y-5">
+            {companies.length > 0 && (
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                  <SearchIcon
+                    size={16}
+                    className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-400"
+                  />
+                  <input
+                    type="search"
+                    aria-label="Tìm kiếm công ty"
+                    value={companySearch}
+                    onChange={(event) => setCompanySearch(event.target.value)}
+                    placeholder="Tìm theo tên công ty, tên pháp lý hoặc slug…"
+                    className={cn(inputClass, "pl-9")}
+                  />
+                </div>
+                <select
+                  aria-label="Lọc theo trạng thái công ty"
+                  value={companyStatusFilter}
+                  onChange={(event) =>
+                    setCompanyStatusFilter(event.target.value as "ALL" | "ACTIVE" | "PENDING" | "SUSPENDED" | "CLOSED")
+                  }
+                  className={cn(inputClass, "sm:w-52")}
+                >
+                  <option value="ALL">Tất cả trạng thái</option>
+                  <option value="ACTIVE">Đang hoạt động</option>
+                  <option value="PENDING">Chờ duyệt</option>
+                  <option value="SUSPENDED">Tạm ngưng</option>
+                  <option value="CLOSED">Đã đóng</option>
+                </select>
+              </div>
+            )}
+          </Card>
+
+          {companies.length === 0 ? (
+            <Card padding="lg" className="text-center space-y-3">
+              <p className="text-sm text-ink-600 m-0">Chưa có công ty nào. Tạo công ty đầu tiên để bắt đầu tuyển dụng.</p>
+              <div>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  disabled={!!uploadingCompanyImage || savingCompany}
+                  onClick={() => {
+                    clearFeedback();
+                    setSelectedCompanyId(null);
+                    setCompanyForm(emptyCompany);
+                    setSlugEdited(false);
+                    setCompanyTab("brand");
+                    setCompanyModalOpen(true);
+                  }}
+                >
+                  + Tạo công ty mới
+                </Button>
+              </div>
+            </Card>
+          ) : filteredCompanies.length === 0 ? (
+            <Card padding="lg" className="text-center space-y-3">
+              <p className="text-sm text-ink-600 m-0">
+                Không tìm thấy công ty nào khớp với bộ lọc hiện tại.
+              </p>
+              <div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    setCompanySearch("");
+                    setCompanyStatusFilter("ALL");
+                  }}
+                >
+                  Xóa bộ lọc
+                </Button>
+              </div>
+            </Card>
+          ) : (
+            <>
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {visibleCompanies.map((company) => {
+                  const selected = company.companyId === selectedCompanyId && companyModalOpen;
+                  const coverSrc = getCompanyCover(company.slug, company.displayName, company.coverImageUrl);
+                  const logoSrc = getCompanyLogo(company.slug, company.displayName, company.logoUrl);
+                  return (
+                    <button
+                      key={company.companyId}
+                      type="button"
+                      disabled={!!uploadingCompanyImage || savingCompany}
+                      onClick={() => {
+                        selectCompany(company);
+                        setCompanyModalOpen(true);
+                      }}
+                      className={cn(
+                        "group flex flex-col overflow-hidden rounded-lg border bg-white text-left transition-all cursor-pointer shadow-xs hover:shadow-card hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed",
+                        selected ? "border-brand-600 ring-2 ring-brand-500/20" : "border-border-subtle hover:border-brand-300"
+                      )}
+                    >
+                      <CompanyCover
+                        src={coverSrc}
+                        name={company.displayName}
+                        className="h-28 w-full shrink-0"
+                      >
+                        <div className="absolute right-3 top-3 flex items-center gap-1.5">
+                          <Badge
+                            tone={
+                              company.status === "ACTIVE"
+                                ? "success"
+                                : company.status === "PENDING"
+                                  ? "warning"
+                                  : "danger"
+                            }
+                          >
+                            {company.status === "ACTIVE"
+                              ? "Đang hoạt động"
+                              : company.status === "PENDING"
+                                ? "Chờ duyệt"
+                                : company.status === "SUSPENDED"
+                                  ? "Tạm ngưng"
+                                  : "Đã đóng"}
+                          </Badge>
+                        </div>
+                      </CompanyCover>
+
+                      <div className="flex flex-1 flex-col justify-between p-4 pt-0">
+                        <div>
+                          <div className="-mt-7 mb-3 flex items-end justify-between gap-2 relative z-10">
+                            <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg border-2 border-white bg-white p-1 shadow-card">
+                              <CompanyLogo
+                                src={logoSrc}
+                                name={company.displayName}
+                                alt={company.displayName}
+                                className="h-full w-full rounded-lg border-0"
+                                textClassName="text-sm font-bold tracking-tight"
+                              />
+                            </div>
+                            <Badge
+                              tone={
+                                company.verificationStatus === "VERIFIED"
+                                  ? "brand"
+                                  : company.verificationStatus === "REJECTED"
+                                    ? "danger"
+                                    : "neutral"
+                              }
+                            >
+                              {company.verificationStatus === "VERIFIED"
+                                ? "Đã xác minh"
+                                : company.verificationStatus === "PENDING"
+                                  ? "Chờ xác minh"
+                                  : company.verificationStatus === "REJECTED"
+                                    ? "Từ chối"
+                                    : "Chưa xác minh"}
+                            </Badge>
+                          </div>
+
+                          <h4 className="text-sm font-bold text-ink-900 leading-snug m-0 line-clamp-2 group-hover:text-brand-700 transition-colors">
+                            {company.displayName}
+                          </h4>
+                          <p className="text-xs text-ink-500 mt-1 mb-0 truncate">{company.slug}</p>
+                        </div>
+
+                        <div className="mt-3 flex items-center justify-between gap-2 border-t border-border-subtle pt-2.5 text-xs text-ink-500">
+                          <span className="truncate">
+                            {company.sizeRange ? `${company.sizeRange} nhân sự` : company.websiteUrl || "Chưa cập nhật website"}
+                          </span>
+                          <span className="shrink-0 font-semibold text-brand-700 opacity-85 group-hover:opacity-100">
+                            Chi tiết →
+                          </span>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {remainingCompanies > 0 && (
+                <div className="flex justify-center pt-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setVisibleCompanyCount((count) => count + 24)}
+                  >
+                    Xem thêm {Math.min(24, remainingCompanies)} công ty (còn {remainingCompanies})
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+
+          <Modal
+            open={companyModalOpen}
+            onClose={() => setCompanyModalOpen(false)}
+            closeDisabled={!!uploadingCompanyImage || savingCompany}
+            size="xl"
+            eyebrow={!selectedCompanyId ? "Hồ sơ doanh nghiệp" : "Chi tiết công ty"}
+            title={selectedCompanyId ? (selectedCompany?.displayName || "Cập nhật công ty") : "Tạo công ty mới"}
+          >
+            <div className="space-y-5 pt-4">
             {selectedCompanyId && (
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border-subtle bg-white px-4 py-3">
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border-subtle bg-white px-4 py-3">
                 <div className="flex flex-wrap items-center gap-2 text-xs">
                   <Badge
                     tone={
@@ -748,7 +925,11 @@ function RecruiterWorkspaceContent({ session, onLogout }: RecruiterWorkspaceProp
                         "rounded-md px-3 py-1.5 transition-colors cursor-pointer",
                         companyTab === tabKey ? "bg-white text-ink-900 shadow-xs" : "text-ink-600 hover:text-ink-900"
                       )}
-                      onClick={() => setCompanyTab(tabKey)}
+                      onClick={() => {
+                        if (navigate(`${routes.recruiter.company}?tab=${tabKey}`, { replace: true })) {
+                          setCompanyTab(tabKey);
+                        }
+                      }}
                     >
                       {tabLabel}
                     </button>
@@ -779,14 +960,14 @@ function RecruiterWorkspaceContent({ session, onLogout }: RecruiterWorkspaceProp
                   <fieldset className="border-0 p-0 m-0 min-w-0 space-y-5" disabled={!canManageCompany || !!uploadingCompanyImage}>
                     {(!selectedCompanyId || companyTab === "brand") && (
                       <>
-                        <div className="overflow-hidden rounded-2xl border border-border-subtle bg-white">
+                        <div className="overflow-hidden rounded-lg border border-border-subtle bg-white">
                           <div
                             className="relative flex flex-wrap items-end gap-4 bg-slate-900 bg-cover bg-center p-5 min-h-[140px]"
                             style={{
                               backgroundImage: `linear-gradient(180deg, rgba(15, 23, 42, 0.28) 0%, rgba(15, 23, 42, 0.88) 100%), url("${coverPreview}")`
                             }}
                           >
-                            <div className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-white/20 bg-white p-1.5 shadow-card">
+                            <div className="h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-white/20 bg-white p-1.5 shadow-card">
                               <CompanyLogo
                                 src={logoPreview}
                                 alt={companyForm.displayName || "Company Logo"}
@@ -806,8 +987,7 @@ function RecruiterWorkspaceContent({ session, onLogout }: RecruiterWorkspaceProp
                               </p>
                             </div>
                           </div>
-                          <div className="flex items-start gap-2.5 border-t border-border-subtle bg-slate-50 px-4 py-3 text-xs text-ink-700">
-                            <span aria-hidden="true">💡</span>
+                          <div className="border-t border-border-subtle bg-slate-50 px-4 py-3 text-xs text-ink-700">
                             <span className="leading-relaxed">
                               <strong>Bộ nhận diện thương hiệu:</strong> Logo và ảnh bìa này sẽ tự động xuất hiện đồng bộ trên trang thông tin công ty và{" "}
                               <strong>toàn bộ bài đăng tuyển dụng (JD)</strong> của doanh nghiệp. Bạn không cần tải lại ảnh khi tạo từng JD.
@@ -815,7 +995,7 @@ function RecruiterWorkspaceContent({ session, onLogout }: RecruiterWorkspaceProp
                           </div>
                         </div>
 
-                        <div className="space-y-3 rounded-xl border border-border-subtle bg-slate-50/60 p-4">
+                        <div className="space-y-3 rounded-lg border border-border-subtle bg-slate-50/60 p-4">
                           <div className="grid gap-4 sm:grid-cols-2">
                             {([["logo", "Tải logo lên"], ["cover", "Tải ảnh bìa lên"]] as const).map(([kind, label]) => {
                               const disabled = !selectedCompanyId || !canManageCompany || !!uploadingCompanyImage || savingCompany;
@@ -825,7 +1005,7 @@ function RecruiterWorkspaceContent({ session, onLogout }: RecruiterWorkspaceProp
                                   <label
                                     data-testid={`company-image-drop-${kind}`}
                                     className={cn(
-                                      "flex min-h-[190px] flex-col items-center gap-3 rounded-xl border-2 border-dashed p-3 text-center transition-colors focus-within:ring-2 focus-within:ring-brand-500/30",
+                                      "flex min-h-[190px] flex-col items-center gap-3 rounded-lg border-2 border-dashed p-3 text-center transition-colors focus-within:ring-2 focus-within:ring-brand-500/30",
                                       disabled ? "cursor-not-allowed border-border-subtle bg-slate-100 opacity-70" : "cursor-pointer border-border-strong bg-white hover:border-brand-500 hover:bg-brand-50/30",
                                       draggingCompanyImage === kind && !disabled && "border-brand-600 bg-brand-50"
                                     )}
@@ -1092,17 +1272,30 @@ function RecruiterWorkspaceContent({ session, onLogout }: RecruiterWorkspaceProp
                 }
               />
             )}
-          </div>
+            </div>
+          </Modal>
         </div>
-      )}
+        );
+      })()}
 
       {activeView === "jobs" && (
         <RecruiterJobBoard
           session={session}
           companyId={selectedCompanyId}
+          companyName={selectedCompany?.displayName ?? null}
+          companies={companies.map((company) => ({
+            companyId: company.companyId,
+            displayName: company.displayName,
+            status: company.status
+          }))}
+          onSelectCompany={(nextCompanyId) => {
+            const target = companies.find((company) => company.companyId === nextCompanyId);
+            if (target) selectCompany(target);
+          }}
           companyStatus={companies.find((company) => company.companyId === selectedCompanyId)?.status ?? "PENDING"}
           canRecruit={canRecruit}
           initialJobId={resolved.jobId ?? selectedDashboardJobId}
+          initialNewJob={Boolean(resolved.isNewJob)}
         />
       )}
       {activeView === "candidates" && (
