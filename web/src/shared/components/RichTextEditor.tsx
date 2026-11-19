@@ -80,7 +80,7 @@ export function RichTextEditor({
 
   return (
     <div
-      className={`overflow-hidden rounded-xl border border-border-subtle ${
+      className={`overflow-hidden rounded-lg border border-border-subtle ${
         disabled ? "bg-slate-50 text-ink-500" : "bg-white focus-within:border-brand-600 focus-within:ring-2 focus-within:ring-brand-500/20"
       }`}
     >

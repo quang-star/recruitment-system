@@ -93,7 +93,7 @@ export function CvPreviewModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="cv-preview-modal-title"
-        className="w-full max-w-5xl rounded-2xl border border-border-subtle bg-white shadow-dialog overflow-hidden outline-none flex flex-col max-h-[92vh]"
+        className="w-full max-w-5xl rounded-lg border border-border-subtle bg-white shadow-dialog overflow-hidden outline-none flex flex-col max-h-[92vh]"
       >
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle px-5 py-4 bg-white">
           <div className="min-w-0">
@@ -164,7 +164,7 @@ export function CvPreviewModal({
             <iframe
               src={displaySrc}
               title={`Xem trước CV: ${resolvedFilename}`}
-              className="w-full h-[72vh] rounded-xl border border-border-subtle bg-white"
+              className="w-full h-[72vh] rounded-lg border border-border-subtle bg-white"
             />
           )}
         </div>

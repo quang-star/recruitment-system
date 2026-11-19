@@ -105,10 +105,10 @@ def load_observations(path: Path) -> tuple[list[dict], list[dict]]:
 
 
 def company_spec(employer: str) -> dict:
-    name = f'{employer} (Demo)'
-    return {'legalName': name, 'displayName': name, 'slug': 'demo-observed-' + _hash(_key(employer)),
+    return {'legalName': employer, 'displayName': employer, 'slug': 'demo-observed-' + _hash(_key(employer)),
             'description': 'Hồ sơ demo từ tên nhà tuyển dụng quan sát được; chưa xác minh pháp nhân.',
-            'countryCode': 'VN'}
+            'countryCode': 'VN',
+            'coverImageUrl': '/companies/photos/workplace.webp'}
 
 
 def job_spec(item: dict, unknown_industry_id: str) -> dict:
@@ -163,8 +163,7 @@ def seed(client: Any, token: str, records: list[dict], industry_id: str, *, publ
         if len(matches) > 1:
             raise ValueError('Duplicate demo company slug')
         company = matches[0] if matches else client.json('POST', '/api/v2/companies', token=token, payload=spec)
-        if matches and (company.get('displayName') != spec['displayName'] or
-                        company.get('description') != spec['description']):
+        if matches and company.get('description') != spec['description']:
             raise ValueError('Existing demo company differs from fixture')
         if not matches:
             owned.append(company)

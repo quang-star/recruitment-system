@@ -40,7 +40,7 @@ export function ReasonDialog({ confirmLabel, description, onCancel, onConfirm, o
             value={reason}
             onChange={(event) => setReason(event.target.value)}
             placeholder="Nhập lý do rõ ràng…"
-            className="w-full rounded-xl border border-border-strong bg-white px-3.5 py-2.5 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-600 focus:outline-none"
+            className="w-full rounded-md border border-border-strong bg-white px-3.5 py-2.5 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-600 focus:outline-none"
           />
         </label>
         <div className="flex items-center justify-end gap-2.5 pt-2">

@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, ReactNode, useEffect, useState } from "react";
 import { apiRequest } from "../../shared/api/client";
 import { Badge, Button, Card, EmptyState, ErrorBanner, cn } from "../../shared/ui";
 
@@ -43,7 +43,7 @@ const statuses: Choice[] = [
 ];
 
 const fieldClass =
-  "mt-1 h-9 w-full rounded-xl border border-border-strong bg-white px-3 text-xs font-medium text-ink-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20";
+  "mt-1 h-9 w-full rounded-md border border-border-strong bg-white px-3 text-xs font-medium text-ink-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20";
 
 export function PendingSkillQueue({
   accessToken,
@@ -52,7 +52,10 @@ export function PendingSkillQueue({
   selected,
   onSelect,
   types,
-  categories
+  categories,
+  headerBadges,
+  headerActions,
+  statusContent
 }: {
   accessToken: string;
   catalogVersion: number;
@@ -61,6 +64,9 @@ export function PendingSkillQueue({
   onSelect: (id: string) => Promise<void>;
   types: Choice[];
   categories: Choice[];
+  headerBadges?: ReactNode;
+  headerActions?: ReactNode;
+  statusContent?: ReactNode;
 }) {
   const [filters, setFilters] = useState(initialFilters);
   const [search, setSearch] = useState("");
@@ -95,16 +101,21 @@ export function PendingSkillQueue({
   return (
     <Card as="section" padding="md" className="space-y-4" aria-label="Hàng chờ kỹ năng">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle pb-3">
-        <div>
+        <div className="flex flex-wrap items-center gap-2">
           <h3 className="text-base font-bold text-ink-900 m-0">Hàng chờ kỹ năng</h3>
+          {headerBadges}
         </div>
-        <Button variant="secondary" size="sm" onClick={() => setAttempt((value) => value + 1)}>
-          Làm mới hàng chờ
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="secondary" size="sm" onClick={() => setAttempt((value) => value + 1)}>
+            Làm mới hàng chờ
+          </Button>
+          {headerActions}
+        </div>
       </div>
+      {statusContent}
 
       <form
-        className="space-y-3 rounded-xl border border-border-subtle bg-slate-50/70 p-3.5"
+        className="space-y-3 rounded-lg border border-border-subtle bg-slate-50/70 p-3.5"
         onSubmit={(event: FormEvent) => {
           event.preventDefault();
           filter("q", search.trim());
@@ -126,7 +137,7 @@ export function PendingSkillQueue({
           </Button>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5">
           <label className="block text-xs font-semibold text-ink-700">
             Trạng thái đề xuất
             <select
@@ -191,7 +202,7 @@ export function PendingSkillQueue({
             </select>
           </label>
 
-          <label className="block col-span-2 lg:col-span-4 text-xs font-semibold text-ink-700">
+          <label className="block col-span-2 md:col-span-1 text-xs font-semibold text-ink-700">
             Sắp xếp đề xuất
             <select
               aria-label="Sắp xếp đề xuất"
@@ -250,7 +261,7 @@ export function PendingSkillQueue({
           {result.catalogCapacity?.reached && (
             <p
               role="status"
-              className="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs text-amber-900 m-0"
+              className="rounded-md border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs text-amber-900 m-0"
             >
               Danh mục đã đạt giới hạn {result.catalogCapacity.used}/{result.catalogCapacity.limit} kỹ năng.
               {result.catalogCapacity.unmappedTermsMayBeSkipped
@@ -260,34 +271,16 @@ export function PendingSkillQueue({
             </p>
           )}
 
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-xs font-semibold text-ink-600 m-0 tabular-nums-kpi">
-              {result.totalElements} kỹ năng · Trang {result.page + 1}
-            </p>
-            <div className="flex items-center gap-2">
-              <Button variant="secondary" size="sm" disabled={result.page === 0} onClick={() => setPage((v) => v - 1)}>
-                Trang đề xuất trước
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={result.page >= 100000 || (result.page + 1) * result.size >= result.totalElements}
-                onClick={() => setPage((v) => v + 1)}
-              >
-                Trang đề xuất sau
-              </Button>
-            </div>
-          </div>
-
           {result.items.length ? (
-            <div className="max-h-[540px] overflow-auto rounded-xl border border-border-subtle bg-white">
+            <div className="overflow-x-auto rounded-lg border border-border-subtle bg-white">
               <table className="w-full border-collapse text-left text-sm">
                 <caption className="sr-only">Đề xuất kỹ năng</caption>
-                <thead className="sticky top-0 z-10 bg-slate-50 shadow-[0_1px_0_0_var(--color-border-subtle)]">
+                <thead className="bg-slate-50 border-b border-border-subtle">
                   <tr className="text-xs font-semibold uppercase tracking-wider text-ink-500">
                     <th className="px-4 py-2.5">Thuật ngữ</th>
                     <th className="px-3 py-2.5">Trạng thái</th>
                     <th className="px-4 py-2.5">Ghi nhận / nguồn</th>
+                    <th className="px-4 py-2.5 text-right">Thao tác</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border-subtle">
@@ -339,6 +332,17 @@ export function PendingSkillQueue({
                         <td className="px-4 py-3 align-top text-xs text-ink-700 tabular-nums-kpi">
                           {item.occurrenceCount} lần ghi nhận · {item.sourceCount} phiên bản nguồn
                         </td>
+                        <td className="px-4 py-3 align-top text-right whitespace-nowrap">
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            disabled={disabled}
+                            onClick={() => void onSelect(item.skillId)}
+                          >
+                            Chi tiết
+                          </Button>
+                        </td>
                       </tr>
                     );
                   })}
@@ -348,6 +352,25 @@ export function PendingSkillQueue({
           ) : (
             <EmptyState title="Không có kỹ năng phù hợp bộ lọc." />
           )}
+
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border-subtle/80 pt-4">
+            <p className="text-xs font-semibold text-ink-600 m-0 tabular-nums-kpi">
+              {result.totalElements} kỹ năng · Trang {result.page + 1}
+            </p>
+            <div className="flex items-center gap-2">
+              <Button variant="secondary" size="sm" disabled={result.page === 0} onClick={() => setPage((v) => v - 1)}>
+                Trang đề xuất trước
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={result.page >= 100000 || (result.page + 1) * result.size >= result.totalElements}
+                onClick={() => setPage((v) => v + 1)}
+              >
+                Trang đề xuất sau
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </Card>
@@ -507,7 +530,7 @@ export function PendingSkillSources({
               {result.items.map((item) => (
                 <li
                   key={item.occurrenceId}
-                  className="rounded-xl border border-border-subtle bg-slate-50/70 p-4 space-y-2 break-words"
+                  className="rounded-lg border border-border-subtle bg-slate-50/70 p-4 space-y-2 break-words"
                 >
                   <strong className="block text-sm font-bold text-ink-900">{item.rawTerm}</strong>
                   <p className="text-xs font-medium text-ink-600 m-0">

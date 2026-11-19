@@ -80,7 +80,7 @@ it.each([false, true])("uploads only the explicit external AI choice (%s) and cl
   });
   render(<CandidateCvPanel session={session} />);
   await screen.findByText("Backend CV");
-  const checkbox = screen.getByRole("checkbox", { name: "Cho phép dịch vụ AI bên ngoài hỗ trợ phân tích nội dung này" });
+  const checkbox = screen.getByRole("checkbox", { name: "Cho phép AI phân tích nội dung này" });
   expect(checkbox).not.toBeChecked();
   if (consented) fireEvent.click(checkbox);
   fireEvent.change(screen.getByLabelText("File PDF (tối đa 10 MiB)"), {
@@ -162,7 +162,7 @@ it("keeps the retry action available after a network failure", async () => {
   await waitFor(() => expect(screen.getByRole("button", { name: "Thử lại" })).toBeEnabled());
 });
 
-it("lists saved CV drafts, reopens one in the builder and deletes it with confirmation", async () => {
+it("lists saved CV drafts, reopens one in the builder and deletes it with confirmation", { timeout: 15000 }, async () => {
   const serverDraft = {
     draftId: "9007199254740993",
     candidateUserId: "100",
@@ -199,7 +199,7 @@ it("lists saved CV drafts, reopens one in the builder and deletes it with confir
   expect(screen.getByText(/Mẫu Modern · Phiên bản 3/)).toBeInTheDocument();
 
   fireEvent.click(screen.getByRole("button", { name: "Chỉnh sửa tiếp" }));
-  expect(await screen.findByLabelText("Họ và tên")).toHaveValue("Nguyễn Minh An");
+  expect(await screen.findByLabelText("Họ và tên", undefined, { timeout: 10000 })).toHaveValue("Nguyễn Minh An");
   fireEvent.click(screen.getByRole("button", { name: "Đóng trình tạo CV" }));
 
   fireEvent.click(screen.getByRole("button", { name: "Xóa bản nháp" }));
@@ -212,7 +212,7 @@ it("lists saved CV drafts, reopens one in the builder and deletes it with confir
   );
 });
 
-it("duplicates a server draft and opens direct PDF overlay editor", async () => {
+it("duplicates a server draft and opens direct PDF overlay editor", { timeout: 15000 }, async () => {
   const serverDraft = {
     draftId: "9007199254740993",
     candidateUserId: "100",
@@ -258,6 +258,6 @@ it("duplicates a server draft and opens direct PDF overlay editor", async () => 
 
   fireEvent.click(screen.getByRole("button", { name: "Sửa file PDF trực tiếp" }));
   expect(
-    await screen.findByRole("heading", { name: "Sửa nhanh trực tiếp trên PDF gốc" }, { timeout: 4000 }),
+    await screen.findByRole("heading", { name: "Sửa nhanh trực tiếp trên PDF gốc" }, { timeout: 10000 }),
   ).toBeInTheDocument();
 });

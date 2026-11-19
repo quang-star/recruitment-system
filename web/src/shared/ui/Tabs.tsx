@@ -21,7 +21,7 @@ export function Tabs<T extends string>({ items, activeId, onChange, ariaLabel, c
       role="tablist"
       aria-label={ariaLabel}
       className={cn(
-        "inline-flex flex-wrap items-center gap-1 rounded-xl bg-slate-100 p-1 border border-border-subtle",
+        "inline-flex flex-wrap items-center gap-1 rounded-lg bg-slate-100 p-1 border border-border-subtle",
         className
       )}
     >
@@ -35,7 +35,7 @@ export function Tabs<T extends string>({ items, activeId, onChange, ariaLabel, c
             aria-selected={selected}
             onClick={() => onChange(item.id)}
             className={cn(
-              "inline-flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors cursor-pointer",
+              "inline-flex items-center gap-2 rounded-md px-3.5 py-1.5 text-sm font-medium transition-colors cursor-pointer",
               selected
                 ? "bg-white text-ink-900 shadow-xs font-semibold"
                 : "text-ink-600 hover:text-ink-900 hover:bg-white/60"
@@ -45,7 +45,7 @@ export function Tabs<T extends string>({ items, activeId, onChange, ariaLabel, c
             {item.count !== undefined && (
               <span
                 className={cn(
-                  "inline-flex items-center justify-center rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums-kpi",
+                  "inline-flex items-center justify-center rounded-sm px-1.5 py-0.5 text-xs font-semibold tabular-nums-kpi",
                   selected ? "bg-brand-50 text-brand-700" : "bg-slate-200/80 text-ink-700"
                 )}
               >

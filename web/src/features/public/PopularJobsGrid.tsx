@@ -2,7 +2,7 @@ import { BanknoteIcon, BookmarkIcon, MapPinIcon } from "../../shared/components/
 import { Card } from "../../shared/ui";
 import { CompanyLogo } from "./CompanyLogo";
 import { resolveCompanyMeta } from "./companyData";
-import { formatSalary, workModeLabel } from "./jobPresentation";
+import { formatJobLocation, formatSalary, workModeLabel } from "./jobPresentation";
 import { useSavedJobs } from "./savedJobs";
 import { PublicJob } from "./types";
 
@@ -76,7 +76,7 @@ export function PopularJobsGrid({ jobs, onSelectJob, onApplyJob }: PopularJobsGr
                   </span>
                   <span className="inline-flex items-center gap-1 text-ink-500">
                     <MapPinIcon size={13} aria-hidden="true" />
-                    <span className="truncate max-w-[120px]">{job.locationText || workModeLabel(job.workMode)}</span>
+                    <span className="truncate max-w-[120px]">{formatJobLocation(job, "short", workModeLabel(job.workMode))}</span>
                   </span>
                 </div>
                 <button

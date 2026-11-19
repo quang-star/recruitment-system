@@ -337,7 +337,7 @@ export function PdfOverlayEditor({
       >
         <div className="space-y-3 py-3">
           {/* Top toolbar */}
-          <div className="flex flex-wrap items-center justify-between gap-2.5 rounded-xl border border-border-subtle bg-slate-50 px-3.5 py-2.5">
+          <div className="flex flex-wrap items-center justify-between gap-2.5 rounded-md border border-border-subtle bg-slate-50 px-3.5 py-2.5">
             <div className="flex flex-wrap items-center gap-2">
               <label className="inline-flex h-9 cursor-pointer items-center rounded-lg border border-border-strong bg-white px-3 text-xs font-semibold text-ink-800 hover:bg-slate-100">
                 Chọn file PDF…
@@ -427,7 +427,7 @@ export function PdfOverlayEditor({
 
           <div className="grid gap-4 lg:grid-cols-[290px_minmax(0,1fr)]">
             {/* Inspector & quick layer controls */}
-            <aside className="space-y-3 rounded-xl border border-border-subtle bg-slate-50 p-3">
+            <aside className="space-y-3 rounded-lg border border-border-subtle bg-slate-50 p-3">
               <div className="space-y-2 rounded-lg border border-border-subtle bg-white p-3 text-xs">
                 <h3 className="m-0 text-xs font-bold uppercase tracking-wide text-ink-800">Thuộc tính lớp phủ</h3>
                 {!selected ? (
@@ -543,7 +543,7 @@ export function PdfOverlayEditor({
             </aside>
 
             {/* PDF Canvas + Interactive Overlay Stage */}
-            <section className="max-h-[72vh] overflow-auto rounded-xl border border-border-subtle bg-[#eef2f6] p-4">
+            <section className="max-h-[72vh] overflow-auto rounded-lg border border-border-subtle bg-[#eef2f6] p-4">
               {!sourceBytes ? (
                 <div className="flex min-h-[420px] flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-slate-300 bg-white/80 p-8 text-center">
                   <p className="m-0 text-sm font-bold text-ink-800">Chưa có file PDF nào được mở</p>

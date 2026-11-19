@@ -8,6 +8,7 @@ import { getPendingJobId, setPendingJobId } from "../../shared/pendingApplicatio
 import { EnsureRouter, routes, useSafeNavigate } from "../../shared/router";
 import { Button, ErrorBanner } from "../../shared/ui";
 import { CandidateJobsPanel } from "../candidate/CandidateJobsPanel";
+import { HomeExplorePreset } from "./HotJobsVIP";
 import { PublicAuthModal } from "./PublicAuthModal";
 import { PublicFooter } from "./PublicFooter";
 import { PublicHomeViews } from "./PublicHomeViews";
@@ -262,7 +263,8 @@ function PublicHomePageInner({ onLoginSuccess, session, candidate, children }: P
     keyword = "",
     companyId = "",
     locationQuery = "",
-    category?: JobDiscovery["categories"][number]
+    category?: JobDiscovery["categories"][number],
+    preset?: HomeExplorePreset
   ) {
     setSelectedJob(null);
     const next = new URLSearchParams();
@@ -272,6 +274,9 @@ function PublicHomePageInner({ onLoginSuccess, session, candidate, children }: P
     if (category?.industryId) next.set("industry", category.industryId);
     if (category?.specializationId) next.set("specialization", category.specializationId);
     if (category?.name) next.set("categoryName", category.name);
+    if (preset?.mode) next.set("mode", preset.mode);
+    if (preset?.sort) next.set("sort", preset.sort);
+    if (preset?.level) next.set("level", preset.level);
     const qs = next.toString();
     safeNavigate(qs ? `${routes.jobs}?${qs}` : routes.jobs);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -354,7 +359,7 @@ function PublicHomePageInner({ onLoginSuccess, session, candidate, children }: P
         {portalNotice && (
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-4">
             <div
-              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
               role="status"
             >
               <span>{portalNotice}</span>
@@ -372,7 +377,7 @@ function PublicHomePageInner({ onLoginSuccess, session, candidate, children }: P
         {applicationMessage && (
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-4">
             <div
-              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900"
               role="status"
             >
               <span>{applicationMessage}</span>

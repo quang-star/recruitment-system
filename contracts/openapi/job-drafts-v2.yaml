@@ -131,6 +131,11 @@ components:
           - string
           - 'null'
           maxLength: 300
+        province:
+          type:
+          - string
+          - 'null'
+          maxLength: 120
         countryCode:
           type:
           - string

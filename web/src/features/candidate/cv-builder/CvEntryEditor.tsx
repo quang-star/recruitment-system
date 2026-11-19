@@ -214,7 +214,7 @@ export function CvEntryEditor({
   if (embedded) return content;
 
   return (
-    <fieldset className="m-0 min-w-0 space-y-3 rounded-xl border border-border-subtle p-4">
+    <fieldset className="m-0 min-w-0 space-y-3 rounded-lg border border-border-subtle p-4">
       <legend className="px-2 text-sm font-bold text-ink-900">{label}</legend>
       {content}
     </fieldset>

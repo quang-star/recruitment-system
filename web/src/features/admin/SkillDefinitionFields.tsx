@@ -93,13 +93,13 @@ export function SkillDefinitionFields({
 
       <section
         aria-label="Quan hệ kỹ năng"
-        className="rounded-xl border border-border-subtle bg-slate-50/70 p-4 space-y-3"
+        className="rounded-lg border border-border-subtle bg-slate-50/70 p-4 space-y-3"
       >
         <h3 className="text-sm font-bold text-ink-900 m-0">Quan hệ kỹ năng</h3>
         {relations.map((relation, index) => (
           <div
             key={index}
-            className="rounded-xl border border-border-subtle bg-white p-3 grid gap-2.5 sm:grid-cols-2"
+            className="rounded-lg border border-border-subtle bg-white p-3 grid gap-2.5 sm:grid-cols-2"
           >
             <label className={labelClass}>
               Loại quan hệ {index + 1}

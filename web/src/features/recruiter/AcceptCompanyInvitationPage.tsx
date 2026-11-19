@@ -47,16 +47,9 @@ export function AcceptCompanyInvitationPage({
   return (
     <div className="min-h-screen flex items-center justify-center bg-canvas px-4 py-12">
       <Card padding="lg" className="w-full max-w-md space-y-5">
-        <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 text-white shadow-xs">
-            <CompanyIcon size={20} />
-          </span>
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-wider text-brand-700 m-0">
-              Cộng tác viên doanh nghiệp
-            </p>
-            <h1 className="text-xl font-bold text-ink-900 m-0">Lời mời tham gia công ty</h1>
-          </div>
+        <div className="flex items-center gap-2.5">
+          <CompanyIcon size={18} className="text-brand-700 shrink-0" aria-hidden="true" />
+          <h1 className="text-xl font-bold text-ink-900 m-0">Lời mời tham gia công ty</h1>
         </div>
 
         <p className="text-sm text-ink-600 m-0">
@@ -65,7 +58,7 @@ export function AcceptCompanyInvitationPage({
 
         {result && (
           <div
-            className="flex items-start gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900"
+            className="flex items-start gap-2.5 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900"
             role="status"
           >
             <CheckCircleIcon size={18} className="shrink-0 mt-0.5 text-emerald-600" />
@@ -79,7 +72,7 @@ export function AcceptCompanyInvitationPage({
           {result ? (
             <a
               href="/"
-              className="inline-flex h-10 flex-1 items-center justify-center rounded-xl bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700 transition-colors no-underline"
+              className="inline-flex h-10 flex-1 items-center justify-center rounded-md bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700 transition-colors no-underline"
             >
               Mở không gian tuyển dụng
             </a>

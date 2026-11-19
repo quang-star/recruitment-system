@@ -3,7 +3,6 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import { ApiClientError, apiRequest } from "../../shared/api/client";
 import { AuthSession, loadSession, sessionGeneration, updateSession } from "../../shared/auth/session";
 import { Badge, Button, Card, ErrorBanner } from "../../shared/ui";
-import { GoogleSignIn } from "./GoogleSignIn";
 
 type AccountSession = {
   sessionId: string;
@@ -31,7 +30,7 @@ type CurrentUserStatus = {
 type Props = { session: AuthSession; onLogout: () => void };
 
 const inputClass =
-  "mt-1.5 h-10 w-full rounded-xl border border-border-strong bg-white px-3.5 text-sm text-ink-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20";
+  "mt-1.5 h-10 w-full rounded-md border border-border-strong bg-white px-3.5 text-sm text-ink-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20";
 
 export function AccountSecurityPanel({ session, onLogout }: Props) {
   const [sessions, setSessions] = useState<AccountSession[]>([]);
@@ -47,24 +46,7 @@ export function AccountSecurityPanel({ session, onLogout }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [accountEmail, setAccountEmail] = useState<string | null>(session.email ?? null);
   const [hasPassword, setHasPassword] = useState(session.hasPassword ?? true);
-  const [googleLinked, setGoogleLinked] = useState(session.googleLinked ?? false);
-  const [accountStatusLoading, setAccountStatusLoading] = useState(
-    session.googleLinked === undefined || session.hasPassword === undefined
-  );
-
-  async function linkGoogle(credential: string, nonce: string) {
-    const generation = sessionGeneration();
-    await apiRequest<void>("/api/v2/auth/google/link", {
-      method: "POST",
-      accessToken: session.accessToken,
-      body: JSON.stringify({ credential, nonce })
-    });
-    const latest = loadSession();
-    if (latest && generation === sessionGeneration()) {
-      updateSession({ ...latest, googleLinked: true }, latest.refreshToken, generation);
-    }
-    setGoogleLinked(true);
-  }
+  const [accountStatusLoading, setAccountStatusLoading] = useState(session.hasPassword === undefined);
 
   const loadSessions = useCallback(async () => {
     setLoadingSessions(true);
@@ -89,7 +71,7 @@ export function AccountSecurityPanel({ session, onLogout }: Props) {
   useEffect(() => {
     let active = true;
     const generation = sessionGeneration();
-    if (session.googleLinked === undefined || session.hasPassword === undefined) {
+    if (session.hasPassword === undefined) {
       setAccountStatusLoading(true);
     }
     void apiRequest<CurrentUserStatus>("/api/v2/auth/me", {
@@ -102,7 +84,6 @@ export function AccountSecurityPanel({ session, onLogout }: Props) {
         const nextGoogleLinked = typeof me?.googleLinked === "boolean" ? me.googleLinked : undefined;
         if (nextEmail !== undefined) setAccountEmail(nextEmail);
         if (nextHasPassword !== undefined) setHasPassword(nextHasPassword);
-        if (nextGoogleLinked !== undefined) setGoogleLinked(nextGoogleLinked);
         const latest = loadSession();
         if (
           latest &&
@@ -131,7 +112,7 @@ export function AccountSecurityPanel({ session, onLogout }: Props) {
     return () => {
       active = false;
     };
-  }, [onLogout, session.accessToken, session.googleLinked, session.hasPassword]);
+  }, [onLogout, session.accessToken, session.hasPassword]);
 
   async function revoke(sessionId: string, isCurrent: boolean) {
     if (revokingId) return;
@@ -217,16 +198,12 @@ export function AccountSecurityPanel({ session, onLogout }: Props) {
 
   return (
     <div className="space-y-6" aria-labelledby="account-security-title">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-        <Card as="section" padding="lg" className="space-y-5">
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-wider text-brand-700 m-0">
-              Account security
-            </p>
-            <h3 id="account-security-title" className="text-lg font-bold text-ink-900 m-0 mt-0.5">
-              Mật khẩu & phiên đăng nhập
-            </h3>
-          </div>
+      <Card as="section" padding="lg" className="space-y-5">
+        <div>
+          <h3 id="account-security-title" className="text-lg font-bold text-ink-900 m-0">
+            Mật khẩu & phiên đăng nhập
+          </h3>
+        </div>
 
           {accountStatusLoading ? (
             <p className="text-sm text-ink-500 m-0">Đang kiểm tra phương thức đăng nhập…</p>
@@ -278,7 +255,7 @@ export function AccountSecurityPanel({ session, onLogout }: Props) {
             </form>
           ) : (
             <div className="space-y-4">
-              <div className="rounded-xl border border-sky-200 bg-sky-50/70 p-4 space-y-2">
+              <div className="rounded-lg border border-sky-200 bg-sky-50/70 p-4 space-y-2">
                 <Badge tone="info">Chưa đặt mật khẩu riêng</Badge>
                 <p className="text-sm text-ink-800 m-0 leading-relaxed">
                   Tài khoản này hiện đăng nhập bằng Google và chưa có mật khẩu riêng.
@@ -301,7 +278,7 @@ export function AccountSecurityPanel({ session, onLogout }: Props) {
                   </Button>
                   {passwordSetupMessage && (
                     <p
-                      className="rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-sm text-emerald-900 m-0"
+                      className="rounded-md border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-sm text-emerald-900 m-0"
                       role="status"
                     >
                       {passwordSetupMessage}
@@ -312,44 +289,6 @@ export function AccountSecurityPanel({ session, onLogout }: Props) {
             </div>
           )}
         </Card>
-
-        <Card as="section" padding="lg" className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-lg font-bold text-ink-900 m-0">Liên kết Google</h3>
-            {!accountStatusLoading && (
-              <Badge tone={googleLinked ? "success" : "neutral"}>
-                {googleLinked ? "Đã liên kết" : "Chưa liên kết"}
-              </Badge>
-            )}
-          </div>
-          {accountStatusLoading ? (
-            <p className="text-sm text-ink-500 m-0">Đang kiểm tra trạng thái liên kết…</p>
-          ) : googleLinked ? (
-            <div
-              className="rounded-xl border border-emerald-200 bg-emerald-50/70 px-4 py-3.5 space-y-1.5"
-              role="status"
-            >
-              <p className="text-sm font-semibold text-emerald-950 m-0">
-                Đã liên kết Google{accountEmail ? ` (${accountEmail})` : ""}.
-              </p>
-              <p className="text-sm text-emerald-900 m-0 leading-relaxed">
-                Bạn có thể dùng tài khoản Google này cho những lần đăng nhập sau.
-              </p>
-            </div>
-          ) : (
-            <>
-              <p className="text-sm text-ink-600 m-0 leading-relaxed">
-                Chọn tài khoản Google có cùng email với tài khoản hiện tại để dùng cho những lần đăng nhập sau.
-              </p>
-              <GoogleSignIn
-                onCredential={linkGoogle}
-                promptText="Liên kết với tài khoản Google"
-                showTopDivider={false}
-              />
-            </>
-          )}
-        </Card>
-      </div>
 
       <Card as="section" padding="lg" className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -370,7 +309,7 @@ export function AccountSecurityPanel({ session, onLogout }: Props) {
         ) : sessions.length === 0 ? (
           <p className="text-sm text-ink-500 m-0">Không có phiên nào.</p>
         ) : (
-          <div className="divide-y divide-border-subtle rounded-xl border border-border-subtle overflow-hidden">
+          <div className="divide-y divide-border-subtle rounded-lg border border-border-subtle overflow-hidden">
             {sessions.map((item) => (
               <div
                 key={item.sessionId}
@@ -416,7 +355,7 @@ export function AccountSecurityPanel({ session, onLogout }: Props) {
 
         {message && (
           <p
-            className="rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-sm text-emerald-900 m-0"
+            className="rounded-md border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-sm text-emerald-900 m-0"
             role="status"
           >
             {message}

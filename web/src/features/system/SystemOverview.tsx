@@ -67,7 +67,7 @@ export function SystemOverview() {
               <div className="space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-brand-50 text-brand-700">
                       <IconComp size={18} />
                     </span>
                     <div className="min-w-0">
@@ -86,7 +86,7 @@ export function SystemOverview() {
         })}
       </div>
 
-      <div className="flex items-center gap-2.5 rounded-xl border border-border-subtle bg-slate-50 px-4 py-3 text-xs sm:text-sm text-ink-600">
+      <div className="flex items-center gap-2.5 rounded-lg border border-border-subtle bg-slate-50 px-4 py-3 text-xs sm:text-sm text-ink-600">
         <LayersIcon size={16} aria-hidden="true" />
         <span>
           Hệ thống phân tán: 3 Database PostgreSQL độc lập, giao tiếp bất đồng bộ qua Kafka KRaft và Transactional Outbox Pattern.

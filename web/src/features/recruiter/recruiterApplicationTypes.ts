@@ -80,7 +80,7 @@ export const STAGE_PILLS = [
 ];
 
 export const controlClass =
-  "mt-1 h-9 w-full rounded-xl border border-border-strong bg-white px-3 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20";
+  "mt-1 h-9 w-full rounded-md border border-border-strong bg-white px-3 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20";
 
 export function statusTone(status: string): BadgeTone {
   if (status === "SHORTLISTED" || status === "HIRED") return "success";

@@ -1,6 +1,6 @@
 import { DocumentReview } from "../../shared/components/DocumentReview";
 import { extractionNeedsManualReview, visibleQualityFlags } from "../../shared/components/ExternalAiConsent";
-import { CheckCircleIcon, SparklesIcon } from "../../shared/components/Icon";
+import { CheckCircleIcon, CvIcon } from "../../shared/components/Icon";
 import { RichTextContent } from "../../shared/components/RichTextEditor";
 import { Badge, Button, Card, ErrorBanner } from "../../shared/ui";
 import { Job, ParsedJd } from "./recruiterJobTypes";
@@ -50,22 +50,22 @@ export function RecruiterJdReview({
         source={
           <Card padding="md" className="bg-slate-50/80 space-y-3">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-ink-500 m-0">
-                NỘI DUNG GỐC ĐÃ LƯU · BẢN {selectedRecord.jobVersionNumber}
+              <p className="text-xs font-medium text-ink-500 m-0">
+                Nội dung gốc đã lưu · Bản {selectedRecord.jobVersionNumber}
               </p>
               <h3 className="text-base font-bold text-ink-900 m-0 mt-1">{selectedRecord.title}</h3>
             </div>
             <div className="space-y-1">
-              <h4 className="text-xs font-bold uppercase tracking-wide text-ink-600 m-0">Mô tả công việc</h4>
+              <h4 className="text-xs font-semibold text-ink-600 m-0">Mô tả công việc</h4>
               <RichTextContent content={selectedRecord.description} className="text-ink-800" />
             </div>
             <div className="space-y-1">
-              <h4 className="text-xs font-bold uppercase tracking-wide text-ink-600 m-0">Yêu cầu ứng viên</h4>
+              <h4 className="text-xs font-semibold text-ink-600 m-0">Yêu cầu ứng viên</h4>
               <RichTextContent content={selectedRecord.requirementsText} className="text-ink-800" />
             </div>
             {selectedRecord.benefitsText && (
               <div className="space-y-1">
-                <h4 className="text-xs font-bold uppercase tracking-wide text-ink-600 m-0">Quyền lợi</h4>
+                <h4 className="text-xs font-semibold text-ink-600 m-0">Quyền lợi</h4>
                 <RichTextContent content={selectedRecord.benefitsText} className="text-ink-800" />
               </div>
             )}
@@ -73,17 +73,12 @@ export function RecruiterJdReview({
         }
       >
         {selectedRecord.matchingSupported !== false && (
-          <div className="rounded-2xl border border-border-subtle bg-white p-5 space-y-5">
+          <div className="rounded-lg border border-border-subtle bg-white p-5 space-y-5">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle pb-4">
-              <div className="flex items-center gap-3">
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600 text-white shrink-0">
-                  <SparklesIcon size={16} />
-                </span>
+              <div className="flex items-center gap-2.5">
+                <CvIcon size={18} className="text-brand-700 shrink-0" aria-hidden="true" />
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-brand-700 m-0">
-                    ĐỐI SOÁT THÔNG TIN
-                  </p>
-                  <h3 className="text-base font-bold text-ink-900 m-0 mt-0.5">Kiểm tra yêu cầu tuyển dụng</h3>
+                  <h3 className="text-base font-bold text-ink-900 m-0">Kiểm tra yêu cầu tuyển dụng</h3>
                 </div>
               </div>
 
@@ -108,7 +103,7 @@ export function RecruiterJdReview({
 
             {parsedJd && parsedJdDraft && (
               <div className="space-y-5">
-                <details className="rounded-xl border border-border-subtle bg-slate-50/70 px-4 py-2.5 text-xs text-ink-700">
+                <details className="rounded-lg border border-border-subtle bg-slate-50/70 px-4 py-2.5 text-xs text-ink-700">
                   <summary className="cursor-pointer font-semibold text-ink-900">Chi tiết phân tích tự động</summary>
                   <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1 text-xs">
                     <span>
@@ -131,7 +126,7 @@ export function RecruiterJdReview({
                 </p>
 
                 {(["requiredSkills", "preferredSkills"] as const).map((section) => (
-                  <div key={section} className="parsed-section space-y-2.5 rounded-xl border border-border-subtle bg-slate-50/50 p-4">
+                  <div key={section} className="parsed-section space-y-2.5 rounded-lg border border-border-subtle bg-slate-50/50 p-4">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <strong className="text-xs font-bold uppercase tracking-wide text-ink-800">
                         {section === "requiredSkills" ? "Kỹ năng bắt buộc (Critical)" : "Kỹ năng ưu tiên (Preferred)"}
@@ -151,7 +146,7 @@ export function RecruiterJdReview({
                         <div key={`${section}-${index}`} className="space-y-1">
                           <div className="flex items-center gap-2">
                             <input
-                              className="h-9 flex-1 rounded-xl border border-border-strong bg-white px-3 text-sm text-ink-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:bg-slate-100"
+                              className="h-9 flex-1 rounded-md border border-border-strong bg-white px-3 text-sm text-ink-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:bg-slate-100"
                               value={skill.raw}
                               disabled={parsedJd.status === "CONFIRMED"}
                               aria-label={`${section === "requiredSkills" ? "Kỹ năng bắt buộc" : "Kỹ năng ưu tiên"} ${index + 1}`}
@@ -190,7 +185,7 @@ export function RecruiterJdReview({
                     <input
                       type="number"
                       min={0}
-                      className="mt-1 h-10 w-full max-w-xs rounded-xl border border-border-strong bg-white px-3 text-sm text-ink-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:bg-slate-100"
+                      className="mt-1 h-10 w-full max-w-xs rounded-md border border-border-strong bg-white px-3 text-sm text-ink-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:bg-slate-100"
                       disabled={parsedJd.status === "CONFIRMED"}
                       value={parsedJdDraft.requirements.minimumRelevantExperienceMonths ?? ""}
                       onChange={(event) =>
@@ -234,7 +229,7 @@ export function RecruiterJdReview({
             )}
 
             {!parsedJd && !loadingParsedJd && (
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border-subtle bg-slate-50 p-3.5">
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border-subtle bg-slate-50 p-3.5">
                 <p className="text-sm text-ink-600 m-0">
                   Yêu cầu đang chờ phân tích. Bạn có thể bấm kiểm tra lại tại đây hoặc quay lại tin tuyển dụng.
                 </p>

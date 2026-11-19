@@ -35,6 +35,10 @@ public class JooqPasswordCredentialRepository implements PasswordCredentialRepos
                 .set(PASSWORD_CREDENTIALS.VERSION, 0L).execute();
     }
     @Override
+    public void deleteByUserId(Long userId) {
+        dsl.deleteFrom(PASSWORD_CREDENTIALS).where(PASSWORD_CREDENTIALS.USER_ID.eq(userId)).execute();
+    }
+    @Override
     public boolean updatePassword(Long userId, String passwordHash, Instant changedAt) {
         return dsl.update(PASSWORD_CREDENTIALS)
                 .set(PASSWORD_CREDENTIALS.PASSWORD_HASH, passwordHash)

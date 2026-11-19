@@ -52,6 +52,7 @@ it("uploads company images and keeps unsaved form changes while advancing the ve
     return [];
   });
   render(<RecruiterWorkspace session={session} onLogout={vi.fn()} />);
+  fireEvent.click(await screen.findByRole("button", { name: /Example/ }));
   const upload = await screen.findByLabelText("Tải logo lên");
   await waitFor(() => expect(upload).toBeEnabled());
   fireEvent.change(screen.getByLabelText("Tên hiển thị"), { target: { value: "Edited company" } });
@@ -64,6 +65,7 @@ it("uploads company images and keeps unsaved form changes while advancing the ve
 
 it("rejects invalid files and requires a saved company before upload", async () => {
   render(<RecruiterWorkspace session={session} onLogout={vi.fn()} />);
+  fireEvent.click(await screen.findByRole("button", { name: /Example/ }));
   const upload = await screen.findByLabelText("Tải ảnh bìa lên");
   await waitFor(() => expect(upload).toBeEnabled());
   fireEvent.change(upload, { target: { files: [new File(["gif"], "cover.gif", { type: "image/gif" })] } });
@@ -83,6 +85,7 @@ it("prevents switching companies or editing the form while a cover upload is in 
     return original(path, options);
   });
   render(<RecruiterWorkspace session={session} onLogout={vi.fn()} />);
+  fireEvent.click(await screen.findByRole("button", { name: /Example/ }));
   const upload = await screen.findByLabelText("Tải ảnh bìa lên");
   await waitFor(() => expect(upload).toBeEnabled());
   fireEvent.change(upload, { target: { files: [new File(["png"], "cover.png", { type: "image/png" })] } });
@@ -108,6 +111,7 @@ it("shows a dropped logo immediately and restores the saved preview if upload fa
   vi.stubGlobal("URL", Object.assign(class extends URL {}, { createObjectURL, revokeObjectURL }));
   try {
     const { unmount } = render(<RecruiterWorkspace session={session} onLogout={vi.fn()} />);
+    fireEvent.click(await screen.findByRole("button", { name: /Example/ }));
     const upload = await screen.findByLabelText("Tải logo lên");
     await waitFor(() => expect(upload).toBeEnabled());
     const preview = screen.getByAltText("Xem trước logo công ty");
@@ -141,6 +145,7 @@ it("does not upload dropped files when the company is unsaved or another upload 
   }));
   try {
     const { unmount } = render(<RecruiterWorkspace session={session} onLogout={vi.fn()} />);
+    fireEvent.click(await screen.findByRole("button", { name: /Example/ }));
     const upload = await screen.findByLabelText("Tải ảnh bìa lên");
     await waitFor(() => expect(upload).toBeEnabled());
     const file = new File(["png"], "cover.png", { type: "image/png" });
@@ -161,6 +166,7 @@ it("does not upload dropped files when the company is unsaved or another upload 
 
 it("rejects invalid or multiple dropped files without uploading", async () => {
   render(<RecruiterWorkspace session={session} onLogout={vi.fn()} />);
+  fireEvent.click(await screen.findByRole("button", { name: /Example/ }));
   const upload = await screen.findByLabelText("Tải logo lên");
   await waitFor(() => expect(upload).toBeEnabled());
   const zone = screen.getByTestId("company-image-drop-logo");
@@ -182,6 +188,7 @@ it("does not upload dropped images without company management permission", async
     return original(path, options);
   });
   render(<RecruiterWorkspace session={session} onLogout={vi.fn()} />);
+  fireEvent.click(await screen.findByRole("button", { name: /Example/ }));
   const upload = await screen.findByLabelText("Tải logo lên");
   await waitFor(() => expect(upload).toBeDisabled());
   const image = new File(["png"], "logo.png", { type: "image/png" });
@@ -191,6 +198,7 @@ it("does not upload dropped images without company management permission", async
 
 it("separates company status from verificationStatus and switches company sub-tabs", async () => {
   render(<RecruiterWorkspace session={session} onLogout={vi.fn()} />);
+  fireEvent.click(await screen.findByRole("button", { name: /Example/ }));
   expect(await screen.findByText(/Trạng thái: Đang hoạt động \(ACTIVE\)/)).toBeInTheDocument();
   expect(screen.getByText(/Xác minh pháp lý: Chưa xác minh \(UNVERIFIED\)/)).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Ứng viên" })).toBeInTheDocument();
@@ -245,5 +253,45 @@ it("opens the company team tab directly when /recruiter/company?tab=team is requ
   render(<RecruiterWorkspace session={session} onLogout={vi.fn()} />);
   expect(await screen.findByRole("button", { name: "Thành viên & Phân quyền" })).toBeInTheDocument();
   expect(screen.queryByLabelText("Tên hiển thị")).not.toBeInTheDocument();
+});
+
+it("filters, paginates, and opens company detail popup from the company card grid", async () => {
+  const manyCompanies = Array.from({ length: 30 }, (_, index) => ({
+    ...company,
+    companyId: String(index + 1),
+    displayName: index === 27 ? "ONEWAY Vietnam JSC" : `Demo Company ${index + 1}`,
+    legalName: index === 27 ? "Công ty Cổ phần ONEWAY" : `Demo Legal ${index + 1}`,
+    slug: index === 27 ? "oneway-vietnam" : `demo-company-${index + 1}`,
+    status: index === 27 ? "PENDING" : "ACTIVE"
+  }));
+  const original = vi.mocked(apiRequest).getMockImplementation()!;
+  vi.mocked(apiRequest).mockImplementation((path, options) => {
+    if (path === "/api/v2/companies") return Promise.resolve(manyCompanies);
+    if (path.startsWith("/api/v2/companies/") && path.endsWith("/members")) {
+      return Promise.resolve([{ userId: "1", status: "ACTIVE", role: "OWNER" }]);
+    }
+    return original(path, options);
+  });
+
+  render(<RecruiterWorkspace session={session} onLogout={vi.fn()} />);
+  expect(await screen.findByText("30 công ty")).toBeInTheDocument();
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  expect(screen.queryByText("ONEWAY Vietnam JSC")).not.toBeInTheDocument();
+
+  const loadMore = screen.getByRole("button", { name: /Xem thêm 6 công ty \(còn 6\)/ });
+  fireEvent.click(loadMore);
+  expect(screen.getByText("ONEWAY Vietnam JSC")).toBeInTheDocument();
+
+  fireEvent.change(screen.getByLabelText("Tìm kiếm công ty"), { target: { value: "oneway" } });
+  expect(screen.getByText("1/30 công ty")).toBeInTheDocument();
+  expect(screen.queryByText("Demo Company 1")).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: /ONEWAY Vietnam JSC/ }));
+  const dialog = await screen.findByRole("dialog");
+  expect(dialog).toBeInTheDocument();
+  expect(screen.getByLabelText("Tên hiển thị")).toHaveValue("ONEWAY Vietnam JSC");
+
+  fireEvent.click(screen.getByRole("button", { name: "Đóng" }));
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 });
 

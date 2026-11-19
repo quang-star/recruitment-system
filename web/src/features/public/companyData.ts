@@ -52,7 +52,7 @@ export function getCompanyTag(_slug?: string, _name?: string): string {
 }
 
 export function getCompanyLocation(_slug?: string, jobsForCompany: PublicJob[] = []): string {
-  const locations = [...new Set(jobsForCompany.map((job) => job.locationText).filter(Boolean))];
+  const locations = [...new Set(jobsForCompany.map((job) => job.province?.trim() || job.locationText?.trim()).filter(Boolean))];
   return locations.length ? locations.join(" · ") : "Chưa có thông tin địa điểm";
 }
 

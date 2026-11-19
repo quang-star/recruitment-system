@@ -1,15 +1,13 @@
 import { AuthSession } from "../../shared/auth/session";
-import { Button, EmptyState } from "../../shared/ui";
-import { SystemOverview } from "../system/SystemOverview";
+import { Button } from "../../shared/ui";
 import { AIMatchingShowcase } from "./AIMatchingShowcase";
 import { CompanyDirectoryView } from "./CompanyDirectoryView";
 import { CompanyProfilePage } from "./CompanyProfilePage";
 import { FeaturedEmployers } from "./FeaturedEmployers";
 import { HotIndustries } from "./HotIndustries";
-import { HotJobsVIP } from "./HotJobsVIP";
+import { HotJobsVIP, HomeExplorePreset } from "./HotJobsVIP";
 import { JobDetailPage } from "./JobDetailPage";
 import { JobSearchPage } from "./JobSearchPage";
-import { PopularJobsGrid } from "./PopularJobsGrid";
 import { PortalHeroBanner } from "./PortalHeroBanner";
 import { CompanyInfo } from "./companyData";
 import { ActiveNavTab, JobDiscovery, PublicJob } from "./types";
@@ -62,7 +60,8 @@ export function PublicHomeViews({
     keyword?: string,
     companyId?: string,
     locationQuery?: string,
-    category?: JobDiscovery["categories"][number]
+    category?: JobDiscovery["categories"][number],
+    preset?: HomeExplorePreset
   ) => void;
   onOpenAuth: (mode?: "login" | "register") => void;
   onOpenCvLibrary: () => void;
@@ -76,7 +75,7 @@ export function PublicHomeViews({
           <div className="mx-auto max-w-2xl px-4 py-12">
             <section
               role="alert"
-              className="rounded-2xl border border-border-subtle bg-white p-8 text-center shadow-card space-y-4"
+              className="rounded-lg border border-border-subtle bg-white p-8 text-center shadow-card space-y-4"
             >
               <h1 className="text-xl font-bold text-ink-900 m-0">Không mở được vị trí này</h1>
               <p className="text-sm text-ink-500 m-0">Tin có thể đã ngừng tuyển hoặc tạm thời chưa tải được.</p>
@@ -99,7 +98,7 @@ export function PublicHomeViews({
           <div className="mx-auto max-w-4xl px-4 py-12">
             <section
               role="status"
-              className="rounded-2xl border border-border-subtle bg-white p-8 text-center text-sm text-ink-600 shadow-card"
+              className="rounded-lg border border-border-subtle bg-white p-8 text-center text-sm text-ink-600 shadow-card"
             >
               Đang tải chi tiết việc làm…
             </section>
@@ -118,7 +117,7 @@ export function PublicHomeViews({
           <div className="mx-auto max-w-4xl px-4 py-12">
             <section
               role="status"
-              className="rounded-2xl border border-border-subtle bg-white p-8 text-center text-sm text-ink-600 shadow-card"
+              className="rounded-lg border border-border-subtle bg-white p-8 text-center text-sm text-ink-600 shadow-card"
             >
               Đang tải hồ sơ công ty…
             </section>
@@ -127,7 +126,7 @@ export function PublicHomeViews({
           <div className="mx-auto max-w-2xl px-4 py-12">
             <section
               role="alert"
-              className="rounded-2xl border border-border-subtle bg-white p-8 text-center shadow-card space-y-4"
+              className="rounded-lg border border-border-subtle bg-white p-8 text-center shadow-card space-y-4"
             >
               <h1 className="text-xl font-bold text-ink-900 m-0">Chưa mở được hồ sơ công ty</h1>
               <p className="text-sm text-ink-500 m-0">
@@ -145,7 +144,6 @@ export function PublicHomeViews({
       {activeTab === "home" && !requestedJobId && (
         <>
           <PortalHeroBanner
-            jobCount={totalJobs}
             locations={discovery.locations}
             suggestedKeywords={[...new Set(jobs.flatMap((job) => job.skills ?? []))].slice(0, 6)}
             signedIn={!!session}
@@ -154,28 +152,15 @@ export function PublicHomeViews({
             onUploadCv={() => onOpenAuth("register")}
           />
 
-          {loadingJobs && (
-            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-6">
-              <p
-                className="rounded-xl border border-border-subtle bg-white px-4 py-3 text-sm text-ink-600 m-0"
-                aria-live="polite"
-              >
-                Đang cập nhật cơ hội việc làm…
-              </p>
-            </div>
-          )}
-
-          {!loadingJobs && !jobsError && jobs.length === 0 && (
-            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-              <EmptyState
-                title="Hiện chưa có vị trí đang tuyển"
-                description="Hiện chưa có vị trí đang tuyển. Bạn có thể tạo hồ sơ để chuẩn bị cho cơ hội tiếp theo."
-              />
-            </div>
-          )}
-
-          <HotJobsVIP jobs={jobs} onSelectJob={onSelectJob} onApplyJob={onApplyJob} />
-          <PopularJobsGrid jobs={jobs.slice(6)} onSelectJob={onSelectJob} onApplyJob={onApplyJob} />
+          <HotJobsVIP
+            jobs={jobs}
+            totalJobs={totalJobs}
+            loadingJobs={loadingJobs}
+            jobsError={jobsError}
+            onSelectJob={onSelectJob}
+            onApplyJob={onApplyJob}
+            onExploreAll={(preset) => onOpenSearch("", "", "", undefined, preset)}
+          />
 
           <FeaturedEmployers companies={companies} onSelectCompany={onOpenCompany} />
 
@@ -200,10 +185,11 @@ export function PublicHomeViews({
       )}
 
       {activeTab === "ai_showcase" && !requestedJobId && (
-        <div>
-          <AIMatchingShowcase />
-          <SystemOverview />
-        </div>
+        <AIMatchingShowcase
+          signedIn={!!session}
+          onExploreJobs={() => onOpenSearch()}
+          onOpenCv={() => onOpenAuth("register")}
+        />
       )}
     </>
   );

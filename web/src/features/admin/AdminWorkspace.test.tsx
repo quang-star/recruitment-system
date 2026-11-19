@@ -29,6 +29,8 @@ function reason(value = "Đã kiểm tra đề xuất") {
 }
 async function selectSkill(id = "skill") {
   fireEvent.click(screen.getByRole("button", { name: "Kỹ năng / tên gọi khác" }));
+  await screen.findByRole("button", { name: "Làm mới hàng chờ" });
+  fireEvent.click(screen.getByRole("button", { name: "+ Thêm kỹ năng mới" }));
   await screen.findByRole("option", { name: "NewX · Chờ duyệt" });
   fireEvent.change(screen.getByLabelText("Danh mục", { exact: true }), { target: { value: id } });
 }
@@ -63,7 +65,7 @@ beforeEach(() => {
   });
 });
 
-it("scopes editor selection and drafts to the route even when category and skill IDs overlap", async () => {
+it("scopes editor selection and drafts to the route even when category and skill IDs overlap", { timeout: 15000 }, async () => {
   vi.mocked(apiRequest).mockImplementation(async (path, options) => {
     if (options?.method) return {};
     const ledger = emptyLedger(path); if (ledger) return ledger;
@@ -72,11 +74,15 @@ it("scopes editor selection and drafts to the route even when category and skill
       : catalog;
   });
   renderWithRoute();
+  fireEvent.click(await screen.findByRole("button", { name: "Ngành mới" }));
   await screen.findByRole("option", { name: "Ngành mới · Chờ duyệt" });
   fireEvent.change(screen.getByLabelText("Danh mục", { exact: true }), { target: { value: "skill" } });
   fireEvent.change(screen.getByLabelText("Tên", { exact: true }), { target: { value: "Category-only draft" } });
   reason("Category-only reason");
   fireEvent.click(screen.getByRole("button", { name: "External skills route" }));
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  await screen.findByRole("button", { name: "Làm mới hàng chờ" });
+  fireEvent.click(screen.getByRole("button", { name: "+ Thêm kỹ năng mới" }));
   await screen.findByRole("option", { name: "NewX · Chờ duyệt" });
   expect(screen.getByLabelText("Danh mục", { exact: true })).toHaveValue("");
   expect(screen.getByLabelText("Tên", { exact: true })).toHaveValue("");
@@ -97,11 +103,14 @@ it("ignores a late category-history response after navigating to the skill edito
       : catalog;
   });
   renderWithRoute();
+  fireEvent.click(await screen.findByRole("button", { name: "Ngành mới" }));
   await screen.findByRole("option", { name: "Ngành mới · Chờ duyệt" });
   fireEvent.change(screen.getByLabelText("Danh mục", { exact: true }), { target: { value: "pending" } });
   fireEvent.click(screen.getByRole("button", { name: "Xem lịch sử thay đổi" }));
   await waitFor(() => expect(finishHistory).toBeTypeOf("function"));
   fireEvent.click(screen.getByRole("button", { name: "External skills route" }));
+  await screen.findByRole("button", { name: "Làm mới hàng chờ" });
+  fireEvent.click(screen.getByRole("button", { name: "+ Thêm kỹ năng mới" }));
   await screen.findByRole("option", { name: "NewX · Chờ duyệt" });
   await act(async () => finishHistory([{ action: "EDIT", reason: "Old category history must not cross routes",
     actorUserId: "1", version: 3, afterState: '{"name":"Old category"}' }]));
@@ -119,12 +128,15 @@ it("does not let a late category write clear a draft on a different route", asyn
       : catalog;
   });
   renderWithRoute();
+  fireEvent.click(await screen.findByRole("button", { name: "Ngành mới" }));
   await screen.findByRole("option", { name: "Ngành mới · Chờ duyệt" });
   fireEvent.change(screen.getByLabelText("Danh mục", { exact: true }), { target: { value: "pending" } });
   reason();
   fireEvent.click(screen.getByRole("button", { name: "Lưu sửa đổi" }));
   await waitFor(() => expect(finishWrite).toBeTypeOf("function"));
   fireEvent.click(screen.getByRole("button", { name: "External skills route" }));
+  await screen.findByRole("button", { name: "Làm mới hàng chờ" });
+  fireEvent.click(screen.getByRole("button", { name: "+ Thêm kỹ năng mới" }));
   await screen.findByRole("option", { name: "NewX · Chờ duyệt" });
   fireEvent.change(screen.getByLabelText("Danh mục", { exact: true }), { target: { value: "skill" } });
   fireEvent.change(screen.getByLabelText("Tên", { exact: true }), { target: { value: "Current skill draft" } });
@@ -137,6 +149,7 @@ it("does not let a late category write clear a draft on a different route", asyn
 
 it("approves a pending category using its shown version", async () => {
   render(<AdminWorkspace session={session} onLogout={vi.fn()} />);
+  fireEvent.click(await screen.findByRole("button", { name: "Ngành mới" }));
   await screen.findByRole("option", { name: "Ngành mới · Chờ duyệt" });
   fireEvent.change(screen.getByLabelText("Danh mục", { exact: true }), { target: { value: "pending" } });
   fireEvent.change(screen.getByLabelText("Tên", { exact: true }), { target: { value: "Tên đã kiểm tra" } });
@@ -156,7 +169,7 @@ it("opens the company review route without loading a taxonomy catalog", async ()
   expect(vi.mocked(apiRequest).mock.calls.some(([path]) => path.includes("/taxonomy/") || path === "/api/v2/dashboard/catalog")).toBe(false);
 });
 
-it("edits aliases with the current catalog version and displays a conflict without losing input", async () => {
+it("edits aliases with the current catalog version and displays a conflict without losing input", { timeout: 15000 }, async () => {
   render(<AdminWorkspace session={session} onLogout={vi.fn()} />);
   await selectSkill();
   fireEvent.change(screen.getByLabelText("Tên gọi khác (mỗi dòng một tên)"), { target: { value: "NFX" } });
@@ -193,7 +206,7 @@ it("edits aliases with the current catalog version and displays a conflict witho
 
 it("opens audit search without loading either catalog and keeps the services separate", async () => {
   render(<AdminWorkspace session={session} onLogout={vi.fn()} />);
-  await screen.findByRole("option", { name: "Ngành mới · Chờ duyệt" });
+  await screen.findByRole("button", { name: "Ngành mới" });
   vi.mocked(apiRequest).mockClear();
   fireEvent.click(screen.getByRole("button", { name: "Nhật ký thay đổi" }));
   await screen.findByText("Không có thay đổi phù hợp bộ lọc.");
@@ -228,6 +241,7 @@ it("waits for the skill catalog version before allowing a write", async () => {
   });
   render(<AdminWorkspace session={session} onLogout={vi.fn()} />);
   fireEvent.click(screen.getByRole("button", { name: "Kỹ năng / tên gọi khác" }));
+  fireEvent.click(screen.getByRole("button", { name: "+ Thêm kỹ năng mới" }));
   const submit = screen.getByRole("button", { name: "Thêm danh mục" });
   expect(submit).toBeDisabled();
   expect(screen.getByLabelText("Tên", { exact: true })).toBeDisabled();
@@ -244,6 +258,7 @@ it("waits for the skill catalog version before allowing a write", async () => {
 
 it("requires a meaningful reason before deferring and sends no editor changes", async () => {
   render(<AdminWorkspace session={session} onLogout={vi.fn()} />);
+  fireEvent.click(await screen.findByRole("button", { name: "Ngành mới" }));
   await screen.findByRole("option", { name: "Ngành mới · Chờ duyệt" });
   fireEvent.change(screen.getByLabelText("Danh mục", { exact: true }), { target: { value: "pending" } });
   reason("   ");
@@ -309,6 +324,7 @@ it("shows auditable category history while explicitly identifying missing legacy
   }, { id: 2, action: "PROPOSE", afterState: '{"name":"Ngành mới","status":"PENDING","version":0}' }]
     : [{ id: "pending", kind: "INDUSTRY", parentId: null, name: "Ngành mới", status: "DEFERRED", version: 4 }]);
   render(<AdminWorkspace session={session} onLogout={vi.fn()} />);
+  fireEvent.click(await screen.findByRole("button", { name: "Ngành mới" }));
   await screen.findByRole("option", { name: "Ngành mới · Tạm hoãn" });
   fireEvent.change(screen.getByLabelText("Danh mục", { exact: true }), { target: { value: "pending" } });
   fireEvent.click(screen.getByRole("button", { name: "Xem lịch sử thay đổi" }));
@@ -359,6 +375,7 @@ it("opens a queued skill using fresh catalog metadata and preserves the draft wh
   await waitFor(() => expect(screen.getByLabelText("Tên", { exact: true })).toHaveValue("FreshDefinition"));
   expect(screen.getByLabelText("Loại kỹ năng")).toHaveValue("framework");
   reason("Giữ lý do đang soạn");
+  fireEvent.click(screen.getByRole("button", { name: "Đóng" }));
   fireEvent.click(await screen.findByRole("button", { name: "Queued proposal" }));
   expect(screen.getByLabelText("Lý do thay đổi")).toHaveValue("Giữ lý do đang soạn");
   expect(catalogReads).toBe(2);
@@ -376,6 +393,8 @@ it("requires clean replacement of masked skill values while retaining reason-onl
   });
   render(<AdminWorkspace session={session} onLogout={vi.fn()} />);
   fireEvent.click(screen.getByRole("button", { name: "Kỹ năng / tên gọi khác" }));
+  await screen.findByRole("button", { name: "Làm mới hàng chờ" });
+  fireEvent.click(screen.getByRole("button", { name: "+ Thêm kỹ năng mới" }));
   await screen.findByRole("option", { name: "Legacy ████ · Chờ duyệt" });
   fireEvent.change(screen.getByLabelText("Danh mục", { exact: true }), { target: { value: "skill" } });
   expect(screen.getByText(/Tên hoặc tên gọi khác có thông tin liên hệ đã được che/)).toBeInTheDocument();

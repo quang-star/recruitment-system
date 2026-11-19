@@ -106,10 +106,24 @@ public class JobService {
                       EmploymentType employmentType, String seniorityLevel, int openings,
                       BigDecimal salaryMin, BigDecimal salaryMax, String salaryCurrency, String salaryPeriod,
                       boolean salaryNegotiable, OffsetDateTime applicationDeadline, UUID correlationId, ExternalAiConsent consent, CategoryChoice categoryChoice) {
+        return create(userId, companyId, title, description, requirementsText, benefitsText, locationText,
+                countryCode, workMode, employmentType, seniorityLevel, openings, salaryMin, salaryMax,
+                salaryCurrency, salaryPeriod, salaryNegotiable, applicationDeadline, correlationId, consent,
+                categoryChoice, null);
+    }
+
+    @Transactional
+    public Job create(Long userId, Long companyId, String title, String description, String requirementsText,
+                      String benefitsText, String locationText, String countryCode, WorkMode workMode,
+                      EmploymentType employmentType, String seniorityLevel, int openings,
+                      BigDecimal salaryMin, BigDecimal salaryMax, String salaryCurrency, String salaryPeriod,
+                      boolean salaryNegotiable, OffsetDateTime applicationDeadline, UUID correlationId,
+                      ExternalAiConsent consent, CategoryChoice categoryChoice, String province) {
         if (!companies.canRecruit(companyId, userId)) throw new CompanyNotFoundException();
         JobVersion version = version(1, userId, title, description, requirementsText, benefitsText, locationText,
                 countryCode, workMode, employmentType, seniorityLevel, openings, salaryMin, salaryMax,
-                salaryCurrency, salaryPeriod, salaryNegotiable, applicationDeadline, consent, resolveCategory(userId, categoryChoice, title));
+                salaryCurrency, salaryPeriod, salaryNegotiable, applicationDeadline, consent,
+                resolveCategory(userId, categoryChoice, title), province);
         Job saved = jobs.insert(Job.draft(companyId, userId, version));
         submitForParsing(saved, correlationId);
         return saved;
@@ -178,6 +192,19 @@ public class JobService {
                            WorkMode workMode, EmploymentType employmentType, String seniorityLevel, int openings,
                            BigDecimal salaryMin, BigDecimal salaryMax, String salaryCurrency, String salaryPeriod,
                            boolean salaryNegotiable, OffsetDateTime applicationDeadline, UUID correlationId, ExternalAiConsent consent, CategoryChoice categoryChoice) {
+        return updateDraft(userId, jobId, expectedVersion, title, description, requirementsText, benefitsText,
+                locationText, countryCode, workMode, employmentType, seniorityLevel, openings, salaryMin,
+                salaryMax, salaryCurrency, salaryPeriod, salaryNegotiable, applicationDeadline, correlationId,
+                consent, categoryChoice, null);
+    }
+
+    @Transactional
+    public Job updateDraft(Long userId, Long jobId, long expectedVersion, String title, String description,
+                           String requirementsText, String benefitsText, String locationText, String countryCode,
+                           WorkMode workMode, EmploymentType employmentType, String seniorityLevel, int openings,
+                           BigDecimal salaryMin, BigDecimal salaryMax, String salaryCurrency, String salaryPeriod,
+                           boolean salaryNegotiable, OffsetDateTime applicationDeadline, UUID correlationId,
+                           ExternalAiConsent consent, CategoryChoice categoryChoice, String province) {
         Job existing = getMine(userId, jobId);
         ensureCanRecruit(existing.companyId(), userId);
         if (existing.status() != JobStatus.DRAFT) {
@@ -185,7 +212,8 @@ public class JobService {
         }
         JobVersion newVersion = version(existing.activeVersion().versionNumber() + 1, userId, title, description,
                 requirementsText, benefitsText, locationText, countryCode, workMode, employmentType, seniorityLevel,
-                openings, salaryMin, salaryMax, salaryCurrency, salaryPeriod, salaryNegotiable, applicationDeadline, consent, resolveCategory(userId, categoryChoice, title));
+                openings, salaryMin, salaryMax, salaryCurrency, salaryPeriod, salaryNegotiable, applicationDeadline,
+                consent, resolveCategory(userId, categoryChoice, title), province);
         Job saved = jobs.updateDraft(existing, newVersion, expectedVersion, userId)
                 .orElseThrow(JobConflictException::new);
         submitForParsing(saved, correlationId);
@@ -240,12 +268,14 @@ public class JobService {
                                String benefitsText, String locationText, String countryCode, WorkMode workMode,
                                EmploymentType employmentType, String seniorityLevel, int openings,
                                BigDecimal salaryMin, BigDecimal salaryMax, String salaryCurrency, String salaryPeriod,
-                               boolean salaryNegotiable, OffsetDateTime deadline, ExternalAiConsent consent, JobCategorySnapshot category) {
+                               boolean salaryNegotiable, OffsetDateTime deadline, ExternalAiConsent consent,
+                               JobCategorySnapshot category, String province) {
         return new JobVersion(0L, number, title, description, requirementsText, benefitsText,
                 locationText, countryCode, workMode, employmentType, seniorityLevel, openings, salaryMin, salaryMax,
                 salaryCurrency, salaryPeriod, salaryNegotiable, deadline, hash(title, description, requirementsText,
-                benefitsText, locationText, countryCode, workMode, employmentType, seniorityLevel, openings, salaryMin,
-                salaryMax, salaryCurrency, salaryPeriod, salaryNegotiable, deadline, category), userId, consent, category);
+                benefitsText, locationText, province, countryCode, workMode, employmentType, seniorityLevel, openings,
+                salaryMin, salaryMax, salaryCurrency, salaryPeriod, salaryNegotiable, deadline, category), userId,
+                consent, category, province);
     }
 
     private JobCategorySnapshot resolveCategory(Long actor, CategoryChoice choice, String title) {

@@ -179,7 +179,7 @@ export function CvTemplatePreviewModal({
     >
       <div className="grid min-w-0 gap-6 py-4 lg:grid-cols-12">
         <div className="space-y-3 lg:col-span-7">
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border-subtle bg-slate-50 px-3.5 py-2.5">
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border-subtle bg-slate-50 px-3.5 py-2.5">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs font-semibold text-ink-700">Thử màu nhấn:</span>
               {ACCENT_PRESETS.map(preset => {
@@ -191,7 +191,7 @@ export function CvTemplatePreviewModal({
                     aria-label={`Xem thử màu ${preset.label}`}
                     aria-pressed={selected}
                     onClick={() => setAccentColor(preset.id)}
-                    className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs cursor-pointer ${
+                    className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs cursor-pointer ${
                       selected ? "border-ink-900 bg-white font-semibold shadow-2xs" : "border-border-subtle bg-white text-ink-600"
                     }`}
                   >
@@ -214,19 +214,19 @@ export function CvTemplatePreviewModal({
             </div>
           </div>
 
-          <div className="max-h-[64vh] overflow-y-auto rounded-xl border border-border-subtle bg-slate-100 p-3">
+          <div className="max-h-[64vh] overflow-y-auto rounded-lg border border-border-subtle bg-slate-100 p-3">
             <CvLivePreview doc={sampleDoc} />
           </div>
         </div>
 
-        <aside className="flex flex-col justify-between gap-4 rounded-2xl border border-border-subtle bg-slate-50/70 p-4 lg:col-span-5">
+        <aside className="flex flex-col justify-between gap-4 rounded-lg border border-border-subtle bg-slate-50/70 p-4 lg:col-span-5">
           <div className="space-y-3">
             <h3 className="m-0 text-base font-bold text-brand-700">Bạn muốn tạo CV từ?</h3>
             {error && <ErrorBanner message={error} />}
 
             <div className="space-y-2.5" role="radiogroup" aria-label="Bạn muốn tạo CV từ?">
               <label
-                className={`block rounded-xl border bg-white p-3.5 transition cursor-pointer ${
+                className={`block rounded-lg border bg-white p-3.5 transition cursor-pointer ${
                   source === "sample" ? "border-brand-600 ring-1 ring-brand-600" : "border-border-subtle hover:border-border-strong"
                 }`}
               >
@@ -248,7 +248,7 @@ export function CvTemplatePreviewModal({
               </label>
 
               <div
-                className={`rounded-xl border bg-white p-3.5 transition ${
+                className={`rounded-lg border bg-white p-3.5 transition ${
                   source === "draft" ? "border-brand-600 ring-1 ring-brand-600" : "border-border-subtle hover:border-border-strong"
                 }`}
               >
@@ -287,7 +287,7 @@ export function CvTemplatePreviewModal({
               </div>
 
               <div
-                className={`rounded-xl border bg-white p-3.5 transition ${
+                className={`rounded-lg border bg-white p-3.5 transition ${
                   source === "existing" ? "border-brand-600 ring-1 ring-brand-600" : "border-border-subtle hover:border-border-strong"
                 }`}
               >
@@ -324,7 +324,7 @@ export function CvTemplatePreviewModal({
               </div>
 
               <label
-                className={`block rounded-xl border bg-white p-3.5 transition cursor-pointer ${
+                className={`block rounded-lg border bg-white p-3.5 transition cursor-pointer ${
                   source === "blank" ? "border-brand-600 ring-1 ring-brand-600" : "border-border-subtle hover:border-border-strong"
                 }`}
               >

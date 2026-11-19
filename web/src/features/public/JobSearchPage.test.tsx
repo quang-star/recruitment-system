@@ -18,28 +18,48 @@ beforeEach(() => {
   Element.prototype.scrollIntoView = vi.fn();
 });
 
-it("offers active industries beyond the discovery limit and searches the whole industry", async () => {
+it("offers active industries and child specializations in a searchable picker", async () => {
   window.history.replaceState(null, "", "/?view=search");
   const industries = Array.from({ length: 15 }, (_, index) => ({
-    id: String(index + 10), kind: "INDUSTRY", name: `Ngành ${index + 1}`, status: "ACTIVE"
+    id: String(index + 10), kind: "INDUSTRY", parentId: null, name: `Ngành ${index + 1}`, status: "ACTIVE"
   }));
+  const childSpec = {
+    id: "301", kind: "SPECIALIZATION", parentId: "24", name: "Kỹ thuật dữ liệu", status: "ACTIVE"
+  };
   vi.mocked(apiRequest).mockImplementation(async (path) => path === "/api/v2/public/job-categories"
-    ? [...industries, { id: "99", kind: "INDUSTRY", name: "Chờ duyệt", status: "PENDING" }]
+    ? [...industries, childSpec, { id: "99", kind: "INDUSTRY", parentId: null, name: "Chờ duyệt", status: "PENDING" }]
     : { items: [job], total: 13, page: 0, size: 12 });
   render(<JobSearchPage discovery={discovery} onSelectJob={vi.fn()} />);
-  await screen.findByRole("option", { name: "Ngành 15" });
-  expect(screen.queryByRole("option", { name: "Chờ duyệt" })).not.toBeInTheDocument();
-  fireEvent.change(screen.getByLabelText("Lọc theo nhóm nghề"), { target: { value: "24:" } });
+  await screen.findByRole("link", { name: /Java Engineer/ });
+
+  fireEvent.click(screen.getByRole("button", { name: "Lọc theo nhóm nghề" }));
+  expect(await screen.findByRole("button", { name: /Ngành 15/ })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /Chờ duyệt/ })).not.toBeInTheDocument();
+
+  fireEvent.change(screen.getByLabelText("Tìm nhanh ngành nghề hoặc chuyên môn"), { target: { value: "Ngành 15" } });
+  fireEvent.click(screen.getByRole("button", { name: "Ngành 15" }));
+  fireEvent.click(screen.getByRole("button", { name: "Tất cả trong Ngành 15" }));
+
   await waitFor(() => expect(vi.mocked(apiRequest).mock.calls.some(([path]) => {
     const params = new URL(path, "http://test").searchParams;
     return params.get("industryId") === "24" && !params.has("specializationId");
+  })).toBe(true));
+
+  fireEvent.click(screen.getByRole("button", { name: "Lọc theo nhóm nghề" }));
+  fireEvent.click(screen.getByRole("button", { name: "Ngành 15" }));
+  fireEvent.click(screen.getByRole("button", { name: "Kỹ thuật dữ liệu" }));
+
+  await waitFor(() => expect(vi.mocked(apiRequest).mock.calls.some(([path]) => {
+    const params = new URL(path, "http://test").searchParams;
+    return params.get("industryId") === "24" && params.get("specializationId") === "301";
   })).toBe(true));
 });
 
 it("combines API category identities, salary, location, work mode and paging without a detail preview", async () => {
   render(<JobSearchPage discovery={discovery} onSelectJob={vi.fn()} />);
   await screen.findByRole("link", { name: /Java Engineer/ });
-  fireEvent.change(screen.getByLabelText("Lọc theo nhóm nghề"), { target: { value: "1:3" } });
+  fireEvent.click(screen.getByRole("button", { name: "Lọc theo nhóm nghề" }));
+  fireEvent.click(screen.getByRole("button", { name: /Phát triển web/ }));
   fireEvent.change(screen.getByLabelText("Lọc theo mức lương"), { target: { value: "15_30" } });
   fireEvent.change(screen.getByLabelText("Địa điểm"), { target: { value: "Hà Nội" } });
   fireEvent.change(screen.getByLabelText("Lọc theo chế độ làm việc"), { target: { value: "REMOTE" } });

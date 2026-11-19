@@ -87,3 +87,35 @@ it("shows a role switch notice when a non-recruiter visits accept-invitation whi
   expect(screen.queryByText("Candidate workspace")).not.toBeInTheDocument();
   window.history.replaceState(null, "", "/");
 });
+
+it("blocks recruiter workspace on narrow mobile viewports with a desktop notice and logout action while keeping candidates allowed", async () => {
+  vi.stubGlobal("matchMedia", vi.fn(() => ({
+    matches: true,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn()
+  })));
+  try {
+    const recruiterSession: AuthSession = { ...session, roles: ["RECRUITER"] };
+    saveSession(recruiterSession);
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+      if (String(url).endsWith("/auth/me")) return json({ ...me, roles: ["RECRUITER"] });
+      return new Response(null, { status: 204 });
+    });
+
+    const { unmount } = render(<App />);
+    expect(await screen.findByRole("heading", { name: "Không gian này chỉ hỗ trợ màn hình máy tính" })).toBeInTheDocument();
+    expect(screen.queryByText("Recruiter workspace")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Đăng xuất" }));
+    expect(await screen.findByText("Public home")).toBeInTheDocument();
+    expect(loadSession()).toBeNull();
+    unmount();
+
+    saveSession(session);
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(json(me));
+    render(<App />);
+    expect(await screen.findByText("Candidate workspace")).toBeInTheDocument();
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});

@@ -79,10 +79,10 @@ export function PdfSource({
         <iframe
           src={url}
           title={`CV gốc: ${filename}`}
-          className="w-full h-[640px] rounded-xl border border-border-subtle bg-slate-50"
+          className="w-full h-[640px] rounded-lg border border-border-subtle bg-slate-50"
         />
       ) : (
-        <div className="rounded-xl border border-border-subtle bg-slate-50 p-6 text-center text-sm text-ink-500" role="status">
+        <div className="rounded-lg border border-border-subtle bg-slate-50 p-6 text-center text-sm text-ink-500" role="status">
           Đang tải tệp gốc…
         </div>
       )}

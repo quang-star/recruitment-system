@@ -5,17 +5,27 @@ const MONOGRAM_PALETTES = [
   "bg-blue-50 text-blue-700 border-blue-200",
   "bg-emerald-50 text-emerald-700 border-emerald-200",
   "bg-amber-50 text-amber-800 border-amber-200",
-  "bg-indigo-50 text-indigo-700 border-indigo-200",
+  "bg-sky-50 text-sky-700 border-sky-200",
   "bg-rose-50 text-rose-700 border-rose-200",
   "bg-teal-50 text-teal-700 border-teal-200",
   "bg-orange-50 text-orange-700 border-orange-200",
   "bg-slate-100 text-slate-700 border-slate-300"
 ] as const;
 
+const LEGAL_PREFIX_RE =
+  /^(công\s+ty\s+(tnhh\s+mtv|tnhh|cổ\s+phần|cp|mtv)?|cty\s+(tnhh|cp)?|tập\s+đoàn|chi\s+nhánh|tnhh|cổ\s+phần)\s+/i;
+
 function getCompanyInitials(name?: string): string {
-  const cleaned = (name ?? "").trim();
+  let cleaned = (name ?? "").trim();
   if (!cleaned) return "DN";
-  const words = cleaned.split(/\s+/).filter(Boolean);
+  // Strip repeated Vietnamese legal prefixes (e.g. "Công ty TNHH MTV ")
+  let prev = "";
+  while (cleaned !== prev) {
+    prev = cleaned;
+    cleaned = cleaned.replace(LEGAL_PREFIX_RE, "").trim();
+  }
+  const target = cleaned || (name ?? "").trim();
+  const words = target.split(/\s+/).filter(Boolean);
   if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
   return `${words[0][0] ?? ""}${words[1][0] ?? ""}`.toUpperCase();
 }

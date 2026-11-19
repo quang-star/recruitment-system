@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { ApiClientError, apiRequest } from "../../shared/api/client";
 import { usePagedResource } from "../../shared/api/pagination";
 import { AuthSession } from "../../shared/auth/session";
@@ -12,9 +13,10 @@ import {
   UsersIcon
 } from "../../shared/components/Icon";
 import { RichTextContent, richTextToPlainText } from "../../shared/components/RichTextEditor";
+import { EnsureRouter, routes } from "../../shared/router";
 import { useUnsavedChanges } from "../../shared/useUnsavedChanges";
 import { Badge, Button, Card, ErrorBanner, cn } from "../../shared/ui";
-import { workModeLabel } from "../public/jobPresentation";
+import { formatJobLocation, workModeLabel } from "../public/jobPresentation";
 import { CategoryFilterValue, emptyCategoryFilter } from "./JobCategoryFilter";
 import { RecruiterApplicationsPanel } from "./RecruiterApplicationsPanel";
 import { RecruiterJdReview } from "./RecruiterJdReview";
@@ -35,21 +37,51 @@ import {
   WorkspaceTab
 } from "./recruiterJobTypes";
 
-export function RecruiterJobBoard({
-  session,
-  companyId,
-  canRecruit,
-  companyStatus = "PENDING",
-  initialJobId
-}: {
+type BoardCompanyOption = {
+  companyId: string;
+  displayName: string;
+  status?: "PENDING" | "ACTIVE" | "SUSPENDED" | "CLOSED";
+};
+
+const validWorkspaceTabs: readonly WorkspaceTab[] = ["editor", "review", "preview", "pipeline", "analytics"];
+
+function parseWorkspaceTab(search: string): WorkspaceTab | null {
+  const tab = new URLSearchParams(search).get("tab");
+  return tab && validWorkspaceTabs.includes(tab as WorkspaceTab) ? (tab as WorkspaceTab) : null;
+}
+
+type RecruiterJobBoardProps = {
   session: AuthSession;
   companyId: string | null;
+  companyName?: string | null;
+  companies?: BoardCompanyOption[];
+  onSelectCompany?: (companyId: string) => void;
   canRecruit: boolean;
   companyStatus?: "PENDING" | "ACTIVE" | "SUSPENDED" | "CLOSED";
   initialJobId?: string | null;
-}) {
+  initialNewJob?: boolean;
+};
+
+function RecruiterJobBoardContent({
+  session,
+  companyId,
+  companyName = null,
+  companies = [],
+  onSelectCompany,
+  canRecruit,
+  companyStatus = "PENDING",
+  initialJobId,
+  initialNewJob = false
+}: RecruiterJobBoardProps) {
+  const location = useLocation();
+  const rawNavigate = useNavigate();
+  const normalizedPath = location.pathname.replace(/\/+$/, "") || "/";
+  const routeIsNewJob = initialNewJob || normalizedPath === routes.recruiter.newJob;
+  const routeTab = parseWorkspaceTab(location.search);
+
   const [selectedRecord, setSelectedRecord] = useState<Job | null>(null);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(initialJobId ?? null);
+  const [draftCompanyId, setDraftCompanyId] = useState<string | null>(companyId);
   const [form, setForm] = useState<JobForm>(emptyJob);
   const [saving, setSaving] = useState(false);
   const [parsedJd, setParsedJd] = useState<ParsedJd | null>(null);
@@ -59,8 +91,12 @@ export function RecruiterJobBoard({
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const [viewMode, setViewMode] = useState<"list" | "workspace">(initialJobId ? "workspace" : "list");
-  const [activeTab, setActiveTab] = useState<WorkspaceTab>(initialJobId ? "pipeline" : "editor");
+  const [viewMode, setViewMode] = useState<"list" | "workspace">(
+    initialJobId || routeIsNewJob ? "workspace" : "list"
+  );
+  const [activeTab, setActiveTab] = useState<WorkspaceTab>(
+    routeTab ?? (initialJobId ? "pipeline" : "editor")
+  );
   const [jobSearch, setJobSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>(() => {
     const param = new URLSearchParams(window.location.search).get("status");
@@ -101,15 +137,60 @@ export function RecruiterJobBoard({
     };
   }, [companyId, session.accessToken, countsTick]);
   const handledInitialJobRef = useRef<string | null>(null);
+  const skipCompanyResetRef = useRef(false);
+  const prevCompanyIdRef = useRef<string | null>(companyId);
+  const prevLocationRef = useRef({ pathname: normalizedPath, search: location.search });
 
   useEffect(() => {
+    setDraftCompanyId(companyId);
+    const companyChanged = prevCompanyIdRef.current !== companyId;
+    prevCompanyIdRef.current = companyId;
+    if (!companyChanged) return;
+    if (skipCompanyResetRef.current) {
+      skipCompanyResetRef.current = false;
+      return;
+    }
     setSelectedJobId(null);
     setSelectedRecord(null);
     setForm(emptyJob);
     setActiveTab("editor");
     setViewMode("list");
     handledInitialJobRef.current = null;
-  }, [companyId]);
+    if (normalizedPath !== routes.recruiter.jobs && normalizedPath.startsWith(routes.recruiter.jobs)) {
+      rawNavigate(routes.recruiter.jobs, { replace: true });
+    }
+  }, [companyId, normalizedPath, rawNavigate]);
+
+  useEffect(() => {
+    const prev = prevLocationRef.current;
+    if (prev.pathname === normalizedPath && prev.search === location.search) return;
+    prevLocationRef.current = { pathname: normalizedPath, search: location.search };
+
+    if (normalizedPath === routes.recruiter.jobs) {
+      setViewMode("list");
+      setSelectedJobId(null);
+      setSelectedRecord(null);
+      setForm(emptyJob);
+      setMessage(null);
+      setError(null);
+      return;
+    }
+    if (normalizedPath === routes.recruiter.newJob) {
+      if (viewMode !== "workspace" || selectedJobId !== null) {
+        setSelectedJobId(null);
+        setSelectedRecord(null);
+        setForm(emptyJob);
+        setActiveTab("editor");
+        setViewMode("workspace");
+        setMessage(null);
+        setError(null);
+      }
+      return;
+    }
+    if (normalizedPath.startsWith(`${routes.recruiter.jobs}/`) && routeTab && routeTab !== activeTab) {
+      setActiveTab(routeTab);
+    }
+  }, [activeTab, location.search, normalizedPath, routeTab, selectedJobId, viewMode]);
 
   useEffect(() => {
     if (!initialJobId || !companyId) return;
@@ -121,7 +202,7 @@ export function RecruiterJobBoard({
       setSelectedJobId(target.jobId);
       setSelectedRecord(target);
       setForm(toForm(target));
-      setActiveTab(target.status === "DRAFT" ? "editor" : "pipeline");
+      setActiveTab(routeTab ?? (target.status === "DRAFT" ? "editor" : "pipeline"));
       setViewMode("workspace");
       return;
     }
@@ -135,7 +216,7 @@ export function RecruiterJobBoard({
         setSelectedJobId(fetched.jobId);
         setSelectedRecord(fetched);
         setForm(toForm(fetched));
-        setActiveTab(fetched.status === "DRAFT" ? "editor" : "pipeline");
+        setActiveTab(routeTab ?? (fetched.status === "DRAFT" ? "editor" : "pipeline"));
         setViewMode("workspace");
       })
       .catch(() => {});
@@ -193,20 +274,55 @@ export function RecruiterJobBoard({
   const formDirty = lockedNonDraftSelected
     ? false
     : JSON.stringify(form) !== JSON.stringify(selectedRecord ? toForm(selectedRecord) : emptyJob);
-  useUnsavedChanges(reviewDirty || formDirty, () =>
-    setError("Bạn còn thay đổi chưa lưu. Hãy lưu trước khi chuyển màn hình.")
-  );
+  const leaveAttemptsRef = useRef(0);
+
+  useEffect(() => {
+    if (!reviewDirty && !formDirty && !saving) {
+      leaveAttemptsRef.current = 0;
+    }
+  }, [reviewDirty, formDirty, saving]);
+
+  useUnsavedChanges(reviewDirty || formDirty, (attempt = 1) => {
+    const remaining = Math.max(1, 3 - attempt);
+    setError(
+      `Bạn còn thay đổi chưa lưu. Hãy lưu trước khi chuyển màn hình (bấm thêm ${remaining} lần nữa để bỏ thay đổi).`
+    );
+  });
 
   function canLeaveDraft(): boolean {
-    if (reviewDirty || formDirty || saving) {
-      setError("Bạn còn thay đổi chưa lưu hoặc đang xử lý. Hãy lưu trước khi đổi tin tuyển dụng.");
+    if (saving) {
+      setError("Bạn còn thay đổi chưa lưu hoặc đang xử lý. Vui lòng chờ lưu xong.");
       return false;
     }
+    if (reviewDirty || formDirty) {
+      leaveAttemptsRef.current += 1;
+      if (leaveAttemptsRef.current >= 3) {
+        leaveAttemptsRef.current = 0;
+        setError(null);
+        return true;
+      }
+      const remaining = 3 - leaveAttemptsRef.current;
+      setError(
+        `Bạn còn thay đổi chưa lưu hoặc đang xử lý. Hãy lưu trước khi đổi tin tuyển dụng (bấm thêm ${remaining} lần nữa để bỏ thay đổi).`
+      );
+      return false;
+    }
+    leaveAttemptsRef.current = 0;
     return true;
+  }
+
+  function selectWorkspaceTab(tab: WorkspaceTab) {
+    setActiveTab(tab);
+    if (selectedJobId) {
+      rawNavigate(`${routes.recruiter.jobDetail(selectedJobId)}?tab=${tab}`, { replace: true });
+    }
   }
 
   function selectJob(job: Job, targetTab: WorkspaceTab = "pipeline") {
     if (!canLeaveDraft()) return;
+    if (companyId) {
+      handledInitialJobRef.current = `${companyId}:${job.jobId}`;
+    }
     setSelectedJobId(job.jobId);
     setSelectedRecord(job);
     setForm(toForm(job));
@@ -214,6 +330,7 @@ export function RecruiterJobBoard({
     setViewMode("workspace");
     setMessage(null);
     setError(null);
+    rawNavigate(`${routes.recruiter.jobDetail(job.jobId)}?tab=${targetTab}`);
   }
 
   function newJob() {
@@ -225,6 +342,7 @@ export function RecruiterJobBoard({
     setViewMode("workspace");
     setMessage(null);
     setError(null);
+    rawNavigate(routes.recruiter.newJob);
   }
 
   function duplicateJob(job: Job) {
@@ -247,6 +365,7 @@ export function RecruiterJobBoard({
     setParsedJdDraft(null);
     setMessage("Đã tạo bản sao vào biểu mẫu. Kiểm tra nội dung rồi bấm “Tạo bản nháp” để lưu.");
     setError(null);
+    rawNavigate(routes.recruiter.newJob);
   }
 
   function backToList() {
@@ -257,6 +376,7 @@ export function RecruiterJobBoard({
     setForm(emptyJob);
     setMessage(null);
     setError(null);
+    rawNavigate(routes.recruiter.jobs);
   }
 
   function updateForm<K extends keyof JobForm>(key: K, value: JobForm[K]) {
@@ -286,6 +406,7 @@ export function RecruiterJobBoard({
       category: { ...form.category, positionName: form.category.positionName || form.title },
       benefitsText: form.benefitsText || null,
       locationText: form.locationText || null,
+      province: form.province.trim() || null,
       externalAiPolicyVersion: form.externalAiConsent ? externalAiPolicyVersion : null,
       countryCode: form.countryCode || null,
       workMode: form.workMode || null,
@@ -298,15 +419,24 @@ export function RecruiterJobBoard({
       applicationDeadline: form.applicationDeadline ? new Date(form.applicationDeadline).toISOString() : null,
       ...(selectedJobId ? { version: selectedRecord?.version } : {})
     };
+    const targetCompanyId = selectedJobId ? companyId : (draftCompanyId ?? companyId);
+    if (!targetCompanyId) return;
     try {
       const saved = await apiRequest<Job>(
-        selectedJobId ? `/api/v2/jobs/${selectedJobId}` : `/api/v2/companies/${companyId}/jobs`,
+        selectedJobId ? `/api/v2/jobs/${selectedJobId}` : `/api/v2/companies/${targetCompanyId}/jobs`,
         {
           method: selectedJobId ? "PUT" : "POST",
           accessToken: session.accessToken,
           body: JSON.stringify(payload)
         }
       );
+      if (!selectedJobId && targetCompanyId !== companyId && onSelectCompany) {
+        skipCompanyResetRef.current = true;
+        onSelectCompany(targetCompanyId);
+      }
+      if (!selectedJobId && companyId) {
+        handledInitialJobRef.current = `${targetCompanyId}:${saved.jobId}`;
+      }
       setSelectedRecord(saved);
       results.refresh();
       setCountsTick((v) => v + 1);
@@ -316,6 +446,9 @@ export function RecruiterJobBoard({
       setViewMode("workspace");
       setParsedJd(null);
       setParsedJdDraft(null);
+      if (!selectedJobId) {
+        rawNavigate(`${routes.recruiter.jobDetail(saved.jobId)}?tab=editor`, { replace: true });
+      }
       setMessage(
         saved.matchingSupported === false
           ? "Đã lưu tin. Ngành này chưa hỗ trợ AI; có thể đăng tin và tuyển dụng thủ công."
@@ -542,38 +675,38 @@ export function RecruiterJobBoard({
             </>
           )}
           {selectedJob && (
-            <header className="rounded-xl bg-slate-900 text-white px-6 py-5 shadow-card space-y-4">
+            <header className="rounded-lg border border-border-subtle bg-white px-6 py-5 shadow-card space-y-4">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="space-y-2 min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-brand-300">
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-brand-700">
                       JD Tuyển dụng
                     </span>
                     <Badge tone={jobStatusTone(selectedJob.status)}>{jobStatusLabel(selectedJob.status)}</Badge>
                     {selectedJob.matchingSupported === false && (
                       <Badge tone="info">Sàng lọc thủ công (Ngoài CNTT)</Badge>
                     )}
-                    <span className="text-xs font-medium text-slate-400 tabular-nums-kpi">
+                    <span className="text-xs font-medium text-ink-500 tabular-nums-kpi">
                       v{selectedJob.jobVersionNumber}
                     </span>
                   </div>
-                  <h3 className="text-xl font-bold text-white m-0">{selectedJob.title}</h3>
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-slate-300">
+                  <h3 className="text-xl font-bold text-ink-900 m-0">{selectedJob.title}</h3>
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-ink-600">
                     <span className="inline-flex items-center gap-1.5">
-                      <MapPinIcon size={14} className="text-slate-400 shrink-0" aria-hidden="true" />
-                      <span>{selectedJob.locationText ?? "Linh hoạt"}</span>
+                      <MapPinIcon size={14} className="text-ink-400 shrink-0" aria-hidden="true" />
+                      <span>{formatJobLocation(selectedJob, "full")}</span>
                     </span>
                     <span className="inline-flex items-center gap-1.5">
-                      <CompanyIcon size={14} className="text-slate-400 shrink-0" aria-hidden="true" />
+                      <CompanyIcon size={14} className="text-ink-400 shrink-0" aria-hidden="true" />
                       <span>{workModeLabel(selectedJob.workMode)}</span>
                     </span>
                     <span className="inline-flex items-center gap-1.5">
-                      <UsersIcon size={14} className="text-slate-400 shrink-0" aria-hidden="true" />
+                      <UsersIcon size={14} className="text-ink-400 shrink-0" aria-hidden="true" />
                       <span>{selectedJob.openings} chỉ tiêu</span>
                     </span>
                     {salaryLabel && (
-                      <span className="inline-flex items-center gap-1.5 font-medium text-emerald-300">
-                        <BanknoteIcon size={14} className="text-emerald-400 shrink-0" aria-hidden="true" />
+                      <span className="inline-flex items-center gap-1.5 font-medium text-emerald-700">
+                        <BanknoteIcon size={14} className="text-emerald-600 shrink-0" aria-hidden="true" />
                         <span>{salaryLabel}</span>
                       </span>
                     )}
@@ -596,7 +729,7 @@ export function RecruiterJobBoard({
                 )}
               </div>
 
-              <div className="flex flex-wrap gap-1.5 border-t border-white/10 pt-3">
+              <div className="flex flex-wrap gap-1.5 border-t border-border-subtle pt-3">
                 {[
                   { id: "pipeline" as const, label: "Ứng viên & Pipeline", Icon: UsersIcon },
                   { id: "analytics" as const, label: "Thống kê tin này", Icon: BarChartIcon },
@@ -606,13 +739,13 @@ export function RecruiterJobBoard({
                     key={id}
                     type="button"
                     onClick={() => {
-                      if (id === "editor" || canLeaveDraft()) setActiveTab(id);
+                      if (id === "editor" || canLeaveDraft()) selectWorkspaceTab(id);
                     }}
                     className={cn(
                       "inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold transition-colors cursor-pointer",
                       activeTab === id
-                        ? "bg-white text-ink-900 shadow-xs"
-                        : "text-slate-300 hover:bg-white/10 hover:text-white"
+                        ? "bg-brand-50 text-brand-700"
+                        : "text-ink-600 hover:bg-slate-100 hover:text-ink-900"
                     )}
                   >
                     <Icon size={14} aria-hidden="true" />
@@ -625,15 +758,15 @@ export function RecruiterJobBoard({
                     onClick={() => {
                       if (formDirty) setError("Lưu tin tuyển dụng trước khi kiểm tra yêu cầu.");
                       else {
-                        setActiveTab("review");
+                        selectWorkspaceTab("review");
                         setError(null);
                       }
                     }}
                     className={cn(
-                      "rounded-xl px-3.5 py-2 text-xs font-semibold transition-colors cursor-pointer",
+                      "rounded-lg px-3.5 py-2 text-xs font-semibold transition-colors cursor-pointer",
                       activeTab === "review"
-                        ? "bg-white text-ink-900 shadow-xs"
-                        : "text-slate-300 hover:bg-white/10 hover:text-white"
+                        ? "bg-brand-50 text-brand-700"
+                        : "text-ink-600 hover:bg-slate-100 hover:text-ink-900"
                     )}
                   >
                     Kiểm tra yêu cầu
@@ -646,7 +779,7 @@ export function RecruiterJobBoard({
           {(!selectedJob || selectedJob.status === "DRAFT") && (
             <nav
               aria-label="Tiến trình tạo và đăng tin"
-              className="flex flex-wrap items-center gap-2 rounded-xl border border-border-subtle bg-white px-4 py-3"
+              className="flex flex-wrap items-center gap-2 rounded-md border border-border-subtle bg-white px-4 py-3"
             >
               {[
                 { id: "editor" as const, num: 1, label: "Thông tin & Mô tả JD", enabled: true },
@@ -679,7 +812,7 @@ export function RecruiterJobBoard({
                         return;
                       }
                       setError(null);
-                      setActiveTab(step.id);
+                      selectWorkspaceTab(step.id);
                     }}
                     className={cn(
                       "inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors",
@@ -762,7 +895,7 @@ export function RecruiterJobBoard({
                   </p>
                   <h3 className="text-xl font-bold text-ink-900 m-0">{selectedRecord.title}</h3>
                   <p className="text-xs text-ink-500 m-0">
-                    {selectedRecord.locationText ?? "Linh hoạt"} · {workModeLabel(selectedRecord.workMode)} ·{" "}
+                    {formatJobLocation(selectedRecord, "full")} · {workModeLabel(selectedRecord.workMode)} ·{" "}
                     {salaryLabel || "Thỏa thuận"}
                   </p>
                 </div>
@@ -828,7 +961,13 @@ export function RecruiterJobBoard({
               form={form}
               selectedJob={selectedJob}
               selectedJobId={selectedJobId}
-              companyId={companyId}
+              companyId={selectedJobId ? companyId : (draftCompanyId ?? companyId)}
+              companyName={
+                companies.find((c) => c.companyId === (selectedJobId ? companyId : (draftCompanyId ?? companyId)))
+                  ?.displayName ?? companyName
+              }
+              companies={companies}
+              onSelectDraftCompany={(nextId) => setDraftCompanyId(nextId)}
               session={session}
               canRecruit={canRecruit}
               canPublish={canPublish}
@@ -856,5 +995,13 @@ export function RecruiterJobBoard({
         </main>
       </div>
     </div>
+  );
+}
+
+export function RecruiterJobBoard(props: RecruiterJobBoardProps) {
+  return (
+    <EnsureRouter>
+      <RecruiterJobBoardContent {...props} />
+    </EnsureRouter>
   );
 }

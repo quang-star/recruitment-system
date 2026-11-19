@@ -27,12 +27,12 @@ export function FeaturedEmployers({ companies, onSelectCompany }: FeaturedEmploy
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {employers.slice(0, 6).map((company) => (
           <Card key={company.id} as="article" interactive padding="none" className="flex flex-col overflow-hidden">
-            <CompanyCover src={company.coverImage} className="h-28 w-full" />
+            <CompanyCover src={company.coverImage} name={company.shortName} className="h-28 w-full" />
             <div className="relative -mt-7 flex flex-1 flex-col gap-3 px-4 pb-4">
               <CompanyLogo
                 src={company.logo}
                 name={company.shortName || company.name}
-                className="h-14 w-14 rounded-xl border-2 border-white shadow-card"
+                className="h-14 w-14 rounded-md border-2 border-white shadow-card"
               />
               <div className="min-w-0">
                 <h3 className="text-base font-bold text-ink-900 m-0 truncate">{company.shortName || company.name}</h3>

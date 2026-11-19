@@ -144,7 +144,7 @@ export function RecruiterJobAnalytics({ jobId, jobTitle, openings, accessToken, 
         <>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {kpis.map((item) => (
-              <div key={item.label} className={cn("rounded-xl border p-4 space-y-2 shadow-xs", item.toneClass)}>
+              <div key={item.label} className={cn("rounded-lg border p-4 space-y-2 shadow-xs", item.toneClass)}>
                 <div className="flex items-center justify-between gap-2">
                   <span className={cn("inline-flex items-center", item.iconClass)} aria-hidden="true">
                     {item.icon}
@@ -159,14 +159,14 @@ export function RecruiterJobAnalytics({ jobId, jobTitle, openings, accessToken, 
             ))}
           </div>
 
-          <div className="rounded-2xl border border-border-subtle bg-slate-50/70 p-4 space-y-3">
+          <div className="rounded-lg border border-border-subtle bg-slate-50/70 p-4 space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h4 className="text-sm font-bold text-ink-900 m-0">Phễu chuyển đổi ứng viên</h4>
               <span className="text-xs text-ink-500">Số liệu cộng dồn các hồ sơ đã từng bước qua từng vòng</span>
             </div>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {steps.map((step) => (
-                <div key={step.num} className="rounded-xl border border-border-subtle bg-white p-3.5 space-y-2">
+                <div key={step.num} className="rounded-lg border border-border-subtle bg-white p-3.5 space-y-2">
                   <div className="flex items-center gap-2 text-xs font-semibold text-ink-600">
                     <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-[11px] font-bold text-ink-800">
                       {step.num}

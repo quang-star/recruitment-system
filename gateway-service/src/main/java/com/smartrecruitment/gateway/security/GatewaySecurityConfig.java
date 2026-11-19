@@ -49,6 +49,7 @@ public class GatewaySecurityConfig {
                         .pathMatchers("/api/v2/recruiter/**", "/api/v2/companies/**", "/api/v2/jobs/**",
                                 "/api/v2/parsed-jds/**").hasRole("RECRUITER")
                         .pathMatchers("/api/v2/applications/**").hasAnyRole("CANDIDATE", "RECRUITER")
+                        .pathMatchers("/api/v2/auth/admin/**").hasRole("SYSTEM_ADMIN")
                         .anyExchange().authenticated())
                 .oauth2ResourceServer(resourceServer -> resourceServer.jwt(jwt ->
                         jwt.jwtAuthenticationConverter(jwtAuthenticationConverter)))

@@ -11,8 +11,7 @@ import {
   JobsIcon,
   NotificationIcon,
   ProfileIcon,
-  SecurityIcon,
-  SparklesIcon
+  SecurityIcon
 } from "../../shared/components/Icon";
 import { Badge, Button, Card, ErrorBanner, Skeleton } from "../../shared/ui";
 import { workModeLabel } from "../public/jobPresentation";
@@ -161,16 +160,13 @@ export function DashboardPanel({ session, companyId, onLogout, onNavigate, onOpe
   return (
     <div className="space-y-6">
       {isCandidate && (
-        <section className="rounded-2xl bg-gradient-to-br from-slate-900 via-slate-900 to-brand-900 px-6 py-6 text-white shadow-card flex flex-wrap items-center justify-between gap-4">
+        <section className="rounded-lg border border-border-subtle bg-white px-6 py-5 shadow-card flex flex-wrap items-center justify-between gap-4">
           <div className="space-y-1 max-w-2xl">
-            <p className="text-xs font-semibold uppercase tracking-widest text-brand-300 m-0">
-              Candidate workspace
-            </p>
-            <h2 className="text-xl sm:text-2xl font-bold text-white m-0">
-              Xin chào, {candidateName || "Ứng viên"}! 👋
+            <h2 className="text-xl sm:text-2xl font-bold text-ink-900 m-0">
+              Xin chào, {candidateName || "Ứng viên"}
             </h2>
-            <p className="text-sm text-slate-300 m-0">
-              Hồ sơ của bạn được phân tích và đối soát với công việc bằng AI.
+            <p className="text-sm text-ink-600 m-0">
+              Quản lý CV và đối chiếu yêu cầu công việc trước khi ứng tuyển.
             </p>
           </div>
           {onNavigate && (
@@ -206,7 +202,7 @@ export function DashboardPanel({ session, companyId, onLogout, onNavigate, onOpe
                 .map(([key, value]) => (
                   <div
                     key={key}
-                    className="rounded-xl border border-border-subtle bg-slate-50/70 px-4 py-3.5 transition-colors hover:border-brand-200 hover:bg-brand-50/30"
+                    className="rounded-lg border border-border-subtle bg-slate-50/70 px-4 py-3.5 transition-colors hover:border-brand-200 hover:bg-brand-50/30"
                   >
                     <strong className="block text-2xl font-bold text-ink-900 tabular-nums-kpi">{value}</strong>
                     <span className="mt-0.5 block text-xs sm:text-sm font-medium text-ink-600">{labels[key] ?? key}</span>
@@ -229,7 +225,7 @@ export function DashboardPanel({ session, companyId, onLogout, onNavigate, onOpe
                 { label: "Mới nộp (SUBMITTED)", value: submitted, note: "Đang chờ sơ loại" },
                 { label: "Đang xem xét", value: underReview, note: "Đang trong quy trình lọc" }
               ].map((kpi) => (
-                <div key={kpi.label} className="rounded-xl border border-border-subtle bg-white p-4">
+                <div key={kpi.label} className="rounded-lg border border-border-subtle bg-white p-4">
                   <span className="block text-xs font-medium text-ink-500">{kpi.label}</span>
                   <strong className="mt-1.5 block text-2xl font-semibold text-ink-900 tabular-nums-kpi">{kpi.value}</strong>
                   <span className="mt-1 block text-xs text-ink-500">{kpi.note}</span>
@@ -263,7 +259,7 @@ export function DashboardPanel({ session, companyId, onLogout, onNavigate, onOpe
                   {recentJobs.map((job) => (
                     <div
                       key={job.jobId}
-                      className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border-subtle bg-slate-50/50 p-3.5"
+                      className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border-subtle bg-slate-50/50 p-3.5"
                     >
                       <div className="space-y-1">
                         <strong className="block text-sm font-semibold text-ink-900">{job.title}</strong>
@@ -292,17 +288,15 @@ export function DashboardPanel({ session, companyId, onLogout, onNavigate, onOpe
             </Card>
 
             <Card padding="md" className="border-brand-200/70 bg-brand-50/40 space-y-2">
-              <div className="flex items-center gap-3">
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600 text-white shrink-0">
-                  <SparklesIcon size={16} />
-                </span>
+              <div className="flex items-start gap-2.5">
+                <CvIcon size={17} className="text-brand-700 shrink-0 mt-0.5" aria-hidden="true" />
                 <div>
-                  <h4 className="text-sm font-bold text-ink-900 m-0">Explainable AI Matching Engine</h4>
-                  <small className="text-xs text-ink-600">Tính toán điểm số kết hợp trích xuất bằng chứng từ CV</small>
+                  <h4 className="text-sm font-bold text-ink-900 m-0">Đối chiếu CV kèm trích dẫn nguồn</h4>
+                  <small className="text-xs text-ink-600">Hỗ trợ xem kỹ năng phù hợp và bằng chứng từ CV cho vị trí IT</small>
                 </div>
               </div>
               <p className="text-sm text-ink-600 m-0 leading-relaxed">
-                Khi bạn nộp CV vào một công việc, worker AI sẽ tự động phân tích kinh nghiệm thực tế, đối sánh kỹ năng bắt buộc và trích dẫn số trang PDF làm bằng chứng cho Nhà tuyển dụng.
+                Khi bạn nộp CV vào vị trí CNTT, hệ thống phân tích kỹ năng, kinh nghiệm và trích dẫn vị trí trong tệp PDF để hỗ trợ nhà tuyển dụng xem xét hồ sơ.
               </p>
             </Card>
           </div>
@@ -365,11 +359,9 @@ export function DashboardPanel({ session, companyId, onLogout, onNavigate, onOpe
 
               <div className="space-y-3">
                 {pendingCount > 0 ? (
-                  <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-amber-200 bg-amber-50/60 p-4">
-                    <div className="flex items-start gap-3 min-w-0 flex-1">
-                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100 text-amber-800 shrink-0">
-                        <ProfileIcon size={18} />
-                      </span>
+                  <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-amber-200 bg-amber-50/60 p-4">
+                    <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                      <ProfileIcon size={18} className="text-amber-800 shrink-0 mt-0.5" aria-hidden="true" />
                       <div className="space-y-1">
                         <strong className="block text-sm font-semibold text-ink-900">
                           {submitted > 0 && underReview > 0
@@ -403,11 +395,9 @@ export function DashboardPanel({ session, companyId, onLogout, onNavigate, onOpe
                     )}
                   </div>
                 ) : (
-                  <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-emerald-200 bg-emerald-50/50 p-4">
-                    <div className="flex items-start gap-3 min-w-0 flex-1">
-                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 shrink-0">
-                        <CheckCircleIcon size={18} />
-                      </span>
+                  <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-emerald-200 bg-emerald-50/50 p-4">
+                    <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                      <CheckCircleIcon size={18} className="text-emerald-700 shrink-0 mt-0.5" aria-hidden="true" />
                       <div className="space-y-1">
                         <strong className="block text-sm font-semibold text-ink-900">Không có hồ sơ nào đang chờ sơ loại</strong>
                         <p className="text-xs text-ink-600 m-0">
@@ -424,11 +414,9 @@ export function DashboardPanel({ session, companyId, onLogout, onNavigate, onOpe
                 )}
 
                 {draftJobs > 0 && (
-                  <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border-subtle bg-slate-50/70 p-4">
-                    <div className="flex items-start gap-3 min-w-0 flex-1">
-                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100 text-amber-700 shrink-0">
-                        <JobsIcon size={18} />
-                      </span>
+                  <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-border-subtle bg-slate-50/70 p-4">
+                    <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                      <JobsIcon size={18} className="text-amber-700 shrink-0 mt-0.5" aria-hidden="true" />
                       <div className="space-y-1">
                         <strong className="block text-sm font-semibold text-ink-900">
                           {draftJobs} tin tuyển dụng ở trạng thái bản nháp
@@ -543,7 +531,7 @@ export function DashboardPanel({ session, companyId, onLogout, onNavigate, onOpe
             </div>
 
             {recentJobs.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-border-strong bg-slate-50/70 p-6 text-center space-y-3">
+              <div className="rounded-lg border border-dashed border-border-strong bg-slate-50/70 p-6 text-center space-y-3">
                 <p className="text-sm text-ink-500 m-0">Công ty chưa có tin tuyển dụng nào đang mở.</p>
                 {onNavigate && (
                   <Button variant="secondary" size="sm" onClick={() => onNavigate("jobs")}>
@@ -552,7 +540,7 @@ export function DashboardPanel({ session, companyId, onLogout, onNavigate, onOpe
                 )}
               </div>
             ) : (
-              <div className="divide-y divide-border-subtle rounded-xl border border-border-subtle">
+              <div className="divide-y divide-border-subtle rounded-lg border border-border-subtle">
                 {recentJobs.map((job) => {
                   const statusLabel =
                     job.status === "PUBLISHED" ? "Đang đăng" : job.status === "CLOSED" ? "Đã đóng" : "Bản nháp";

@@ -39,14 +39,14 @@ export function CompanyProfilePage({ company, onSelectJob }: Props) {
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
       <Card padding="none" className="overflow-hidden">
-        <CompanyCover src={company.coverImage} className="h-44 sm:h-52 w-full" />
+        <CompanyCover src={company.coverImage} name={company.shortName} className="h-44 sm:h-52 w-full" />
         <div className="p-6 sm:p-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-12 relative">
           <div className="flex flex-col sm:flex-row sm:items-end gap-4 min-w-0">
             <CompanyLogo
               src={company.logo}
               name={company.shortName || company.name}
               alt={`${company.shortName} logo`}
-              className="h-20 w-20 sm:h-24 sm:w-24 rounded-xl border-4 border-white shadow-card"
+              className="h-20 w-20 sm:h-24 sm:w-24 rounded-lg border-4 border-white shadow-card"
               textClassName="text-xl font-bold"
             />
             <div className="space-y-1.5 min-w-0 pt-1">
@@ -74,7 +74,7 @@ export function CompanyProfilePage({ company, onSelectJob }: Props) {
               href={websiteHref}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-10 shrink-0 items-center gap-2 rounded-xl border border-border-strong bg-white px-4 text-sm font-semibold text-ink-800 hover:bg-slate-50 no-underline"
+              className="inline-flex h-10 shrink-0 items-center gap-2 rounded-md border border-border-strong bg-white px-4 text-sm font-semibold text-ink-800 hover:bg-slate-50 no-underline"
             >
               <span>Website công ty</span>
               <ExternalLinkIcon size={14} aria-hidden="true" />
@@ -86,13 +86,13 @@ export function CompanyProfilePage({ company, onSelectJob }: Props) {
       <nav aria-label="Nội dung hồ sơ công ty" className="flex flex-wrap gap-2">
         <a
           href="#company-about"
-          className="rounded-xl border border-border-subtle bg-white px-3.5 py-2 text-xs font-semibold text-ink-700 hover:border-brand-300 hover:text-brand-700 no-underline"
+          className="rounded-md border border-border-subtle bg-white px-3.5 py-2 text-xs font-semibold text-ink-700 hover:border-brand-300 hover:text-brand-700 no-underline"
         >
           Giới thiệu
         </a>
         <a
           href="#company-open-jobs"
-          className="rounded-xl border border-border-subtle bg-white px-3.5 py-2 text-xs font-semibold text-ink-700 hover:border-brand-300 hover:text-brand-700 no-underline"
+          className="rounded-md border border-border-subtle bg-white px-3.5 py-2 text-xs font-semibold text-ink-700 hover:border-brand-300 hover:text-brand-700 no-underline"
         >
           Việc làm đang tuyển ({jobs.total})
         </a>

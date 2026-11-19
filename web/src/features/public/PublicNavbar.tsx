@@ -1,5 +1,6 @@
 import { FC, useState } from "react";
 import { CandidateView } from "../candidate/navigation";
+import { BrandMark } from "../../shared/components/BrandMark";
 import { CloseIcon, MenuIcon, NotificationIcon, ProfileIcon } from "../../shared/components/Icon";
 import { BRAND_CONFIG } from "../../shared/config/brand";
 import { cn } from "../../shared/ui";
@@ -44,19 +45,9 @@ export const PublicNavbar: FC<Props> = ({
             type="button"
             aria-label={BRAND_CONFIG.name || "Trang chủ cổng tuyển dụng"}
             onClick={() => selectTab("home")}
-            className="flex items-center gap-2.5 text-left cursor-pointer group shrink-0 bg-transparent border-0 p-0"
+            className="flex items-center text-left cursor-pointer group shrink-0 bg-transparent border-0 p-0"
           >
-            <img
-              src="/logo.png"
-              alt=""
-              aria-hidden="true"
-              className="h-9 w-9 shrink-0 object-contain transition-transform group-hover:scale-105"
-            />
-            {BRAND_CONFIG.name && (
-              <strong className="text-base font-extrabold tracking-tight text-ink-900">
-                {BRAND_CONFIG.name}
-              </strong>
-            )}
+            <BrandMark showWordmark iconClassName="transition-transform group-hover:scale-105" />
           </button>
 
           <nav aria-label="Điều hướng chính" className="hidden md:flex items-center gap-1">
@@ -65,7 +56,7 @@ export const PublicNavbar: FC<Props> = ({
               aria-current={activeTab === "search" ? "page" : undefined}
               onClick={() => selectTab("search")}
               className={cn(
-                "rounded-xl px-3.5 py-2 text-sm font-medium transition-colors cursor-pointer whitespace-nowrap",
+                "rounded-md px-3.5 py-2 text-sm font-medium transition-colors cursor-pointer whitespace-nowrap",
                 activeTab === "search"
                   ? "bg-brand-50 text-brand-700 font-semibold"
                   : "text-ink-600 hover:bg-slate-100 hover:text-ink-900"
@@ -78,26 +69,13 @@ export const PublicNavbar: FC<Props> = ({
               aria-current={activeTab === "companies" ? "page" : undefined}
               onClick={() => selectTab("companies")}
               className={cn(
-                "rounded-xl px-3.5 py-2 text-sm font-medium transition-colors cursor-pointer whitespace-nowrap",
+                "rounded-md px-3.5 py-2 text-sm font-medium transition-colors cursor-pointer whitespace-nowrap",
                 activeTab === "companies"
                   ? "bg-brand-50 text-brand-700 font-semibold"
                   : "text-ink-600 hover:bg-slate-100 hover:text-ink-900"
               )}
             >
               Công ty
-            </button>
-            <button
-              type="button"
-              aria-current={activeTab === "ai_showcase" ? "page" : undefined}
-              onClick={() => selectTab("ai_showcase")}
-              className={cn(
-                "rounded-xl px-3.5 py-2 text-sm font-medium transition-colors cursor-pointer whitespace-nowrap",
-                activeTab === "ai_showcase"
-                  ? "bg-brand-50 text-brand-700 font-semibold"
-                  : "text-ink-600 hover:bg-slate-100 hover:text-ink-900"
-              )}
-            >
-              Công nghệ AI
             </button>
           </nav>
         </div>
@@ -111,7 +89,7 @@ export const PublicNavbar: FC<Props> = ({
                 aria-current={candidate.activeView === "notifications" ? "page" : undefined}
                 onClick={() => candidate.onNavigate("notifications")}
                 className={cn(
-                  "inline-flex h-9 w-9 items-center justify-center rounded-xl border transition-colors cursor-pointer",
+                  "inline-flex h-9 w-9 items-center justify-center rounded-md border transition-colors cursor-pointer",
                   candidate.activeView === "notifications"
                     ? "border-brand-300 bg-brand-50 text-brand-700"
                     : "border-border-subtle bg-white text-ink-600 hover:bg-slate-50 hover:text-ink-900"
@@ -132,14 +110,14 @@ export const PublicNavbar: FC<Props> = ({
               <button
                 type="button"
                 onClick={() => onOpenAuth("register")}
-                className="hidden sm:inline-flex h-9 items-center rounded-xl border border-border-strong bg-white px-3.5 text-sm font-semibold text-ink-800 hover:bg-slate-50 cursor-pointer"
+                className="hidden sm:inline-flex h-9 items-center rounded-md border border-border-strong bg-white px-3.5 text-sm font-semibold text-ink-800 hover:bg-slate-50 cursor-pointer"
               >
                 Tạo tài khoản
               </button>
               <button
                 type="button"
                 onClick={() => onOpenAuth("login")}
-                className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-brand-600 px-3.5 sm:px-4 text-sm font-semibold text-white shadow-xs hover:bg-brand-700 cursor-pointer"
+                className="inline-flex h-9 items-center gap-1.5 rounded-md bg-brand-600 px-3.5 sm:px-4 text-sm font-semibold text-white shadow-xs hover:bg-brand-700 cursor-pointer"
               >
                 <ProfileIcon size={16} aria-hidden="true" />
                 <span>Đăng nhập</span>
@@ -152,7 +130,7 @@ export const PublicNavbar: FC<Props> = ({
             aria-label={mobileMenuOpen ? "Đóng menu" : "Mở menu điều hướng"}
             aria-expanded={mobileMenuOpen}
             onClick={() => setMobileMenuOpen((v) => !v)}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border-subtle bg-white text-ink-700 md:hidden cursor-pointer"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border-subtle bg-white text-ink-700 md:hidden cursor-pointer"
           >
             {mobileMenuOpen ? <CloseIcon size={18} /> : <MenuIcon size={18} />}
           </button>
@@ -164,23 +142,16 @@ export const PublicNavbar: FC<Props> = ({
           <button
             type="button"
             onClick={() => selectTab("search")}
-            className="block w-full rounded-xl px-3.5 py-2.5 text-left text-sm font-semibold text-ink-800 hover:bg-slate-50 cursor-pointer"
+            className="block w-full rounded-md px-3.5 py-2.5 text-left text-sm font-semibold text-ink-800 hover:bg-slate-50 cursor-pointer"
           >
             Tìm việc làm
           </button>
           <button
             type="button"
             onClick={() => selectTab("companies")}
-            className="block w-full rounded-xl px-3.5 py-2.5 text-left text-sm font-semibold text-ink-800 hover:bg-slate-50 cursor-pointer"
+            className="block w-full rounded-md px-3.5 py-2.5 text-left text-sm font-semibold text-ink-800 hover:bg-slate-50 cursor-pointer"
           >
             Công ty
-          </button>
-          <button
-            type="button"
-            onClick={() => selectTab("ai_showcase")}
-            className="block w-full rounded-xl px-3.5 py-2.5 text-left text-sm font-semibold text-ink-800 hover:bg-slate-50 cursor-pointer"
-          >
-            Công nghệ AI
           </button>
           {!candidate && (
             <button
@@ -189,7 +160,7 @@ export const PublicNavbar: FC<Props> = ({
                 setMobileMenuOpen(false);
                 onOpenAuth("register");
               }}
-              className="block w-full rounded-xl border border-border-strong bg-white px-3.5 py-2 text-center text-sm font-semibold text-ink-800 cursor-pointer sm:hidden"
+              className="block w-full rounded-md border border-border-strong bg-white px-3.5 py-2 text-center text-sm font-semibold text-ink-800 cursor-pointer sm:hidden"
             >
               Tạo tài khoản
             </button>

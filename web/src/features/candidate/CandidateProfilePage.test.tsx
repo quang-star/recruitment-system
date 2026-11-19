@@ -45,7 +45,7 @@ it("defaults signed-in candidates to the same job-first homepage and puts person
   expect(screen.getByRole("button", { name: /^Thông báo$/ })).toBeVisible();
   expect(screen.getByRole("button", { name: /^Tìm việc làm$/ })).toBeVisible();
   expect(screen.getByRole("button", { name: /^Công ty$/ })).toBeVisible();
-  expect(screen.getByRole("button", { name: /^Công nghệ AI$/ })).toBeVisible();
+  expect(screen.queryByRole("button", { name: /^Đối chiếu CV–JD$/ })).not.toBeInTheDocument();
   expect(screen.queryByRole("navigation", { name: "Tài khoản cá nhân" })).not.toBeInTheDocument();
   expect(trigger).toHaveAttribute("aria-expanded", "false");
   fireEvent.click(screen.getByRole("button", { name: "Trang chủ cổng tuyển dụng" }));
@@ -198,7 +198,7 @@ it("keeps the normal portal heading on candidate account pages instead of switch
   const headerNav = screen.getByRole("navigation", { name: "Điều hướng chính" });
   expect(within(headerNav).getByRole("button", { name: "Tìm việc làm" })).toBeInTheDocument();
   expect(within(headerNav).getByRole("button", { name: "Công ty" })).toBeInTheDocument();
-  expect(within(headerNav).getByRole("button", { name: "Công nghệ AI" })).toBeInTheDocument();
+  expect(within(headerNav).queryByRole("button", { name: "Đối chiếu CV–JD" })).not.toBeInTheDocument();
   expect(within(headerNav).queryByRole("button", { name: "Tổng quan" })).not.toBeInTheDocument();
   expect(within(headerNav).queryByRole("button", { name: "Hồ sơ" })).not.toBeInTheDocument();
   expect(within(headerNav).queryByRole("button", { name: "Bảo mật" })).not.toBeInTheDocument();

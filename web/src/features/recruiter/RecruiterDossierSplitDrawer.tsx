@@ -124,7 +124,7 @@ export function RecruiterDossierSplitDrawer({
             <div className="flex-1 min-h-0 p-3">
               {!cvAccessGranted ? (
                 <div className="flex h-full items-center justify-center p-6">
-                  <div className="max-w-sm rounded-xl border border-border-subtle bg-white p-5 text-center space-y-1.5">
+                  <div className="max-w-sm rounded-lg border border-border-subtle bg-white p-5 text-center space-y-1.5">
                     <p className="text-sm font-semibold text-ink-900 m-0">Không còn quyền truy cập CV</p>
                     <p className="text-xs text-ink-500 m-0">
                       Quyền xem CV và điểm AI đã tự động đóng sau khi từ chối, rút hồ sơ hoặc thu hồi chia sẻ.

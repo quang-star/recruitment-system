@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { apiRequest } from "../../shared/api/client";
-import { SparklesIcon } from "../../shared/components/Icon";
+import { LayersIcon } from "../../shared/components/Icon";
 import { Badge, Button, Card, ErrorBanner } from "../../shared/ui";
 
 type Candidate = {
@@ -83,7 +83,7 @@ export function SkillCandidateSuggestions({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <SparklesIcon size={15} className="text-brand-700" />
+            <LayersIcon size={16} className="text-brand-700 shrink-0" aria-hidden="true" />
             <h3 className="text-base font-bold text-ink-900 m-0">Gợi ý chuẩn hóa kỹ năng</h3>
           </div>
           <p className="text-xs text-ink-600 m-0 leading-relaxed">
@@ -115,7 +115,7 @@ export function SkillCandidateSuggestions({
 
       {result && (
         <div className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border-subtle bg-white px-3.5 py-2.5 text-xs">
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border-subtle bg-white px-3.5 py-2.5 text-xs">
             <p role="status" className="font-medium text-ink-800 m-0">
               {semanticLabel[result.semanticStatus] ?? result.semanticStatus}
             </p>
@@ -129,7 +129,7 @@ export function SkillCandidateSuggestions({
               {result.candidates.map((candidate) => (
                 <li
                   key={candidate.skillId}
-                  className="rounded-xl border border-border-subtle bg-white p-3.5 shadow-xs space-y-2 break-words"
+                  className="rounded-lg border border-border-subtle bg-white p-3.5 shadow-xs space-y-2 break-words"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div className="min-w-0">
@@ -164,7 +164,7 @@ export function SkillCandidateSuggestions({
             <p className="text-xs text-ink-500 m-0">Chưa có gợi ý canonical.</p>
           )}
 
-          <details className="rounded-xl border border-border-subtle bg-white px-3.5 py-2.5 text-xs text-ink-600">
+          <details className="rounded-md border border-border-subtle bg-white px-3.5 py-2.5 text-xs text-ink-600">
             <summary className="cursor-pointer font-semibold text-ink-800">Thông tin phương pháp</summary>
             <div className="mt-2 space-y-1">
               <p className="m-0">

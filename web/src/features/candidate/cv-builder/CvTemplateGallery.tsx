@@ -95,7 +95,7 @@ export function CvTemplateGallery({
                 type="button"
                 aria-pressed={active}
                 onClick={() => setActiveTag(tag)}
-                className={`rounded-full border px-3 py-1 text-xs font-medium transition cursor-pointer ${
+                className={`rounded-md border px-3 py-1 text-xs font-medium transition cursor-pointer ${
                   active
                     ? "border-brand-600 bg-brand-600 text-white"
                     : "border-border-subtle bg-white text-ink-700 hover:border-border-strong hover:bg-slate-50"
@@ -114,7 +114,7 @@ export function CvTemplateGallery({
           return (
             <article
               key={item.id}
-              className="group flex flex-col overflow-hidden rounded-2xl border border-border-subtle bg-white p-3 shadow-2xs transition hover:border-brand-400 hover:shadow-md"
+              className="group flex flex-col overflow-hidden rounded-lg border border-border-subtle bg-white p-3 shadow-2xs transition hover:border-brand-400 hover:shadow-md"
             >
               <button
                 type="button"
@@ -124,7 +124,7 @@ export function CvTemplateGallery({
               >
                 <TemplateMiniPreview item={item} accentColor={accent} />
                 <div className="pointer-events-none absolute inset-0 flex items-end justify-center bg-gradient-to-t from-slate-900/55 via-slate-900/10 to-transparent p-3 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
-                  <span className="rounded-full bg-brand-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm">
+                  <span className="rounded-md bg-brand-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm">
                     Xem trước & Dùng mẫu
                   </span>
                 </div>

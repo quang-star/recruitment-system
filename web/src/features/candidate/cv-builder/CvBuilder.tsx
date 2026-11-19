@@ -677,7 +677,7 @@ export default function CvBuilder({
       >
         <div className="space-y-3 py-3">
           {/* TopCV-style sticky editor action bar */}
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border-subtle bg-slate-50 px-3.5 py-2.5">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border-subtle bg-slate-50 px-3.5 py-2.5">
             <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2.5">
               <input
                 type="text"
@@ -763,7 +763,7 @@ export default function CvBuilder({
           <div className="grid min-w-0 gap-4 lg:grid-cols-[330px_minmax(0,1fr)]">
             <aside
               aria-label="Thanh công cụ thiết kế CV"
-              className={`${mobilePane === "tools" ? "block" : "hidden"} min-w-0 space-y-3 rounded-xl border border-border-subtle bg-slate-50 p-3 lg:block`}
+              className={`${mobilePane === "tools" ? "block" : "hidden"} min-w-0 space-y-3 rounded-lg border border-border-subtle bg-slate-50 p-3 lg:block`}
             >
               <div className="grid grid-cols-2 gap-1 rounded-lg bg-white p-1 border border-border-subtle" role="tablist" aria-label="Nhóm công cụ trình tạo CV">
                 {(
@@ -1206,7 +1206,7 @@ export default function CvBuilder({
             {/* Center A4 Canvas on neutral gray TopCV background */}
             <section
               aria-label="Trang soạn thảo CV A4"
-              className={`${mobilePane === "canvas" ? "block" : "hidden"} min-w-0 rounded-xl border border-border-subtle bg-[#eef2f6] p-3 sm:p-5 lg:block`}
+              className={`${mobilePane === "canvas" ? "block" : "hidden"} min-w-0 rounded-lg border border-border-subtle bg-[#eef2f6] p-3 sm:p-5 lg:block`}
             >
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Chế độ trang CV">

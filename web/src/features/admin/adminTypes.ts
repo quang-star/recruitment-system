@@ -96,9 +96,9 @@ export function resolveAdminTab(pathname: string, search: string): AdminTab {
 }
 
 export const fieldClass =
-  "mt-1 h-10 w-full rounded-xl border border-border-strong bg-white px-3 text-sm text-ink-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:bg-slate-100 disabled:text-ink-500";
+  "mt-1 h-10 w-full rounded-md border border-border-strong bg-white px-3 text-sm text-ink-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:bg-slate-100 disabled:text-ink-500";
 export const textareaClass =
-  "mt-1 w-full rounded-xl border border-border-strong bg-white p-3 text-sm text-ink-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:bg-slate-100 disabled:text-ink-500";
+  "mt-1 w-full rounded-md border border-border-strong bg-white p-3 text-sm text-ink-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:bg-slate-100 disabled:text-ink-500";
 export const labelClass = "block text-xs font-semibold text-ink-700";
 
 export const legacyMissing = "Chưa được ghi (dữ liệu cũ)";

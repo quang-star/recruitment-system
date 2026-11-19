@@ -89,7 +89,7 @@ export function CandidateAccountMenu({ name, avatarUrl, activeView, onNavigate, 
           clearLeaveTimer();
           setOpen((value) => !value);
         }}
-        className="inline-flex items-center gap-2 rounded-full border border-border-subtle bg-slate-50 px-2.5 py-1.5 text-xs sm:text-sm font-semibold text-ink-800 hover:border-brand-300 hover:bg-white transition-colors cursor-pointer"
+        className="inline-flex items-center gap-2 rounded-md border border-border-subtle bg-slate-50 px-2.5 py-1.5 text-xs sm:text-sm font-semibold text-ink-800 hover:border-brand-300 hover:bg-white transition-colors cursor-pointer"
       >
         {avatarUrl && failedAvatar !== avatarUrl ? (
           <img src={avatarUrl} alt="" referrerPolicy="no-referrer" onError={() => setFailedAvatar(avatarUrl)} className="h-6 w-6 rounded-full object-cover" />
@@ -105,7 +105,7 @@ export function CandidateAccountMenu({ name, avatarUrl, activeView, onNavigate, 
       {open && (
         <div
           id={panelId}
-          className="absolute right-0 mt-2 w-60 rounded-2xl border border-border-subtle bg-white p-1.5 shadow-dialog z-50"
+          className="absolute right-0 mt-2 w-60 rounded-lg border border-border-subtle bg-white p-1.5 shadow-dialog z-50"
         >
           <div className="px-3 py-2.5 border-b border-border-subtle mb-1">
             <strong className="block truncate text-sm font-bold text-ink-900">{name}</strong>
@@ -122,7 +122,7 @@ export function CandidateAccountMenu({ name, avatarUrl, activeView, onNavigate, 
                   aria-current={active ? "page" : undefined}
                   onClick={() => navigate(item.id)}
                   className={cn(
-                    "flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors cursor-pointer text-left",
+                    "flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors cursor-pointer text-left",
                     active ? "bg-brand-50 text-brand-700 font-semibold" : "text-ink-700 hover:bg-slate-50"
                   )}
                 >
@@ -142,7 +142,7 @@ export function CandidateAccountMenu({ name, avatarUrl, activeView, onNavigate, 
                 setOpen(false);
                 onLogout();
               }}
-              className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer text-left"
+              className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer text-left"
             >
               <span aria-hidden="true">
                 <LogoutIcon size={16} />

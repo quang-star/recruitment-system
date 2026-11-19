@@ -17,9 +17,9 @@ export const defaultCategory: CategoryChoice = {
 };
 
 const selectClass =
-  "mt-1 h-10 w-full rounded-xl border border-border-strong bg-white px-3 text-sm text-ink-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:bg-slate-50 disabled:text-ink-500";
+  "mt-1 h-10 w-full rounded-md border border-border-strong bg-white px-3 text-sm text-ink-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:bg-slate-50 disabled:text-ink-500";
 const inputClass =
-  "mt-1 h-10 w-full rounded-xl border border-border-strong bg-white px-3 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20";
+  "mt-1 h-10 w-full rounded-md border border-border-strong bg-white px-3 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20";
 const labelClass = "block text-xs font-semibold uppercase tracking-wide text-ink-600";
 
 export function JobCategoryFields({ value, onChange }: {
@@ -39,7 +39,7 @@ export function JobCategoryFields({ value, onChange }: {
   const kinds = ["INDUSTRY", "SPECIALIZATION", "POSITION"] as const;
   const keys = ["industry", "specialization", "position"] as const;
   const labels = ["Ngành", "Nhóm chuyên môn", "Vị trí"];
-  return <section className="rounded-xl border border-border-subtle bg-slate-50/70 p-4 space-y-3" aria-label="Phân loại tuyển dụng">
+  return <section className="rounded-lg border border-border-subtle bg-slate-50/70 p-4 space-y-3" aria-label="Phân loại tuyển dụng">
     <div className="grid gap-3 md:grid-cols-3">
       {kinds.map((kind, index) => {
         const key = keys[index];

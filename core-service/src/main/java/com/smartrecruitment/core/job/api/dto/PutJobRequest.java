@@ -16,6 +16,7 @@ public record PutJobRequest(
         @NotBlank @Size(max = 30000) String requirementsText,
         @Size(max = 30000) String benefitsText,
         @Size(max = 300) String locationText,
+        @Size(max = 120) String province,
         @Pattern(regexp = "[A-Z]{2}") String countryCode,
         WorkMode workMode,
         EmploymentType employmentType,

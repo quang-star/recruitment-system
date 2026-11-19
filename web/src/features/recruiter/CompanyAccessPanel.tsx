@@ -127,7 +127,7 @@ export function CompanyAccessPanel({ session, companyId, members, canManage, onM
   }
 
   const fieldClass =
-    "mt-1 h-9 w-full rounded-xl border border-border-strong bg-white px-3 text-sm text-ink-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:bg-slate-50 disabled:text-ink-400";
+    "mt-1 h-9 w-full rounded-md border border-border-strong bg-white px-3 text-sm text-ink-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:bg-slate-50 disabled:text-ink-400";
 
   return (
     <Card padding="lg" className="space-y-6">
@@ -142,7 +142,7 @@ export function CompanyAccessPanel({ session, companyId, members, canManage, onM
       {members.length === 0 ? (
         <p className="text-sm text-ink-500 m-0">Đang tải hoặc chưa có thành viên.</p>
       ) : (
-        <div className="divide-y divide-border-subtle rounded-xl border border-border-subtle bg-slate-50/50">
+        <div className="divide-y divide-border-subtle rounded-lg border border-border-subtle bg-slate-50/50">
           {members.map((member) => (
             <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3" key={member.memberId}>
               <div>
@@ -201,8 +201,7 @@ export function CompanyAccessPanel({ session, companyId, members, canManage, onM
       {canManage && (
         <div className="space-y-4 border-t border-border-subtle pt-5">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-brand-700 m-0">Company invitations</p>
-            <h3 className="text-base font-bold text-ink-900 m-0 mt-0.5">Mời thành viên</h3>
+            <h3 className="text-base font-bold text-ink-900 m-0">Lời mời thành viên</h3>
           </div>
           <form className="grid gap-3 sm:grid-cols-[1fr_180px_auto] sm:items-end" onSubmit={invite}>
             <label className="block text-xs font-semibold text-ink-700">
@@ -239,7 +238,7 @@ export function CompanyAccessPanel({ session, companyId, members, canManage, onM
           ) : invitations.length === 0 ? (
             <p className="text-sm text-ink-500 m-0">Chưa có lời mời nào.</p>
           ) : (
-            <div className="divide-y divide-border-subtle rounded-xl border border-border-subtle bg-white">
+            <div className="divide-y divide-border-subtle rounded-lg border border-border-subtle bg-white">
               {invitations.map((invitation) => {
                 const status = invitationStatus(invitation);
                 const statusTone =

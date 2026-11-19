@@ -1,0 +1,2 @@
+ALTER TABLE job_versions
+    ADD COLUMN IF NOT EXISTS province VARCHAR(120);

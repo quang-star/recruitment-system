@@ -1,7 +1,8 @@
 import { FormEvent, useEffect, useState } from "react";
 import { apiRequest } from "../../shared/api/client";
-import { Badge, Button, Card, EmptyState, ErrorBanner, cn } from "../../shared/ui";
-import { historyTime, skillCategoryLabel, skillTypeLabel } from "./adminTypes";
+import { Badge, Button, Card, EmptyState, ErrorBanner, Modal, cn } from "../../shared/ui";
+import { catalogStatusLabel, historyTime, skillCategoryLabel, skillTypeLabel } from "./adminTypes";
+import { AdminUserSummary, formatAdminUserRole, useAdminUserLookup } from "./useAdminUserLookup";
 
 type Service = "CORE" | "AI";
 type Filters = { actor: string; resourceId: string; action: string; correlationId: string; from: string; to: string };
@@ -40,7 +41,7 @@ type AuditEntry = {
 type AuditPage = { items: AuditEntry[]; total: number; page: number; size: number };
 
 const fieldClass =
-  "mt-1 h-9 w-full rounded-xl border border-border-strong bg-white px-3 text-xs font-medium text-ink-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20";
+  "mt-1 h-9 w-full rounded-md border border-border-strong bg-white px-3 text-xs font-medium text-ink-900 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-500/20";
 
 export function AdminAuditPanel({ accessToken }: { accessToken: string }) {
   const [selectedId, setSelectedId] = useState<string | number | null>(null);
@@ -51,7 +52,9 @@ export function AdminAuditPanel({ accessToken }: { accessToken: string }) {
   const [result, setResult] = useState<AuditPage | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
-  const selectedEntry = result?.items.find((item) => item.id === selectedId) ?? result?.items[0];
+  const selectedEntry = result?.items.find((item) => item.id === selectedId) ?? null;
+  const actorIds = (result?.items ?? []).map((item) => (service === "CORE" ? item.actorUserId : item.actorId));
+  const usersById = useAdminUserLookup(actorIds, accessToken);
 
   useEffect(() => {
     let active = true;
@@ -93,6 +96,20 @@ export function AdminAuditPanel({ accessToken }: { accessToken: string }) {
       resourceId: draft.resourceId.trim(),
       correlationId: draft.correlationId.trim()
     });
+    setSelectedId(null);
+    setPage(0);
+  }
+
+  function applyQuickFilter(patch: Partial<Filters>) {
+    const next = { ...draft, ...patch };
+    setDraft(next);
+    setFilters({
+      ...next,
+      actor: next.actor.trim(),
+      resourceId: next.resourceId.trim(),
+      correlationId: next.correlationId.trim()
+    });
+    setSelectedId(null);
     setPage(0);
   }
 
@@ -119,6 +136,7 @@ export function AdminAuditPanel({ accessToken }: { accessToken: string }) {
                 setService(event.target.value as Service);
                 setDraft(emptyFilters);
                 setFilters(emptyFilters);
+                setSelectedId(null);
                 setPage(0);
               }}
             >
@@ -133,7 +151,7 @@ export function AdminAuditPanel({ accessToken }: { accessToken: string }) {
       </div>
 
       <form
-        className="space-y-3 rounded-xl border border-border-subtle bg-slate-50/70 p-4"
+        className="space-y-3 rounded-lg border border-border-subtle bg-slate-50/70 p-4"
         onSubmit={filter}
         aria-label="Bộ lọc nhật ký"
       >
@@ -142,6 +160,7 @@ export function AdminAuditPanel({ accessToken }: { accessToken: string }) {
             ID người thực hiện
             <input
               className={fieldClass}
+              placeholder="Ví dụ: 7"
               maxLength={19}
               inputMode="numeric"
               pattern={businessIdPattern}
@@ -154,6 +173,7 @@ export function AdminAuditPanel({ accessToken }: { accessToken: string }) {
             ID danh mục / kỹ năng
             <input
               className={fieldClass}
+              placeholder="Ví dụ: 60"
               maxLength={19}
               inputMode="numeric"
               pattern={businessIdPattern}
@@ -183,6 +203,7 @@ export function AdminAuditPanel({ accessToken }: { accessToken: string }) {
             Mã tương quan nhật ký
             <input
               className={fieldClass}
+              placeholder="UUID, ví dụ: c75866ba-..."
               maxLength={36}
               pattern={uuidPattern}
               value={draft.correlationId}
@@ -222,6 +243,7 @@ export function AdminAuditPanel({ accessToken }: { accessToken: string }) {
             onClick={() => {
               setDraft(emptyFilters);
               setFilters(emptyFilters);
+              setSelectedId(null);
               setPage(0);
             }}
           >
@@ -239,126 +261,223 @@ export function AdminAuditPanel({ accessToken }: { accessToken: string }) {
 
       {result && (
         <div className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
+          {result.items.length ? (
+            <div className="overflow-x-auto rounded-lg border border-border-subtle bg-white">
+              <table className="w-full border-collapse text-left text-sm">
+                <caption className="sr-only">Các thay đổi được ghi nhận</caption>
+                <thead className="bg-slate-50/90 border-b border-border-subtle">
+                  <tr className="text-xs font-semibold uppercase tracking-wider text-ink-500">
+                    <th className="w-28 px-4 py-2.5 whitespace-nowrap">Hành động</th>
+                    <th className="px-3 py-2.5">Danh mục / kỹ năng</th>
+                    <th className="w-36 px-3 py-2.5 whitespace-nowrap">Người thực hiện</th>
+                    <th className="px-3 py-2.5">Lý do</th>
+                    <th className="w-36 px-3 py-2.5 whitespace-nowrap">Thời điểm</th>
+                    <th className="w-28 px-4 py-2.5 text-right whitespace-nowrap">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border-subtle">
+                  {result.items.map((item) => {
+                    const isSelected = selectedEntry?.id === item.id;
+                    const after = state(item.after ?? item.afterState);
+                    const actor = service === "CORE" ? item.actorUserId : item.actorId;
+                    const actorUser = actor ? usersById[actor] : undefined;
+                    const actorRole = actorUser ? formatAdminUserRole(actorUser.roles) : null;
+                    const afterStatus = typeof after?.status === "string" ? (catalogStatusLabel[after.status] ?? after.status) : null;
+                    return (
+                      <tr
+                        key={item.id}
+                        onClick={() => setSelectedId(item.id)}
+                        className={cn(
+                          "transition-colors hover:bg-slate-50/80 cursor-pointer",
+                          isSelected && "bg-brand-50/50"
+                        )}
+                      >
+                        <td className="px-4 py-3 align-middle">
+                          <Badge tone="brand">{actions[item.action] ?? item.action}</Badge>
+                        </td>
+                        <td className="px-3 py-3 align-middle text-sm font-medium text-ink-900 break-words">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span>{name(after)}</span>
+                            {afterStatus && <Badge tone="neutral">{afterStatus}</Badge>}
+                          </div>
+                          <span className="mt-0.5 block font-mono text-xs text-ink-500">#{item.resourceId}</span>
+                        </td>
+                        <td className="px-3 py-3 align-middle text-xs text-ink-700">
+                          {actorUser ? (
+                            <>
+                              <span className="block font-medium text-ink-900 break-all">{actorUser.email}</span>
+                              <span className="block text-ink-500">
+                                #{actor}{actorRole ? ` · ${actorRole}` : ""} · {item.version !== null ? `Phiên bản ${item.version}` : legacyMissing}
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="block font-mono">{actor ? `#${actor}` : legacyMissing}</span>
+                              <span className="block text-ink-500">{item.version !== null ? `Phiên bản ${item.version}` : legacyMissing}</span>
+                            </>
+                          )}
+                        </td>
+                        <td className="px-3 py-3 align-middle text-xs text-ink-700 max-w-xs">
+                          <p className="m-0 line-clamp-2 break-words">{item.reason ?? legacyMissing}</p>
+                        </td>
+                        <td className="px-3 py-3 align-middle text-xs text-ink-600 whitespace-nowrap">
+                          {historyTime(item.createdAt ?? item.occurredAt)}
+                        </td>
+                        <td className="px-4 py-3 align-middle text-right" onClick={(event) => event.stopPropagation()}>
+                          <Button
+                            size="sm"
+                            variant={isSelected ? "primary" : "secondary"}
+                            aria-label={`Xem chi tiết ${name(after)} #${item.resourceId}`}
+                            aria-pressed={isSelected}
+                            onClick={() => setSelectedId(item.id)}
+                          >
+                            Xem chi tiết
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <EmptyState title="Không có thay đổi phù hợp bộ lọc." />
+          )}
+
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border-subtle/80 pt-4">
             <p className="text-xs font-semibold text-ink-600 m-0 tabular-nums-kpi">
               {result.total} thay đổi · Trang {result.page + 1} ·{" "}
               {service === "CORE" ? "Danh mục nghề (Core)" : "Kỹ năng (AI)"}
             </p>
             <div className="flex items-center gap-2">
-              <Button variant="secondary" size="sm" disabled={result.page === 0} onClick={() => setPage((v) => v - 1)}>
+              <Button variant="secondary" size="sm" disabled={result.page === 0} onClick={() => { setSelectedId(null); setPage((v) => v - 1); }}>
                 Trang nhật ký trước
               </Button>
               <Button
                 variant="secondary"
                 size="sm"
                 disabled={result.page >= 100000 || (result.page + 1) * result.size >= result.total}
-                onClick={() => setPage((v) => v + 1)}
+                onClick={() => { setSelectedId(null); setPage((v) => v + 1); }}
               >
                 Trang nhật ký sau
               </Button>
             </div>
           </div>
-
-          {result.items.length ? (
-            <div className="grid gap-5 items-start lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
-              <div className="min-w-0 max-h-[540px] overflow-auto rounded-xl border border-border-subtle bg-white">
-                <table className="w-full border-collapse text-left text-sm">
-                  <caption className="sr-only">Các thay đổi được ghi nhận</caption>
-                  <thead className="sticky top-0 z-10 bg-slate-50 shadow-[0_1px_0_0_var(--color-border-subtle)]">
-                    <tr className="text-xs font-semibold uppercase tracking-wider text-ink-500">
-                      <th className="px-4 py-2.5">Hành động</th>
-                      <th className="px-3 py-2.5">Danh mục / kỹ năng</th>
-                      <th className="px-4 py-2.5">Thời điểm</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border-subtle">
-                    {result.items.map((item) => {
-                      const isSelected = selectedEntry?.id === item.id;
-                      return (
-                        <tr
-                          key={item.id}
-                          className={cn(
-                            "transition-colors hover:bg-slate-50/80",
-                            isSelected && "bg-brand-50/50 border-l-4 border-l-brand-600"
-                          )}
-                        >
-                          <td className="px-4 py-2.5 align-top">
-                            <button
-                              type="button"
-                              aria-pressed={isSelected}
-                              onClick={() => setSelectedId(item.id)}
-                              className="text-xs font-bold text-brand-700 hover:underline cursor-pointer"
-                            >
-                              {actions[item.action] ?? item.action}
-                            </button>
-                          </td>
-                          <td className="px-3 py-2.5 align-top text-sm font-medium text-ink-900 break-words">
-                            <span className="block">{name(state(item.after ?? item.afterState))}</span>
-                            <span className="mt-0.5 block font-mono text-xs text-ink-500">#{item.resourceId}</span>
-                          </td>
-                          <td className="px-4 py-2.5 align-top text-xs text-ink-600 whitespace-nowrap">
-                            {historyTime(item.createdAt ?? item.occurredAt)}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              <ol className="pl-0 list-none m-0">
-                {selectedEntry && <AuditRecord key={selectedEntry.id} item={selectedEntry} service={service} />}
-              </ol>
-            </div>
-          ) : (
-            <EmptyState title="Không có thay đổi phù hợp bộ lọc." />
-          )}
         </div>
       )}
+
+      <Modal
+        open={Boolean(selectedEntry)}
+        onClose={() => setSelectedId(null)}
+        size="lg"
+        title={selectedEntry ? `${actions[selectedEntry.action] ?? selectedEntry.action} · ${name(state(selectedEntry.after ?? selectedEntry.afterState))}` : undefined}
+        description={selectedEntry ? `ID danh mục / kỹ năng: #${selectedEntry.resourceId} · ${service === "CORE" ? "Danh mục nghề (Core)" : "Kỹ năng (AI)"}` : undefined}
+      >
+        {selectedEntry && (
+          <div className="pt-4">
+            <AuditRecord
+              key={selectedEntry.id}
+              item={selectedEntry}
+              service={service}
+              actorUser={(() => {
+                const actor = service === "CORE" ? selectedEntry.actorUserId : selectedEntry.actorId;
+                return actor ? usersById[actor] : undefined;
+              })()}
+              onFilterResource={(id) => applyQuickFilter({ resourceId: id })}
+              onFilterCorrelation={(corr) => applyQuickFilter({ correlationId: corr })}
+            />
+          </div>
+        )}
+      </Modal>
     </Card>
   );
 }
 
-function AuditRecord({ item, service }: { item: AuditEntry; service: Service }) {
+function AuditRecord({
+  item,
+  service,
+  actorUser,
+  onFilterResource,
+  onFilterCorrelation
+}: {
+  item: AuditEntry;
+  service: Service;
+  actorUser?: AdminUserSummary;
+  onFilterResource: (resourceId: string) => void;
+  onFilterCorrelation: (correlationId: string) => void;
+}) {
   const before = state(item.before ?? item.beforeState);
   const after = state(item.after ?? item.afterState);
   const occurred = item.createdAt ?? item.occurredAt;
   const date = occurred ? new Date(occurred) : null;
+  const isInitial = !before && (item.action === "CREATE" || item.action === "PROPOSE");
+  const beforeLabel = isInitial ? "Khởi tạo" : name(before);
+  const afterStatus = typeof after?.status === "string" ? (catalogStatusLabel[after.status] ?? after.status) : null;
+  const actor = service === "CORE" ? item.actorUserId : item.actorId;
+  const actorRole = actorUser ? formatAdminUserRole(actorUser.roles) : null;
   return (
-    <li className="rounded-2xl border border-border-subtle bg-slate-50/70 p-4 space-y-3 break-words">
+    <div className="rounded-lg border border-border-subtle bg-slate-50/70 p-4 space-y-3 break-words">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-subtle pb-2.5">
         <Badge tone="brand">{actions[item.action] ?? item.action}</Badge>
         <p className="text-xs text-ink-500 m-0">
           {date && !Number.isNaN(date.getTime()) ? date.toLocaleString("vi-VN") : legacyMissing}
         </p>
       </div>
-      <dl className="grid gap-2 text-xs m-0">
+      <dl className="grid gap-3 sm:grid-cols-2 text-xs m-0">
         <div>
           <dt className="font-semibold text-ink-500">ID danh mục / kỹ năng</dt>
-          <dd className="m-0 font-mono text-ink-900">{item.resourceId}</dd>
+          <dd className="m-0 mt-0.5 flex flex-wrap items-center gap-2 font-mono text-ink-900">
+            <span>{item.resourceId}</span>
+            <button
+              type="button"
+              onClick={() => onFilterResource(item.resourceId)}
+              className="font-sans text-[11px] font-semibold text-brand-700 hover:underline cursor-pointer"
+            >
+              Lọc ID này
+            </button>
+          </dd>
         </div>
         <div>
           <dt className="font-semibold text-ink-500">Người thực hiện</dt>
-          <dd className="m-0 font-mono text-ink-900">
-            {(service === "CORE" ? item.actorUserId : item.actorId) ?? legacyMissing}
+          <dd className="m-0 mt-0.5 text-ink-900">
+            {actorUser ? (
+              <span>
+                <span className="font-medium">{actorUser.email}</span>{" "}
+                <span className="font-mono text-ink-600">(#{actor})</span>
+                {actorRole ? <span className="text-ink-500"> · {actorRole}</span> : null}
+              </span>
+            ) : (
+              <span className="font-mono">{actor ?? legacyMissing}</span>
+            )}
           </dd>
         </div>
         <div>
           <dt className="font-semibold text-ink-500">Phiên bản</dt>
-          <dd className="m-0 text-ink-900">{item.version ?? legacyMissing}</dd>
+          <dd className="m-0 mt-0.5 text-ink-900">{item.version ?? legacyMissing}</dd>
         </div>
         <div>
           <dt className="font-semibold text-ink-500">Lý do</dt>
-          <dd className="m-0 text-ink-900">{item.reason ?? legacyMissing}</dd>
+          <dd className="m-0 mt-0.5 text-ink-900">{item.reason ?? legacyMissing}</dd>
         </div>
-        <div>
+        <div className="sm:col-span-2">
           <dt className="font-semibold text-ink-500">Mã tương quan</dt>
-          <dd className="m-0 font-mono text-ink-800">{item.correlationId ?? legacyMissing}</dd>
+          <dd className="m-0 mt-0.5 flex flex-wrap items-center gap-2 font-mono text-ink-800">
+            <span>{item.correlationId ?? legacyMissing}</span>
+            {item.correlationId && (
+              <button
+                type="button"
+                onClick={() => onFilterCorrelation(item.correlationId!)}
+                className="font-sans text-[11px] font-semibold text-brand-700 hover:underline cursor-pointer"
+              >
+                Lọc theo mã này
+              </button>
+            )}
+          </dd>
         </div>
       </dl>
-      <p className="rounded-xl border border-border-subtle bg-white px-3 py-2 text-xs font-medium text-ink-900 m-0">
-        {name(before)} → {name(after)}
-        {typeof after?.status === "string" ? ` · ${after.status}` : ""}
+      <p className="rounded-md border border-border-subtle bg-white px-3 py-2 text-xs font-medium text-ink-900 m-0">
+        {beforeLabel} → {name(after)}
+        {afterStatus ? ` · ${afterStatus}` : ""}
       </p>
       {typeof after?.type === "string" && (
         <p className="text-xs text-ink-700 m-0">
@@ -378,7 +497,7 @@ function AuditRecord({ item, service }: { item: AuditEntry; service: Service }) 
       {service === "AI" && item.redacted && (
         <p className="text-xs font-medium text-amber-800 m-0">Thông tin liên hệ đã được che trong bản ghi này.</p>
       )}
-    </li>
+    </div>
   );
 }
 

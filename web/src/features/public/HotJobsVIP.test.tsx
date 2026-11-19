@@ -84,4 +84,80 @@ describe("HotJobsVIP saved bookmarks", () => {
 
     expect(await screen.findByText("Staff Data Engineer")).toBeInTheDocument();
   });
+
+  it("renders a single unified list with count, quick filter, explore-all link, and item actions", () => {
+    const onSelectJob = vi.fn();
+    const onApplyJob = vi.fn();
+    const onExploreAll = vi.fn();
+    const eightJobs: PublicJob[] = Array.from({ length: 8 }, (_, index) => ({
+      ...sampleJobs[index % 2],
+      jobId: `job-${index + 1}`,
+      title: `Software Engineer ${index + 1}`
+    }));
+
+    render(
+      <HotJobsVIP
+        jobs={eightJobs}
+        totalJobs={24}
+        onSelectJob={onSelectJob}
+        onApplyJob={onApplyJob}
+        onExploreAll={onExploreAll}
+      />
+    );
+
+    expect(screen.getByText("24 vị trí đang tuyển")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Software Engineer 8" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Xem tất cả việc làm" }));
+    expect(onExploreAll).toHaveBeenCalledOnce();
+
+    fireEvent.click(screen.getByRole("button", { name: "Software Engineer 1" }));
+    expect(onSelectJob).toHaveBeenCalledWith(eightJobs[0]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Ứng tuyển Software Engineer 2" }));
+    expect(onApplyJob).toHaveBeenCalledWith(eightJobs[1]);
+  });
+
+  it("hides total job count while loading or on error and shows empty state when no jobs exist", () => {
+    const { rerender } = render(
+      <HotJobsVIP jobs={[]} totalJobs={0} loadingJobs onSelectJob={vi.fn()} onApplyJob={vi.fn()} />
+    );
+    expect(screen.getByText("Đang cập nhật cơ hội việc làm…")).toBeInTheDocument();
+    expect(screen.queryByText(/^\d+ vị trí đang tuyển$/)).not.toBeInTheDocument();
+
+    rerender(<HotJobsVIP jobs={[]} totalJobs={0} loadingJobs={false} onSelectJob={vi.fn()} onApplyJob={vi.fn()} />);
+    expect(screen.getByText("Hiện chưa có vị trí đang tuyển")).toBeInTheDocument();
+    expect(screen.queryByText(/^\d+ vị trí đang tuyển$/)).not.toBeInTheDocument();
+  });
+
+  it("queries the public jobs API for quick filters across the full catalog and forwards the active preset", async () => {
+    const onExploreAll = vi.fn();
+    vi.mocked(apiRequest).mockResolvedValueOnce({
+      items: [{ ...sampleJobs[0], jobId: "remote-814", title: "Remote Platform Engineer" }],
+      total: 42,
+      page: 0,
+      size: 12
+    });
+
+    render(
+      <HotJobsVIP
+        jobs={sampleJobs}
+        totalJobs={814}
+        onSelectJob={vi.fn()}
+        onApplyJob={vi.fn()}
+        onExploreAll={onExploreAll}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Từ xa" }));
+    expect(await screen.findByText("Remote Platform Engineer")).toBeInTheDocument();
+    expect(screen.getByText("42 vị trí đang tuyển")).toBeInTheDocument();
+    expect(vi.mocked(apiRequest)).toHaveBeenCalledWith(
+      "/api/v2/public/jobs?page=0&size=12&sort=newest&workMode=REMOTE",
+      expect.objectContaining({ signal: expect.any(AbortSignal) })
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Xem tất cả việc làm" }));
+    expect(onExploreAll).toHaveBeenCalledWith({ mode: "REMOTE" });
+  });
 });

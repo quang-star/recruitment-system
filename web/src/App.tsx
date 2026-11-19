@@ -11,6 +11,7 @@ import {
   subscribeSession,
   updateSession
 } from "./shared/auth/session";
+import { useIsNarrowViewport } from "./shared/layout/useDesktopWorkspaceGuard";
 import { EnsureRouter, routes } from "./shared/router";
 import { Button, ErrorBanner } from "./shared/ui";
 
@@ -46,7 +47,7 @@ type CurrentUser = {
 function WorkspaceLoadingFallback({ message = "Đang tải không gian làm việc…" }: { message?: string }) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-canvas px-4">
-      <div className="w-full max-w-md rounded-2xl border border-border-subtle bg-surface p-6 text-center shadow-card">
+      <div className="w-full max-w-md rounded-lg border border-border-subtle bg-surface p-6 text-center shadow-card">
         <div className="mx-auto mb-3 h-7 w-7 animate-spin rounded-full border-2 border-brand-600 border-t-transparent" />
         <p className="text-sm font-medium text-ink-600 m-0">{message}</p>
       </div>
@@ -57,6 +58,7 @@ function WorkspaceLoadingFallback({ message = "Đang tải không gian làm vi�
 function AppContent() {
   const location = useLocation();
   const navigate = useNavigate();
+  const isNarrowViewport = useIsNarrowViewport();
   const pathnameRef = useRef(location.pathname);
   pathnameRef.current = location.pathname;
   const [session, setSession] = useState<AuthSession | null>(() => loadSession());
@@ -150,7 +152,7 @@ function AppContent() {
     <main className={`min-h-screen bg-canvas ${session ? "authenticated-shell" : "public-portal-shell"}`}>
       {!sessionVerified ? (
         <div className="min-h-screen flex items-center justify-center px-4">
-          <section className="w-full max-w-md rounded-2xl border border-border-subtle bg-surface p-6 shadow-card space-y-4">
+          <section className="w-full max-w-md rounded-lg border border-border-subtle bg-surface p-6 shadow-card space-y-4">
             {verificationError ? (
               <>
                 <ErrorBanner tone="error" message={verificationError} />
@@ -177,7 +179,7 @@ function AppContent() {
             <main className="mx-auto max-w-lg px-4 py-16">
               <section
                 role="alert"
-                className="rounded-2xl border border-border-subtle bg-white p-6 shadow-card space-y-4"
+                className="rounded-lg border border-border-subtle bg-white p-6 shadow-card space-y-4"
               >
                 <h1 className="text-lg font-bold text-ink-900 m-0">Liên kết mời thành viên công ty</h1>
                 <p className="text-sm text-ink-600 m-0">
@@ -187,13 +189,13 @@ function AppContent() {
                   <button
                     type="button"
                     onClick={logout}
-                    className="rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 cursor-pointer"
+                    className="rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 cursor-pointer"
                   >
                     Đăng xuất để dùng tài khoản nhà tuyển dụng
                   </button>
                   <a
                     href={routes.home}
-                    className="rounded-xl border border-border-strong px-4 py-2 text-sm font-semibold text-ink-700 no-underline hover:bg-slate-50"
+                    className="rounded-lg border border-border-strong px-4 py-2 text-sm font-semibold text-ink-700 no-underline hover:bg-slate-50"
                   >
                     Về trang chính
                   </a>
@@ -201,9 +203,49 @@ function AppContent() {
               </section>
             </main>
           ) : session.roles.includes("SYSTEM_ADMIN") ? (
-            <AdminWorkspace session={session} onLogout={logout} />
+            isNarrowViewport ? (
+              <div className="min-h-screen flex items-center justify-center px-4 py-12">
+                <section
+                  role="status"
+                  className="w-full max-w-md rounded-lg border border-border-subtle bg-surface p-6 shadow-card space-y-4"
+                >
+                  <h1 className="text-lg font-bold text-ink-900 m-0">
+                    Không gian này chỉ hỗ trợ màn hình máy tính
+                  </h1>
+                  <p className="text-sm text-ink-600 m-0 leading-relaxed">
+                    Giao diện điện thoại chỉ dành cho khách tìm việc và ứng viên. Vui lòng mở bằng máy tính để sử dụng không gian Quản trị viên, hoặc đăng xuất để đổi tài khoản.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" variant="primary" onClick={() => { void logout(); }}>
+                      Đăng xuất
+                    </Button>
+                  </div>
+                </section>
+              </div>
+            ) : (
+              <AdminWorkspace session={session} onLogout={logout} />
+            )
           ) : session.roles.includes("RECRUITER") ? (
-            location.pathname === routes.acceptInvitation ? (
+            isNarrowViewport ? (
+              <div className="min-h-screen flex items-center justify-center px-4 py-12">
+                <section
+                  role="status"
+                  className="w-full max-w-md rounded-lg border border-border-subtle bg-surface p-6 shadow-card space-y-4"
+                >
+                  <h1 className="text-lg font-bold text-ink-900 m-0">
+                    Không gian này chỉ hỗ trợ màn hình máy tính
+                  </h1>
+                  <p className="text-sm text-ink-600 m-0 leading-relaxed">
+                    Giao diện điện thoại chỉ dành cho khách tìm việc và ứng viên. Vui lòng mở bằng máy tính để sử dụng không gian Nhà tuyển dụng, hoặc đăng xuất để đổi tài khoản.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" variant="primary" onClick={() => { void logout(); }}>
+                      Đăng xuất
+                    </Button>
+                  </div>
+                </section>
+              </div>
+            ) : location.pathname === routes.acceptInvitation ? (
               <AcceptCompanyInvitationPage session={session} onLogout={logout} />
             ) : (
               <RecruiterWorkspace session={session} onLogout={logout} />

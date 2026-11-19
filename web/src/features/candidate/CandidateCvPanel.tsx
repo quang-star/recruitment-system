@@ -537,7 +537,7 @@ export function CandidateCvPanel({ session, onLogout }: Props) {
       {error && <ErrorBanner tone="error" message={error} />}
       {uploadMessage && (
         <p
-          className="success-message rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 m-0"
+          className="success-message rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900 m-0"
           role="status"
         >
           {uploadMessage}
@@ -660,10 +660,8 @@ export function CandidateCvPanel({ session, onLogout }: Props) {
           )}
 
           <Card padding="lg" className="space-y-4">
-        <div className="flex items-center gap-2.5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
-            <UploadIcon size={18} aria-hidden="true" />
-          </span>
+        <div className="flex items-start gap-2.5">
+          <UploadIcon size={18} className="text-brand-700 shrink-0 mt-0.5" aria-hidden="true" />
           <div>
             <h3 className="text-base font-bold text-ink-900 m-0">Tải CV mới</h3>
             <p className="text-xs text-ink-500 m-0">
@@ -682,7 +680,7 @@ export function CandidateCvPanel({ session, onLogout }: Props) {
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
                 placeholder="Ví dụ: Backend Java CV 2026"
-                className="mt-1.5 h-10 w-full rounded-xl border border-border-strong bg-white px-3.5 text-sm text-ink-900 focus:border-brand-600 focus:outline-none"
+                className="mt-1.5 h-10 w-full rounded-md border border-border-strong bg-white px-3.5 text-sm text-ink-900 focus:border-brand-600 focus:outline-none"
               />
             </label>
 
@@ -693,7 +691,7 @@ export function CandidateCvPanel({ session, onLogout }: Props) {
                 type="file"
                 accept=".pdf,application/pdf"
                 onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
-                className="mt-1.5 block w-full rounded-xl border border-dashed border-border-strong bg-slate-50/70 px-3 py-2 text-xs text-ink-700 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-brand-700 hover:file:bg-brand-100 cursor-pointer"
+                className="mt-1.5 block w-full rounded-md border border-dashed border-border-strong bg-slate-50/70 px-3 py-2 text-xs text-ink-700 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-brand-700 hover:file:bg-brand-100 cursor-pointer"
               />
             </label>
           </div>
@@ -739,7 +737,7 @@ export function CandidateCvPanel({ session, onLogout }: Props) {
                   </div>
 
                   {isFailed && (
-                    <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 m-0">
+                    <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 m-0">
                       {cvFailureInstruction(cv.activeVersion.failureCode)}
                     </p>
                   )}
