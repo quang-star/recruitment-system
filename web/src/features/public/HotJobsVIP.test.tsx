@@ -130,6 +130,17 @@ describe("HotJobsVIP saved bookmarks", () => {
     expect(screen.queryByText(/^\d+ vị trí đang tuyển$/)).not.toBeInTheDocument();
   });
 
+  it("hides the jobs section when loading fails and restores it on retry", () => {
+    const props = { jobs: [], onSelectJob: vi.fn(), onApplyJob: vi.fn() };
+    const { rerender } = render(<HotJobsVIP {...props} loadingJobs />);
+
+    rerender(<HotJobsVIP {...props} jobsError />);
+    expect(screen.queryByRole("region")).not.toBeInTheDocument();
+
+    rerender(<HotJobsVIP {...props} jobs={sampleJobs} />);
+    expect(screen.getByText("Backend Java Developer")).toBeInTheDocument();
+  });
+
   it("queries the public jobs API for quick filters across the full catalog and forwards the active preset", async () => {
     const onExploreAll = vi.fn();
     vi.mocked(apiRequest).mockResolvedValueOnce({
