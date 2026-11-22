@@ -369,6 +369,7 @@ function CandidateProfilePageInner({ session, onLogout }: CandidateProfilePagePr
         avatarUrl: savedAvatar,
         activeView,
         onNavigate: navigateView,
+        onOpenRecruiter: session.roles.includes("RECRUITER") ? () => navigate(routes.recruiter.dashboard) : undefined,
         onLogout,
       }}
     >

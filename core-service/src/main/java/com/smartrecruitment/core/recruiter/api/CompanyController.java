@@ -90,6 +90,15 @@ public class CompanyController {
                 request.token()));
     }
 
+    @PostMapping("/invitations/accept-for-account")
+    public AccountInvitationAcceptanceResponse acceptInvitationForAccount(@AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody AcceptCompanyInvitationRequest request) {
+        var member = invitations.acceptForAccount(userId(jwt), jwt.getClaimAsString("email"), request.token());
+        return new AccountInvitationAcceptanceResponse(member.companyId(), member.userId(), member.role(), member.status());
+    }
+
+    public record AccountInvitationAcceptanceResponse(Long companyId, Long userId, String role, String status) {}
+
     @PatchMapping("/{companyId}/members/{memberId}")
     public CompanyMemberResponse updateMember(@AuthenticationPrincipal Jwt jwt, @PathVariable Long companyId,
                                               @PathVariable Long memberId,

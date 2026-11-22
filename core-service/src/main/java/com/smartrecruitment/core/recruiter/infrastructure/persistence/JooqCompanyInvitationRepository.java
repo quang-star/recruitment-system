@@ -83,6 +83,16 @@ public class JooqCompanyInvitationRepository implements CompanyInvitationReposit
     }
 
     @Override
+    public Optional<CompanyInvitation> findAcceptedByTokenHash(String tokenHash, Long userId, String normalizedEmail) {
+        return dsl.selectFrom(COMPANY_INVITATIONS)
+                .where(COMPANY_INVITATIONS.TOKEN_HASH.eq(tokenHash))
+                .and(COMPANY_INVITATIONS.ACCEPTED_BY_USER_ID.eq(userId))
+                .and(COMPANY_INVITATIONS.NORMALIZED_EMAIL.eq(normalizedEmail))
+                .and(COMPANY_INVITATIONS.ACCEPTED_AT.isNotNull())
+                .fetchOptional(record -> toInvitation(record, record.getCompanyId()));
+    }
+
+    @Override
     public int revokeExpired(Long companyId, String normalizedEmail, OffsetDateTime now) {
         Long internalCompanyId = internalCompanyId(companyId);
         if (internalCompanyId == null) return 0;

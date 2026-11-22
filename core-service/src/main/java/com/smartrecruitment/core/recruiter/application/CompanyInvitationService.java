@@ -84,10 +84,28 @@ public class CompanyInvitationService {
 
     @Transactional
     public CompanyMember accept(Long userId, String jwtEmail, String rawToken) {
+        return acceptActive(userId, normalizeEmail(jwtEmail), tokens.hash(rawToken));
+    }
+
+    @Transactional
+    public CompanyMember acceptForAccount(Long userId, String jwtEmail, String rawToken) {
+        String email = normalizeEmail(jwtEmail);
+        String tokenHash = tokens.hash(rawToken);
+        var accepted = invitations.findAcceptedByTokenHash(tokenHash, userId, email);
+        if (accepted.isPresent()) {
+            // Recover when Core committed before Auth could grant the workspace role.
+            return companies.findMember(accepted.get().companyId(), userId)
+                    .filter(member -> "ACTIVE".equals(member.status()))
+                    .orElseThrow(CompanyInvitationNotFoundException::new);
+        }
+        return acceptActive(userId, email, tokenHash);
+    }
+
+    private CompanyMember acceptActive(Long userId, String email, String tokenHash) {
         OffsetDateTime now = OffsetDateTime.now(clock);
-        CompanyInvitation invitation = invitations.findActiveByTokenHash(tokens.hash(rawToken), now)
+        CompanyInvitation invitation = invitations.findActiveByTokenHash(tokenHash, now)
                 .orElseThrow(CompanyInvitationNotFoundException::new);
-        if (!invitation.normalizedEmail().equals(normalizeEmail(jwtEmail))) {
+        if (!invitation.normalizedEmail().equals(email)) {
             throw new CompanyInvitationConflictException("Invitation belongs to a different email address");
         }
         companies.findMember(invitation.companyId(), userId).ifPresent(member -> {

@@ -109,7 +109,7 @@ function AppContent() {
   }, [session?.userId, sessionEpoch, verificationAttempt]);
 
   const logout = useCallback(async () => {
-    const shouldReturnHome = /^\/(candidate|recruiter|admin|accept-invitation)(\/|$)/.test(pathnameRef.current);
+    const shouldReturnHome = /^\/(candidate|recruiter|admin)(\/|$)/.test(pathnameRef.current);
     const current = loadSession();
     clearSession();
     setSession(null);
@@ -148,6 +148,9 @@ function AppContent() {
     setSession(authenticated);
   };
 
+  const opensRecruiter = session?.roles.includes("RECRUITER") &&
+    (!session.roles.includes("CANDIDATE") || /^\/recruiter(\/|$)/.test(location.pathname));
+
   return (
     <main className={`min-h-screen bg-canvas ${session ? "authenticated-shell" : "public-portal-shell"}`}>
       {!sessionVerified ? (
@@ -175,33 +178,9 @@ function AppContent() {
         </div>
       ) : session ? (
         <Suspense fallback={<WorkspaceLoadingFallback />}>
-          {location.pathname === routes.acceptInvitation && !session.roles.includes("RECRUITER") ? (
-            <main className="mx-auto max-w-lg px-4 py-16">
-              <section
-                role="alert"
-                className="rounded-lg border border-border-subtle bg-white p-6 shadow-card space-y-4"
-              >
-                <h1 className="text-lg font-bold text-ink-900 m-0">Liên kết mời thành viên công ty</h1>
-                <p className="text-sm text-ink-600 m-0">
-                  Tài khoản hiện tại không có vai trò nhà tuyển dụng. Hãy đăng xuất rồi đăng nhập bằng tài khoản nhà tuyển dụng được mời để chấp nhận lời mời này.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={logout}
-                    className="rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 cursor-pointer"
-                  >
-                    Đăng xuất để dùng tài khoản nhà tuyển dụng
-                  </button>
-                  <a
-                    href={routes.home}
-                    className="rounded-lg border border-border-strong px-4 py-2 text-sm font-semibold text-ink-700 no-underline hover:bg-slate-50"
-                  >
-                    Về trang chính
-                  </a>
-                </div>
-              </section>
-            </main>
+          {location.pathname === routes.acceptInvitation ? (
+            <AcceptCompanyInvitationPage key={location.search} session={session} onLogout={logout}
+              isNarrowViewport={isNarrowViewport} />
           ) : session.roles.includes("SYSTEM_ADMIN") ? (
             isNarrowViewport ? (
               <div className="min-h-screen flex items-center justify-center px-4 py-12">
@@ -225,7 +204,7 @@ function AppContent() {
             ) : (
               <AdminWorkspace session={session} onLogout={logout} />
             )
-          ) : session.roles.includes("RECRUITER") ? (
+          ) : opensRecruiter ? (
             isNarrowViewport ? (
               <div className="min-h-screen flex items-center justify-center px-4 py-12">
                 <section
@@ -239,14 +218,17 @@ function AppContent() {
                     Giao diện điện thoại chỉ dành cho khách tìm việc và ứng viên. Vui lòng mở bằng máy tính để sử dụng không gian Nhà tuyển dụng, hoặc đăng xuất để đổi tài khoản.
                   </p>
                   <div className="flex flex-wrap gap-2">
+                    {session.roles.includes("CANDIDATE") && (
+                      <Button type="button" variant="secondary" onClick={() => navigate(routes.candidate.dashboard)}>
+                        Về không gian Ứng viên
+                      </Button>
+                    )}
                     <Button type="button" variant="primary" onClick={() => { void logout(); }}>
                       Đăng xuất
                     </Button>
                   </div>
                 </section>
               </div>
-            ) : location.pathname === routes.acceptInvitation ? (
-              <AcceptCompanyInvitationPage session={session} onLogout={logout} />
             ) : (
               <RecruiterWorkspace session={session} onLogout={logout} />
             )

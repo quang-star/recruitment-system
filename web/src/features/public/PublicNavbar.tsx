@@ -12,6 +12,7 @@ export type CandidateNavigation = {
   avatarUrl?: string | null;
   activeView: CandidateView;
   onNavigate: (view: CandidateView) => void;
+  onOpenRecruiter?: () => void;
   onLogout: () => void;
 };
 
@@ -102,6 +103,7 @@ export const PublicNavbar: FC<Props> = ({
                 avatarUrl={candidate.avatarUrl}
                 activeView={candidate.activeView}
                 onNavigate={candidate.onNavigate}
+                onOpenRecruiter={candidate.onOpenRecruiter}
                 onLogout={candidate.onLogout}
               />
             </>

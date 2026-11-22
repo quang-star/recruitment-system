@@ -56,6 +56,12 @@ async function refreshSession(original: AuthSession, generation: number): Promis
   finally { if (refreshing?.promise === promise) refreshing = null; }
 }
 
+export function refreshCurrentSession(accessToken: string): Promise<AuthSession> {
+  const current = sessionForToken(accessToken);
+  if (!current) throw new SessionChangedError();
+  return refreshSession(current, sessionGeneration());
+}
+
 async function authenticatedFetch(path: string, requestInit: RequestInit, headers: Headers, token?: string): Promise<Response> {
   const current = sessionForToken(token);
   if (token && loadSession() && !current) throw new SessionChangedError();

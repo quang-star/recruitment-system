@@ -1,9 +1,10 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { BrowserRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AcceptCompanyInvitationPage } from "./AcceptCompanyInvitationPage";
-import { AuthSession } from "../../shared/auth/session";
+import { AuthSession, clearSession, saveSession } from "../../shared/auth/session";
 
 const session: AuthSession = {
   userId: "11111111-1111-1111-1111-111111111111",
@@ -15,24 +16,33 @@ const session: AuthSession = {
 };
 
 describe("AcceptCompanyInvitationPage", () => {
-  afterEach(() => window.history.replaceState({}, "", "/"));
+  afterEach(() => {
+    window.history.replaceState({}, "", "/");
+    clearSession();
+    vi.restoreAllMocks();
+  });
 
   it("accepts the URL token with the authenticated recruiter session", async () => {
     const token = "b".repeat(64);
     window.history.replaceState({}, "", `/accept-invitation?token=${token}`);
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({
-      memberId: "member-1", companyId: "company-1", userId: session.userId,
-      role: "RECRUITER", status: "ACTIVE", joinedAt: "2026-08-25T10:00:00Z", version: 0
-    }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    saveSession(session);
+    const fetchMock = vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(Response.json({ companyId: "42", role: "RECRUITER", status: "ACTIVE" }))
+      .mockResolvedValueOnce(Response.json({ ...session, accessToken: "new-access", refreshToken: "new-refresh" }));
     const user = userEvent.setup();
-    render(<AcceptCompanyInvitationPage session={session} onLogout={vi.fn()} />);
+    render(
+      <BrowserRouter>
+        <AcceptCompanyInvitationPage session={session} onLogout={vi.fn()} isNarrowViewport={false} />
+      </BrowserRouter>
+    );
 
     await user.click(screen.getByRole("button", { name: "Chấp nhận lời mời" }));
 
     expect(await screen.findByText(/đã tham gia công ty/)).toBeInTheDocument();
     const [path, init] = fetchMock.mock.calls[0];
-    expect(path).toBe("/api/v2/companies/invitations/accept");
+    expect(path).toBe("/api/v2/auth/company-invitations/accept");
     expect(new Headers(init?.headers).get("Authorization")).toBe("Bearer access-token");
     expect(JSON.parse(String(init?.body))).toEqual({ token });
+    expect(await screen.findByRole("link", { name: "Mở không gian tuyển dụng" })).toHaveAttribute("href", "/recruiter");
   });
 });

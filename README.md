@@ -36,6 +36,8 @@ Trình soạn thảo hỗ trợ **Tải xuống PDF** một chạm trực tiếp
 4. Hệ thống đối chiếu CV với JD bất đồng bộ, trả điểm thành phần, giải thích và tham chiếu nguồn cho nhà tuyển dụng xem xét.
 5. Nhà tuyển dụng xem xét CV và đưa hồ sơ vào danh sách rút gọn hoặc từ chối. Ứng viên theo dõi trạng thái trong workspace và có thể rút hồ sơ đang được xử lý.
 
+Ứng viên có thể dùng tài khoản hiện có để nhận lời mời vào đội tuyển dụng nếu email đã xác minh trùng với email được mời. Sau khi chấp nhận, menu tài khoản trên máy tính cho phép chuyển giữa không gian Ứng viên và Nhà tuyển dụng. Quyền trong từng công ty do vai trò thành viên quyết định.
+
 **Phạm vi AI:** đối chiếu và chấm điểm dành cho tuyển dụng CNTT. Công việc ngoài CNTT dùng quy trình xem xét hồ sơ thủ công. Điểm hỗ trợ sàng lọc; quyết định tuyển dụng thuộc người phụ trách.
 
 ## Kiến trúc

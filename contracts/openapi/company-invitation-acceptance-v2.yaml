@@ -1,0 +1,48 @@
+openapi: 3.1.0
+info:
+  title: Company invitation acceptance
+  version: 2.0.0
+paths:
+  /api/v2/auth/company-invitations/accept:
+    post:
+      summary: Accept a company invitation on the current verified account
+      description: >-
+        Core accepts the invitation only for its matching email and stores the company membership.
+        Auth adds the RECRUITER workspace role to the same account. A client can refresh its
+        access token after success. The recipient can retry the same token while the
+        resulting membership is active.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string, minLength: 64, maxLength: 128 }
+      responses:
+        '200':
+          description: Active membership and recruiter role granted
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [companyId, role, status]
+                properties:
+                  companyId: { type: string, pattern: '^[1-9][0-9]*$' }
+                  role: { type: string, enum: [OWNER, COMPANY_ADMIN, RECRUITER, VIEWER] }
+                  status: { type: string, const: ACTIVE }
+        '400': { description: Invalid request }
+        '401': { description: Authentication required }
+        '403': { description: Verified candidate or recruiter account required }
+        '404': { description: Invitation unavailable }
+        '409': { description: Invitation email or membership conflict }
+        '503': { description: Temporary invitation processing failure }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

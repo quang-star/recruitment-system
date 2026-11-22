@@ -2,6 +2,7 @@ package com.smartrecruitment.auth.auth.api;
 
 import com.smartrecruitment.auth.shared.api.ApiError;
 import com.smartrecruitment.auth.shared.api.CorrelationIdFilter;
+import com.smartrecruitment.auth.user.application.CompanyInvitationAcceptanceException;
 import com.smartrecruitment.auth.user.application.EmailAlreadyRegisteredException;
 import com.smartrecruitment.auth.user.application.InvalidCredentialsException;
 import com.smartrecruitment.auth.user.application.InvalidEmailVerificationTokenException;
@@ -24,6 +25,21 @@ import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class AuthExceptionHandler {
+    @ExceptionHandler(CompanyInvitationAcceptanceException.class)
+    ResponseEntity<ApiError> handleCompanyInvitation(CompanyInvitationAcceptanceException exception,
+                                                      HttpServletRequest request) {
+        return switch (exception.reason()) {
+            case ACCOUNT_INELIGIBLE -> error(HttpStatus.FORBIDDEN, "INVITATION_ACCOUNT_INELIGIBLE",
+                    "A verified candidate or recruiter account is required", Map.of(), request);
+            case NOT_FOUND -> error(HttpStatus.NOT_FOUND, "COMPANY_INVITATION_NOT_FOUND",
+                    "Company invitation was not found or is no longer active", Map.of(), request);
+            case CONFLICT -> error(HttpStatus.CONFLICT, "COMPANY_INVITATION_CONFLICT",
+                    "Invitation email or membership conflicts with the current account", Map.of(), request);
+            case UNAVAILABLE -> error(HttpStatus.SERVICE_UNAVAILABLE, "COMPANY_INVITATION_UNAVAILABLE",
+                    "Company invitation is temporarily unavailable. Please try again", Map.of(), request);
+        };
+    }
+
     @ExceptionHandler(GoogleSignInException.class)
     ResponseEntity<ApiError> handleGoogleSignIn(GoogleSignInException exception, HttpServletRequest request) {
         HttpStatus status = switch (exception.reason()) {

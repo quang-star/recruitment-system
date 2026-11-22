@@ -492,6 +492,12 @@ function RecruiterWorkspaceContent({ session, onLogout }: RecruiterWorkspaceProp
       userLabel={profile?.displayName || "Recruiter"}
       accountRoleLabel="Nhà tuyển dụng"
       accountMenuItems={[
+        ...(session.roles.includes("CANDIDATE") ? [{
+          id: "candidate-workspace",
+          label: "Không gian Ứng viên",
+          icon: <ProfileIcon size={16} />,
+          onSelect: () => navigate(routes.candidate.dashboard)
+        }] : []),
         {
           id: "profile",
           label: "Hồ sơ recruiter",
