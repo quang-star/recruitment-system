@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { apiRequest } from "../../shared/api/client";
 
 export const itIndustryId = "1";
+export const unclassifiedPositionName = "Chưa xác định";
 export type CategoryChoice = {
   industryId: string | null; industryName: string;
   specializationId: string | null; specializationName: string;
