@@ -1,0 +1,2962 @@
+{
+  "schemaVersion": "showcase-seed/1.0",
+  "synthetic": true,
+  "description": "Realistic Vietnamese & IT recruitment showcase fixture for local and Coolify environments. Company profiles reference public enterprise brands with bundled static logos/covers; job postings and candidate CVs are fictionalized with zero real personal data.",
+  "catalog": {
+    "itExtraSpecializations": [
+      {
+        "name": "Phát triển phần mềm",
+        "existing": true,
+        "positions": [
+          "Fullstack Developer",
+          "Embedded Software Engineer",
+          "Solution Architect",
+          "Engineering Manager"
+        ]
+      },
+      {
+        "name": "Dữ liệu & AI",
+        "existing": true,
+        "positions": [
+          "Data Analyst",
+          "Machine Learning Engineer"
+        ]
+      },
+      {
+        "name": "An toàn thông tin",
+        "existing": true,
+        "positions": [
+          "SOC / Pentest Specialist",
+          "DevSecOps Engineer"
+        ]
+      },
+      {
+        "name": "Hạ tầng & mạng",
+        "existing": true,
+        "positions": [
+          "Cloud / SRE Engineer",
+          "System / Network Engineer"
+        ]
+      },
+      {
+        "name": "Sản phẩm & Phân tích nghiệp vụ",
+        "existing": false,
+        "positions": [
+          "Product Manager / Product Owner",
+          "Business Analyst (IT BA)",
+          "UI/UX Designer"
+        ]
+      }
+    ],
+    "nonItIndustries": [
+      {
+        "name": "Tài chính - Ngân hàng - Bảo hiểm",
+        "specializations": [
+          {
+            "name": "Ngân hàng số & Doanh nghiệp",
+            "positions": [
+              "Chuyên viên Quan hệ Khách hàng Doanh nghiệp",
+              "Chuyên viên Phân tích Tài chính"
+            ]
+          },
+          {
+            "name": "Quản trị rủi ro & Tuân thủ",
+            "positions": [
+              "Chuyên viên Quản trị Rủi ro Tín dụng",
+              "Chuyên viên Kiểm soát Nội bộ"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Kinh doanh - Bán hàng",
+        "specializations": [
+          {
+            "name": "Kinh doanh Giải pháp Doanh nghiệp (B2B)",
+            "positions": [
+              "Account Manager (B2B)",
+              "Business Development Executive",
+              "Chuyên viên Tư vấn Giải pháp"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Marketing - Truyền thông",
+        "specializations": [
+          {
+            "name": "Digital & Growth Marketing",
+            "positions": [
+              "Performance Marketing Specialist",
+              "Product Marketing Executive",
+              "Content & Brand Specialist"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Nhân sự - Hành chính",
+        "specializations": [
+          {
+            "name": "Tuyển dụng & Đối tác Nhân sự",
+            "positions": [
+              "IT Talent Acquisition Specialist",
+              "HR Business Partner (HRBP)",
+              "Chuyên viên C&B"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Vận hành - Thương mại điện tử",
+        "specializations": [
+          {
+            "name": "Vận hành Sàn & Chuỗi cung ứng",
+            "positions": [
+              "E-commerce Operations Specialist",
+              "Category Management Associate",
+              "Supply Chain Coordinator"
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Chưa phân loại",
+        "specializations": [
+          {
+            "name": "Khác",
+            "positions": [
+              "Chưa xác định"
+            ]
+          }
+        ]
+      }
+    ],
+    "extraSkills": [
+      {
+        "name": "C#",
+        "type": "language",
+        "category": "backend",
+        "aliases": [
+          "CSharp"
+        ],
+        "approve": true
+      },
+      {
+        "name": ".NET",
+        "type": "framework",
+        "category": "backend",
+        "aliases": [],
+        "approve": true
+      },
+      {
+        "name": "ASP.NET Core",
+        "type": "framework",
+        "category": "backend",
+        "aliases": [],
+        "approve": true
+      },
+      {
+        "name": "Golang",
+        "type": "language",
+        "category": "backend",
+        "aliases": [
+          "Go"
+        ],
+        "approve": true
+      },
+      {
+        "name": "C++",
+        "type": "language",
+        "category": "backend",
+        "aliases": [
+          "C/C++"
+        ],
+        "approve": true
+      },
+      {
+        "name": "PHP",
+        "type": "language",
+        "category": "backend",
+        "aliases": [],
+        "approve": true
+      },
+      {
+        "name": "Laravel",
+        "type": "framework",
+        "category": "backend",
+        "aliases": [],
+        "approve": true
+      },
+      {
+        "name": "Kotlin",
+        "type": "language",
+        "category": "mobile",
+        "aliases": [],
+        "approve": true
+      },
+      {
+        "name": "Android",
+        "type": "framework",
+        "category": "mobile",
+        "aliases": [],
+        "approve": true
+      },
+      {
+        "name": "Swift",
+        "type": "language",
+        "category": "mobile",
+        "aliases": [],
+        "approve": true
+      },
+      {
+        "name": "iOS",
+        "type": "framework",
+        "category": "mobile",
+        "aliases": [],
+        "approve": true
+      },
+      {
+        "name": "Flutter",
+        "type": "framework",
+        "category": "mobile",
+        "aliases": [],
+        "approve": true
+      },
+      {
+        "name": "React Native",
+        "type": "framework",
+        "category": "mobile",
+        "aliases": [],
+        "approve": true
+      },
+      {
+        "name": "Vue.js",
+        "type": "framework",
+        "category": "frontend",
+        "aliases": [
+          "Vue",
+          "VueJS"
+        ],
+        "approve": true
+      },
+      {
+        "name": "Angular",
+        "type": "framework",
+        "category": "frontend",
+        "aliases": [
+          "AngularJS"
+        ],
+        "approve": true
+      },
+      {
+        "name": "HTML",
+        "type": "language",
+        "category": "frontend",
+        "aliases": [
+          "HTML5"
+        ],
+        "approve": true
+      },
+      {
+        "name": "CSS",
+        "type": "language",
+        "category": "frontend",
+        "aliases": [
+          "CSS3"
+        ],
+        "approve": true
+      },
+      {
+        "name": "Tailwind CSS",
+        "type": "framework",
+        "category": "frontend",
+        "aliases": [
+          "TailwindCSS"
+        ],
+        "approve": true
+      },
+      {
+        "name": "Spring Security",
+        "type": "framework",
+        "category": "security",
+        "aliases": [],
+        "approve": true
+      },
+      {
+        "name": "Hibernate",
+        "type": "library",
+        "category": "backend",
+        "aliases": [
+          "JPA"
+        ],
+        "approve": true
+      },
+      {
+        "name": "GraphQL",
+        "type": "other",
+        "category": "fullstack",
+        "aliases": [],
+        "approve": true
+      },
+      {
+        "name": "gRPC",
+        "type": "other",
+        "category": "backend",
+        "aliases": [],
+        "approve": true
+      },
+      {
+        "name": "RabbitMQ",
+        "type": "other",
+        "category": "backend",
+        "aliases": [],
+        "approve": true
+      },
+      {
+        "name": "Elasticsearch",
+        "type": "database",
+        "category": "backend",
+        "aliases": [
+          "ELK"
+        ],
+        "approve": true
+      },
+      {
+        "name": "Oracle",
+        "type": "database",
+        "category": "backend",
+        "aliases": [
+          "Oracle DB"
+        ],
+        "approve": true
+      },
+      {
+        "name": "SQL Server",
+        "type": "database",
+        "category": "backend",
+        "aliases": [
+          "MSSQL",
+          "Microsoft SQL Server"
+        ],
+        "approve": true
+      },
+      {
+        "name": "Terraform",
+        "type": "devops",
+        "category": "devops",
+        "aliases": [],
+        "approve": true
+      },
+      {
+        "name": "Ansible",
+        "type": "devops",
+        "category": "devops",
+        "aliases": [],
+        "approve": true
+      },
+      {
+        "name": "Microsoft Azure",
+        "type": "cloud",
+        "category": "devops",
+        "aliases": [
+          "Azure"
+        ],
+        "approve": true
+      },
+      {
+        "name": "Google Cloud Platform",
+        "type": "cloud",
+        "category": "devops",
+        "aliases": [
+          "GCP"
+        ],
+        "approve": true
+      },
+      {
+        "name": "GitLab CI",
+        "type": "devops",
+        "category": "devops",
+        "aliases": [
+          "GitLab CI/CD"
+        ],
+        "approve": true
+      },
+      {
+        "name": "GitHub Actions",
+        "type": "devops",
+        "category": "devops",
+        "aliases": [],
+        "approve": true
+      },
+      {
+        "name": "Jenkins",
+        "type": "devops",
+        "category": "devops",
+        "aliases": [],
+        "approve": true
+      },
+      {
+        "name": "Selenium",
+        "type": "testing",
+        "category": "qa",
+        "aliases": [],
+        "approve": true
+      },
+      {
+        "name": "Playwright",
+        "type": "testing",
+        "category": "qa",
+        "aliases": [],
+        "approve": true
+      },
+      {
+        "name": "Cypress",
+        "type": "testing",
+        "category": "qa",
+        "aliases": [],
+        "approve": true
+      },
+      {
+        "name": "JUnit",
+        "type": "testing",
+        "category": "qa",
+        "aliases": [
+          "JUnit 5"
+        ],
+        "approve": true
+      },
+      {
+        "name": "PyTorch",
+        "type": "data_ai",
+        "category": "data_ai",
+        "aliases": [],
+        "approve": true
+      },
+      {
+        "name": "TensorFlow",
+        "type": "data_ai",
+        "category": "data_ai",
+        "aliases": [],
+        "approve": true
+      },
+      {
+        "name": "Apache Spark",
+        "type": "data_ai",
+        "category": "data_ai",
+        "aliases": [
+          "Spark",
+          "PySpark"
+        ],
+        "approve": true
+      },
+      {
+        "name": "Apache Airflow",
+        "type": "data_ai",
+        "category": "data_ai",
+        "aliases": [
+          "Airflow"
+        ],
+        "approve": true
+      },
+      {
+        "name": "Scrum",
+        "type": "methodology",
+        "category": "cross_functional",
+        "aliases": [
+          "Agile Scrum"
+        ],
+        "approve": true
+      }
+    ],
+    "organicPendingSkillsFromCvs": [
+      "LangChain",
+      "OpenTelemetry"
+    ]
+  },
+  "companies": [
+    {
+      "approve": true,
+      "company": {
+        "legalName": "Công ty TNHH Phần mềm FPT",
+        "displayName": "FPT Software",
+        "slug": "fpt-software",
+        "description": "FPT Software là công ty thành viên của Tập đoàn FPT, chuyên cung cấp dịch vụ công nghệ thông tin, chuyển đổi số, phát triển phần mềm và giải pháp AI/Cloud cho hơn 1.000 doanh nghiệp toàn cầu tại Mỹ, Nhật Bản, châu Âu và châu Á - Thái Bình Dương.",
+        "websiteUrl": "https://fptsoftware.com",
+        "countryCode": "VN",
+        "registrationNumber": "VN-ENT-001",
+        "sizeRange": "1000+",
+        "logoUrl": "/logos/official/fpt.png",
+        "coverImageUrl": "/companies/photos/fpt.webp"
+      },
+      "jobs": [
+        {
+          "title": "Senior Backend Developer (Java / Spring Boot)",
+          "description": "<p>Tham gia phát triển các hệ thống lõi quy mô lớn cho khách hàng tài chính, bảo hiểm và thương mại điện tử tại thị trường Nhật Bản và Bắc Mỹ.</p><ul><li>Thiết kế kiến trúc dịch vụ phân tán theo mô hình Microservices, đảm bảo khả năng chịu tải cao và tính sẵn sàng 99.95%.</li><li>Xây dựng API hiệu năng cao, tối ưu truy vấn cơ sở dữ liệu và xử lý dữ liệu thời gian thực qua hàng đợi thông điệp.</li><li>Phối hợp chặt chẽ với đội ngũ Product, QA và DevOps trong quy trình Agile/Scrum để bàn giao sản phẩm đúng tiến độ.</li><li>Review mã nguồn, hướng dẫn kỹ thuật cho các thành viên Junior/Middle và đề xuất cải tiến chất lượng hệ thống.</li></ul>",
+          "requirementsText": "<ul><li>Tối thiểu 4 năm kinh nghiệm phát triển phần mềm backend trên nền tảng Java doanh nghiệp.</li><li>Tốt nghiệp Đại học chuyên ngành Công nghệ thông tin, Khoa học máy tính hoặc tương đương.</li><li>Yêu cầu bắt buộc: Java, Spring Boot, Hibernate, PostgreSQL, REST API, Microservices.</li><li>Ưu tiên: Docker, Kubernetes, Apache Kafka. Tiếng Anh đọc hiểu tài liệu kỹ thuật và giao tiếp công việc tốt (tương đương TOEIC 700+ / IELTS 6.0+).</li></ul>",
+          "benefitsText": "<ul><li>Thu nhập 13–15 tháng lương/năm, thưởng hiệu suất dự án và thưởng thâm niên hấp dẫn.</li><li>Bảo hiểm sức khỏe toàn diện FPT Care cho bản thân và người thân.</li><li>Cơ hội onsite dài hạn hoặc công tác ngắn hạn tại Nhật Bản, Mỹ, Singapore.</li><li>Môi trường làm việc hiện đại tại F-Ville Hòa Lạc với xe đưa đón và trợ cấp ăn trưa.</li></ul>",
+          "locationText": "Khu Công nghệ cao Hòa Lạc, Thạch Thất, Hà Nội",
+          "province": "Hà Nội",
+          "countryCode": "VN",
+          "workMode": "HYBRID",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "SENIOR",
+          "openings": 3,
+          "salaryMin": 38000000,
+          "salaryMax": 58000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Công nghệ thông tin",
+            "specialization": "Phát triển phần mềm",
+            "position": "Backend Developer"
+          }
+        },
+        {
+          "title": "Lead Frontend Developer (React / Next.js)",
+          "description": "<p>Dẫn dắt đội ngũ Frontend xây dựng nền tảng web doanh nghiệp thế hệ mới cho đối tác bán lẻ và logistics tại châu Âu.</p><ul><li>Thiết kế kiến trúc giao diện người dùng (Design System, Micro-frontend) tối ưu hiệu năng Core Web Vitals và SEO.</li><li>Trực tiếp triển khai các tính năng phức tạp, quản lý trạng thái ứng dụng và tích hợp API bảo mật.</li><li>Định hướng tiêu chuẩn coding, kiểm thử tự động và quy trình CI/CD cho nhóm 6–8 kỹ sư Frontend.</li><li>Làm việc trực tiếp với khách hàng quốc tế để làm rõ yêu cầu kỹ thuật và trải nghiệm người dùng.</li></ul>",
+          "requirementsText": "<ul><li>Tối thiểu 5 năm kinh nghiệm phát triển ứng dụng web hiện đại, trong đó ít nhất 1 năm ở vị trí Tech Lead hoặc Senior dẫn dắt nhóm.</li><li>Tốt nghiệp Đại học chuyên ngành Công nghệ thông tin, Kỹ thuật phần mềm hoặc tương đương.</li><li>Yêu cầu bắt buộc: TypeScript, React, Next.js, Tailwind CSS, GraphQL, Git.</li><li>Ưu tiên: Docker, CI/CD, Playwright. Tiếng Anh giao tiếp trôi chảy với khách hàng quốc tế (tương đương IELTS 6.5+ / TOEIC 800+).</li></ul>",
+          "benefitsText": "<ul><li>Gói thu nhập cạnh tranh kèm phụ cấp quản lý kỹ thuật và thưởng dự án theo quý.</li><li>Cơ hội tham gia các khóa đào tạo chứng chỉ quốc tế được công ty tài trợ 100%.</li><li>Chính sách làm việc linh hoạt Hybrid tại FPT Complex Đà Nẵng bên cạnh không gian xanh chuẩn campus.</li><li>15 ngày phép năm và gói chăm sóc sức khỏe FPT Care cao cấp.</li></ul>",
+          "locationText": "Khu đô thị Công nghệ FPT Complex, Quận Ngũ Hành Sơn, Đà Nẵng",
+          "province": "Đà Nẵng",
+          "countryCode": "VN",
+          "workMode": "HYBRID",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "LEAD",
+          "openings": 1,
+          "salaryMin": 45000000,
+          "salaryMax": 68000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Công nghệ thông tin",
+            "specialization": "Phát triển phần mềm",
+            "position": "Frontend Developer"
+          }
+        },
+        {
+          "title": "Embedded Software Engineer (C++ / Automotive)",
+          "description": "<p>Phát triển phần mềm nhúng cho hệ thống điều khiển xe thông minh (ADAS, Infotainment và AUTOSAR) hợp tác cùng các hãng sản xuất ô tô hàng đầu thế giới.</p><ul><li>Thiết kế, lập trình và tối ưu mô-đun phần mềm thời gian thực trên nền tảng vi điều khiển và hệ điều hành nhúng.</li><li>Thực hiện kiểm thử đơn vị (Unit Test), kiểm thử tích hợp trên mô hình HIL/SIL theo tiêu chuẩn ASPICE.</li><li>Phân tích log hệ thống, xử lý lỗi bộ nhớ và tối ưu hiệu năng truyền thông CAN/Ethernet trên xe.</li><li>Viết tài liệu thiết kế chi tiết và phối hợp với đội ngũ kỹ sư tại Nhật Bản/Đức.</li></ul>",
+          "requirementsText": "<ul><li>Ít nhất 2 năm kinh nghiệm lập trình phần mềm nhúng hoặc hệ thống thời gian thực.</li><li>Tốt nghiệp Đại học chuyên ngành Điện tử - Viễn thông, Tự động hóa, Công nghệ thông tin hoặc tương đương.</li><li>Yêu cầu bắt buộc: C++, Linux, Git, Software Testing.</li><li>Ưu tiên: Python, Jenkins, Scrum. Tiếng Anh đọc hiểu tài liệu kỹ thuật chuyên ngành tốt (tương đương TOEIC 650+).</li></ul>",
+          "benefitsText": "<ul><li>Lương tháng 13, thưởng hiệu suất năm và phụ cấp chứng chỉ kỹ thuật Automotive.</li><li>Trang bị phòng lab chuyên dụng với thiết bị đo kiểm và bo mạch chuẩn công nghiệp.</li><li>Bảo hiểm FPT Care, khám sức khỏe định kỳ và các câu lạc bộ thể thao nội bộ.</li><li>Lộ trình thăng tiến rõ ràng lên Technical Specialist hoặc Project Manager.</li></ul>",
+          "locationText": "Khu Công nghệ cao Quận 9, TP. Thủ Đức, TP. Hồ Chí Minh",
+          "province": "TP. Hồ Chí Minh",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "MIDDLE",
+          "openings": 4,
+          "salaryMin": 26000000,
+          "salaryMax": 42000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Công nghệ thông tin",
+            "specialization": "Phát triển phần mềm",
+            "position": "Embedded Software Engineer"
+          }
+        },
+        {
+          "title": "IT Talent Acquisition Specialist",
+          "description": "<p>Chịu trách nhiệm tìm kiếm, đánh giá và thu hút nhân sự công nghệ chất lượng cao cho các đơn vị phần mềm chiến lược của FPT Software tại Hà Nội.</p><ul><li>Phối hợp với Hiring Manager để xây dựng chân dung ứng viên và kế hoạch tuyển dụng cho các vị trí Backend, AI, Cloud, Embedded.</li><li>Triển khai tìm kiếm ứng viên đa kênh (LinkedIn, cộng đồng công nghệ, mạng lưới giới thiệu nội bộ) và tổ chức phỏng vấn kỹ thuật.</li><li>Theo dõi tỷ lệ chuyển đổi phễu tuyển dụng, tối ưu trải nghiệm ứng viên và thương hiệu nhà tuyển dụng.</li><li>Thực hiện đàm phán chế độ đãi ngộ, gửi thư mời nhận việc và hỗ trợ quy trình hội nhập nhân sự mới.</li></ul>",
+          "requirementsText": "<ul><li>Tối thiểu 2 năm kinh nghiệm tuyển dụng chuyên sâu mảng công nghệ thông tin (IT Recruitment) tại các công ty phần mềm hoặc headhunt.</li><li>Tốt nghiệp Đại học chuyên ngành Quản trị nhân lực, Kinh tế, Ngoại ngữ hoặc các ngành liên quan.</li><li>Am hiểu cấu trúc thị trường nhân sự IT Việt Nam, các vị trí kỹ sư phần mềm và kỹ năng phỏng vấn đánh giá hành vi.</li><li>Tiếng Anh giao tiếp công việc tốt (tương đương TOEIC 700+ / IELTS 6.0+), kỹ năng đàm phán và quản lý dữ liệu ứng viên thành thạo.</li></ul>",
+          "benefitsText": "<ul><li>Lương cố định cạnh tranh kết hợp thưởng theo chỉ tiêu tuyển dụng (KPI) hàng quý không giới hạn.</li><li>Bảo hiểm sức khỏe FPT Care và chế độ nghỉ phép, du lịch nghỉ dưỡng hàng năm.</li><li>Môi trường chuyên nghiệp, được tiếp cận hệ thống ATS hiện đại và dữ liệu ứng viên lớn.</li><li>Cơ hội phát triển lên vị trí Talent Acquisition Lead hoặc HR Business Partner.</li></ul>",
+          "locationText": "Tòa nhà FPT Tower, Số 10 Phạm Văn Bạch, Quận Cầu Giấy, Hà Nội",
+          "province": "Hà Nội",
+          "countryCode": "VN",
+          "workMode": "HYBRID",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "MIDDLE",
+          "openings": 2,
+          "salaryMin": 20000000,
+          "salaryMax": 32000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Nhân sự - Hành chính",
+            "specialization": "Tuyển dụng & Đối tác Nhân sự",
+            "position": "IT Talent Acquisition Specialist"
+          }
+        }
+      ]
+    },
+    {
+      "approve": true,
+      "company": {
+        "legalName": "Tổng Công ty Giải pháp Doanh nghiệp Viettel",
+        "displayName": "Viettel Solutions",
+        "slug": "viettel-solutions",
+        "description": "Viettel Solutions là đơn vị tiên phong trực thuộc Tập đoàn Viettel trong lĩnh vực tư vấn và triển khai giải pháp chuyển đổi số quốc gia, hạ tầng Cloud, Trí tuệ nhân tạo (AI), Big Data và An toàn thông tin cho Chính phủ, bộ ngành và doanh nghiệp lớn tại Việt Nam.",
+        "websiteUrl": "https://solutions.viettel.vn",
+        "countryCode": "VN",
+        "registrationNumber": "VN-ENT-002",
+        "sizeRange": "1000+",
+        "logoUrl": "/logos/official/viettel.png",
+        "coverImageUrl": "/companies/photos/viettel.webp"
+      },
+      "jobs": [
+        {
+          "title": "AI / Machine Learning Engineer",
+          "description": "<p>Nghiên cứu, huấn luyện và triển khai các mô hình học máy và xử lý ngôn ngữ tự nhiên/thị giác máy tính phục vụ bài toán thành phố thông minh và doanh nghiệp số.</p><ul><li>Xây dựng pipeline thu thập, làm sạch dữ liệu và huấn luyện mô hình dự báo, nhận diện hình ảnh/văn bản trên cụm GPU hiệu năng cao.</li><li>Đóng gói và triển khai mô hình AI dưới dạng API có độ trễ thấp, tích hợp vào hệ thống sản phẩm thực tế.</li><li>Theo dõi độ chính xác mô hình (Model Drift), thực hiện tái huấn luyện tự động và tối ưu chi phí suy luận (Inference).</li><li>Phối hợp với đội ngũ Data Engineer và Product Owner để chuyển hóa bài toán nghiệp vụ thành giải pháp AI khả thi.</li></ul>",
+          "requirementsText": "<ul><li>Tối thiểu 2 năm kinh nghiệm phát triển và đưa mô hình Machine Learning / Deep Learning vào môi trường production.</li><li>Tốt nghiệp Đại học chuyên ngành Khoa học máy tính, Trí tuệ nhân tạo, Toán - Tin hoặc tương đương.</li><li>Yêu cầu bắt buộc: Python, Machine Learning, PyTorch, TensorFlow, FastAPI, Docker.</li><li>Ưu tiên: Kubernetes, Apache Spark, SQL. Tiếng Anh đọc hiểu bài báo khoa học và tài liệu kỹ thuật tốt (tương đương TOEIC 700+ / IELTS 6.0+).</li></ul>",
+          "benefitsText": "<ul><li>Thu nhập hấp dẫn theo năng lực với gói thưởng sáng kiến công nghệ và thưởng hoàn thành dự án trọng điểm.</li><li>Được sử dụng hạ tầng GPU mạnh mẽ và kho dữ liệu quy mô lớn phục vụ nghiên cứu ứng dụng.</li><li>Hưởng đầy đủ chế độ bảo hiểm xã hội, bảo hiểm sức khỏe cao cấp và phúc lợi Tập đoàn Viettel.</li><li>Cơ hội tham gia các hội thảo công nghệ quốc tế và đào tạo chuyên sâu về MLOps.</li></ul>",
+          "locationText": "Tòa nhà Viettel, Số 1 Trần Hữu Dực, Quận Nam Từ Liêm, Hà Nội",
+          "province": "Hà Nội",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "MIDDLE",
+          "openings": 2,
+          "salaryMin": 32000000,
+          "salaryMax": 52000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Công nghệ thông tin",
+            "specialization": "Dữ liệu & AI",
+            "position": "Machine Learning Engineer"
+          }
+        },
+        {
+          "title": "DevSecOps / Security Engineer",
+          "description": "<p>Thiết lập và vận hành hệ thống bảo mật tự động trong quy trình phát triển phần mềm (DevSecOps) cho các nền tảng Cloud và dịch vụ công quốc gia.</p><ul><li>Tích hợp các công cụ quét lỗ hổng mã nguồn (SAST), phân tích thành phần (SCA) và kiểm tra bảo mật động (DAST) vào pipeline CI/CD.</li><li>Thiết kế cơ chế quản lý bí mật (Secrets Management), phân quyền tối thiểu và bảo mật container/Kubernetes cluster.</li><li>Đánh giá rủi ro an toàn thông tin trước khi phát hành, phối hợp đội phát triển khắc phục lỗ hổng theo chuẩn OWASP.</li><li>Giám sát sự cố bảo mật, tự động hóa phản ứng và thiết lập chính sách tuân thủ hạ tầng (Policy as Code).</li></ul>",
+          "requirementsText": "<ul><li>Tối thiểu 3 năm kinh nghiệm trong lĩnh vực An toàn thông tin hoặc DevSecOps / Cloud Security.</li><li>Tốt nghiệp Đại học chuyên ngành An toàn thông tin, Công nghệ thông tin hoặc tương đương.</li><li>Yêu cầu bắt buộc: Linux, Docker, Kubernetes, CI/CD, GitLab CI, Terraform.</li><li>Ưu tiên: Amazon Web Services, Python, Ansible. Tiếng Anh đọc hiểu tài liệu bảo mật và tiêu chuẩn quốc tế tốt (tương đương TOEIC 700+).</li></ul>",
+          "benefitsText": "<ul><li>Mức lương cạnh tranh kèm phụ cấp chuyên gia an ninh mạng và thưởng dự án hàng năm.</li><li>Tài trợ chi phí thi các chứng chỉ quốc tế như CKS, OSCP, AWS Security Specialty.</li><li>Chế độ chăm sóc sức khỏe toàn diện cho nhân viên và hỗ trợ ăn trưa tại văn phòng.</li><li>Môi trường làm việc kỷ luật, chuyên nghiệp với các dự án hạ tầng quy mô quốc gia.</li></ul>",
+          "locationText": "Tòa nhà Viettel, Số 1 Trần Hữu Dực, Quận Nam Từ Liêm, Hà Nội",
+          "province": "Hà Nội",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "SENIOR",
+          "openings": 2,
+          "salaryMin": 38000000,
+          "salaryMax": 60000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Công nghệ thông tin",
+            "specialization": "An toàn thông tin",
+            "position": "DevSecOps Engineer"
+          }
+        },
+        {
+          "title": "Account Manager (B2B)",
+          "description": "<p>Phát triển và duy trì quan hệ khách hàng doanh nghiệp lớn (B2B) trong mảng giải pháp hạ tầng số, Cloud, IoT và chuyển đổi số tại khu vực miền Bắc.</p><ul><li>Xây dựng kế hoạch tiếp cận, tư vấn giải pháp công nghệ phù hợp với bài toán vận hành của khách hàng doanh nghiệp và tổ chức.</li><li>Chủ trì quá trình chào thầu, đàm phán hợp đồng, theo dõi tiến độ triển khai và đảm bảo sự hài lòng của khách hàng.</li><li>Phối hợp chặt chẽ với đội ngũ Pre-sales và Kỹ thuật để thiết kế phương án kỹ thuật - tài chính tối ưu.</li><li>Quản lý doanh số, dự báo doanh thu định kỳ và mở rộng cơ hội bán chéo các dịch vụ hệ sinh thái Viettel.</li></ul>",
+          "requirementsText": "<ul><li>Tối thiểu 3 năm kinh nghiệm kinh doanh giải pháp B2B (ưu tiên lĩnh vực CNTT, viễn thông, phần mềm doanh nghiệp).</li><li>Tốt nghiệp Đại học chuyên ngành Kinh tế, Quản trị kinh doanh, Thương mại hoặc Công nghệ thông tin.</li><li>Kỹ năng giao tiếp, thuyết trình cấp lãnh đạo, đàm phán hợp đồng và quản lý tài khoản khách hàng xuất sắc.</li><li>Tiếng Anh giao tiếp và đọc hiểu tài liệu thương mại tốt (tương đương TOEIC 650+); sẵn sàng đi công tác theo yêu cầu dự án.</li></ul>",
+          "benefitsText": "<ul><li>Lương cứng ổn định cùng chính sách hoa hồng kinh doanh minh bạch theo doanh số thực đạt.</li><li>Phụ cấp tiếp khách, đi lại và công tác phí theo quy định của Tổng Công ty.</li><li>Đầy đủ bảo hiểm, thưởng các dịp lễ lớn và lộ trình thăng tiến lên Trưởng phòng Kinh doanh.</li><li>Được đào tạo bài bản về các sản phẩm công nghệ mới nhất của Viettel Solutions.</li></ul>",
+          "locationText": "Tòa nhà Viettel, Số 1 Trần Hữu Dực, Quận Nam Từ Liêm, Hà Nội",
+          "province": "Hà Nội",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "MIDDLE",
+          "openings": 2,
+          "salaryMin": 22000000,
+          "salaryMax": 38000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Kinh doanh - Bán hàng",
+            "specialization": "Kinh doanh Giải pháp Doanh nghiệp (B2B)",
+            "position": "Account Manager (B2B)"
+          }
+        }
+      ]
+    },
+    {
+      "approve": true,
+      "company": {
+        "legalName": "Công ty Cổ phần VNG",
+        "displayName": "VNG Corporation",
+        "slug": "vng-corporation",
+        "description": "VNG Corporation là kỳ lân công nghệ đầu tiên của Việt Nam, sở hữu hệ sinh thái sản phẩm số phục vụ hàng chục triệu người dùng gồm Zalo, ZaloPay, VNG Cloud và các nền tảng giải trí trực tuyến hàng đầu Đông Nam Á.",
+        "websiteUrl": "https://vng.com.vn",
+        "countryCode": "VN",
+        "registrationNumber": "VN-ENT-003",
+        "sizeRange": "1000+",
+        "logoUrl": "/logos/official/vng.png",
+        "coverImageUrl": "/companies/photos/vng.webp"
+      },
+      "jobs": [
+        {
+          "title": "Senior Golang Distributed Systems Engineer",
+          "description": "<p>Xây dựng và tối ưu các dịch vụ backend phân tán chịu tải hàng trăm nghìn truy vấn mỗi giây cho hệ sinh thái nhắn tin và thanh toán tại VNG Campus.</p><ul><li>Thiết kế hệ thống lưu trữ, hàng đợi và dịch vụ xử lý đồng thời (Concurrency) có độ trễ cực thấp bằng Golang.</li><li>Tối ưu bộ nhớ, profiling hiệu năng dịch vụ và xử lý các bài toán nhất quán dữ liệu phân tán.</li><li>Triển khai cơ chế giám sát, tracing và tự động phục hồi sự cố trong môi trường production quy mô lớn.</li><li>Tham gia thảo luận kiến trúc, đặt tiêu chuẩn kỹ thuật và cố vấn cho các kỹ sư trẻ trong team.</li></ul>",
+          "requirementsText": "<ul><li>Tối thiểu 4 năm kinh nghiệm phát triển hệ thống backend, trong đó ít nhất 2 năm làm việc chuyên sâu với Golang trên hệ thống chịu tải cao.</li><li>Tốt nghiệp Đại học chuyên ngành Khoa học máy tính, Kỹ thuật phần mềm hoặc tương đương.</li><li>Yêu cầu bắt buộc: Golang, gRPC, Redis, Apache Kafka, PostgreSQL, Microservices.</li><li>Ưu tiên: Docker, Kubernetes, Elasticsearch. Tiếng Anh đọc hiểu tài liệu kỹ thuật tốt (tương đương TOEIC 700+ / IELTS 6.0+).</li></ul>",
+          "benefitsText": "<ul><li>Thu nhập cạnh tranh top đầu thị trường cùng thưởng hiệu suất cuối năm và xét tăng lương định kỳ.</li><li>Làm việc tại VNG Campus hiện đại với phòng gym, khu thể thao, căn tin trợ giá và không gian mở.</li><li>Bảo hiểm sức khỏe cao cấp cho nhân viên, gói khám tổng quát hàng năm và 15+ ngày phép.</li><li>Văn hóa kỹ thuật cởi mở, khuyến khích chia sẻ kiến thức và đổi mới sáng tạo.</li></ul>",
+          "locationText": "VNG Campus, Khu chế xuất Tân Thuận, Quận 7, TP. Hồ Chí Minh",
+          "province": "TP. Hồ Chí Minh",
+          "countryCode": "VN",
+          "workMode": "HYBRID",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "SENIOR",
+          "openings": 2,
+          "salaryMin": 45000000,
+          "salaryMax": 72000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Công nghệ thông tin",
+            "specialization": "Phát triển phần mềm",
+            "position": "Backend Developer"
+          }
+        },
+        {
+          "title": "Cloud / SRE Engineer (Kubernetes & AWS)",
+          "description": "<p>Đảm bảo độ tin cậy, khả năng mở rộng và tự động hóa vận hành cho hạ tầng đa đám mây (Multi-Cloud) phục vụ hàng chục triệu người dùng của VNG.</p><ul><li>Vận hành, nâng cấp và tối ưu cụm Kubernetes quy mô lớn chạy hàng nghìn microservices.</li><li>Thiết kế hạ tầng bằng mã nguồn (Infrastructure as Code), tự động hóa cấp phát tài nguyên và triển khai không gián đoạn.</li><li>Xây dựng hệ thống cảnh báo, quan sát toàn diện (Observability) và tham gia trực ứng cứu sự cố (On-call rotation) có phụ cấp.</li><li>Phối hợp với đội phát triển cải thiện hiệu suất sử dụng tài nguyên Cloud và tối ưu chi phí vận hành.</li></ul>",
+          "requirementsText": "<ul><li>Tối thiểu 3 năm kinh nghiệm ở vị trí SRE, DevOps hoặc Cloud Infrastructure Engineer.</li><li>Tốt nghiệp Đại học chuyên ngành Công nghệ thông tin, Hệ thống thông tin hoặc tương đương.</li><li>Yêu cầu bắt buộc: Kubernetes, Docker, Amazon Web Services, Terraform, Linux, CI/CD.</li><li>Ưu tiên: Python, Golang, Ansible. Tiếng Anh đọc hiểu tài liệu hệ thống và giao tiếp kỹ thuật tốt (tương đương TOEIC 700+).</li></ul>",
+          "benefitsText": "<ul><li>Mức lương hấp dẫn kèm phụ cấp trực On-call và thưởng thành tích dự án.</li><li>Tài trợ chi phí thi chứng chỉ AWS, CKA/CKAD và ngân sách học tập cá nhân hàng năm.</li><li>Bảo hiểm sức khỏe toàn diện, xe buýt đưa đón nhiều tuyến tại TP. Hồ Chí Minh.</li><li>Môi trường năng động tại VNG Campus với đầy đủ tiện ích thể thao và giải trí.</li></ul>",
+          "locationText": "VNG Campus, Khu chế xuất Tân Thuận, Quận 7, TP. Hồ Chí Minh",
+          "province": "TP. Hồ Chí Minh",
+          "countryCode": "VN",
+          "workMode": "HYBRID",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "SENIOR",
+          "openings": 2,
+          "salaryMin": 40000000,
+          "salaryMax": 62000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Công nghệ thông tin",
+            "specialization": "Hạ tầng & mạng",
+            "position": "Cloud / SRE Engineer"
+          }
+        },
+        {
+          "title": "Product Marketing Executive",
+          "description": "<p>Xây dựng chiến lược định vị sản phẩm, thông điệp truyền thông và chiến dịch ra mắt tính năng mới cho các sản phẩm số trong hệ sinh thái VNG.</p><ul><li>Nghiên cứu thị trường, phân tích hành vi người dùng và đối thủ cạnh tranh để đề xuất chiến lược tăng trưởng sản phẩm.</li><li>Phối hợp chặt chẽ với đội ngũ Product, Design và Performance Marketing để triển khai chiến dịch Go-to-Market.</li><li>Sáng tạo nội dung truyền thông đa kênh (landing page, thông cáo báo chí, social media, in-app messaging) nhất quán với định vị thương hiệu.</li><li>Đo lường hiệu quả chiến dịch qua các chỉ số chuyển đổi, tỷ lệ giữ chân người dùng (Retention) và tối ưu liên tục.</li></ul>",
+          "requirementsText": "<ul><li>Ít nhất 2 năm kinh nghiệm làm Product Marketing hoặc Brand/Growth Marketing cho sản phẩm công nghệ, ứng dụng di động hoặc dịch vụ số.</li><li>Tốt nghiệp Đại học chuyên ngành Marketing, Truyền thông, Kinh tế hoặc tương đương.</li><li>Kỹ năng viết lách sắc bén, tư duy phân tích dữ liệu người dùng và quản lý dự án đa phòng ban tốt.</li><li>Tiếng Anh thành thạo cả 4 kỹ năng (tương đương IELTS 6.5+ / TOEIC 750+) để làm việc với đối tác khu vực.</li></ul>",
+          "benefitsText": "<ul><li>Thu nhập cạnh tranh kèm thưởng KPI chiến dịch và lương tháng 13.</li><li>Cơ hội dẫn dắt các chiến dịch ra mắt sản phẩm tiếp cận hàng triệu người dùng tại Việt Nam.</li><li>Gói bảo hiểm sức khỏe cao cấp, du lịch công ty hàng năm và các hoạt động gắn kết đội ngũ.</li><li>Không gian làm việc sáng tạo, trang thiết bị làm việc hiện đại tại VNG Campus.</li></ul>",
+          "locationText": "VNG Campus, Khu chế xuất Tân Thuận, Quận 7, TP. Hồ Chí Minh",
+          "province": "TP. Hồ Chí Minh",
+          "countryCode": "VN",
+          "workMode": "HYBRID",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "MIDDLE",
+          "openings": 1,
+          "salaryMin": 22000000,
+          "salaryMax": 34000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Marketing - Truyền thông",
+            "specialization": "Digital & Growth Marketing",
+            "position": "Product Marketing Executive"
+          }
+        }
+      ]
+    },
+    {
+      "approve": true,
+      "company": {
+        "legalName": "Tổng Công ty Hạ tầng Mạng - Tập đoàn VNPT",
+        "displayName": "VNPT-Net",
+        "slug": "vnpt-net",
+        "description": "VNPT-Net là đơn vị chủ lực của Tập đoàn Bưu chính Viễn thông Việt Nam (VNPT), chịu trách nhiệm thiết kế, xây dựng, vận hành và tối ưu hạ tầng mạng viễn thông, trung tâm dữ liệu (IDC) và nền tảng số phủ sóng toàn quốc.",
+        "websiteUrl": "https://vnpt.com.vn",
+        "countryCode": "VN",
+        "registrationNumber": "VN-ENT-004",
+        "sizeRange": "1000+",
+        "logoUrl": "/logos/official/vnpt.png",
+        "coverImageUrl": "/companies/photos/vnpt.webp"
+      },
+      "jobs": [
+        {
+          "title": "Fullstack Engineer (Java / Spring Boot & React)",
+          "description": "<p>Phát triển hệ thống quản trị hạ tầng mạng lưới thông minh và cổng dịch vụ giám sát vận hành tập trung cho hàng chục nghìn trạm phát sóng trên toàn quốc.</p><ul><li>Thiết kế và xây dựng các dịch vụ backend xử lý dữ liệu cấu hình, cảnh báo mạng theo thời gian thực.</li><li>Phát triển giao diện web trực quan hóa bản đồ hạ tầng, biểu đồ giám sát hiệu năng và luồng xử lý sự cố.</li><li>Tối ưu hiệu năng truy vấn cơ sở dữ liệu quan hệ và đảm bảo bảo mật phân quyền người dùng nội bộ.</li><li>Viết kiểm thử tự động và phối hợp triển khai lên môi trường hạ tầng đám mây nội bộ.</li></ul>",
+          "requirementsText": "<ul><li>Tối thiểu 3 năm kinh nghiệm phát triển phần mềm Fullstack với Java và các framework giao diện hiện đại.</li><li>Tốt nghiệp Đại học chuyên ngành Công nghệ thông tin, Điện tử viễn thông hoặc tương đương.</li><li>Yêu cầu bắt buộc: Java, Spring Boot, React, TypeScript, PostgreSQL, REST API.</li><li>Ưu tiên: Docker, GitLab CI, Redis. Tiếng Anh đọc hiểu tài liệu kỹ thuật tốt (tương đương TOEIC 650+).</li></ul>",
+          "benefitsText": "<ul><li>Thu nhập ổn định, lương tháng 13, thưởng các ngày lễ lớn và thưởng hoàn thành kế hoạch năm.</li><li>Chế độ phúc lợi đầy đủ của Tập đoàn VNPT cùng bảo hiểm sức khỏe bổ sung.</li><li>Môi trường làm việc ổn định, cơ hội tiếp cận bài toán dữ liệu viễn thông quy mô toàn quốc.</li><li>Được tham gia các khóa đào tạo nâng cao năng lực công nghệ định kỳ hàng năm.</li></ul>",
+          "locationText": "Tòa nhà VNPT, Số 57 Huỳnh Thúc Kháng, Quận Đống Đa, Hà Nội",
+          "province": "Hà Nội",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "MIDDLE",
+          "openings": 2,
+          "salaryMin": 28000000,
+          "salaryMax": 45000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Công nghệ thông tin",
+            "specialization": "Phát triển phần mềm",
+            "position": "Fullstack Developer"
+          }
+        },
+        {
+          "title": "Cloud Infrastructure Architect",
+          "description": "<p>Thiết kế kiến trúc hạ tầng Private Cloud và Hybrid Cloud thế hệ mới tại các Trung tâm dữ liệu chuẩn Tier III của VNPT trên toàn quốc.</p><ul><li>Xây dựng kiến trúc tổng thể về tính toán, lưu trữ phân tán, mạng định nghĩa bằng phần mềm (SDN) và cơ chế dự phòng thảm họa (DR).</li><li>Đánh giá, lựa chọn công nghệ ảo hóa, container và điều phối hạ tầng phù hợp với bài toán chuyển đổi số quy mô lớn.</li><li>Ban hành tiêu chuẩn thiết kế hạ tầng, quy chuẩn bảo mật và tối ưu hiệu năng cho các dự án trọng điểm.</li><li>Tư vấn kỹ thuật cấp cao cho ban lãnh đạo và hướng dẫn đội ngũ kỹ sư triển khai hạ tầng.</li></ul>",
+          "requirementsText": "<ul><li>Tối thiểu 5 năm kinh nghiệm thiết kế hoặc vận hành hạ tầng Cloud, trong đó ít nhất 2 năm ở vai trò Solution/Cloud Architect.</li><li>Tốt nghiệp Đại học chuyên ngành Công nghệ thông tin, Viễn thông hoặc tương đương.</li><li>Yêu cầu bắt buộc: Linux, Kubernetes, Docker, Terraform, Ansible, Microservices.</li><li>Ưu tiên: Amazon Web Services, Microsoft Azure, Python. Tiếng Anh đọc hiểu tài liệu kiến trúc và giao tiếp đối tác tốt (tương đương TOEIC 750+).</li></ul>",
+          "benefitsText": "<ul><li>Gói thu nhập chuyên gia cấp cao cùng thưởng dự án chiến lược và phụ cấp trách nhiệm.</li><li>Cơ hội dẫn dắt kiến trúc hạ tầng cho các nền tảng số quốc gia với quy mô hàng nghìn máy chủ.</li><li>Bảo hiểm sức khỏe cao cấp, nghỉ dưỡng định kỳ và chế độ đãi ngộ toàn diện của Tập đoàn.</li><li>Tài trợ học tập và thi các chứng chỉ kiến trúc Cloud quốc tế.</li></ul>",
+          "locationText": "Tòa nhà VNPT, Số 57 Huỳnh Thúc Kháng, Quận Đống Đa, Hà Nội",
+          "province": "Hà Nội",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "LEAD",
+          "openings": 1,
+          "salaryMin": 50000000,
+          "salaryMax": 78000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Công nghệ thông tin",
+            "specialization": "Phát triển phần mềm",
+            "position": "Solution Architect"
+          }
+        },
+        {
+          "title": "System / Network Engineer",
+          "description": "<p>Quản trị, giám sát và tối ưu hệ thống máy chủ, thiết bị mạng lõi và đường truyền dữ liệu tốc độ cao tại khu vực miền Trung - Tây Nguyên.</p><ul><li>Cấu hình, vận hành hệ thống máy chủ Linux, hệ thống lưu trữ và các thiết bị định tuyến/tường lửa doanh nghiệp.</li><li>Giám sát hiệu năng mạng lưới 24/7 theo ca trực, phát hiện sớm và xử lý triệt để các sự cố nghẽn mạch hoặc gián đoạn dịch vụ.</li><li>Tự động hóa các tác vụ kiểm tra cấu hình, sao lưu dữ liệu và vá lỗi bảo mật hệ thống định kỳ.</li><li>Lập báo cáo chất lượng dịch vụ (SLA) và phối hợp với các đội ứng cứu hiện trường khi cần thiết.</li></ul>",
+          "requirementsText": "<ul><li>Ít nhất 2 năm kinh nghiệm quản trị hệ thống Linux hoặc kỹ sư mạng tại các nhà mạng, trung tâm dữ liệu hoặc doanh nghiệp lớn.</li><li>Tốt nghiệp Đại học chuyên ngành Mạng máy tính, Viễn thông, Công nghệ thông tin hoặc tương đương.</li><li>Yêu cầu bắt buộc: Linux, Docker, Ansible, Git.</li><li>Ưu tiên: Python, Kubernetes, Jenkins. Tiếng Anh đọc hiểu tài liệu thiết bị mạng và hệ thống tốt (tương đương TOEIC 600+).</li></ul>",
+          "benefitsText": "<ul><li>Thu nhập ổn định, phụ cấp trực vận hành và thưởng theo hiệu quả công việc hàng quý.</li><li>Đầy đủ chế độ bảo hiểm theo quy định nhà nước và bảo hiểm sức khỏe tự nguyện VNPT.</li><li>Làm việc tại trung tâm thành phố Đà Nẵng với cơ sở vật chất hiện đại.</li><li>Cơ hội thi chứng chỉ mạng/hệ thống quốc tế (CCNP, RHCE) được công ty hỗ trợ chi phí.</li></ul>",
+          "locationText": "Tòa nhà VNPT Đà Nẵng, Số 346 Đường 2/9, Quận Hải Châu, Đà Nẵng",
+          "province": "Đà Nẵng",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "MIDDLE",
+          "openings": 2,
+          "salaryMin": 20000000,
+          "salaryMax": 32000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Công nghệ thông tin",
+            "specialization": "Hạ tầng & mạng",
+            "position": "System / Network Engineer"
+          }
+        }
+      ]
+    },
+    {
+      "approve": true,
+      "company": {
+        "legalName": "Công ty Cổ phần Dịch vụ Di động Trực tuyến (M_Service)",
+        "displayName": "MoMo (M_Service)",
+        "slug": "momo-fintech",
+        "description": "MoMo (M_Service) là siêu ứng dụng tài chính hàng đầu Việt Nam với hơn 30 triệu người dùng, cung cấp hệ sinh thái thanh toán không tiền mặt, dịch vụ tài chính cá nhân, bảo hiểm và giải pháp cho hàng trăm nghìn đối tác kinh doanh.",
+        "websiteUrl": "https://momo.vn",
+        "countryCode": "VN",
+        "registrationNumber": "VN-ENT-005",
+        "sizeRange": "1000+",
+        "logoUrl": "/logos/official/momo.svg",
+        "coverImageUrl": "/companies/photos/momo.webp"
+      },
+      "jobs": [
+        {
+          "title": "Mobile Engineer (React Native / Kotlin)",
+          "description": "<p>Phát triển và tối ưu các phân hệ tính năng tài chính - thanh toán trên siêu ứng dụng MoMo phục vụ hơn 30 triệu người dùng.</p><ul><li>Xây dựng giao diện và luồng trải nghiệm mượt mà trên đa nền tảng bằng React Native kết hợp mô-đun native hiệu năng cao.</li><li>Tối ưu thời gian khởi động ứng dụng, giảm tiêu thụ bộ nhớ và xử lý các giao dịch tài chính an toàn, chính xác.</li><li>Phối hợp chặt chẽ với đội ngũ Product Designer, Backend và QA để đảm bảo chất lượng bản phát hành hàng tuần.</li><li>Tham gia viết unit test, theo dõi crash-free rate và xử lý nhanh các vấn đề phát sinh trên thiết bị thực tế.</li></ul>",
+          "requirementsText": "<ul><li>Tối thiểu 3 năm kinh nghiệm phát triển ứng dụng di động trên iOS/Android hoặc đa nền tảng.</li><li>Tốt nghiệp Đại học chuyên ngành Công nghệ thông tin, Kỹ thuật phần mềm hoặc tương đương.</li><li>Yêu cầu bắt buộc: React Native, TypeScript, JavaScript, Kotlin, Android, REST API.</li><li>Ưu tiên: Swift, iOS, GraphQL. Tiếng Anh đọc hiểu tài liệu kỹ thuật và giao tiếp công việc tốt (tương đương TOEIC 700+).</li></ul>",
+          "benefitsText": "<ul><li>Thu nhập hấp dẫn kèm thưởng hiệu suất, thưởng tháng 13 và cơ hội nhận cổ phiếu ESOP cho nhân sự xuất sắc.</li><li>Gói bảo hiểm sức khỏe cao cấp, trợ cấp ăn trưa, gửi xe và ngân sách đào tạo hàng năm.</li><li>Làm việc trực tiếp trên sản phẩm Fintech có lượng người dùng lớn hàng đầu Việt Nam.</li><li>Môi trường trẻ trung, linh hoạt Hybrid và trang bị MacBook Pro phục vụ công việc.</li></ul>",
+          "locationText": "Tòa nhà Phú Mỹ Hưng Tower, Số 8 Hoàng Văn Thái, Quận 7, TP. Hồ Chí Minh",
+          "province": "TP. Hồ Chí Minh",
+          "countryCode": "VN",
+          "workMode": "HYBRID",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "SENIOR",
+          "openings": 2,
+          "salaryMin": 38000000,
+          "salaryMax": 60000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Công nghệ thông tin",
+            "specialization": "Phát triển phần mềm",
+            "position": "Mobile Developer"
+          }
+        },
+        {
+          "title": "Senior Data Engineer (Spark & Airflow)",
+          "description": "<p>Xây dựng và vận hành nền tảng dữ liệu lớn (Data Lakehouse) xử lý hàng tỷ sự kiện giao dịch mỗi ngày phục vụ phân tích hành vi, chấm điểm tín dụng và chống gian lận.</p><ul><li>Thiết kế các luồng ETL/ELT và xử lý dữ liệu thời gian thực có độ tin cậy cao, đảm bảo tính toàn vẹn dữ liệu tài chính.</li><li>Tối ưu hiệu năng truy vấn kho dữ liệu, quản lý phân vùng lưu trữ và kiểm soát chất lượng dữ liệu tự động (Data Quality).</li><li>Phối hợp với đội ngũ Data Scientist và Business Intelligence để cung cấp tập dữ liệu chuẩn hóa cho mô hình AI.</li><li>Giám sát chi phí hạ tầng dữ liệu đám mây và thiết lập quy chuẩn quản trị dữ liệu (Data Governance).</li></ul>",
+          "requirementsText": "<ul><li>Tối thiểu 4 năm kinh nghiệm xây dựng hệ thống dữ liệu lớn (Big Data / Data Platform) trong lĩnh vực Fintech hoặc Thương mại điện tử.</li><li>Tốt nghiệp Đại học chuyên ngành Khoa học dữ liệu, Khoa học máy tính hoặc tương đương.</li><li>Yêu cầu bắt buộc: Python, SQL, Apache Spark, Apache Airflow, Apache Kafka, Google Cloud Platform.</li><li>Ưu tiên: Docker, Kubernetes, Terraform. Tiếng Anh đọc hiểu tài liệu kỹ thuật và giao tiếp công việc tốt (tương đương TOEIC 700+).</li></ul>",
+          "benefitsText": "<ul><li>Gói lương thưởng cạnh tranh top đầu ngành Fintech cùng cơ hội xét duyệt ESOP hàng năm.</li><li>Được làm việc với bài toán dữ liệu quy mô hàng chục triệu người dùng thực tế.</li><li>Bảo hiểm sức khỏe toàn diện cho bản thân, khám sức khỏe định kỳ và các câu lạc bộ thể thao.</li><li>Chế độ làm việc Hybrid linh hoạt cùng nhiều chương trình đào tạo nội bộ chuyên sâu.</li></ul>",
+          "locationText": "Tòa nhà Phú Mỹ Hưng Tower, Số 8 Hoàng Văn Thái, Quận 7, TP. Hồ Chí Minh",
+          "province": "TP. Hồ Chí Minh",
+          "countryCode": "VN",
+          "workMode": "HYBRID",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "SENIOR",
+          "openings": 2,
+          "salaryMin": 45000000,
+          "salaryMax": 70000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Công nghệ thông tin",
+            "specialization": "Dữ liệu & AI",
+            "position": "Data Engineer"
+          }
+        },
+        {
+          "title": "Performance Marketing Specialist",
+          "description": "<p>Lập kế hoạch, triển khai và tối ưu các chiến dịch quảng cáo chuyển đổi số (Performance Marketing) nhằm tăng trưởng người dùng mới và tần suất giao dịch trên ứng dụng MoMo.</p><ul><li>Quản lý ngân sách và trực tiếp vận hành chiến dịch trên các nền tảng Google Ads, Meta, TikTok, Apple Search Ads.</li><li>Theo dõi các chỉ số CAC, ROAS, tỷ lệ cài đặt và kích hoạt ví, thực hiện A/B testing sáng tạo nội dung và đối tượng mục tiêu.</li><li>Phối hợp chặt chẽ với đội ngũ Data Analytics để phân tích hành trình chuyển đổi và tối ưu điểm chạm người dùng.</li><li>Cập nhật xu hướng công nghệ quảng cáo, phòng chống gian lận lượt cài đặt (Fraud Prevention) và báo cáo hiệu quả định kỳ.</li></ul>",
+          "requirementsText": "<ul><li>Tối thiểu 2 năm kinh nghiệm trực tiếp chạy và tối ưu chiến dịch Performance Marketing cho ứng dụng di động (App Growth) hoặc thương mại điện tử.</li><li>Tốt nghiệp Đại học chuyên ngành Marketing, Kinh tế, Thương mại điện tử hoặc tương đương.</li><li>Thành thạo các công cụ đo lường di động (AppsFlyer/Adjust), Google Analytics và kỹ năng phân tích số liệu Excel/SQL cơ bản.</li><li>Tiếng Anh đọc hiểu tài liệu chuyên ngành và làm việc với đối tác quảng cáo quốc tế tốt (tương đương TOEIC 700+).</li></ul>",
+          "benefitsText": "<ul><li>Thu nhập hấp dẫn kèm thưởng hiệu quả chiến dịch theo quý và lương tháng 13.</li><li>Quản lý ngân sách quảng cáo quy mô lớn hàng đầu thị trường Fintech Việt Nam.</li><li>Bảo hiểm sức khỏe cao cấp, trợ cấp cơm trưa và không gian làm việc năng động tại Quận 7.</li><li>Cơ hội phát triển lên vị trí Growth Marketing Lead.</li></ul>",
+          "locationText": "Tòa nhà Phú Mỹ Hưng Tower, Số 8 Hoàng Văn Thái, Quận 7, TP. Hồ Chí Minh",
+          "province": "TP. Hồ Chí Minh",
+          "countryCode": "VN",
+          "workMode": "HYBRID",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "MIDDLE",
+          "openings": 1,
+          "salaryMin": 20000000,
+          "salaryMax": 32000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Marketing - Truyền thông",
+            "specialization": "Digital & Growth Marketing",
+            "position": "Performance Marketing Specialist"
+          }
+        }
+      ]
+    },
+    {
+      "approve": true,
+      "company": {
+        "legalName": "Công ty TNHH Shopee Việt Nam",
+        "displayName": "Shopee Việt Nam",
+        "slug": "shopee-vietnam",
+        "description": "Shopee Việt Nam là nền tảng thương mại điện tử hàng đầu tại Việt Nam và Đông Nam Á thuộc Tập đoàn Sea, kết nối hàng triệu người tiêu dùng với nhà bán hàng và thương hiệu thông qua trải nghiệm mua sắm trực tuyến liền mạch.",
+        "websiteUrl": "https://careers.shopee.vn",
+        "countryCode": "VN",
+        "registrationNumber": "VN-ENT-006",
+        "sizeRange": "1000+",
+        "logoUrl": "/logos/official/shopee.svg",
+        "coverImageUrl": "/companies/photos/shopee.webp"
+      },
+      "jobs": [
+        {
+          "title": "Backend Engineer (Python / FastAPI & Kafka)",
+          "description": "<p>Phát triển các dịch vụ backend xử lý đơn hàng, khuyến mãi và đồng bộ tồn kho thời gian thực cho nền tảng thương mại điện tử có lưu lượng truy cập cao hàng đầu Việt Nam.</p><ul><li>Thiết kế API hiệu năng cao với Python/FastAPI, đảm bảo khả năng mở rộng linh hoạt trong các đợt siêu sale (Double Day).</li><li>Xây dựng cơ chế xử lý bất đồng bộ qua Apache Kafka và tối ưu bộ nhớ đệm Redis để giảm tải cơ sở dữ liệu.</li><li>Đảm bảo độ tin cậy dịch vụ thông qua viết kiểm thử tự động, giám sát log/metric và xử lý sự cố nhanh chóng.</li><li>Phối hợp với các kỹ sư khu vực (Singapore) để đồng bộ tiêu chuẩn kỹ thuật và kiến trúc hệ thống.</li></ul>",
+          "requirementsText": "<ul><li>Ít nhất 2 năm kinh nghiệm phát triển phần mềm backend trên môi trường hệ thống phân tán.</li><li>Tốt nghiệp Đại học chuyên ngành Khoa học máy tính, Công nghệ thông tin hoặc tương đương.</li><li>Yêu cầu bắt buộc: Python, FastAPI, Apache Kafka, PostgreSQL, Redis, Docker.</li><li>Ưu tiên: Kubernetes, Elasticsearch, GitHub Actions. Tiếng Anh giao tiếp công việc tốt với đồng nghiệp khu vực (tương đương IELTS 6.0+ / TOEIC 750+).</li></ul>",
+          "benefitsText": "<ul><li>Thu nhập cạnh tranh, thưởng hiệu suất hàng năm và xét điều chỉnh lương định kỳ.</li><li>Bảo hiểm sức khỏe toàn diện cho nhân viên, khu vực pantry đồ ăn nhẹ miễn phí mỗi ngày.</li><li>Môi trường đa quốc gia chuyên nghiệp tại trung tâm Quận 1, TP. Hồ Chí Minh.</li><li>15 ngày phép năm cùng các hoạt động gắn kết nhân viên sôi nổi hàng tháng.</li></ul>",
+          "locationText": "Tòa nhà Saigon Centre Tower 2, Số 67 Lê Lợi, Quận 1, TP. Hồ Chí Minh",
+          "province": "TP. Hồ Chí Minh",
+          "countryCode": "VN",
+          "workMode": "HYBRID",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "MIDDLE",
+          "openings": 2,
+          "salaryMin": 30000000,
+          "salaryMax": 48000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Công nghệ thông tin",
+            "specialization": "Phát triển phần mềm",
+            "position": "Backend Developer"
+          }
+        },
+        {
+          "title": "QA Automation Engineer (Playwright & Python)",
+          "description": "<p>Xây dựng và mở rộng hệ thống kiểm thử tự động End-to-End và API cho các luồng nghiệp vụ trọng yếu trên sàn thương mại điện tử Shopee.</p><ul><li>Thiết kế kịch bản kiểm thử, viết mã nguồn kiểm thử tự động cho giao diện web và dịch vụ API.</li><li>Tích hợp bộ kiểm thử tự động vào pipeline CI/CD để phát hiện sớm lỗi hồi quy trước mỗi đợt phát hành.</li><li>Phân tích nguyên nhân gốc rễ của lỗi (Root Cause Analysis), phối hợp cùng đội phát triển tối ưu độ ổn định sản phẩm.</li><li>Tham gia kiểm thử hiệu năng (Load/Stress test) chuẩn bị cho các chiến dịch mua sắm lớn.</li></ul>",
+          "requirementsText": "<ul><li>Tối thiểu 2 năm kinh nghiệm xây dựng framework kiểm thử tự động (Automation Testing) cho ứng dụng web/API.</li><li>Tốt nghiệp Đại học chuyên ngành Công nghệ thông tin, Kỹ thuật phần mềm hoặc tương đương.</li><li>Yêu cầu bắt buộc: Playwright, Python, Software Testing, REST API, Git, CI/CD.</li><li>Ưu tiên: Selenium, Docker, SQL. Tiếng Anh đọc hiểu tài liệu đặc tả và báo cáo lỗi rõ ràng (tương đương TOEIC 700+).</li></ul>",
+          "benefitsText": "<ul><li>Lương tháng 13, thưởng hiệu suất năm và chế độ bảo hiểm sức khỏe cao cấp.</li><li>Làm việc trong đội ngũ QA chuyên nghiệp với quy trình phát hành phần mềm chuẩn mực.</li><li>Trợ cấp ăn uống, gửi xe, pantry miễn phí và các chương trình chăm sóc sức khỏe tinh thần.</li><li>Cơ hội học hỏi và thăng tiến lên QA Lead hoặc SDET.</li></ul>",
+          "locationText": "Tòa nhà Saigon Centre Tower 2, Số 67 Lê Lợi, Quận 1, TP. Hồ Chí Minh",
+          "province": "TP. Hồ Chí Minh",
+          "countryCode": "VN",
+          "workMode": "HYBRID",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "MIDDLE",
+          "openings": 2,
+          "salaryMin": 24000000,
+          "salaryMax": 38000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Công nghệ thông tin",
+            "specialization": "Phát triển phần mềm",
+            "position": "QA Engineer"
+          }
+        },
+        {
+          "title": "E-commerce Operations Specialist",
+          "description": "<p>Quản lý và tối ưu quy trình vận hành sàn thương mại điện tử, đảm bảo chất lượng xử lý đơn hàng, tỷ lệ giao hàng đúng hẹn và trải nghiệm nhà bán hàng.</p><ul><li>Theo dõi các chỉ số vận hành hàng ngày (SLA giao hàng, tỷ lệ hủy đơn, thời gian xử lý kho vận) và đề xuất giải pháp cải thiện điểm nghẽn.</li><li>Phối hợp với đội ngũ Logistics, Chăm sóc khách hàng và Quản lý ngành hàng để chuẩn bị năng lực vận hành cho các chiến dịch Mega Sale.</li><li>Xây dựng quy trình chuẩn (SOP), đào tạo nhà bán hàng tuân thủ chính sách vận hành của sàn.</li><li>Phân tích dữ liệu vận hành trên hệ thống để dự báo sản lượng và tối ưu chi phí chuỗi cung ứng.</li></ul>",
+          "requirementsText": "<ul><li>Ít nhất 1–2 năm kinh nghiệm vận hành sàn thương mại điện tử, chuỗi cung ứng hoặc điều phối đơn hàng quy mô lớn.</li><li>Tốt nghiệp Đại học chuyên ngành Quản trị chuỗi cung ứng, Thương mại điện tử, Kinh tế hoặc tương đương.</li><li>Thành thạo phân tích dữ liệu (Excel nâng cao, SQL cơ bản), tư duy hệ thống và xử lý vấn đề nhanh nhạy.</li><li>Tiếng Anh đọc hiểu và giao tiếp công việc tốt (tương đương TOEIC 650+) để phối hợp với đội ngũ khu vực.</li></ul>",
+          "benefitsText": "<ul><li>Thu nhập cạnh tranh kèm thưởng hiệu suất theo đánh giá định kỳ.</li><li>Bảo hiểm sức khỏe toàn diện, 15 ngày phép năm và môi trường làm việc trẻ trung tại Quận 1.</li><li>Được tiếp cận quy trình vận hành thương mại điện tử quy mô hàng triệu đơn hàng mỗi ngày.</li><li>Lộ trình phát triển rõ ràng lên Senior Operations Specialist hoặc Operations Manager.</li></ul>",
+          "locationText": "Tòa nhà Saigon Centre Tower 2, Số 67 Lê Lợi, Quận 1, TP. Hồ Chí Minh",
+          "province": "TP. Hồ Chí Minh",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "JUNIOR",
+          "openings": 2,
+          "salaryMin": 16000000,
+          "salaryMax": 25000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Vận hành - Thương mại điện tử",
+            "specialization": "Vận hành Sàn & Chuỗi cung ứng",
+            "position": "E-commerce Operations Specialist"
+          }
+        }
+      ]
+    },
+    {
+      "approve": true,
+      "company": {
+        "legalName": "Ngân hàng TMCP Kỹ thương Việt Nam",
+        "displayName": "Techcombank",
+        "slug": "techcombank-software",
+        "description": "Techcombank là một trong những ngân hàng thương mại cổ phần hàng đầu Việt Nam, tiên phong dẫn dắt hành trình chuyển đổi số ngành tài chính với nền tảng ngân hàng số, dữ liệu đám mây và đội ngũ công nghệ chuẩn quốc tế.",
+        "websiteUrl": "https://techcombank.com",
+        "countryCode": "VN",
+        "registrationNumber": "VN-ENT-007",
+        "sizeRange": "1000+",
+        "logoUrl": "/logos/official/techcombank.svg",
+        "coverImageUrl": "/companies/photos/techcombank.webp"
+      },
+      "jobs": [
+        {
+          "title": "Principal Solution Architect (Cloud & Microservices)",
+          "description": "<p>Định hình kiến trúc công nghệ lõi và nền tảng ngân hàng số thế hệ mới trên hạ tầng Cloud phục vụ hàng chục triệu giao dịch tài chính mỗi ngày.</p><ul><li>Thiết kế kiến trúc hệ thống phân tán có độ tin cậy cao, khả năng chịu lỗi và tuân thủ nghiêm ngặt quy định bảo mật ngân hàng.</li><li>Phê duyệt giải pháp kỹ thuật cho các squad phát triển sản phẩm, dẫn dắt chuyển đổi từ hệ thống kế thừa sang Microservices trên Cloud.</li><li>Đánh giá công nghệ mới, xây dựng bộ tiêu chuẩn kiến trúc (Architecture Blueprint) và giảm thiểu nợ kỹ thuật toàn hàng.</li><li>Làm việc trực tiếp với lãnh đạo khối Công nghệ, Khối Kinh doanh và các đối tác công nghệ chiến lược toàn cầu.</li></ul>",
+          "requirementsText": "<ul><li>Tối thiểu 7 năm kinh nghiệm phát triển và thiết kế kiến trúc phần mềm doanh nghiệp, trong đó ít nhất 3 năm ở vai trò Solution/Enterprise Architect.</li><li>Tốt nghiệp Đại học chuyên ngành Khoa học máy tính, Công nghệ thông tin hoặc tương đương.</li><li>Yêu cầu bắt buộc: Java, Spring Boot, Microservices, Amazon Web Services, Kubernetes, Apache Kafka.</li><li>Ưu tiên: Terraform, PostgreSQL, Oracle. Tiếng Anh giao tiếp trôi chảy với chuyên gia và đối tác quốc tế (tương đương IELTS 6.5+ / TOEIC 800+).</li></ul>",
+          "benefitsText": "<ul><li>Gói thu nhập lãnh đạo kỹ thuật top đầu thị trường tài chính - công nghệ cùng thưởng hiệu suất cao.</li><li>Gói bảo hiểm sức khỏe VIP cho bản thân và gia đình, ưu đãi lãi suất vay dành riêng cho CBNV.</li><li>Làm việc tại trụ sở mới hiện đại bậc nhất Hà Nội với đầy đủ tiện ích chuẩn quốc tế.</li><li>Cơ hội tham gia các chương trình đào tạo lãnh đạo công nghệ và hội thảo quốc tế.</li></ul>",
+          "locationText": "Tòa nhà Techcombank, Số 6 Quang Trung, Quận Hoàn Kiếm, Hà Nội",
+          "province": "Hà Nội",
+          "countryCode": "VN",
+          "workMode": "HYBRID",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "LEAD",
+          "openings": 1,
+          "salaryMin": 65000000,
+          "salaryMax": 85000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Công nghệ thông tin",
+            "specialization": "Phát triển phần mềm",
+            "position": "Solution Architect"
+          }
+        },
+        {
+          "title": "Business Analyst (IT BA - Core Banking)",
+          "description": "<p>Phân tích nghiệp vụ ngân hàng lõi (Core Banking), thanh toán và tín dụng để chuyển hóa yêu cầu kinh doanh thành đặc tả kỹ thuật cho các đội Agile Squad.</p><ul><li>Làm việc trực tiếp với Product Owner và các phòng ban nghiệp vụ để thu thập yêu cầu, vẽ luồng quy trình (BPMN) và thiết kế giải pháp hệ thống.</li><li>Viết tài liệu User Story, tiêu chí nghiệm thu (Acceptance Criteria), đặc tả API và mô hình dữ liệu chi tiết.</li><li>Phối hợp với đội phát triển và QA trong suốt vòng đời phát triển để giải đáp nghiệp vụ và nghiệm thu tính năng (UAT).</li><li>Đề xuất tối ưu hóa quy trình số hóa nhằm rút ngắn thời gian xử lý giao dịch cho khách hàng.</li></ul>",
+          "requirementsText": "<ul><li>Tối thiểu 3 năm kinh nghiệm ở vị trí IT Business Analyst trong lĩnh vực Ngân hàng, Tài chính hoặc Fintech.</li><li>Tốt nghiệp Đại học chuyên ngành Hệ thống thông tin quản lý, Công nghệ thông tin, Tài chính - Ngân hàng hoặc tương đương.</li><li>Yêu cầu bắt buộc: SQL, REST API, Scrum, Software Testing.</li><li>Ưu tiên: Oracle, PostgreSQL, Git. Tiếng Anh đọc hiểu tài liệu Core Banking và giao tiếp chuyên môn tốt (tương đương TOEIC 700+).</li></ul>",
+          "benefitsText": "<ul><li>Thu nhập cạnh tranh kèm thưởng KPI hàng năm và các khoản phụ cấp ngân hàng hấp dẫn.</li><li>Bảo hiểm sức khỏe toàn diện, chế độ nghỉ phép ưu việt và ưu đãi dịch vụ ngân hàng cho nhân viên.</li><li>Môi trường Agile chuyên nghiệp, hợp tác cùng các chuyên gia công nghệ và tài chính hàng đầu.</li><li>Lộ trình thăng tiến lên Lead BA hoặc Product Owner.</li></ul>",
+          "locationText": "Tòa nhà Techcombank, Số 6 Quang Trung, Quận Hoàn Kiếm, Hà Nội",
+          "province": "Hà Nội",
+          "countryCode": "VN",
+          "workMode": "HYBRID",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "MIDDLE",
+          "openings": 2,
+          "salaryMin": 26000000,
+          "salaryMax": 42000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Công nghệ thông tin",
+            "specialization": "Sản phẩm & Phân tích nghiệp vụ",
+            "position": "Business Analyst (IT BA)"
+          }
+        },
+        {
+          "title": "Chuyên viên Phân tích Tài chính",
+          "description": "<p>Thực hiện phân tích hiệu quả tài chính, lập kế hoạch ngân sách và mô hình dự báo kinh doanh phục vụ ban lãnh đạo khối Ngân hàng Số và Doanh nghiệp.</p><ul><li>Thu thập, tổng hợp và phân tích các chỉ số tài chính (NIM, CIR, ROE, tăng trưởng tín dụng/huy động) theo phân khúc khách hàng.</li><li>Xây dựng mô hình tài chính đánh giá hiệu quả đầu tư (ROI/NPV) cho các sáng kiến sản phẩm mới và chiến dịch kinh doanh.</li><li>Lập báo cáo quản trị định kỳ, phân tích biến động thực tế so với kế hoạch và cảnh báo sớm rủi ro tài chính.</li><li>Phối hợp với các đơn vị kinh doanh thiết lập chỉ tiêu KPI và phân bổ nguồn lực ngân sách hợp lý.</li></ul>",
+          "requirementsText": "<ul><li>Tối thiểu 2 năm kinh nghiệm phân tích tài chính doanh nghiệp, FP&A hoặc kiểm toán tại ngân hàng, công ty chứng khoán hoặc Big4.</li><li>Tốt nghiệp Đại học chuyên ngành Tài chính, Ngân hàng, Kế toán, Kiểm toán hoặc Kinh tế.</li><li>Thành thạo lập mô hình tài chính trên Excel, kỹ năng phân tích số liệu và trình bày báo cáo quản trị mạch lạc.</li><li>Tiếng Anh đọc hiểu báo cáo tài chính chuẩn IFRS và giao tiếp công việc tốt (tương đương TOEIC 700+); ưu tiên ứng viên có CFA/ACCA.</li></ul>",
+          "benefitsText": "<ul><li>Mức lương cạnh tranh cùng thưởng hiệu quả kinh doanh cuối năm hấp dẫn.</li><li>Chế độ bảo hiểm sức khỏe cao cấp, hỗ trợ chi phí học thi chứng chỉ tài chính quốc tế (CFA, FRM).</li><li>Môi trường làm việc chuyên nghiệp tại hội sở trung tâm Hà Nội với cơ hội phát triển sự nghiệp bền vững.</li><li>Ưu đãi lãi suất vay và các dịch vụ tài chính đặc quyền dành cho CBNV Techcombank.</li></ul>",
+          "locationText": "Tòa nhà Techcombank, Số 6 Quang Trung, Quận Hoàn Kiếm, Hà Nội",
+          "province": "Hà Nội",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "MIDDLE",
+          "openings": 1,
+          "salaryMin": 24000000,
+          "salaryMax": 38000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Tài chính - Ngân hàng - Bảo hiểm",
+            "specialization": "Ngân hàng số & Doanh nghiệp",
+            "position": "Chuyên viên Phân tích Tài chính"
+          }
+        }
+      ]
+    },
+    {
+      "approve": true,
+      "company": {
+        "legalName": "Ngân hàng TMCP Việt Nam Thịnh Vượng",
+        "displayName": "VPBank",
+        "slug": "vpbank-digital",
+        "description": "VPBank là ngân hàng thương mại cổ phần dẫn đầu về chuyển đổi số và ngân hàng bán lẻ tại Việt Nam, xây dựng nền tảng dữ liệu đám mây hiện đại và hệ sinh thái dịch vụ tài chính toàn diện cho khách hàng cá nhân lẫn doanh nghiệp SME.",
+        "websiteUrl": "https://www.vpbank.com.vn",
+        "countryCode": "VN",
+        "registrationNumber": "VN-ENT-008",
+        "sizeRange": "1000+",
+        "logoUrl": "/logos/official/vpbank.svg",
+        "coverImageUrl": "/companies/photos/vpbank.webp"
+      },
+      "jobs": [
+        {
+          "title": "Data Engineer (Delta Lake / Spark / AWS)",
+          "description": "<p>Phát triển nền tảng dữ liệu Lakehouse trên hạ tầng AWS nhằm hợp nhất dữ liệu ngân hàng bán lẻ, thẻ tín dụng và ngân hàng số VPBank NEO.</p><ul><li>Xây dựng và tối ưu các pipeline tích hợp dữ liệu hàng loạt và thời gian thực bằng PySpark trên kiến trúc Delta Lake.</li><li>Chuẩn hóa mô hình dữ liệu (Data Modeling), kiểm soát chất lượng và độ trễ dữ liệu phục vụ báo cáo quản trị và AI.</li><li>Phối hợp với đội ngũ Cloud Engineering để tự động hóa triển khai luồng dữ liệu qua CI/CD và quản lý phân quyền dữ liệu.</li><li>Tối ưu chi phí tính toán và lưu trữ dữ liệu trên Amazon Web Services.</li></ul>",
+          "requirementsText": "<ul><li>Tối thiểu 3 năm kinh nghiệm xây dựng hệ thống kỹ thuật dữ liệu (Data Engineering) trên nền tảng Cloud.</li><li>Tốt nghiệp Đại học chuyên ngành Công nghệ thông tin, Khoa học dữ liệu hoặc tương đương.</li><li>Yêu cầu bắt buộc: Python, SQL, Apache Spark, Amazon Web Services, Apache Airflow, Git.</li><li>Ưu tiên: Docker, Terraform, Apache Kafka. Tiếng Anh đọc hiểu tài liệu kỹ thuật tốt (tương đương TOEIC 700+).</li></ul>",
+          "benefitsText": "<ul><li>Thu nhập hấp dẫn kèm thưởng hiệu quả công việc và thưởng các dịp lễ lớn trong năm.</li><li>Bảo hiểm sức khỏe toàn diện VPBank Care, chế độ nghỉ phép ưu đãi và khám sức khỏe định kỳ.</li><li>Cơ hội làm việc trực tiếp với kiến trúc dữ liệu hiện đại trên AWS quy mô hàng triệu khách hàng.</li><li>Được tài trợ học tập và thi chứng chỉ AWS Data Analytics / Databricks.</li></ul>",
+          "locationText": "Tòa nhà VPBank Tower, Số 89 Láng Hạ, Quận Đống Đa, Hà Nội",
+          "province": "Hà Nội",
+          "countryCode": "VN",
+          "workMode": "HYBRID",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "MIDDLE",
+          "openings": 2,
+          "salaryMin": 32000000,
+          "salaryMax": 50000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Công nghệ thông tin",
+            "specialization": "Dữ liệu & AI",
+            "position": "Data Engineer"
+          }
+        },
+        {
+          "title": "Chuyên viên Quản trị Rủi ro Tín dụng",
+          "description": "<p>Xây dựng chính sách, giám sát chất lượng danh mục tín dụng và tối ưu mô hình phê duyệt tự động cho phân khúc khách hàng cá nhân và doanh nghiệp SME.</p><ul><li>Phân tích dữ liệu danh mục cho vay, theo dõi tỷ lệ nợ quá hạn, nợ xấu theo từng sản phẩm và khu vực kinh doanh.</li><li>Đề xuất điều chỉnh tiêu chí chấm điểm tín dụng (Credit Scoring) và khẩu vị rủi ro nhằm cân bằng tăng trưởng và an toàn vốn.</li><li>Thực hiện kiểm tra sức chịu đựng danh mục (Stress Testing) và lập báo cáo rủi ro định kỳ trình Ủy ban Quản lý Rủi ro.</li><li>Phối hợp với khối Công nghệ để triển khai các quy tắc phê duyệt tự động trên hệ thống khởi tạo khoản vay.</li></ul>",
+          "requirementsText": "<ul><li>Tối thiểu 2 năm kinh nghiệm quản trị rủi ro tín dụng, phân tích danh mục hoặc mô hình rủi ro tại ngân hàng hoặc công ty tài chính.</li><li>Tốt nghiệp Đại học chuyên ngành Tài chính - Ngân hàng, Kinh tế lượng, Thống kê hoặc Toán tài chính.</li><li>Thành thạo phân tích dữ liệu (SQL, Python hoặc SAS/Excel nâng cao) và am hiểu quy định quản trị rủi ro của Ngân hàng Nhà nước.</li><li>Tiếng Anh đọc hiểu tài liệu Basel II/III và báo cáo chuyên môn tốt (tương đương TOEIC 650+).</li></ul>",
+          "benefitsText": "<ul><li>Lương thưởng cạnh tranh theo năng lực, lương tháng 13 và thưởng KPI cuối năm.</li><li>Gói bảo hiểm sức khỏe toàn diện, ưu đãi lãi suất vay mua nhà/tiêu dùng cho CBNV.</li><li>Môi trường làm việc chuyên nghiệp tại hội sở 89 Láng Hạ với lộ trình thăng tiến rõ ràng.</li><li>Cơ hội đào tạo chuyên sâu về khoa học dữ liệu ứng dụng trong quản trị rủi ro.</li></ul>",
+          "locationText": "Tòa nhà VPBank Tower, Số 89 Láng Hạ, Quận Đống Đa, Hà Nội",
+          "province": "Hà Nội",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "MIDDLE",
+          "openings": 1,
+          "salaryMin": 22000000,
+          "salaryMax": 35000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Tài chính - Ngân hàng - Bảo hiểm",
+            "specialization": "Quản trị rủi ro & Tuân thủ",
+            "position": "Chuyên viên Quản trị Rủi ro Tín dụng"
+          }
+        }
+      ]
+    },
+    {
+      "approve": true,
+      "company": {
+        "legalName": "Ngân hàng TMCP Quân Đội",
+        "displayName": "MB Bank",
+        "slug": "mb-bank",
+        "description": "Ngân hàng TMCP Quân Đội (MB Bank) là tập đoàn tài chính đa năng tiên phong chuyển đổi số tại Việt Nam, sở hữu ứng dụng App MBBank và BIZ MBBank phục vụ hơn 28 triệu khách hàng với tốc độ đổi mới công nghệ vượt trội.",
+        "websiteUrl": "https://www.mbbank.com.vn",
+        "countryCode": "VN",
+        "registrationNumber": "VN-ENT-009",
+        "sizeRange": "1000+",
+        "logoUrl": "/logos/mbbank.svg",
+        "coverImageUrl": "/companies/photos/workplace.webp"
+      },
+      "jobs": [
+        {
+          "title": "Mobile App Developer (Flutter / Dart)",
+          "description": "<p>Phát triển các tính năng ngân hàng số, thanh toán QR, đầu tư tài chính và tiện ích đời sống trên ứng dụng App MBBank phục vụ hàng chục triệu người dùng.</p><ul><li>Thiết kế giao diện người dùng mượt mà, nhất quán theo Design System và đảm bảo hiệu năng khung hình ổn định trên cả iOS lẫn Android.</li><li>Xây dựng kiến trúc mã nguồn sạch (Clean Architecture), quản lý state hiệu quả và tích hợp bảo mật ứng dụng di động.</li><li>Phối hợp chặt chẽ với đội ngũ Backend, Product Owner và QA trong mô hình Agile Factory của MB Bank.</li><li>Viết unit test, widget test và tối ưu quy trình đóng gói phát hành tự động.</li></ul>",
+          "requirementsText": "<ul><li>Ít nhất 2 năm kinh nghiệm phát triển ứng dụng di động với Flutter hoặc nền tảng native iOS/Android.</li><li>Tốt nghiệp Đại học chuyên ngành Công nghệ thông tin, Kỹ thuật phần mềm hoặc tương đương.</li><li>Yêu cầu bắt buộc: Flutter, Android, iOS, REST API, Git.</li><li>Ưu tiên: Kotlin, Swift, CI/CD. Tiếng Anh đọc hiểu tài liệu kỹ thuật tốt (tương đương TOEIC 650+).</li></ul>",
+          "benefitsText": "<ul><li>Thu nhập hấp dẫn với thưởng hiệu suất dự án, thưởng các dịp lễ lớn và chế độ đãi ngộ đặc thù của MB Group.</li><li>Bảo hiểm sức khỏe toàn diện cho nhân viên và người thân, khám sức khỏe định kỳ hàng năm.</li><li>Làm việc tại tòa nhà MB Grand Tower hiện đại với khu vực thể thao và căng tin tiện nghi.</li><li>Cơ hội phát triển chuyên sâu về kiến trúc Mobile quy mô hàng chục triệu người dùng.</li></ul>",
+          "locationText": "Tòa nhà MB Grand Tower, Số 18 Lê Văn Lương, Quận Cầu Giấy, Hà Nội",
+          "province": "Hà Nội",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "MIDDLE",
+          "openings": 2,
+          "salaryMin": 26000000,
+          "salaryMax": 42000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Công nghệ thông tin",
+            "specialization": "Phát triển phần mềm",
+            "position": "Mobile Developer"
+          }
+        },
+        {
+          "title": "SOC / Pentest Specialist",
+          "description": "<p>Thực hiện kiểm thử xâm nhập (Pentest), rà soát lỗ hổng bảo mật ứng dụng/hạ tầng và giám sát phản ứng sự cố an ninh mạng tại Trung tâm An toàn thông tin MB Bank.</p><ul><li>Thực hiện đánh giá bảo mật (Black-box, Grey-box, White-box) cho các ứng dụng Web, Mobile Banking, API và hạ tầng mạng nội bộ.</li><li>Giám sát cảnh báo an ninh mạng trên hệ thống SIEM/SOAR, phân tích mã độc và điều tra xử lý sự cố (Incident Response).</li><li>Xây dựng báo cáo kỹ thuật chi tiết, đề xuất phương án vá lỗi theo chuẩn OWASP/PCI-DSS và kiểm tra lại sau khi khắc phục.</li><li>Tham gia diễn tập phòng thủ tấn công mạng (Red Team / Blue Team) định kỳ của ngành ngân hàng.</li></ul>",
+          "requirementsText": "<ul><li>Tối thiểu 3 năm kinh nghiệm trong lĩnh vực Pentest, Red Team hoặc vận hành trung tâm giám sát an ninh mạng (SOC).</li><li>Tốt nghiệp Đại học chuyên ngành An toàn thông tin, Công nghệ thông tin hoặc tương đương.</li><li>Yêu cầu bắt buộc: Linux, Python, REST API, Docker, SQL.</li><li>Ưu tiên: Kubernetes, Java, GitLab CI. Tiếng Anh đọc hiểu tài liệu bảo mật và viết báo cáo kỹ thuật tốt (tương đương TOEIC 700+).</li></ul>",
+          "benefitsText": "<ul><li>Mức lương chuyên gia cạnh tranh cùng phụ cấp đặc thù an ninh mạng ngân hàng.</li><li>Tài trợ chi phí thi các chứng chỉ bảo mật uy tín như OSCP, CEH, GCIH, CISSP.</li><li>Bảo hiểm sức khỏe cao cấp và các chế độ phúc lợi toàn diện từ MB Bank.</li><li>Môi trường kỹ thuật chuyên sâu với đầy đủ công cụ mô phỏng và lab nghiên cứu hiện đại.</li></ul>",
+          "locationText": "Tòa nhà MB Grand Tower, Số 18 Lê Văn Lương, Quận Cầu Giấy, Hà Nội",
+          "province": "Hà Nội",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "SENIOR",
+          "openings": 1,
+          "salaryMin": 36000000,
+          "salaryMax": 58000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Công nghệ thông tin",
+            "specialization": "An toàn thông tin",
+            "position": "SOC / Pentest Specialist"
+          }
+        }
+      ]
+    },
+    {
+      "approve": true,
+      "company": {
+        "legalName": "Ngân hàng TMCP Ngoại thương Việt Nam",
+        "displayName": "Vietcombank",
+        "slug": "vietcombank",
+        "description": "Ngân hàng TMCP Ngoại thương Việt Nam (Vietcombank) là ngân hàng thương mại hàng đầu Việt Nam về quy mô vốn hóa, hiệu quả hoạt động và uy tín thương hiệu, đang đẩy mạnh hiện đại hóa hệ thống công nghệ lõi và dịch vụ ngân hàng số.",
+        "websiteUrl": "https://portal.vietcombank.com.vn",
+        "countryCode": "VN",
+        "registrationNumber": "VN-ENT-010",
+        "sizeRange": "1000+",
+        "logoUrl": "/companies/seed-expanded/vietcombank-logo.webp",
+        "coverImageUrl": "/companies/seed-expanded/vietcombank-cover.webp"
+      },
+      "jobs": [
+        {
+          "title": "Senior Java Backend Developer (Oracle & Spring Boot)",
+          "description": "<p>Phát triển và nâng cấp các hệ thống giao dịch thanh toán, kết nối đối tác tài chính và nền tảng ngân hàng số VCB Digibank/VCB DigiBiz.</p><ul><li>Thiết kế và lập trình các dịch vụ backend xử lý giao dịch có tính chính xác, an toàn và khả năng kiểm toán cao.</li><li>Tối ưu các truy vấn phức tạp và thủ tục lưu trữ trên cơ sở dữ liệu Oracle phục vụ lượng giao dịch lớn mỗi ngày.</li><li>Đảm bảo tuân thủ quy chuẩn bảo mật ngân hàng, viết kiểm thử đơn vị (Unit Test) và hỗ trợ kiểm thử tích hợp hệ thống.</li><li>Phối hợp với đội ngũ kiến trúc sư và vận hành để xử lý sự cố và nâng cao độ ổn định hệ thống.</li></ul>",
+          "requirementsText": "<ul><li>Tối thiểu 4 năm kinh nghiệm phát triển ứng dụng Java doanh nghiệp trong lĩnh vực Ngân hàng, Tài chính hoặc Thanh toán.</li><li>Tốt nghiệp Đại học chuyên ngành Công nghệ thông tin, Khoa học máy tính hoặc tương đương.</li><li>Yêu cầu bắt buộc: Java, Spring Boot, Spring Security, Oracle, REST API, Microservices.</li><li>Ưu tiên: Docker, Kubernetes, JUnit. Tiếng Anh đọc hiểu tài liệu kỹ thuật ngân hàng tốt (tương đương TOEIC 700+).</li></ul>",
+          "benefitsText": "<ul><li>Chế độ đãi ngộ và thưởng hiệu quả kinh doanh thuộc nhóm dẫn đầu hệ thống ngân hàng Việt Nam.</li><li>Bảo hiểm sức khỏe toàn diện, chế độ nghỉ mát hàng năm và các khoản phụ cấp theo quy định của Vietcombank.</li><li>Môi trường làm việc ổn định, chuyên nghiệp ngay tại trung tâm Quận Hoàn Kiếm, Hà Nội.</li><li>Cơ hội tham gia các dự án hiện đại hóa hạ tầng công nghệ lõi quy mô lớn.</li></ul>",
+          "locationText": "Tòa nhà Vietcombank Tower, Số 198 Trần Quang Khải, Quận Hoàn Kiếm, Hà Nội",
+          "province": "Hà Nội",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "SENIOR",
+          "openings": 2,
+          "salaryMin": 40000000,
+          "salaryMax": 62000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Công nghệ thông tin",
+            "specialization": "Phát triển phần mềm",
+            "position": "Backend Developer"
+          }
+        },
+        {
+          "title": "Chuyên viên Quan hệ Khách hàng Doanh nghiệp",
+          "description": "<p>Phát triển và quản lý danh mục khách hàng doanh nghiệp lớn và doanh nghiệp FDI, tư vấn giải pháp tín dụng, tài trợ thương mại và quản lý dòng tiền toàn diện.</p><ul><li>Tìm kiếm, tiếp cận và thẩm định nhu cầu tài chính của các doanh nghiệp xuất nhập khẩu, sản xuất và thương mại tại TP. Hồ Chí Minh.</li><li>Xây dựng phương án cấp tín dụng, bảo lãnh, thanh toán quốc tế (L/C) và sản phẩm ngân hàng số doanh nghiệp phù hợp với từng khách hàng.</li><li>Lập tờ trình thẩm định tín dụng, theo dõi tình hình hoạt động kinh doanh của khách hàng sau giải ngân và kiểm soát chất lượng nợ.</li><li>Phối hợp với các phòng ban hội sở để nâng cao chất lượng dịch vụ và mở rộng doanh số bán chéo.</li></ul>",
+          "requirementsText": "<ul><li>Tối thiểu 2 năm kinh nghiệm ở vị trí Quan hệ Khách hàng Doanh nghiệp (RM) tại các ngân hàng thương mại.</li><li>Tốt nghiệp Đại học chuyên ngành Tài chính - Ngân hàng, Kinh tế đối ngoại, Thương mại quốc tế hoặc Kế toán.</li><li>Am hiểu phân tích báo cáo tài chính doanh nghiệp, nghiệp vụ tín dụng và thanh toán quốc tế.</li><li>Tiếng Anh giao tiếp thương mại và đọc hiểu hồ sơ xuất nhập khẩu thành thạo (tương đương TOEIC 700+ / IELTS 6.0+).</li></ul>",
+          "benefitsText": "<ul><li>Thu nhập hấp dẫn gồm lương cố định, phụ cấp kinh doanh và thưởng hoàn thành chỉ tiêu vượt trội.</li><li>Đầy đủ chế độ bảo hiểm, khám sức khỏe định kỳ và phúc lợi đặc quyền của hệ thống Vietcombank.</li><li>Làm việc tại tòa nhà biểu tượng Vietcombank Tower ngay trung tâm Quận 1, TP. Hồ Chí Minh.</li><li>Cơ hội phát triển nghề nghiệp lên Trưởng phòng Khách hàng Doanh nghiệp hoặc Giám đốc Chi nhánh.</li></ul>",
+          "locationText": "Tòa nhà Vietcombank Tower, Số 5 Công trường Mê Linh, Quận 1, TP. Hồ Chí Minh",
+          "province": "TP. Hồ Chí Minh",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "MIDDLE",
+          "openings": 2,
+          "salaryMin": 22000000,
+          "salaryMax": 38000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Tài chính - Ngân hàng - Bảo hiểm",
+            "specialization": "Ngân hàng số & Doanh nghiệp",
+            "position": "Chuyên viên Quan hệ Khách hàng Doanh nghiệp"
+          }
+        }
+      ]
+    },
+    {
+      "approve": true,
+      "company": {
+        "legalName": "Công ty TNHH NAVER Việt Nam",
+        "displayName": "NAVER Vietnam",
+        "slug": "naver-vietnam",
+        "description": "NAVER Việt Nam là trung tâm phát triển phần mềm và nghiên cứu công nghệ chiến lược của Tập đoàn NAVER tại Đông Nam Á. Đội ngũ kỹ sư tại TP. Hồ Chí Minh và Hà Nội trực tiếp xây dựng các nền tảng tìm kiếm, nội dung số, dịch vụ đám mây và ứng dụng di động phục vụ hàng chục triệu người dùng toàn cầu.",
+        "websiteUrl": "https://naver.vn",
+        "countryCode": "VN",
+        "registrationNumber": "VN-ENT-011",
+        "sizeRange": "151-300",
+        "logoUrl": "/companies/seed-expanded/naver-logo.webp",
+        "coverImageUrl": "/companies/seed-expanded/naver-cover.webp"
+      },
+      "jobs": [
+        {
+          "title": "Senior Backend Engineer (Java / Spring Boot)",
+          "description": "<p>Gia nhập đội ngũ nền tảng cốt lõi của NAVER Việt Nam để thiết kế và vận hành các dịch vụ backend hiệu năng cao phục vụ lưu lượng truy cập lớn.</p><ul><li>Thiết kế kiến trúc Microservices phân tán, tối ưu thông lượng và độ trễ thấp cho các API trọng yếu.</li><li>Phối hợp với đội ngũ kỹ sư tại Hàn Quốc và Việt Nam trong việc chuẩn hóa luồng dữ liệu, xử lý bất đồng bộ với Apache Kafka và bộ nhớ đệm Redis.</li><li>Xây dựng bộ kiểm thử tự động, giám sát hệ thống và tham gia review mã nguồn theo tiêu chuẩn kỹ thuật chặt chẽ.</li></ul>",
+          "requirementsText": "<ul><li>Tối thiểu 4 năm kinh nghiệm phát triển hệ thống backend quy mô lớn bằng ngôn ngữ Java.</li><li>Tốt nghiệp Đại học chuyên ngành Công nghệ thông tin, Khoa học máy tính hoặc tương đương.</li><li>Yêu cầu bắt buộc: Java, Spring Boot, PostgreSQL, Redis, Apache Kafka, Docker, Microservices.</li><li>Ưu tiên: Kubernetes, Elasticsearch, CI/CD và Tiếng Anh giao tiếp công việc tốt (IELTS 6.0+ / TOEIC 700+).</li></ul>",
+          "benefitsText": "<ul><li>Thu nhập cạnh tranh 13 tháng lương cùng thưởng hiệu suất năm và xét tăng lương định kỳ.</li><li>Gói bảo hiểm sức khỏe cao cấp cho bản thân và người thân, khám sức khỏe tổng quát hằng năm.</li><li>Cấp MacBook Pro cấu hình cao, hỗ trợ chi phí ăn trưa, gửi xe và ngân sách đào tạo chuyên môn.</li></ul>",
+          "locationText": "Tòa nhà Saigon Centre, 65 Lê Lợi, Quận 1, TP. Hồ Chí Minh",
+          "province": "TP. Hồ Chí Minh",
+          "countryCode": "VN",
+          "workMode": "HYBRID",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "SENIOR",
+          "openings": 2,
+          "salaryMin": 40000000,
+          "salaryMax": 68000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Công nghệ thông tin",
+            "specialization": "Phát triển phần mềm",
+            "position": "Backend Developer"
+          }
+        },
+        {
+          "title": "Android Engineer (Kotlin)",
+          "description": "<p>Phát triển và tối ưu hóa các ứng dụng di động chủ lực của hệ sinh thái NAVER với trải nghiệm mượt mà trên đa dạng thiết bị Android.</p><ul><li>Xây dựng tính năng mới bằng Kotlin theo kiến trúc MVVM / Clean Architecture và Jetpack Compose.</li><li>Tối ưu thời gian khởi động ứng dụng, quản lý bộ nhớ, bộ nhớ đệm ngoại tuyến và hiệu năng hiển thị danh sách lớn.</li><li>Viết unit test, UI test và phối hợp chặt chẽ với Product Designer và Backend Engineer trong mỗi sprint.</li></ul>",
+          "requirementsText": "<ul><li>Từ 2 năm kinh nghiệm phát triển ứng dụng Android native trong môi trường sản phẩm thực tế.</li><li>Tốt nghiệp Đại học chuyên ngành Công nghệ thông tin, Kỹ thuật phần mềm hoặc ngành liên quan.</li><li>Yêu cầu bắt buộc: Kotlin, Android, REST API, Git, JUnit.</li><li>Ưu tiên: GraphQL, CI/CD, Scrum và Tiếng Anh đọc hiểu tài liệu kỹ thuật tốt (TOEIC 700+).</li></ul>",
+          "benefitsText": "<ul><li>Lương tháng 13, thưởng dự án và chương trình teambuilding hằng năm tại nước ngoài hoặc resort cao cấp.</li><li>Làm việc linh hoạt hybrid 3 ngày tại văn phòng, môi trường tôn trọng văn hóa kỹ thuật.</li><li>Phụ cấp ăn trưa, đồ uống miễn phí tại pantry và gói chăm sóc sức khỏe toàn diện.</li></ul>",
+          "locationText": "Tòa nhà Saigon Centre, 65 Lê Lợi, Quận 1, TP. Hồ Chí Minh",
+          "province": "TP. Hồ Chí Minh",
+          "countryCode": "VN",
+          "workMode": "HYBRID",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "MIDDLE",
+          "openings": 2,
+          "salaryMin": 26000000,
+          "salaryMax": 45000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Công nghệ thông tin",
+            "specialization": "Phát triển phần mềm",
+            "position": "Mobile Developer"
+          }
+        },
+        {
+          "title": "Software Engineer Intern (Frontend React)",
+          "description": "<p>Chương trình thực tập kỹ thuật 6 tháng tại trung tâm R&amp;D Hà Nội, giúp sinh viên năm cuối tham gia trực tiếp vào quy trình phát triển giao diện web hiện đại cùng các kỹ sư cấp cao.</p><ul><li>Phát triển các thành phần giao diện tái sử dụng bằng React, TypeScript và Tailwind CSS.</li><li>Kết nối dữ liệu qua REST API, xử lý trạng thái ứng dụng và viết kiểm thử giao diện cơ bản.</li><li>Tham gia code review hằng tuần, hội thảo kỹ thuật nội bộ và có cơ hội trở thành nhân viên chính thức sau kỳ thực tập.</li></ul>",
+          "requirementsText": "<ul><li>Sinh viên năm cuối hoặc mới tốt nghiệp chưa có kinh nghiệm làm việc toàn thời gian, có thể làm việc tối thiểu 4 ngày/tuần.</li><li>Đang theo học hoặc tốt nghiệp Đại học chuyên ngành Công nghệ thông tin, Khoa học máy tính hoặc tương đương.</li><li>Yêu cầu bắt buộc: JavaScript, TypeScript, React, HTML, CSS, Git.</li><li>Ưu tiên: Next.js, Tailwind CSS và Tiếng Anh đọc hiểu tài liệu kỹ thuật tốt (TOEIC 650+).</li></ul>",
+          "benefitsText": "<ul><li>Trợ cấp thực tập hằng tháng cạnh tranh, hỗ trợ ăn trưa và gửi xe tại tòa nhà.</li><li>Được mentor 1-1 bởi Senior Engineer và cung cấp laptop làm việc trong suốt thời gian thực tập.</li><li>Xét tuyển lên vị trí Fresher/Junior chính thức ngay khi hoàn thành đánh giá cuối kỳ.</li></ul>",
+          "locationText": "Tòa nhà Keangnam Landmark 72, Phạm Hùng, Nam Từ Liêm, Hà Nội",
+          "province": "Hà Nội",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "INTERNSHIP",
+          "seniorityLevel": "INTERN",
+          "openings": 3,
+          "salaryMin": 6000000,
+          "salaryMax": 10000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Công nghệ thông tin",
+            "specialization": "Phát triển phần mềm",
+            "position": "Frontend Developer"
+          }
+        }
+      ]
+    },
+    {
+      "approve": true,
+      "company": {
+        "legalName": "Công ty TNHH LG CNS Việt Nam",
+        "displayName": "LG CNS Việt Nam",
+        "slug": "lg-cns-vietnam",
+        "description": "LG CNS Việt Nam là trung tâm phát triển phần mềm toàn cầu của Tập đoàn LG CNS (Hàn Quốc), chuyên tư vấn chuyển đổi số, xây dựng hệ thống nhà máy thông minh, điện toán đám mây và các giải pháp phần mềm doanh nghiệp cho khách hàng tại Hàn Quốc, Nhật Bản và châu Á.",
+        "websiteUrl": "https://www.lgcns.com",
+        "countryCode": "VN",
+        "registrationNumber": "VN-ENT-012",
+        "sizeRange": "501-1000",
+        "logoUrl": "/companies/seed-expanded/lg-cns-logo.webp",
+        "coverImageUrl": "/companies/seed-expanded/lg-cns-cover.webp"
+      },
+      "jobs": [
+        {
+          "title": "Fullstack Developer (Java & Vue.js)",
+          "description": "<p>Tham gia phát triển các hệ thống quản trị sản xuất thông minh (MES/ERP) và cổng dịch vụ doanh nghiệp cho khách hàng thuộc Tập đoàn LG.</p><ul><li>Thiết kế và lập trình các dịch vụ backend bằng Java, Spring Boot, Hibernate kết nối cơ sở dữ liệu Oracle và PostgreSQL.</li><li>Xây dựng giao diện quản trị nghiệp vụ phức tạp bằng Vue.js, TypeScript với trải nghiệm người dùng nhất quán.</li><li>Phối hợp với đội ngũ phân tích nghiệp vụ và QA tại Hà Nội và Seoul để kiểm thử tích hợp và triển khai định kỳ.</li></ul>",
+          "requirementsText": "<ul><li>Tối thiểu 2 năm kinh nghiệm phát triển ứng dụng web fullstack với Java và framework JavaScript hiện đại.</li><li>Tốt nghiệp Đại học chuyên ngành Công nghệ thông tin, Kỹ thuật phần mềm hoặc tương đương.</li><li>Yêu cầu bắt buộc: Java, Spring Boot, Hibernate, Vue.js, PostgreSQL, REST API.</li><li>Ưu tiên: Oracle, Docker, GitLab CI và Tiếng Anh giao tiếp công việc tốt (TOEIC 700+); biết tiếng Hàn là điểm cộng.</li></ul>",
+          "benefitsText": "<ul><li>Thưởng tháng 13, thưởng hiệu suất dự án và xét tăng lương hằng năm minh bạch.</li><li>Bảo hiểm sức khỏe bảo lãnh viện phí, phụ cấp ăn trưa và hỗ trợ học ngoại ngữ (tiếng Anh, tiếng Hàn).</li><li>Cơ hội công tác ngắn hạn tại trụ sở Hàn Quốc đối với các thành viên có đóng góp nổi bật.</li></ul>",
+          "locationText": "Tòa nhà Lotte Center, 54 Liễu Giai, Ba Đình, Hà Nội",
+          "province": "Hà Nội",
+          "countryCode": "VN",
+          "workMode": "HYBRID",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "MIDDLE",
+          "openings": 2,
+          "salaryMin": 24000000,
+          "salaryMax": 42000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Công nghệ thông tin",
+            "specialization": "Phát triển phần mềm",
+            "position": "Fullstack Developer"
+          }
+        },
+        {
+          "title": "Frontend Engineer (React & TypeScript)",
+          "description": "<p>Phát triển giao diện web cho nền tảng quản lý vận hành đám mây và bảng điều khiển phân tích dữ liệu thời gian thực.</p><ul><li>Chuyển đổi thiết kế từ Figma thành các module React và TypeScript sạch, dễ bảo trì và chuẩn hóa theo Design System.</li><li>Tối ưu hóa tốc độ tải trang, quản lý bộ nhớ trình duyệt cho các bảng dữ liệu lớn và biểu đồ tương tác.</li><li>Viết kiểm thử đơn vị và tích hợp với REST API do đội backend cung cấp.</li></ul>",
+          "requirementsText": "<ul><li>Từ 1 năm kinh nghiệm làm việc với React và TypeScript trong các dự án web thương mại.</li><li>Tốt nghiệp Đại học chuyên ngành Công nghệ thông tin, Hệ thống thông tin hoặc ngành kỹ thuật liên quan.</li><li>Yêu cầu bắt buộc: React, TypeScript, JavaScript, HTML, CSS, Git.</li><li>Ưu tiên: Tailwind CSS, Cypress, Scrum và Tiếng Anh giao tiếp công việc tốt (IELTS 6.0+ / TOEIC 700+).</li></ul>",
+          "benefitsText": "<ul><li>Thu nhập cạnh tranh, 12 ngày phép năm cộng thêm ngày nghỉ lễ của công ty.</li><li>Được tham gia các khóa đào tạo nội bộ về kiến trúc frontend, cloud và quy trình phát triển chuẩn quốc tế.</li><li>Khám sức khỏe định kỳ hằng năm, câu lạc bộ thể thao và phụ cấp gửi xe.</li></ul>",
+          "locationText": "Tòa nhà Lotte Center, 54 Liễu Giai, Ba Đình, Hà Nội",
+          "province": "Hà Nội",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "JUNIOR",
+          "openings": 2,
+          "salaryMin": 16000000,
+          "salaryMax": 26000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Công nghệ thông tin",
+            "specialization": "Phát triển phần mềm",
+            "position": "Frontend Developer"
+          }
+        }
+      ]
+    },
+    {
+      "approve": true,
+      "company": {
+        "legalName": "Công ty TNHH Bosch Global Software Technologies Việt Nam",
+        "displayName": "Bosch Global Software Technologies Vietnam",
+        "slug": "bosch-global-software",
+        "description": "Bosch Global Software Technologies Việt Nam (BGSW Vietnam) là trung tâm kỹ thuật phần mềm quy mô lớn thuộc Tập đoàn Bosch, phát triển phần mềm nhúng ô tô, giải pháp doanh nghiệp, điện toán đám mây và AIoT cho thị trường châu Âu, Bắc Mỹ và châu Á - Thái Bình Dương.",
+        "websiteUrl": "https://www.bosch-softwaretechnologies.com",
+        "countryCode": "VN",
+        "registrationNumber": "VN-ENT-013",
+        "sizeRange": "1000+",
+        "logoUrl": "/companies/seed-expanded/bosch-logo.webp",
+        "coverImageUrl": "/companies/seed-expanded/bosch-cover.webp"
+      },
+      "jobs": [
+        {
+          "title": "Senior .NET & Angular Fullstack Engineer",
+          "description": "<p>Phát triển nền tảng phần mềm quản lý chuỗi cung ứng và thiết bị công nghiệp kết nối toàn cầu của Tập đoàn Bosch.</p><ul><li>Thiết kế và xây dựng hệ thống web doanh nghiệp trên nền tảng .NET / ASP.NET Core và Angular.</li><li>Tối ưu hóa truy vấn SQL Server, thiết kế API bảo mật và tích hợp xác thực doanh nghiệp.</li><li>Đảm bảo chất lượng mã nguồn thông qua review chéo, unit test và quy trình CI/CD trên Microsoft Azure.</li></ul>",
+          "requirementsText": "<ul><li>Tối thiểu 4 năm kinh nghiệm phát triển phần mềm doanh nghiệp trên hệ sinh thái .NET và Angular.</li><li>Tốt nghiệp Đại học chuyên ngành Công nghệ thông tin, Kỹ thuật phần mềm hoặc tương đương.</li><li>Yêu cầu bắt buộc: C#, .NET, ASP.NET Core, Angular, TypeScript, SQL Server.</li><li>Ưu tiên: Microsoft Azure, Docker, Microservices và Tiếng Anh giao tiếp công việc thành thạo (IELTS 6.5+ / TOEIC 750+).</li></ul>",
+          "benefitsText": "<ul><li>Lương tháng 13, thưởng hiệu suất hằng năm và gói bảo hiểm sức khỏe cho gia đình.</li><li>Môi trường làm việc chuẩn Đức, giờ làm việc linh hoạt và chính sách hybrid 2 ngày/tuần tại nhà.</li><li>Xe đưa đón nhân viên tại các quận trung tâm, phụ cấp ăn trưa và ngân sách học chứng chỉ quốc tế.</li></ul>",
+          "locationText": "Tòa nhà eTown 2, 364 Cộng Hòa, Quận Tân Bình, TP. Hồ Chí Minh",
+          "province": "TP. Hồ Chí Minh",
+          "countryCode": "VN",
+          "workMode": "HYBRID",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "SENIOR",
+          "openings": 2,
+          "salaryMin": 38000000,
+          "salaryMax": 62000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Công nghệ thông tin",
+            "specialization": "Phát triển phần mềm",
+            "position": "Fullstack Developer"
+          }
+        },
+        {
+          "title": "Embedded C/C++ Software Engineer",
+          "description": "<p>Tham gia phát triển phần mềm nhúng thời gian thực cho các bộ điều khiển điện tử (ECU) và hệ thống hỗ trợ lái xe tiên tiến (ADAS) của Bosch.</p><ul><li>Lập trình firmware và module điều khiển bằng ngôn ngữ C++ trên các vi điều khiển công nghiệp và hệ điều hành nhúng Linux / RTOS.</li><li>Phân tích yêu cầu kỹ thuật, thiết kế kiến trúc phần mềm nhúng theo chuẩn ASPICE và kiểm thử trên phần cứng mục tiêu.</li><li>Phối hợp với đội ngũ kỹ sư tại Đức và Nhật Bản để gỡ lỗi, tối ưu bộ nhớ và độ ổn định hệ thống.</li></ul>",
+          "requirementsText": "<ul><li>Tối thiểu 2 năm kinh nghiệm lập trình phần mềm nhúng bằng C++ trong lĩnh vực ô tô hoặc điện tử công nghiệp.</li><li>Tốt nghiệp Đại học chuyên ngành Kỹ thuật máy tính, Điện tử - Viễn thông, Tự động hóa hoặc Công nghệ thông tin.</li><li>Yêu cầu bắt buộc: C++, Linux, Git, Software Testing.</li><li>Ưu tiên: Python, Jenkins, Scrum và Tiếng Anh giao tiếp kỹ thuật tốt (TOEIC 700+); có chứng chỉ tiếng Nhật JLPT N3/N2 là lợi thế lớn.</li></ul>",
+          "benefitsText": "<ul><li>Thu nhập ổn định cùng thưởng cuối năm, thưởng sáng kiến kỹ thuật và phụ cấp dự án.</li><li>Được đào tạo bài bản về quy trình ASPICE, an toàn chức năng ISO 26262 và phòng lab thiết bị hiện đại.</li><li>Bảo hiểm tai nạn 24/7, khám sức khỏe cao cấp và các ngày phép thưởng theo thâm niên.</li></ul>",
+          "locationText": "Tòa nhà eTown 2, 364 Cộng Hòa, Quận Tân Bình, TP. Hồ Chí Minh",
+          "province": "TP. Hồ Chí Minh",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "MIDDLE",
+          "openings": 3,
+          "salaryMin": 25000000,
+          "salaryMax": 42000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Công nghệ thông tin",
+            "specialization": "Phát triển phần mềm",
+            "position": "Embedded Software Engineer"
+          }
+        },
+        {
+          "title": "HR Business Partner (HRBP)",
+          "description": "<p>Đồng hành cùng ban giám đốc các khối kỹ thuật phần mềm trong việc xây dựng chiến lược nhân sự, phát triển đội ngũ và gắn kết nhân viên tại văn phòng TP. Hồ Chí Minh.</p><ul><li>Tư vấn cho các Engineering Manager về hoạch định nguồn lực, lộ trình thăng tiến, đánh giá hiệu suất và giữ chân nhân tài công nghệ.</li><li>Phối hợp với bộ phận C&amp;B và Talent Acquisition triển khai các chương trình lương thưởng, đào tạo lãnh đạo kế cận và khảo sát mức độ gắn kết.</li><li>Xử lý các vấn đề quan hệ lao động, tuân thủ nội quy và thúc đẩy văn hóa doanh nghiệp đa quốc gia.</li></ul>",
+          "requirementsText": "<ul><li>Tối thiểu 4 năm kinh nghiệm ở vai trò HRBP hoặc chuyên viên nhân sự tổng hợp tại các công ty công nghệ quy mô trên 300 nhân sự.</li><li>Tốt nghiệp Đại học chuyên ngành Quản trị nguồn nhân lực, Quản trị kinh doanh hoặc ngành liên quan.</li><li>Am hiểu luật lao động Việt Nam, kỹ năng phân tích dữ liệu nhân sự và giao tiếp thuyết phục cấp quản lý.</li><li>Tiếng Anh giao tiếp công việc thành thạo (IELTS 6.5+ / TOEIC 750+) để làm việc với lãnh đạo khu vực.</li></ul>",
+          "benefitsText": "<ul><li>Mức lương cạnh tranh kèm thưởng thành tích hằng năm và chế độ nghỉ phép linh hoạt 15 ngày/năm.</li><li>Gói bảo hiểm sức khỏe toàn diện cho gia đình và phụ cấp chăm sóc sức khỏe tinh thần.</li><li>Cơ hội tham gia các dự án chuyển đổi nhân sự quy mô khu vực châu Á - Thái Bình Dương.</li></ul>",
+          "locationText": "Tòa nhà eTown 2, 364 Cộng Hòa, Quận Tân Bình, TP. Hồ Chí Minh",
+          "province": "TP. Hồ Chí Minh",
+          "countryCode": "VN",
+          "workMode": "HYBRID",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "SENIOR",
+          "openings": 1,
+          "salaryMin": 32000000,
+          "salaryMax": 50000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Nhân sự - Hành chính",
+            "specialization": "Tuyển dụng & Đối tác Nhân sự",
+            "position": "HR Business Partner (HRBP)"
+          }
+        }
+      ]
+    },
+    {
+      "approve": true,
+      "company": {
+        "legalName": "Công ty TNHH Capgemini Việt Nam",
+        "displayName": "Capgemini Vietnam",
+        "slug": "capgemini-vietnam",
+        "description": "Capgemini Việt Nam là thành viên của Tập đoàn tư vấn và dịch vụ công nghệ hàng đầu thế giới Capgemini (Pháp), cung cấp dịch vụ chuyển đổi đám mây, kiểm thử tự động, phát triển ứng dụng doanh nghiệp và kỹ thuật dữ liệu cho khách hàng Fortune 500.",
+        "websiteUrl": "https://www.capgemini.com",
+        "countryCode": "VN",
+        "registrationNumber": "VN-ENT-014",
+        "sizeRange": "501-1000",
+        "logoUrl": "/companies/seed-expanded/capgemini-logo.webp",
+        "coverImageUrl": "/companies/seed-expanded/capgemini-cover.webp"
+      },
+      "jobs": [
+        {
+          "title": "Cloud DevOps Engineer (Azure & Terraform)",
+          "description": "<p>Xây dựng và tự động hóa hạ tầng điện toán đám mây cho các dự án chuyển đổi số của khách hàng châu Âu và Úc theo mô hình làm việc từ xa linh hoạt.</p><ul><li>Thiết kế Infrastructure as Code bằng Terraform và Ansible để cấp phát môi trường đồng nhất trên Microsoft Azure.</li><li>Vận hành cụm Kubernetes (AKS), thiết lập đường ống CI/CD bằng GitHub Actions và giám sát độ tin cậy dịch vụ.</li><li>Tối ưu chi phí cloud, cấu hình bảo mật mạng và tự động hóa quy trình sao lưu, phục hồi thảm họa.</li></ul>",
+          "requirementsText": "<ul><li>Tối thiểu 2 năm kinh nghiệm vận hành hạ tầng Cloud và DevOps trong môi trường sản xuất.</li><li>Tốt nghiệp Đại học chuyên ngành Công nghệ thông tin, Mạng máy tính hoặc tương đương.</li><li>Yêu cầu bắt buộc: Microsoft Azure, Terraform, Docker, Kubernetes, CI/CD, Linux.</li><li>Ưu tiên: Ansible, GitHub Actions, Python và Tiếng Anh giao tiếp công việc tốt (IELTS 6.0+ / TOEIC 700+).</li></ul>",
+          "benefitsText": "<ul><li>Chế độ làm việc 100% remote linh hoạt, hỗ trợ chi phí trang thiết bị làm việc tại nhà.</li><li>Thu nhập cạnh tranh theo năng lực, lương tháng 13 và tài trợ thi chứng chỉ Azure / Terraform chính thức.</li><li>Bảo hiểm sức khỏe cao cấp và 15 ngày phép năm hưởng nguyên lương.</li></ul>",
+          "locationText": "Tòa nhà Opal Office, 92 Nguyễn Hữu Cảnh, Bình Thạnh, TP. Hồ Chí Minh",
+          "province": "TP. Hồ Chí Minh",
+          "countryCode": "VN",
+          "workMode": "REMOTE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "MIDDLE",
+          "openings": 2,
+          "salaryMin": 28000000,
+          "salaryMax": 48000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Công nghệ thông tin",
+            "specialization": "Hạ tầng & mạng",
+            "position": "DevOps Engineer"
+          }
+        },
+        {
+          "title": "Senior QA Automation Engineer (Selenium & Cypress)",
+          "description": "<p>Dẫn dắt hoạt động kiểm thử tự động cho các ứng dụng web và API doanh nghiệp của khách hàng ngành tài chính và bán lẻ quốc tế.</p><ul><li>Xây dựng và mở rộng framework kiểm thử tự động end-to-end bằng Selenium, Cypress và TypeScript.</li><li>Tích hợp bộ kiểm thử hồi quy vào đường ống Jenkins / CI/CD để phản hồi nhanh chất lượng sau mỗi lần build.</li><li>Phối hợp với đội phát triển rà soát test case, kiểm thử API và hướng dẫn kỹ thuật cho các QA Engineer cấp dưới.</li></ul>",
+          "requirementsText": "<ul><li>Tối thiểu 4 năm kinh nghiệm kiểm thử phần mềm, trong đó ít nhất 2 năm chuyên sâu về kiểm thử tự động.</li><li>Tốt nghiệp Đại học chuyên ngành Công nghệ thông tin, Kỹ thuật phần mềm hoặc ngành liên quan.</li><li>Yêu cầu bắt buộc: Software Testing, Selenium, Cypress, TypeScript, REST API, CI/CD.</li><li>Ưu tiên: Jenkins, Playwright, Scrum và Tiếng Anh giao tiếp trực tiếp với khách hàng tốt (IELTS 6.0+ / TOEIC 700+).</li></ul>",
+          "benefitsText": "<ul><li>Lương tháng 13, thưởng dự án và lộ trình phát triển lên QA Architect hoặc Test Manager.</li><li>Làm việc hybrid 2 ngày tại văn phòng, môi trường đa văn hóa và tôn trọng cân bằng cuộc sống.</li><li>Khám sức khỏe định kỳ, bảo hiểm tai nạn và phụ cấp ăn trưa hằng tháng.</li></ul>",
+          "locationText": "Tòa nhà Opal Office, 92 Nguyễn Hữu Cảnh, Bình Thạnh, TP. Hồ Chí Minh",
+          "province": "TP. Hồ Chí Minh",
+          "countryCode": "VN",
+          "workMode": "HYBRID",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "SENIOR",
+          "openings": 2,
+          "salaryMin": 30000000,
+          "salaryMax": 48000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Công nghệ thông tin",
+            "specialization": "Phát triển phần mềm",
+            "position": "QA Engineer"
+          }
+        }
+      ]
+    },
+    {
+      "approve": true,
+      "company": {
+        "legalName": "Tổng Công ty Công nghệ và Giải pháp CMC",
+        "displayName": "CMC Technology & Solution",
+        "slug": "cmc-ts",
+        "description": "CMC Technology & Solution (CMC TS) là đơn vị thành viên trụ cột của Tập đoàn Công nghệ CMC, dẫn đầu tại Việt Nam về tư vấn và triển khai giải pháp chuyển đổi số, hạ tầng điện toán đám mây, an toàn thông tin và phần mềm lõi cho khối ngân hàng, tài chính và chính phủ.",
+        "websiteUrl": "https://cmcts.com.vn",
+        "countryCode": "VN",
+        "registrationNumber": "VN-ENT-015",
+        "sizeRange": "1000+",
+        "logoUrl": "/companies/seed-expanded/cmc-ts-logo.webp",
+        "coverImageUrl": "/companies/seed-expanded/cmc-ts-cover.webp"
+      },
+      "jobs": [
+        {
+          "title": "Solution Architect (.NET / Microservices)",
+          "description": "<p>Chủ trì thiết kế kiến trúc tổng thể cho các hệ thống phần mềm doanh nghiệp và nền tảng dịch vụ số quy mô lớn cho khách hàng ngân hàng, bảo hiểm và tập đoàn tại Việt Nam.</p><ul><li>Khảo sát yêu cầu nghiệp vụ, đề xuất kiến trúc Microservices, tích hợp API Gateway và thông điệp bất đồng bộ với RabbitMQ / Apache Kafka.</li><li>Lựa chọn công nghệ trên nền tảng .NET, SQL Server, Redis và phương án triển khai trên Docker / Kubernetes hoặc hạ tầng đám mây lai.</li><li>Đồng hành cùng đội ngũ phát triển giải quyết các bài toán kỹ thuật phức tạp về hiệu năng, bảo mật và tính sẵn sàng cao.</li></ul>",
+          "requirementsText": "<ul><li>Tối thiểu 6 năm kinh nghiệm phát triển phần mềm, trong đó ít nhất 2 năm ở vai trò Solution Architect hoặc Tech Lead.</li><li>Tốt nghiệp Đại học chuyên ngành Công nghệ thông tin, Khoa học máy tính hoặc tương đương.</li><li>Yêu cầu bắt buộc: .NET, C#, Microservices, SQL Server, Docker, Kubernetes, RabbitMQ.</li><li>Ưu tiên: Amazon Web Services, Redis, gRPC và Tiếng Anh đọc hiểu tài liệu kiến trúc và trình bày giải pháp tốt (TOEIC 700+).</li></ul>",
+          "benefitsText": "<ul><li>Thu nhập thỏa thuận tương xứng với năng lực kiến trúc hệ thống, kèm thưởng dự án và thưởng cuối năm hấp dẫn.</li><li>Bảo hiểm sức khỏe CMC Care, phụ cấp ăn trưa, điện thoại và công tác phí đầy đủ.</li><li>Cơ hội làm việc trực tiếp với lãnh đạo công nghệ tại các ngân hàng và tập đoàn hàng đầu.</li></ul>",
+          "locationText": "Tòa nhà CMC Tower, 11 Duy Tân, Cầu Giấy, Hà Nội",
+          "province": "Hà Nội",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "LEAD",
+          "openings": 1,
+          "salaryMin": null,
+          "salaryMax": null,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": true,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Công nghệ thông tin",
+            "specialization": "Phát triển phần mềm",
+            "position": "Solution Architect"
+          }
+        },
+        {
+          "title": "Business Development Executive",
+          "description": "<p>Mở rộng tập khách hàng doanh nghiệp và triển khai kinh doanh các giải pháp phần mềm, hạ tầng đám mây và dịch vụ tích hợp hệ thống của CMC TS tại khu vực miền Bắc.</p><ul><li>Tìm kiếm, tiếp cận khách hàng B2B thuộc khối tài chính, sản xuất và bán lẻ để giới thiệu giải pháp công nghệ phù hợp.</li><li>Phối hợp với đội ngũ Solution Architect và Presales xây dựng hồ sơ đề xuất kỹ thuật, báo giá và thương thảo hợp đồng.</li><li>Theo dõi tiến độ triển khai dự án, chăm sóc khách hàng sau bán hàng nhằm gia tăng doanh thu mở rộng.</li></ul>",
+          "requirementsText": "<ul><li>Tối thiểu 2 năm kinh nghiệm kinh doanh giải pháp CNTT, phần mềm doanh nghiệp hoặc dịch vụ B2B.</li><li>Tốt nghiệp Đại học chuyên ngành Kinh tế, Quản trị kinh doanh, Thương mại hoặc Công nghệ thông tin.</li><li>Kỹ năng giao tiếp, thuyết trình, đàm phán hợp đồng và quản lý phễu bán hàng bài bản.</li><li>Tiếng Anh giao tiếp công việc tốt (TOEIC 650+ / IELTS 5.5+) để phối hợp với các hãng công nghệ đối tác.</li></ul>",
+          "benefitsText": "<ul><li>Lương cứng cạnh tranh kết hợp hoa hồng doanh số không giới hạn theo quý và năm.</li><li>Phụ cấp đi lại, tiếp khách, điện thoại và gói bảo hiểm sức khỏe cho nhân viên.</li><li>Được đào tạo bài bản về các giải pháp công nghệ của Microsoft, AWS, SAP và Oracle.</li></ul>",
+          "locationText": "Tòa nhà CMC Tower, 11 Duy Tân, Cầu Giấy, Hà Nội",
+          "province": "Hà Nội",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "MIDDLE",
+          "openings": 2,
+          "salaryMin": 18000000,
+          "salaryMax": 35000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Kinh doanh - Bán hàng",
+            "specialization": "Kinh doanh Giải pháp Doanh nghiệp (B2B)",
+            "position": "Business Development Executive"
+          }
+        }
+      ]
+    },
+    {
+      "approve": true,
+      "company": {
+        "legalName": "Công ty Cổ phần SmartOSC",
+        "displayName": "SmartOSC",
+        "slug": "smartosc",
+        "description": "SmartOSC là công ty tư vấn và triển khai thương mại điện tử đa kênh hàng đầu khu vực châu Á - Thái Bình Dương với hơn 1.000 chuyên gia tại Việt Nam, Singapore, Úc và Nhật Bản, là đối tác chiến lược của Adobe Commerce, Shopify Plus và Salesforce.",
+        "websiteUrl": "https://www.smartosc.com",
+        "countryCode": "VN",
+        "registrationNumber": "VN-ENT-016",
+        "sizeRange": "501-1000",
+        "logoUrl": "/companies/seed-expanded/smartosc-logo.webp",
+        "coverImageUrl": "/companies/seed-expanded/smartosc-cover.webp"
+      },
+      "jobs": [
+        {
+          "title": "Senior PHP / Laravel E-commerce Developer",
+          "description": "<p>Phát triển các nền tảng thương mại điện tử đa quốc gia có lượng truy cập và đơn hàng lớn cho các thương hiệu bán lẻ tại Úc, Singapore và châu Âu.</p><ul><li>Thiết kế và tùy biến các module thanh toán, giỏ hàng, quản lý tồn kho và tích hợp ERP trên nền tảng PHP / Laravel và MySQL.</li><li>Tối ưu hóa hiệu năng truy vấn, áp dụng Redis caching và Elasticsearch để tăng tốc độ tìm kiếm sản phẩm.</li><li>Tham gia review mã nguồn, hướng dẫn kỹ thuật cho thành viên mới và đảm bảo tiến độ bàn giao theo quy trình Agile/Scrum.</li></ul>",
+          "requirementsText": "<ul><li>Tối thiểu 4 năm kinh nghiệm lập trình web với PHP và các framework hiện đại như Laravel.</li><li>Tốt nghiệp Đại học chuyên ngành Công nghệ thông tin, Kỹ thuật phần mềm hoặc tương đương.</li><li>Yêu cầu bắt buộc: PHP, Laravel, MySQL, Redis, REST API, Git.</li><li>Ưu tiên: Elasticsearch, Docker, Scrum và Tiếng Anh giao tiếp công việc tốt (IELTS 6.0+ / TOEIC 700+).</li></ul>",
+          "benefitsText": "<ul><li>Thu nhập hấp dẫn, thưởng tháng 13 và thưởng dự án theo hiệu quả kinh doanh.</li><li>Chính sách làm việc hybrid linh hoạt, miễn phí đồ ăn nhẹ và các câu lạc bộ thể thao nội bộ.</li><li>Tài trợ thi chứng chỉ chuyên môn quốc tế và cơ hội onsite tại văn phòng Singapore hoặc Úc.</li></ul>",
+          "locationText": "Tòa nhà Handico, Phạm Hùng, Nam Từ Liêm, Hà Nội",
+          "province": "Hà Nội",
+          "countryCode": "VN",
+          "workMode": "HYBRID",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "SENIOR",
+          "openings": 2,
+          "salaryMin": 32000000,
+          "salaryMax": 52000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Công nghệ thông tin",
+            "specialization": "Phát triển phần mềm",
+            "position": "Backend Developer"
+          }
+        },
+        {
+          "title": "Category Management Associate",
+          "description": "<p>Quản lý danh mục sản phẩm và tối ưu hiệu quả vận hành gian hàng thương mại điện tử cho các nhãn hàng đối tác của SmartOSC tại thị trường Việt Nam và Đông Nam Á.</p><ul><li>Theo dõi doanh số, tồn kho, tỷ lệ chuyển đổi và giá bán theo từng nhóm hàng trên các sàn thương mại điện tử và website D2C.</li><li>Phối hợp với đội ngũ Marketing và vận hành lập kế hoạch khuyến mãi, tối ưu nội dung hiển thị sản phẩm và chiến dịch Mega Sale.</li><li>Phân tích dữ liệu hành vi mua sắm để đề xuất cơ cấu sản phẩm và dự báo nhu cầu nhập hàng hằng tháng.</li></ul>",
+          "requirementsText": "<ul><li>Từ 1 năm kinh nghiệm trong lĩnh vực vận hành thương mại điện tử, quản lý ngành hàng hoặc phân tích bán lẻ.</li><li>Tốt nghiệp Đại học chuyên ngành Thương mại điện tử, Kinh tế, Marketing hoặc Quản trị kinh doanh.</li><li>Thành thạo Excel, phân tích số liệu bán hàng và hiểu biết quy trình vận hành sàn thương mại điện tử.</li><li>Tiếng Anh đọc viết và giao tiếp công việc tốt (TOEIC 650+ / IELTS 5.5+).</li></ul>",
+          "benefitsText": "<ul><li>Lương cạnh tranh, thưởng hiệu suất theo quý và lương tháng 13 đầy đủ.</li><li>Môi trường trẻ trung, năng động, được tiếp xúc trực tiếp với các thương hiệu bán lẻ lớn trong khu vực.</li><li>Bảo hiểm sức khỏe nâng cao, khám sức khỏe định kỳ và teambuilding hằng năm.</li></ul>",
+          "locationText": "Tòa nhà Dreamplex, 195 Điện Biên Phủ, Bình Thạnh, TP. Hồ Chí Minh",
+          "province": "TP. Hồ Chí Minh",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "JUNIOR",
+          "openings": 2,
+          "salaryMin": 14000000,
+          "salaryMax": 22000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Vận hành - Thương mại điện tử",
+            "specialization": "Vận hành Sàn & Chuỗi cung ứng",
+            "position": "Category Management Associate"
+          }
+        }
+      ]
+    },
+    {
+      "approve": true,
+      "company": {
+        "legalName": "Trung tâm Công nghệ Thông tin MobiFone",
+        "displayName": "Trung tâm CNTT MobiFone",
+        "slug": "mobifone-it",
+        "description": "Trung tâm Công nghệ Thông tin MobiFone là đơn vị nòng cốt nghiên cứu, phát triển và vận hành các hệ thống phần mềm viễn thông, nền tảng dữ liệu lớn, hệ sinh thái số My MobiFone và các giải pháp chuyển đổi số cho doanh nghiệp trên toàn quốc.",
+        "websiteUrl": "https://it.mobifone.vn",
+        "countryCode": "VN",
+        "registrationNumber": "VN-ENT-017",
+        "sizeRange": "301-500",
+        "logoUrl": "/companies/seed-expanded/mobifone-it-logo.webp",
+        "coverImageUrl": "/companies/seed-expanded/mobifone-it-cover.webp"
+      },
+      "jobs": [
+        {
+          "title": "Data Analyst & BI Engineer (SQL & Python)",
+          "description": "<p>Khai thác và phân tích dữ liệu người dùng viễn thông quy mô hàng chục triệu thuê bao để hỗ trợ quyết định kinh doanh và cá nhân hóa dịch vụ số.</p><ul><li>Viết truy vấn SQL tối ưu trên kho dữ liệu lớn, làm sạch dữ liệu bằng Python và xây dựng bảng dữ liệu tổng hợp phục vụ báo cáo.</li><li>Thiết kế hệ thống dashboard trực quan theo dõi chỉ số tăng trưởng thuê bao, hành vi sử dụng gói cước và tỷ lệ rời mạng.</li><li>Phối hợp với các phòng ban sản phẩm phân tích hiệu quả chiến dịch và đề xuất chỉ số đo lường chuẩn xác.</li></ul>",
+          "requirementsText": "<ul><li>Tối thiểu 2 năm kinh nghiệm làm việc ở vị trí Data Analyst hoặc BI Engineer với tập dữ liệu lớn.</li><li>Tốt nghiệp Đại học chuyên ngành Khoa học dữ liệu, Công nghệ thông tin, Toán tin hoặc Thống kê.</li><li>Yêu cầu bắt buộc: SQL, Python, PostgreSQL, Oracle, Git.</li><li>Ưu tiên: Apache Airflow, Apache Spark, Linux và Tiếng Anh đọc hiểu tài liệu kỹ thuật tốt (TOEIC 650+).</li></ul>",
+          "benefitsText": "<ul><li>Chế độ đãi ngộ cạnh tranh theo quy chế của Tổng công ty Viễn thông MobiFone, thưởng lễ tết và hiệu suất dự án.</li><li>Hưởng đầy đủ bảo hiểm xã hội, bảo hiểm sức khỏe bổ sung và chế độ nghỉ mát hằng năm.</li><li>Môi trường bài bản, nguồn dữ liệu lớn thực tế và cơ hội học hỏi chuyên sâu về Data Platform.</li></ul>",
+          "locationText": "Tòa nhà MobiFone, Lô VP1, Yên Hòa, Cầu Giấy, Hà Nội",
+          "province": "Hà Nội",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "MIDDLE",
+          "openings": 2,
+          "salaryMin": 22000000,
+          "salaryMax": 38000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Công nghệ thông tin",
+            "specialization": "Dữ liệu & AI",
+            "position": "Data Analyst"
+          }
+        },
+        {
+          "title": "iOS Mobile Developer (Swift)",
+          "description": "<p>Phát triển và nâng cấp các tính năng trên ứng dụng di động My MobiFone và các sản phẩm dịch vụ số tại chi nhánh phát triển phần mềm Đà Nẵng.</p><ul><li>Xây dựng giao diện và luồng nghiệp vụ trên iOS bằng ngôn ngữ Swift, UIKit và SwiftUI theo kiến trúc MVVM.</li><li>Tích hợp REST API, xử lý xác thực bảo mật, thông báo đẩy và tối ưu trải nghiệm người dùng trên nhiều kích thước màn hình.</li><li>Viết kiểm thử đơn vị, theo dõi báo cáo crash và phối hợp phát hành phiên bản mới lên App Store.</li></ul>",
+          "requirementsText": "<ul><li>Từ 2 năm kinh nghiệm phát triển ứng dụng iOS native bằng Swift và xuất bản ứng dụng lên App Store.</li><li>Tốt nghiệp Đại học chuyên ngành Công nghệ thông tin, Kỹ thuật phần mềm hoặc tương đương.</li><li>Yêu cầu bắt buộc: Swift, iOS, REST API, Git.</li><li>Ưu tiên: GraphQL, CI/CD, Scrum và Tiếng Anh đọc hiểu tài liệu kỹ thuật tốt (TOEIC 650+).</li></ul>",
+          "benefitsText": "<ul><li>Mức lương cạnh tranh tại thị trường Đà Nẵng kèm thưởng quý, thưởng tháng 13 và phụ cấp ăn trưa.</li><li>Chính sách làm việc hybrid linh hoạt 1-2 ngày/tuần, được cấp MacBook phục vụ công việc.</li><li>Khám sức khỏe định kỳ hằng năm, bảo hiểm sức khỏe toàn diện và các hoạt động gắn kết nội bộ.</li></ul>",
+          "locationText": "Tòa nhà MobiFone Miền Trung, Đường 2 Tháng 9, Hải Châu, Đà Nẵng",
+          "province": "Đà Nẵng",
+          "countryCode": "VN",
+          "workMode": "HYBRID",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "MIDDLE",
+          "openings": 2,
+          "salaryMin": 20000000,
+          "salaryMax": 34000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Công nghệ thông tin",
+            "specialization": "Phát triển phần mềm",
+            "position": "Mobile Developer"
+          }
+        }
+      ]
+    },
+    {
+      "approve": true,
+      "company": {
+        "legalName": "Công ty Cổ phần Dịch vụ Công nghệ Tin học HPT",
+        "displayName": "HPT Vietnam Corporation",
+        "slug": "hpt-vietnam",
+        "description": "HPT Vietnam Corporation là doanh nghiệp hàng đầu tại Việt Nam với gần 30 năm kinh nghiệm trong lĩnh vực tích hợp hệ thống, an toàn thông tin, điện toán đám mây và phát triển phần mềm cho các ngân hàng, tổ chức tài chính và cơ quan nhà nước.",
+        "websiteUrl": "https://hpt.vn",
+        "countryCode": "VN",
+        "registrationNumber": "VN-ENT-018",
+        "sizeRange": "301-500",
+        "logoUrl": "/companies/seed-expanded/hpt-logo.webp",
+        "coverImageUrl": "/companies/seed-expanded/hpt-cover.webp"
+      },
+      "jobs": [
+        {
+          "title": "Security Engineer (SIEM & SOC)",
+          "description": "<p>Tham gia đội ngũ chuyên gia an toàn thông tin của Trung tâm An ninh mạng HPT để giám sát, phát hiện và ứng phó sự cố bảo mật cho khách hàng khối ngân hàng và doanh nghiệp lớn.</p><ul><li>Triển khai, cấu hình và tinh chỉnh luật cảnh báo trên hệ thống SIEM / Elasticsearch để phát hiện sớm hành vi tấn công.</li><li>Phân tích log hệ thống Linux, tường lửa, ứng dụng web nhằm điều tra nguyên nhân gốc rễ và đề xuất phương án khắc phục.</li><li>Thực hiện đánh giá lỗ hổng bảo mật định kỳ, viết kịch bản tự động hóa điều phối phản ứng sự cố bằng Python.</li></ul>",
+          "requirementsText": "<ul><li>Tối thiểu 2 năm kinh nghiệm vận hành SOC, quản trị SIEM hoặc kỹ sư an toàn thông tin.</li><li>Tốt nghiệp Đại học chuyên ngành An toàn thông tin, Công nghệ thông tin hoặc Mạng máy tính.</li><li>Yêu cầu bắt buộc: Linux, Python, Elasticsearch, Docker, REST API.</li><li>Ưu tiên: Kubernetes, Ansible, CI/CD và Tiếng Anh đọc hiểu tài liệu bảo mật tốt (IELTS 6.0+ / TOEIC 700+).</li></ul>",
+          "benefitsText": "<ul><li>Thu nhập cạnh tranh kèm phụ cấp chứng chỉ an toàn thông tin quốc tế và thưởng dự án triển khai.</li><li>Được tài trợ chi phí học và thi các chứng chỉ bảo mật như CEH, CompTIA Security+, CISSP.</li><li>Bảo hiểm sức khỏe cao cấp, khám sức khỏe hằng năm và chế độ nghỉ phép theo thâm niên.</li></ul>",
+          "locationText": "Lô E2a-3, Đường D1, Khu Công nghệ cao, TP. Thủ Đức, TP. Hồ Chí Minh",
+          "province": "TP. Hồ Chí Minh",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "MIDDLE",
+          "openings": 2,
+          "salaryMin": 25000000,
+          "salaryMax": 42000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Công nghệ thông tin",
+            "specialization": "An toàn thông tin",
+            "position": "Security Engineer"
+          }
+        },
+        {
+          "title": "System / Network Engineer",
+          "description": "<p>Triển khai, vận hành và bảo trì hạ tầng máy chủ, mạng doanh nghiệp và hệ thống ảo hóa cho các dự án công nghệ thông tin khu vực Đồng bằng sông Cửu Long.</p><ul><li>Cài đặt, cấu hình hệ điều hành Linux, dịch vụ mạng LAN/WAN, cân bằng tải và sao lưu dữ liệu định kỳ.</li><li>Giám sát hiệu năng máy chủ, xử lý sự cố phần cứng và kết nối mạng tại trung tâm dữ liệu khách hàng.</li><li>Viết tài liệu vận hành, hướng dẫn bàn giao kỹ thuật và phối hợp đội ngũ chuyên gia tại TP. Hồ Chí Minh khi cần hỗ trợ chuyên sâu.</li></ul>",
+          "requirementsText": "<ul><li>Từ 1 năm kinh nghiệm quản trị hệ thống máy chủ Linux hoặc hạ tầng mạng doanh nghiệp.</li><li>Tốt nghiệp Đại học hoặc Cao đẳng chuyên ngành Mạng máy tính, Công nghệ thông tin hoặc tương đương.</li><li>Yêu cầu bắt buộc: Linux, Docker, Git, SQL.</li><li>Ưu tiên: Ansible, Amazon Web Services, Kubernetes và Tiếng Anh đọc hiểu tài liệu kỹ thuật tốt (TOEIC 600+).</li></ul>",
+          "benefitsText": "<ul><li>Mức lương cạnh tranh tại Cần Thơ kèm phụ cấp công tác, điện thoại và thưởng dự án hằng quý.</li><li>Cơ hội được đào tạo trực tiếp bởi các kỹ sư trưởng về hạ tầng cloud và bảo mật doanh nghiệp.</li><li>Đầy đủ bảo hiểm theo quy định, bảo hiểm tai nạn 24/7 và du lịch công ty hằng năm.</li></ul>",
+          "locationText": "Số 131 Trần Hưng Đạo, Quận Ninh Kiều, Cần Thơ",
+          "province": "Cần Thơ",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "JUNIOR",
+          "openings": 1,
+          "salaryMin": 14000000,
+          "salaryMax": 22000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Công nghệ thông tin",
+            "specialization": "Hạ tầng & mạng",
+            "position": "System / Network Engineer"
+          }
+        }
+      ]
+    },
+    {
+      "approve": true,
+      "company": {
+        "legalName": "Công ty TNHH ISB Việt Nam",
+        "displayName": "ISB Vietnam",
+        "slug": "isb-vietnam",
+        "description": "ISB Việt Nam là công ty phần mềm 100% vốn đầu tư từ Tập đoàn ISB (Nhật Bản) với hơn 20 năm hoạt động tại Việt Nam, chuyên phát triển hệ thống phần mềm doanh nghiệp, ứng dụng web, di động và kiểm thử chất lượng cho thị trường Nhật Bản.",
+        "websiteUrl": "https://isb-vietnam.com.vn",
+        "countryCode": "VN",
+        "registrationNumber": "VN-ENT-019",
+        "sizeRange": "151-300",
+        "logoUrl": "/companies/seed-expanded/isb-logo.webp",
+        "coverImageUrl": "/companies/seed-expanded/isb-cover.webp"
+      },
+      "jobs": [
+        {
+          "title": "Node.js & GraphQL Backend Developer",
+          "description": "<p>Phát triển hệ thống dịch vụ web và API hiện đại cho các nền tảng quản lý bán lẻ và dịch vụ số của khách hàng Nhật Bản.</p><ul><li>Thiết kế và xây dựng API sử dụng Node.js, TypeScript và GraphQL với cấu trúc mã nguồn sạch, rõ ràng.</li><li>Làm việc với cơ sở dữ liệu PostgreSQL, MongoDB và tối ưu hóa truy vấn dữ liệu nhiều tầng.</li><li>Phối hợp với kỹ sư cầu nối (BrSE) và khách hàng Nhật Bản để làm rõ đặc tả, viết kiểm thử và triển khai trên Docker.</li></ul>",
+          "requirementsText": "<ul><li>Tối thiểu 2 năm kinh nghiệm lập trình backend bằng Node.js và TypeScript trong các dự án sản phẩm hoặc gia công phần mềm.</li><li>Tốt nghiệp Đại học chuyên ngành Công nghệ thông tin, Kỹ thuật phần mềm hoặc tương đương.</li><li>Yêu cầu bắt buộc: Node.js, TypeScript, GraphQL, PostgreSQL, MongoDB, Docker.</li><li>Ưu tiên: Redis, Amazon Web Services, GitHub Actions và Có chứng chỉ tiếng Nhật JLPT N3/N2 là lợi thế lớn.</li></ul>",
+          "benefitsText": "<ul><li>Lương tháng 13, thưởng hiệu suất 2 lần/năm và phụ cấp chứng chỉ tiếng Nhật hằng tháng.</li><li>Chế độ hybrid linh hoạt 2 ngày/tuần, môi trường làm việc chuẩn Nhật chuyên nghiệp và ổn định.</li><li>Bảo hiểm sức khỏe cao cấp, lớp học tiếng Nhật miễn phí tại công ty và du lịch hằng năm.</li></ul>",
+          "locationText": "Tòa nhà E-Town Central, 11 Đoàn Văn Bơ, Quận 4, TP. Hồ Chí Minh",
+          "province": "TP. Hồ Chí Minh",
+          "countryCode": "VN",
+          "workMode": "HYBRID",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "MIDDLE",
+          "openings": 2,
+          "salaryMin": 24000000,
+          "salaryMax": 40000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Công nghệ thông tin",
+            "specialization": "Phát triển phần mềm",
+            "position": "Backend Developer"
+          }
+        },
+        {
+          "title": "UI/UX Product Designer",
+          "description": "<p>Thiết kế trải nghiệm người dùng và giao diện cho các ứng dụng quản trị doanh nghiệp và cổng dịch vụ khách hàng tại chi nhánh Bình Dương.</p><ul><li>Nghiên cứu hành vi người dùng, xây dựng wireframe, luồng tương tác và nguyên mẫu (prototype) trực quan.</li><li>Phát triển và duy trì hệ thống Design System đồng bộ, phối hợp chặt chẽ với đội ngũ Frontend để đảm bảo độ chính xác khi lập trình.</li><li>Thực hiện kiểm thử khả năng sử dụng (usability testing) và cải tiến giao diện dựa trên phản hồi thực tế.</li></ul>",
+          "requirementsText": "<ul><li>Tối thiểu 2 năm kinh nghiệm thiết kế UI/UX cho sản phẩm web hoặc ứng dụng di động.</li><li>Tốt nghiệp Đại học chuyên ngành Thiết kế đồ họa, Công nghệ thông tin hoặc Đa phương tiện.</li><li>Yêu cầu bắt buộc: HTML, CSS, JavaScript, Git.</li><li>Ưu tiên: Tailwind CSS, React, Scrum và Tiếng Anh giao tiếp công việc tốt (TOEIC 650+); biết tiếng Nhật là lợi thế.</li></ul>",
+          "benefitsText": "<ul><li>Thu nhập cạnh tranh tại khu vực Bình Dương, có xe đưa đón từ TP. Hồ Chí Minh hoặc phụ cấp đi lại.</li><li>Môi trường sáng tạo, trang bị màn hình thiết kế chuẩn màu và phần mềm bản quyền đầy đủ.</li><li>Thưởng tháng 13, bảo hiểm sức khỏe bổ sung và các câu lạc bộ ngoại khóa sôi nổi.</li></ul>",
+          "locationText": "Tòa nhà Becamex Tower, 230 Đại lộ Bình Dương, Thủ Dầu Một, Bình Dương",
+          "province": "Bình Dương",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "MIDDLE",
+          "openings": 1,
+          "salaryMin": 18000000,
+          "salaryMax": 30000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Công nghệ thông tin",
+            "specialization": "Sản phẩm & Phân tích nghiệp vụ",
+            "position": "UI/UX Designer"
+          }
+        }
+      ]
+    },
+    {
+      "approve": true,
+      "company": {
+        "legalName": "Công ty TNHH Phát triển Phần mềm Toshiba Việt Nam",
+        "displayName": "Toshiba Software Development (Vietnam)",
+        "slug": "toshiba-software-vietnam",
+        "description": "Toshiba Software Development (Vietnam) (TSDV) là công ty phần mềm trực thuộc Tập đoàn Toshiba (Nhật Bản), chuyên nghiên cứu và phát triển phần mềm nhúng, hệ thống hạ tầng xã hội, trí tuệ nhân tạo và giải pháp công nghiệp công nghệ cao.",
+        "websiteUrl": "https://www.toshiba-tsdv.com",
+        "countryCode": "VN",
+        "registrationNumber": "VN-ENT-020",
+        "sizeRange": "501-1000",
+        "logoUrl": "/companies/seed-expanded/toshiba-logo.webp",
+        "coverImageUrl": "/companies/seed-expanded/toshiba-cover.webp"
+      },
+      "jobs": [
+        {
+          "title": "Machine Learning / Computer Vision Engineer (PyTorch)",
+          "description": "<p>Nghiên cứu và phát triển các mô hình thị giác máy tính phục vụ kiểm tra chất lượng sản phẩm tự động và phân tích hình ảnh y tế, công nghiệp cho Tập đoàn Toshiba.</p><ul><li>Xây dựng, huấn luyện và tinh chỉnh các mô hình học sâu bằng PyTorch và Python cho bài toán phát hiện vật thể và phân đoạn ảnh.</li><li>Tối ưu hóa tốc độ suy luận mô hình để triển khai trên máy chủ GPU hoặc thiết bị biên chạy Linux.</li><li>Phối hợp với đội ngũ kỹ sư R&amp;D tại Nhật Bản đánh giá độ chính xác, viết báo cáo thực nghiệm và đóng gói dịch vụ với Docker.</li></ul>",
+          "requirementsText": "<ul><li>Tối thiểu 2 năm kinh nghiệm phát triển mô hình Machine Learning hoặc Computer Vision trong môi trường R&amp;D hoặc sản xuất.</li><li>Tốt nghiệp Đại học hoặc Thạc sĩ chuyên ngành Khoa học máy tính, Trí tuệ nhân tạo hoặc Toán tin.</li><li>Yêu cầu bắt buộc: Python, Machine Learning, PyTorch, Docker, Linux, Git.</li><li>Ưu tiên: TensorFlow, FastAPI, C++ và Có chứng chỉ tiếng Nhật JLPT N3/N2 là lợi thế lớn hoặc Tiếng Anh đọc hiểu bài báo khoa học tốt (IELTS 6.0+).</li></ul>",
+          "benefitsText": "<ul><li>Thu nhập hấp dẫn kèm thưởng 2 lần/năm và phụ cấp chứng chỉ ngoại ngữ tiếng Nhật.</li><li>Được tiếp cận hệ thống máy chủ GPU hiệu năng cao và dữ liệu công nghiệp thực tế từ Nhật Bản.</li><li>Bảo hiểm sức khỏe toàn diện, khám sức khỏe định kỳ và cơ hội công tác đào tạo tại Tokyo.</li></ul>",
+          "locationText": "Tòa nhà VIT Tower, 519 Kim Mã, Ba Đình, Hà Nội",
+          "province": "Hà Nội",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "MIDDLE",
+          "openings": 2,
+          "salaryMin": 26000000,
+          "salaryMax": 46000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Công nghệ thông tin",
+            "specialization": "Dữ liệu & AI",
+            "position": "Machine Learning Engineer"
+          }
+        },
+        {
+          "title": "Fresher Java / Spring Boot Developer",
+          "description": "<p>Tham gia phát triển các hệ thống phần mềm quản lý năng lượng và hạ tầng doanh nghiệp cho thị trường Nhật Bản dưới sự hướng dẫn trực tiếp của đội ngũ Senior Engineer.</p><ul><li>Lập trình các API nghiệp vụ và chức năng xử lý dữ liệu bằng Java, Spring Boot và cơ sở dữ liệu PostgreSQL.</li><li>Viết unit test với JUnit, tuân thủ quy chuẩn mã nguồn sạch và quy trình kiểm thử chặt chẽ của dự án Nhật Bản.</li><li>Tham gia chương trình đào tạo nội bộ về kiến trúc phần mềm, quy trình phát triển và kỹ năng giao tiếp dự án.</li></ul>",
+          "requirementsText": "<ul><li>Sinh viên mới tốt nghiệp hoặc có dưới 1 năm kinh nghiệm lập trình Java thực tế.</li><li>Tốt nghiệp Đại học chuyên ngành Công nghệ thông tin, Kỹ thuật phần mềm hoặc ngành kỹ thuật liên quan.</li><li>Yêu cầu bắt buộc: Java, Spring Boot, PostgreSQL, SQL, Git.</li><li>Ưu tiên: JUnit, Docker, REST API và Có chứng chỉ tiếng Nhật JLPT N3/N2 là lợi thế lớn hoặc Tiếng Anh đọc hiểu tài liệu kỹ thuật tốt (TOEIC 600+).</li></ul>",
+          "benefitsText": "<ul><li>Lương khởi điểm cạnh tranh cho cấp bậc Fresher, xét tăng lương 2 lần trong năm đầu tiên nếu đạt kết quả tốt.</li><li>Lộ trình đào tạo bài bản từ kỹ năng lập trình đến văn hóa làm việc với khách hàng Nhật Bản.</li><li>Bảo hiểm sức khỏe bổ sung, hỗ trợ ăn trưa, gửi xe và lớp học tiếng Nhật miễn phí.</li></ul>",
+          "locationText": "Tòa nhà VIT Tower, 519 Kim Mã, Ba Đình, Hà Nội",
+          "province": "Hà Nội",
+          "countryCode": "VN",
+          "workMode": "ONSITE",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "FRESHER",
+          "openings": 4,
+          "salaryMin": 12000000,
+          "salaryMax": 18000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Công nghệ thông tin",
+            "specialization": "Phát triển phần mềm",
+            "position": "Backend Developer"
+          }
+        }
+      ]
+    },
+    {
+      "approve": false,
+      "company": {
+        "legalName": "Công ty TNHH DataStreams Việt Nam",
+        "displayName": "DataStreams Vietnam",
+        "slug": "datastreams-vietnam",
+        "description": "DataStreams Việt Nam là doanh nghiệp chuyên cung cấp giải pháp tích hợp dữ liệu lớn, quản trị chất lượng dữ liệu (Data Governance) và nền tảng phân tích dữ liệu thời gian thực cho khối tài chính, ngân hàng và bán lẻ tại Việt Nam.",
+        "websiteUrl": "https://www.datastreams.io",
+        "countryCode": "VN",
+        "registrationNumber": "VN-ENT-021",
+        "sizeRange": "51-150",
+        "logoUrl": "/companies/seed-expanded/datastreams-logo.webp",
+        "coverImageUrl": "/companies/seed-expanded/datastreams-cover.webp"
+      },
+      "jobs": [
+        {
+          "title": "Data Platform Engineer (Spark & Kafka)",
+          "description": "<p>Xây dựng và tối ưu hóa nền tảng xử lý dữ liệu thời gian thực (streaming) và kho dữ liệu tập trung cho khách hàng doanh nghiệp.</p><ul><li>Thiết kế đường ống thu thập và xử lý dữ liệu quy mô lớn bằng Apache Kafka, Apache Spark và Apache Airflow.</li><li>Tối ưu hóa lưu trữ, phân vùng dữ liệu trên PostgreSQL, Elasticsearch và triển khai dịch vụ trên cụm Kubernetes.</li><li>Đảm bảo tính toàn vẹn dữ liệu, giám sát độ trễ xử lý và tự động hóa kiểm thử luồng dữ liệu.</li></ul>",
+          "requirementsText": "<ul><li>Tối thiểu 4 năm kinh nghiệm xây dựng hệ thống Data Platform hoặc Data Pipeline quy mô lớn.</li><li>Tốt nghiệp Đại học chuyên ngành Khoa học máy tính, Công nghệ thông tin hoặc Kỹ thuật dữ liệu.</li><li>Yêu cầu bắt buộc: Python, Apache Spark, Apache Kafka, Apache Airflow, PostgreSQL, SQL.</li><li>Ưu tiên: Kubernetes, Elasticsearch, Amazon Web Services và Tiếng Anh giao tiếp công việc tốt (IELTS 6.0+ / TOEIC 700+).</li></ul>",
+          "benefitsText": "<ul><li>Thu nhập thỏa thuận cạnh tranh, thưởng hiệu suất theo quý và chính sách cổ phần thưởng cho nhân sự chủ chốt.</li><li>Làm việc hybrid linh hoạt, cấp laptop cấu hình cao và hỗ trợ chi phí thi chứng chỉ Data Engineering.</li><li>Bảo hiểm sức khỏe cao cấp và 15 ngày phép năm hưởng nguyên lương.</li></ul>",
+          "locationText": "Tòa nhà Lim Tower 3, 29A Nguyễn Đình Chiểu, Quận 1, TP. Hồ Chí Minh",
+          "province": "TP. Hồ Chí Minh",
+          "countryCode": "VN",
+          "workMode": "HYBRID",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "SENIOR",
+          "openings": 2,
+          "salaryMin": null,
+          "salaryMax": null,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": true,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Công nghệ thông tin",
+            "specialization": "Dữ liệu & AI",
+            "position": "Data Engineer"
+          }
+        },
+        {
+          "title": "Product Manager (Data Governance)",
+          "description": "<p>Định hướng chiến lược sản phẩm và quản lý lộ trình phát triển bộ công cụ quản trị dữ liệu doanh nghiệp (Data Catalog, Data Lineage, Data Quality) của DataStreams Việt Nam.</p><ul><li>Làm việc trực tiếp với khách hàng khối ngân hàng và tập đoàn để thu thập yêu cầu, ưu tiên tính năng và viết đặc tả sản phẩm.</li><li>Phối hợp với đội ngũ Data Engineer, UI/UX Designer và QA theo quy trình Scrum để phát hành phiên bản mới đúng tiến độ.</li><li>Xây dựng chỉ số đo lường mức độ sử dụng sản phẩm và hỗ trợ đội ngũ kinh doanh trong các buổi trình diễn giải pháp.</li></ul>",
+          "requirementsText": "<ul><li>Tối thiểu 5 năm kinh nghiệm quản lý sản phẩm phần mềm B2B hoặc nền tảng dữ liệu doanh nghiệp.</li><li>Tốt nghiệp Đại học chuyên ngành Công nghệ thông tin, Hệ thống thông tin quản lý hoặc Quản trị kinh doanh.</li><li>Yêu cầu bắt buộc: SQL, REST API, Scrum, Git.</li><li>Ưu tiên: Python, PostgreSQL, Amazon Web Services và Tiếng Anh giao tiếp công việc thành thạo (IELTS 6.5+ / TOEIC 750+).</li></ul>",
+          "benefitsText": "<ul><li>Thu nhập cạnh tranh tương xứng vị trí quản lý sản phẩm, thưởng KPI năm và chế độ đãi ngộ linh hoạt.</li><li>Cơ hội dẫn dắt sản phẩm công nghệ lõi phục vụ chuyển đổi số dữ liệu tại Việt Nam.</li><li>Gói bảo hiểm sức khỏe toàn diện và ngân sách tham gia hội thảo công nghệ khu vực.</li></ul>",
+          "locationText": "Tòa nhà Lim Tower 3, 29A Nguyễn Đình Chiểu, Quận 1, TP. Hồ Chí Minh",
+          "province": "TP. Hồ Chí Minh",
+          "countryCode": "VN",
+          "workMode": "HYBRID",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "MANAGER",
+          "openings": 1,
+          "salaryMin": 45000000,
+          "salaryMax": 75000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Công nghệ thông tin",
+            "specialization": "Sản phẩm & Phân tích nghiệp vụ",
+            "position": "Product Manager / Product Owner"
+          }
+        },
+        {
+          "title": "Senior LLM & Generative AI Engineer (RAG / Vector Search)",
+          "description": "<p>Nghiên cứu và phát triển nền tảng truy vấn tri thức doanh nghiệp tích hợp mô hình ngôn ngữ lớn (LLM) cho các tổ chức tài chính và viễn thông.</p><ul><li>Xây dựng pipeline Retrieval-Augmented Generation (RAG), đánh giá độ chính xác câu trả lời và kiểm soát trích dẫn nguồn dữ liệu.</li><li>Tối ưu chi phí suy luận, độ trễ phản hồi và cơ chế bảo vệ dữ liệu nhạy cảm trên môi trường on-premise và Cloud.</li><li>Phối hợp với đội ngũ Data Platform để chuẩn hóa danh mục dữ liệu và giám sát chất lượng mô hình trong vận hành.</li></ul>",
+          "requirementsText": "<ul><li>Tối thiểu 3 năm kinh nghiệm trong lĩnh vực AI/NLP, Machine Learning hoặc phát triển hệ thống dữ liệu lớn.</li><li>Tốt nghiệp Đại học hoặc Thạc sĩ chuyên ngành Khoa học máy tính, Trí tuệ nhân tạo hoặc tương đương.</li><li>Yêu cầu bắt buộc: Python, PyTorch, FastAPI, PostgreSQL, Docker.</li><li>Ưu tiên: Elasticsearch, Kubernetes, Apache Kafka. Tiếng Anh đọc hiểu bài báo khoa học và giao tiếp tốt (IELTS 6.5+).</li></ul>",
+          "benefitsText": "<ul><li>Mức đãi ngộ hấp dẫn dành cho chuyên gia R&D kèm thưởng sáng kiến công nghệ.</li><li>Hạ tầng máy chủ GPU riêng biệt phục vụ huấn luyện và thử nghiệm mô hình.</li><li>Bảo hiểm sức khỏe cao cấp và 15 ngày nghỉ phép nguyên lương mỗi năm.</li></ul>",
+          "locationText": "Tòa nhà Saigon Centre, Quận 1, TP. Hồ Chí Minh",
+          "province": "TP. Hồ Chí Minh",
+          "countryCode": "VN",
+          "workMode": "HYBRID",
+          "employmentType": "FULL_TIME",
+          "seniorityLevel": "SENIOR",
+          "openings": 2,
+          "salaryMin": 45000000,
+          "salaryMax": 75000000,
+          "salaryCurrency": "VND",
+          "salaryPeriod": "MONTH",
+          "salaryNegotiable": false,
+          "externalAiConsent": false,
+          "categoryRef": {
+            "industry": "Công nghệ thông tin",
+            "specialization": "Dữ liệu & AI",
+            "position": "LLM / Generative AI Engineer",
+            "proposePosition": true
+          }
+        }
+      ]
+    }
+  ],
+  "candidates": [
+    {
+      "key": "kim-quang-backend",
+      "email": "nguyenquangit1612@gmail.com",
+      "profile": {
+        "displayName": "Nguyễn Kim Quang",
+        "headline": "Senior Backend Engineer (Java / Spring Boot / Golang)",
+        "locationText": "Quận Cầu Giấy, Hà Nội",
+        "visibility": "APPLICATION_ONLY",
+        "phoneNumber": "+84900000101",
+        "contactEmail": "nguyenquangit1612@gmail.com",
+        "linkedinUrl": "https://linkedin.com/in/nguyen-kim-quang",
+        "githubUrl": "https://github.com/quang-star",
+        "portfolioUrl": "https://nguyenkimquang.id.vn",
+        "bio": "Kỹ sư Backend với hơn 5 năm kinh nghiệm phát triển hệ thống thanh toán số, Core Banking và nền tảng Microservices chịu tải cao bằng Java, Spring Boot, Golang, Apache Kafka và PostgreSQL."
+      },
+      "cvs": [
+        {
+          "key": "cv-java-senior",
+          "title": "Nguyen Kim Quang - Senior Backend Java Engineer CV",
+          "filename": "nguyen-kim-quang-backend-java.pdf",
+          "pdfContent": {
+            "fullName": "NGUYEN KIM QUANG",
+            "headline": "SENIOR BACKEND JAVA ENGINEER",
+            "contactLine": "Ha Noi, Viet Nam | nguyenquangit1612@gmail.com | github.com/quang-star",
+            "summary": "Backend Software Engineer with 5+ years of experience designing high-throughput microservices, event-driven architectures, and distributed banking systems.",
+            "experience": [
+              "Senior Backend Software Engineer - FinTech Platform | 03/2023 - Present",
+              "Design and build Java and Spring Boot microservices handling high-volume payment transactions with PostgreSQL, Redis, and Apache Kafka.",
+              "Implement OAuth2 / Spring Security authentication, REST APIs, and deploy containerized workloads on Docker, Kubernetes, and AWS.",
+              "Backend Developer - Enterprise Solutions | 06/2020 - 02/2023",
+              "Develop core enterprise APIs using Java, Spring Boot, Hibernate, Oracle, and CI/CD pipelines with GitLab CI and JUnit."
+            ],
+            "skills": "Java, Spring Boot, Spring Security, Hibernate, PostgreSQL, Oracle, Redis, Apache Kafka, REST API, Microservices, Docker, Kubernetes, AWS, Git, GitLab CI, CI/CD, Linux, SQL, JUnit, Scrum",
+            "projects": [
+              "Real-time Payment Settlement Engine: Built idempotent Kafka consumers and outbox relay in Java 21 and PostgreSQL.",
+              "API Gateway Rate Limiter: Designed distributed token-bucket rate limiting with Redis and Spring Cloud."
+            ],
+            "education": [
+              "Bachelor of Computer Science - Hanoi University of Science and Technology (HUST) (2016 - 2020)"
+            ],
+            "languages": [
+              "English: IELTS 7.0 (Professional working proficiency)",
+              "Vietnamese: Native"
+            ],
+            "certificates": [
+              "AWS Certified Solutions Architect - Associate (2024)"
+            ]
+          }
+        },
+        {
+          "key": "cv-golang-cloud",
+          "title": "Nguyen Kim Quang - Senior Golang & Cloud Backend CV",
+          "filename": "nguyen-kim-quang-golang-cloud.pdf",
+          "pdfContent": {
+            "fullName": "NGUYEN KIM QUANG",
+            "headline": "SENIOR GOLANG & CLOUD BACKEND ENGINEER",
+            "contactLine": "Ha Noi, Viet Nam | nguyenquangit1612@gmail.com | github.com/quang-star",
+            "summary": "Distributed systems engineer specializing in Golang, gRPC, Kafka, and cloud-native Kubernetes microservices.",
+            "experience": [
+              "Senior Backend Engineer (Golang / Java) - FinTech Platform | 03/2023 - Present",
+              "Architected low-latency gRPC and Go services for wallet ledger synchronization with PostgreSQL, Redis, and Kafka.",
+              "Automated cloud infrastructure provisioning with Terraform, Docker, Kubernetes, and GitHub Actions on AWS and GCP.",
+              "Backend Developer - Enterprise Solutions | 06/2020 - 02/2023",
+              "Built backend REST and gRPC APIs with Go, Java, PostgreSQL, and Linux container deployments."
+            ],
+            "skills": "Golang, Go, gRPC, Java, Spring Boot, PostgreSQL, Redis, Apache Kafka, Microservices, Docker, Kubernetes, Terraform, AWS, GCP, CI/CD, GitHub Actions, Linux, Git, Scrum, OpenTelemetry",
+            "projects": [
+              "High-Throughput Ledger Service: Implemented concurrent Go workers processing 15,000+ events/sec with PostgreSQL partitioning.",
+              "Multi-Region Service Mesh: Configured Kubernetes ingress, observability, and zero-downtime canary rollouts."
+            ],
+            "education": [
+              "Bachelor of Computer Science - Hanoi University of Science and Technology (HUST) (2016 - 2020)"
+            ],
+            "languages": [
+              "English: IELTS 7.0 (Professional working proficiency)",
+              "Vietnamese: Native"
+            ],
+            "certificates": [
+              "Certified Kubernetes Application Developer (CKAD) (2024)"
+            ]
+          }
+        }
+      ],
+      "drafts": [
+        {
+          "title": "CV Kỹ sư Backend Java & Microservices",
+          "templateId": "modern",
+          "accentColor": "#0f766e",
+          "sectionOrder": [
+            "introduction",
+            "skills",
+            "experiences",
+            "education",
+            "projects",
+            "certificates",
+            "languages",
+            "awards",
+            "activities",
+            "hobbies"
+          ],
+          "expectedVersion": null,
+          "payload": {
+            "fullName": "Nguyễn Kim Quang",
+            "headline": "Senior Backend Engineer (Java / Spring Boot / Microservices)",
+            "email": "nguyenquangit1612@gmail.com",
+            "phone": "+84900000101",
+            "location": "Quận Cầu Giấy, Hà Nội",
+            "links": "https://github.com/quang-star\nhttps://linkedin.com/in/nguyen-kim-quang",
+            "introduction": "Kỹ sư phần mềm Backend với hơn 5 năm kinh nghiệm thiết kế và vận hành các hệ thống thanh toán số, kiến trúc hướng sự kiện (Event-Driven) và Microservices chịu tải cao bằng Java, Spring Boot, Apache Kafka và PostgreSQL.",
+            "skills": "Java, Spring Boot, Spring Security, Hibernate, PostgreSQL, Oracle, Redis, Apache Kafka, Microservices, Docker, Kubernetes, AWS, GitLab CI, CI/CD, JUnit, Scrum",
+            "experiences": [
+              {
+                "id": "exp-jq-1",
+                "title": "Senior Backend Software Engineer",
+                "subtitle": "FinTech Platform",
+                "startMonth": "2023-03",
+                "endMonth": "",
+                "current": true,
+                "description": "Thiết kế và phát triển các dịch vụ Microservices bằng Java 21 và Spring Boot xử lý giao dịch thanh toán thời gian thực với PostgreSQL, Redis và Apache Kafka.\nTriển khai bảo mật OAuth2 / Spring Security và tự động hóa triển khai trên Docker, Kubernetes và AWS."
+              },
+              {
+                "id": "exp-jq-2",
+                "title": "Backend Developer",
+                "subtitle": "Enterprise Solutions",
+                "startMonth": "2020-06",
+                "endMonth": "2023-02",
+                "current": false,
+                "description": "Xây dựng REST API doanh nghiệp với Java, Spring Boot, Hibernate và Oracle Database.\nThiết lập quy trình CI/CD trên GitLab CI và nâng cao độ phủ kiểm thử tự động với JUnit."
+              }
+            ],
+            "education": [
+              {
+                "id": "edu-jq-1",
+                "title": "Cử nhân Khoa học Máy tính",
+                "subtitle": "Đại học Bách khoa Hà Nội (HUST)",
+                "startMonth": "2016-09",
+                "endMonth": "2020-06",
+                "current": false,
+                "description": "Tốt nghiệp loại Giỏi, chuyên ngành Kỹ thuật phần mềm và Hệ thống phân tán."
+              }
+            ],
+            "projects": [
+              {
+                "id": "proj-jq-1",
+                "title": "Hệ thống Đối soát Thanh toán Thời gian thực",
+                "subtitle": "Java 21 · Spring Boot · Kafka · PostgreSQL",
+                "startMonth": "2023-06",
+                "endMonth": "2024-05",
+                "current": false,
+                "description": "Xây dựng cơ chế Transactional Outbox và Inbox Idempotency đảm bảo xử lý chính xác 100% giao dịch ngay cả khi có lỗi mạng."
+              }
+            ],
+            "certificates": [
+              {
+                "id": "cert-jq-1",
+                "title": "AWS Certified Solutions Architect - Associate",
+                "subtitle": "Amazon Web Services",
+                "startMonth": "2024-02",
+                "endMonth": "",
+                "current": false,
+                "description": "Chứng chỉ kiến trúc giải pháp đám mây AWS."
+              }
+            ],
+            "languages": [
+              {
+                "id": "lang-jq-1",
+                "title": "Tiếng Anh",
+                "subtitle": "IELTS 7.0",
+                "startMonth": "2023-01",
+                "endMonth": "",
+                "current": false,
+                "description": "Giao tiếp và đọc viết tài liệu kỹ thuật thành thạo."
+              }
+            ],
+            "photoDataUrl": "",
+            "language": "vi",
+            "fontSize": "medium",
+            "lineSpacing": "normal",
+            "hiddenSections": [
+              "awards",
+              "activities",
+              "hobbies"
+            ],
+            "fontFamily": "sans",
+            "dateOfBirth": "1998-05-14",
+            "gender": "Nam",
+            "awards": [],
+            "activities": [],
+            "hobbies": [],
+            "sectionTitles": {}
+          }
+        },
+        {
+          "title": "CV Kỹ sư Golang & Cloud Native",
+          "templateId": "executive",
+          "accentColor": "#1d4ed8",
+          "sectionOrder": [
+            "introduction",
+            "skills",
+            "experiences",
+            "education",
+            "projects",
+            "certificates",
+            "languages",
+            "awards",
+            "activities",
+            "hobbies"
+          ],
+          "expectedVersion": null,
+          "payload": {
+            "fullName": "Nguyễn Kim Quang",
+            "headline": "Senior Golang & Cloud Backend Engineer",
+            "email": "nguyenquangit1612@gmail.com",
+            "phone": "+84900000101",
+            "location": "Quận Cầu Giấy, Hà Nội",
+            "links": "https://github.com/quang-star\nhttps://linkedin.com/in/nguyen-kim-quang",
+            "introduction": "Kỹ sư hệ thống phân tán chuyên sâu về Golang, gRPC, Kubernetes và hạ tầng Cloud Native trên AWS/GCP với tư duy tối ưu hiệu năng và độ tin cậy cao.",
+            "skills": "Golang, Go, gRPC, PostgreSQL, Redis, Apache Kafka, Docker, Kubernetes, Terraform, AWS, GCP, GitHub Actions, CI/CD, Linux",
+            "experiences": [
+              {
+                "id": "exp-gq-1",
+                "title": "Senior Backend Engineer (Golang)",
+                "subtitle": "FinTech Platform",
+                "startMonth": "2023-03",
+                "endMonth": "",
+                "current": true,
+                "description": "Phát triển các dịch vụ gRPC hiệu năng cao bằng Golang phục vụ đồng bộ sổ cái ví điện tử và cảnh báo gian lận.\nTự động hóa hạ tầng với Terraform và GitHub Actions trên cụm Kubernetes."
+              }
+            ],
+            "education": [
+              {
+                "id": "edu-gq-1",
+                "title": "Cử nhân Khoa học Máy tính",
+                "subtitle": "Đại học Bách khoa Hà Nội (HUST)",
+                "startMonth": "2016-09",
+                "endMonth": "2020-06",
+                "current": false,
+                "description": "Nghiên cứu đề tài tối ưu lập lịch tác vụ trong hệ thống phân tán."
+              }
+            ],
+            "projects": [
+              {
+                "id": "proj-gq-1",
+                "title": "High-Throughput Ledger Service",
+                "subtitle": "Golang · gRPC · PostgreSQL · Kafka",
+                "startMonth": "2024-01",
+                "endMonth": "2024-11",
+                "current": false,
+                "description": "Xây dựng worker pool xử lý hơn 15.000 sự kiện/giây với độ trễ p99 dưới 25ms."
+              }
+            ],
+            "certificates": [
+              {
+                "id": "cert-gq-1",
+                "title": "Certified Kubernetes Application Developer (CKAD)",
+                "subtitle": "Cloud Native Computing Foundation",
+                "startMonth": "2024-05",
+                "endMonth": "",
+                "current": false,
+                "description": "Chứng chỉ phát triển và triển khai ứng dụng trên Kubernetes."
+              }
+            ],
+            "languages": [
+              {
+                "id": "lang-gq-1",
+                "title": "Tiếng Anh",
+                "subtitle": "IELTS 7.0",
+                "startMonth": "2023-01",
+                "endMonth": "",
+                "current": false,
+                "description": "Làm việc trực tiếp với đối tác và tài liệu kỹ thuật quốc tế."
+              }
+            ],
+            "photoDataUrl": "",
+            "language": "vi",
+            "fontSize": "medium",
+            "lineSpacing": "normal",
+            "hiddenSections": [
+              "awards",
+              "activities",
+              "hobbies"
+            ],
+            "fontFamily": "sans",
+            "dateOfBirth": "1998-05-14",
+            "gender": "Nam",
+            "awards": [],
+            "activities": [],
+            "hobbies": [],
+            "sectionTitles": {}
+          }
+        }
+      ],
+      "applications": [
+        {
+          "companySlug": "fpt-software",
+          "jobIndex": 0,
+          "cvKey": "cv-java-senior",
+          "targetStage": "INTERVIEW",
+          "coverLetter": "Kính gửi Ban Tuyển dụng FPT Software, với hơn 5 năm kinh nghiệm phát triển hệ thống Microservices bằng Java, Spring Boot, Kafka và PostgreSQL, tôi rất mong muốn đóng góp vào các dự án chuyển đổi số quy mô lớn của công ty.",
+          "stageReason": "Hồ sơ phù hợp cao về Java/Spring Boot và kiến trúc Microservices; mời phỏng vấn kỹ thuật vòng 1."
+        },
+        {
+          "companySlug": "vng-corporation",
+          "jobIndex": 0,
+          "cvKey": "cv-golang-cloud",
+          "targetStage": "SHORTLISTED",
+          "coverLetter": "Kính gửi VNG Corporation, tôi có kinh nghiệm thực chiến xây dựng dịch vụ Golang, gRPC, Kafka và vận hành Kubernetes chịu tải lớn, rất hào hứng với vị trí Backend Engineer tại VNG.",
+          "stageReason": "Kinh nghiệm Golang và hệ thống phân tán đáp ứng tốt yêu cầu; đưa vào danh sách rút gọn."
+        },
+        {
+          "companySlug": "naver-vietnam",
+          "jobIndex": 0,
+          "cvKey": "cv-java-senior",
+          "targetStage": "UNDER_REVIEW",
+          "coverLetter": "Kính gửi NAVER Vietnam, tôi mong muốn ứng tuyển vị trí Java Backend Engineer để cùng đội ngũ phát triển các nền tảng dịch vụ có lượng truy cập lớn.",
+          "stageReason": "Đang đánh giá chi tiết kinh nghiệm tối ưu hiệu năng cơ sở dữ liệu và Redis."
+        },
+        {
+          "companySlug": "vnpt-net",
+          "jobIndex": 0,
+          "cvKey": "cv-java-senior",
+          "targetStage": "SUBMITTED",
+          "coverLetter": "Kính gửi VNPT-Net, tôi xin ứng tuyển vị trí Fullstack Java/React với nền tảng vững chắc về Java, Spring Boot, PostgreSQL và REST API.",
+          "stageReason": ""
+        }
+      ]
+    },
+    {
+      "key": "thao-vy-frontend",
+      "email": "thaovy.tran@smart.local",
+      "profile": {
+        "displayName": "Trần Thảo Vy",
+        "headline": "Senior Frontend Engineer (React / TypeScript / Next.js)",
+        "locationText": "Quận 3, TP. Hồ Chí Minh",
+        "visibility": "APPLICATION_ONLY",
+        "phoneNumber": "+84900000102",
+        "contactEmail": "thaovy.tran@smart.local",
+        "linkedinUrl": "https://linkedin.com/in/thaovy-frontend",
+        "githubUrl": "https://github.com/thaovy-frontend",
+        "portfolioUrl": "https://thaovy-ui.id.vn",
+        "bio": "Kỹ sư Frontend chuyên xây dựng giao diện web hiệu năng cao, Design System và ứng dụng SPA/SSR bằng React, TypeScript, Next.js và Tailwind CSS."
+      },
+      "cvs": [
+        {
+          "key": "cv-frontend-react",
+          "title": "Tran Thao Vy - Senior Frontend React TypeScript CV",
+          "filename": "tran-thao-vy-frontend-react.pdf",
+          "pdfContent": {
+            "fullName": "TRAN THAO VY",
+            "headline": "SENIOR FRONTEND ENGINEER (REACT / TYPESCRIPT)",
+            "contactLine": "Ho Chi Minh City, Viet Nam | github.com/thaovy-frontend",
+            "summary": "Frontend Engineer with 4+ years of experience crafting accessible, responsive web applications and reusable UI component libraries using React, TypeScript, Next.js, and Vue.js.",
+            "experience": [
+              "Senior Frontend Engineer - E-Commerce Tech | 04/2023 - Present",
+              "Lead React and TypeScript storefront architecture, improving Core Web Vitals and reducing bundle size by 32%.",
+              "Build SSR pages with Next.js, Tailwind CSS, GraphQL, and automated UI testing with Vitest and Playwright.",
+              "Frontend Developer - Digital Agency | 07/2021 - 03/2023",
+              "Developed customer portals using React, Vue.js, JavaScript, HTML, CSS, and REST APIs."
+            ],
+            "skills": "React, TypeScript, JavaScript, Next.js, Vue.js, Tailwind CSS, TailwindCSS, HTML, CSS, GraphQL, Vitest, Playwright, Git, CI/CD, Scrum",
+            "projects": [
+              "Enterprise Design System: Built 45+ accessible React + TypeScript components documented in Storybook.",
+              "Checkout Conversion Revamp: Migrated legacy SPA checkout to Next.js App Router with optimistic UI updates."
+            ],
+            "education": [
+              "Bachelor of Software Engineering - University of Information Technology (UIT - VNUHCM) (2017 - 2021)"
+            ],
+            "languages": [
+              "English: TOEIC 860 (Professional working proficiency)",
+              "Vietnamese: Native"
+            ],
+            "certificates": [
+              "Meta Front-End Developer Professional Certificate (2023)"
+            ]
+          }
+        }
+      ],
+      "drafts": [],
+      "applications": [
+        {
+          "companySlug": "fpt-software",
+          "jobIndex": 1,
+          "cvKey": "cv-frontend-react",
+          "targetStage": "OFFERED",
+          "coverLetter": "Kính gửi FPT Software, tôi có hơn 4 năm kinh nghiệm chuyên sâu React, TypeScript và Next.js, rất mong muốn gia nhập đội ngũ phát triển sản phẩm Frontend.",
+          "stageReason": "Hoàn thành xuất sắc vòng phỏng vấn kỹ thuật và hệ thống giao diện; gửi thư mời nhận việc."
+        },
+        {
+          "companySlug": "lg-cns-vietnam",
+          "jobIndex": 1,
+          "cvKey": "cv-frontend-react",
+          "targetStage": "INTERVIEW",
+          "coverLetter": "Kính gửi LG CNS Vietnam, với kinh nghiệm xây dựng Design System bằng React và TypeScript, tôi mong muốn đóng góp vào các dự án enterprise của công ty.",
+          "stageReason": "Kinh nghiệm React/TypeScript và tối ưu Core Web Vitals phù hợp; hẹn phỏng vấn với Tech Lead."
+        },
+        {
+          "companySlug": "fpt-software",
+          "jobIndex": 3,
+          "cvKey": "cv-frontend-react",
+          "targetStage": "REJECTED",
+          "coverLetter": "Kính gửi FPT Software, tôi quan tâm đến môi trường làm việc năng động của công ty và xin gửi hồ sơ ứng tuyển.",
+          "stageReason": "Hồ sơ chuyên sâu kỹ thuật Frontend React/TypeScript, chưa phù hợp với vị trí Chuyên viên Tuyển dụng IT (Talent Acquisition)."
+        }
+      ]
+    },
+    {
+      "key": "hoang-nam-ai",
+      "email": "hoangnam.le@smart.local",
+      "profile": {
+        "displayName": "Lê Hoàng Nam",
+        "headline": "AI / ML Engineer & Python Backend (PyTorch / LLM / FastAPI)",
+        "locationText": "Quận Đống Đa, Hà Nội",
+        "visibility": "APPLICATION_ONLY",
+        "phoneNumber": "+84900000103",
+        "contactEmail": "hoangnam.le@smart.local",
+        "linkedinUrl": "https://linkedin.com/in/hoangnam-ai",
+        "githubUrl": "https://github.com/hoangnam-ai",
+        "portfolioUrl": "https://hoangnam-ai.id.vn",
+        "bio": "Kỹ sư Trí tuệ nhân tạo và Backend Python với kinh nghiệm triển khai mô hình NLP, LLM, Vector DB và dịch vụ FastAPI trong môi trường production."
+      },
+      "cvs": [
+        {
+          "key": "cv-ai-python",
+          "title": "Le Hoang Nam - AI ML & Python Backend Engineer CV",
+          "filename": "le-hoang-nam-ai-python.pdf",
+          "pdfContent": {
+            "fullName": "LE HOANG NAM",
+            "headline": "AI / ML ENGINEER & PYTHON BACKEND",
+            "contactLine": "Ha Noi, Viet Nam | github.com/hoangnam-ai",
+            "summary": "Machine Learning and Python Backend Engineer with 4 years of experience building NLP pipelines, LLM RAG applications, and scalable FastAPI inference services.",
+            "experience": [
+              "AI / ML Engineer - Smart Analytics Corp | 01/2023 - Present",
+              "Design and deploy NLP and LLM retrieval pipelines using Python, PyTorch, Milvus Vector DB, and FastAPI.",
+              "Optimize inference latency with Docker, Kubernetes, Redis caching, and PostgreSQL pgvector.",
+              "Python Backend & Data Developer - Tech Labs | 08/2021 - 12/2022",
+              "Built asynchronous Python REST APIs with FastAPI, PostgreSQL, Elasticsearch, and Apache Kafka."
+            ],
+            "skills": "Python, PyTorch, TensorFlow, FastAPI, NLP, LLM, Milvus, Vector DB, Elasticsearch, PostgreSQL, Redis, Apache Kafka, Docker, Kubernetes, SQL, Git, Linux, LangChain",
+            "projects": [
+              "Enterprise RAG Assistant: Built hybrid BM25 + dense vector search over technical manuals using Milvus and PyTorch.",
+              "Document Extraction Pipeline: Fine-tuned transformer models for Vietnamese NER with 93% F1-score."
+            ],
+            "education": [
+              "Master of Data Science & AI - Hanoi University of Science and Technology (HUST) (2021 - 2023)",
+              "Bachelor of Information Technology - VNU University of Engineering and Technology (2017 - 2021)"
+            ],
+            "languages": [
+              "English: IELTS 7.5 (Fluent)",
+              "Vietnamese: Native"
+            ],
+            "certificates": [
+              "DeepLearning.AI Generative AI with Large Language Models (2024)"
+            ]
+          }
+        }
+      ],
+      "drafts": [],
+      "applications": [
+        {
+          "companySlug": "viettel-solutions",
+          "jobIndex": 0,
+          "cvKey": "cv-ai-python",
+          "targetStage": "HIRED",
+          "coverLetter": "Kính gửi Viettel Solutions, với nền tảng Thạc sĩ Khoa học Dữ liệu và kinh nghiệm triển khai LLM, NLP, PyTorch trên hệ thống thực tế, tôi mong muốn đóng góp vào các giải pháp AI của Tổng công ty.",
+          "stageReason": "Ứng viên đã nhận offer và hoàn tất thủ tục nhận việc cho vị trí Kỹ sư AI/ML."
+        },
+        {
+          "companySlug": "shopee-vietnam",
+          "jobIndex": 0,
+          "cvKey": "cv-ai-python",
+          "targetStage": "SHORTLISTED",
+          "coverLetter": "Kính gửi Shopee Vietnam, tôi có kinh nghiệm xây dựng hệ thống Python Backend với FastAPI, Kafka, Elasticsearch và PostgreSQL chịu tải cao.",
+          "stageReason": "Nền tảng Python Backend, Kafka và Elasticsearch rất tốt; đưa vào vòng đánh giá chuyên sâu."
+        },
+        {
+          "companySlug": "viettel-solutions",
+          "jobIndex": 2,
+          "cvKey": "cv-ai-python",
+          "targetStage": "REJECTED",
+          "coverLetter": "Kính gửi Viettel Solutions, tôi xin gửi hồ sơ để tìm hiểu thêm cơ hội làm việc tại đơn vị.",
+          "stageReason": "Ứng viên có thế mạnh kỹ thuật AI/ML, không có kinh nghiệm kinh doanh B2B cho vị trí Account Manager."
+        }
+      ]
+    },
+    {
+      "key": "gia-huy-devops",
+      "email": "giahuy.pham@smart.local",
+      "profile": {
+        "displayName": "Phạm Gia Huy",
+        "headline": "Senior Cloud / DevSecOps & SRE Engineer (Kubernetes / Terraform / AWS / Azure)",
+        "locationText": "Quận 7, TP. Hồ Chí Minh",
+        "visibility": "APPLICATION_ONLY",
+        "phoneNumber": "+84900000104",
+        "contactEmail": "giahuy.pham@smart.local",
+        "linkedinUrl": "https://linkedin.com/in/giahuy-devops",
+        "githubUrl": "https://github.com/giahuy-devops",
+        "portfolioUrl": "https://giahuy-sre.id.vn",
+        "bio": "Kỹ sư DevSecOps và SRE chuyên tự động hóa hạ tầng đa đám mây (AWS, Azure, GCP), vận hành cụm Kubernetes quy mô lớn và thiết lập quy trình CI/CD an toàn."
+      },
+      "cvs": [
+        {
+          "key": "cv-cloud-devops",
+          "title": "Pham Gia Huy - Senior DevSecOps & Cloud SRE CV",
+          "filename": "pham-gia-huy-devops-sre.pdf",
+          "pdfContent": {
+            "fullName": "PHAM GIA HUY",
+            "headline": "SENIOR CLOUD / DEVSECOPS & SRE ENGINEER",
+            "contactLine": "Ho Chi Minh City, Viet Nam | github.com/giahuy-devops",
+            "summary": "DevSecOps and Site Reliability Engineer with 5 years of experience automating multi-cloud infrastructure on AWS, Azure, and OpenStack using Terraform, Kubernetes, and GitLab CI.",
+            "experience": [
+              "Senior DevSecOps Engineer - CloudPay Services | 02/2023 - Present",
+              "Manage production Kubernetes clusters on AWS EKS and Azure AKS with Terraform Infrastructure-as-Code.",
+              "Implement DevSecOps pipelines with GitLab CI, GitHub Actions, container vulnerability scanning, and automated rollbacks.",
+              "Systems & Cloud Engineer - Telecom Infrastructure | 05/2020 - 01/2023",
+              "Operated private cloud workloads on OpenStack, Ceph storage, Linux servers, Docker, and CI/CD automation."
+            ],
+            "skills": "Kubernetes, Docker, Terraform, AWS, Azure, GCP, OpenStack, Ceph, Linux, CI/CD, GitLab CI, GitHub Actions, Python, Go, PostgreSQL, Redis, Git, LangChain",
+            "projects": [
+              "Zero-Trust Multi-Cluster Platform: Standardized Terraform modules and GitOps workflows across 12 production microservices.",
+              "Automated Disaster Recovery Drill: Reduced RTO from 45 minutes to under 6 minutes across multi-AZ clusters."
+            ],
+            "education": [
+              "Bachelor of Computer Networks and Communications - Ho Chi Minh City University of Technology (HCMUT) (2016 - 2020)"
+            ],
+            "languages": [
+              "English: IELTS 7.0 (Professional working proficiency)",
+              "Vietnamese: Native"
+            ],
+            "certificates": [
+              "Certified Kubernetes Security Specialist (CKS) (2024)",
+              "HashiCorp Certified: Terraform Associate (2023)"
+            ]
+          }
+        }
+      ],
+      "drafts": [],
+      "applications": [
+        {
+          "companySlug": "viettel-solutions",
+          "jobIndex": 1,
+          "cvKey": "cv-cloud-devops",
+          "targetStage": "INTERVIEW",
+          "coverLetter": "Kính gửi Viettel Solutions, với kinh nghiệm vận hành OpenStack, Ceph, Kubernetes và bảo mật quy trình CI/CD, tôi rất mong muốn tham gia đội ngũ DevSecOps của công ty.",
+          "stageReason": "Kinh nghiệm OpenStack, Ceph và CKS rất sát với hạ tầng của đơn vị; mời phỏng vấn kỹ thuật."
+        },
+        {
+          "companySlug": "vng-corporation",
+          "jobIndex": 1,
+          "cvKey": "cv-cloud-devops",
+          "targetStage": "HIRED",
+          "coverLetter": "Kính gửi VNG Corporation, tôi xin ứng tuyển vị trí Cloud/SRE Engineer với thế mạnh tự động hóa Terraform, Kubernetes và đảm bảo SLA hệ thống.",
+          "stageReason": "Đã hoàn tất thỏa thuận nhận việc và xác nhận ngày onboard vị trí Cloud/SRE."
+        },
+        {
+          "companySlug": "capgemini-vietnam",
+          "jobIndex": 0,
+          "cvKey": "cv-cloud-devops",
+          "targetStage": "UNDER_REVIEW",
+          "coverLetter": "Kính gửi Capgemini Vietnam, tôi có kinh nghiệm triển khai Azure AKS và Terraform cho các hệ thống doanh nghiệp đa quốc gia.",
+          "stageReason": "Đang rà soát kinh nghiệm làm việc trực tiếp với dự án Azure Enterprise."
+        }
+      ]
+    },
+    {
+      "key": "minh-khoi-mobile",
+      "email": "minhkhoi.do@smart.local",
+      "profile": {
+        "displayName": "Đỗ Minh Khôi",
+        "headline": "Senior Mobile Engineer (Flutter / Kotlin / Android / iOS)",
+        "locationText": "Quận Tân Bình, TP. Hồ Chí Minh",
+        "visibility": "APPLICATION_ONLY",
+        "phoneNumber": "+84900000105",
+        "contactEmail": "minhkhoi.do@smart.local",
+        "linkedinUrl": "https://linkedin.com/in/minhkhoi-mobile",
+        "githubUrl": "https://github.com/minhkhoi-mobile",
+        "portfolioUrl": "https://minhkhoi-apps.id.vn",
+        "bio": "Kỹ sư phát triển ứng dụng di động với 4 năm kinh nghiệm xây dựng app ngân hàng số và ví điện tử bằng Flutter, Kotlin (Android), Swift (iOS) và React Native."
+      },
+      "cvs": [
+        {
+          "key": "cv-mobile-flutter",
+          "title": "Do Minh Khoi - Senior Mobile Flutter & Kotlin CV",
+          "filename": "do-minh-khoi-mobile-flutter.pdf",
+          "pdfContent": {
+            "fullName": "DO MINH KHOI",
+            "headline": "SENIOR MOBILE ENGINEER (FLUTTER / KOTLIN)",
+            "contactLine": "Ho Chi Minh City, Viet Nam | github.com/minhkhoi-mobile",
+            "summary": "Mobile Application Engineer with 4+ years of experience building high-rated fintech and consumer apps using Flutter, Kotlin, Android, Swift, and React Native.",
+            "experience": [
+              "Senior Mobile Engineer - Digital Banking Squad | 05/2023 - Present",
+              "Develop cross-platform mobile banking features in Flutter and native Kotlin/Swift biometric modules.",
+              "Integrate REST APIs, GraphQL, offline caching, and CI/CD mobile release pipelines on GitHub Actions.",
+              "Android Developer - Consumer App Studio | 07/2021 - 04/2023",
+              "Built native Android apps in Kotlin with Jetpack Compose, Coroutines, and automated UI tests."
+            ],
+            "skills": "Flutter, Kotlin, Android, Swift, iOS, React Native, TypeScript, GraphQL, REST API, GitHub Actions, CI/CD, Git, Scrum",
+            "projects": [
+              "Biometric eKYC SDK Integration: Delivered smooth camera and NFC passport verification across Android and iOS.",
+              "Personal Finance Tracker: Flutter app with 100k+ downloads and 4.8-star store rating."
+            ],
+            "education": [
+              "Bachelor of Information Technology - University of Science, VNU-HCM (2017 - 2021)"
+            ],
+            "languages": [
+              "English: TOEIC 820 (Working proficiency)",
+              "Vietnamese: Native"
+            ],
+            "certificates": [
+              "Google Associate Android Developer (2023)"
+            ]
+          }
+        }
+      ],
+      "drafts": [],
+      "applications": [
+        {
+          "companySlug": "mb-bank",
+          "jobIndex": 0,
+          "cvKey": "cv-mobile-flutter",
+          "targetStage": "OFFERED",
+          "coverLetter": "Kính gửi Ngân hàng Quân đội (MB Bank), với kinh nghiệm phát triển ứng dụng ngân hàng số bằng Flutter và tích hợp eKYC trên Android/iOS, tôi rất mong muốn đồng hành cùng đội ngũ Mobile của MB.",
+          "stageReason": "Vượt qua bài kiểm tra kỹ thuật Flutter và phỏng vấn kiến trúc bảo mật mobile; gửi offer."
+        },
+        {
+          "companySlug": "momo-fintech",
+          "jobIndex": 0,
+          "cvKey": "cv-mobile-flutter",
+          "targetStage": "SHORTLISTED",
+          "coverLetter": "Kính gửi MoMo, tôi có nền tảng vững chắc về Flutter, React Native và tối ưu hiệu năng ứng dụng thanh toán di động.",
+          "stageReason": "Kinh nghiệm app tài chính có lượng người dùng lớn phù hợp với yêu cầu."
+        },
+        {
+          "companySlug": "naver-vietnam",
+          "jobIndex": 1,
+          "cvKey": "cv-mobile-flutter",
+          "targetStage": "SUBMITTED",
+          "coverLetter": "Kính gửi NAVER Vietnam, tôi xin ứng tuyển vị trí Android Kotlin Engineer với kinh nghiệm thực tế về Jetpack Compose và Coroutines.",
+          "stageReason": ""
+        }
+      ]
+    },
+    {
+      "key": "quoc-bao-dotnet",
+      "email": "quocbao.huynh@smart.local",
+      "profile": {
+        "displayName": "Huỳnh Quốc Bảo",
+        "headline": "Fullstack .NET & Angular Engineer (ASP.NET Core / C# / Angular)",
+        "locationText": "Quận Phú Nhuận, TP. Hồ Chí Minh",
+        "visibility": "APPLICATION_ONLY",
+        "phoneNumber": "+84900000106",
+        "contactEmail": "quocbao.huynh@smart.local",
+        "linkedinUrl": "https://linkedin.com/in/quocbao-dotnet",
+        "githubUrl": "https://github.com/quocbao-dotnet",
+        "portfolioUrl": "https://quocbao-net.id.vn",
+        "bio": "Kỹ sư Fullstack với 5 năm kinh nghiệm phát triển hệ thống doanh nghiệp bằng ASP.NET Core, .NET, C#, Angular, TypeScript và SQL Server."
+      },
+      "cvs": [
+        {
+          "key": "cv-dotnet-angular",
+          "title": "Huynh Quoc Bao - Fullstack .NET & Angular Engineer CV",
+          "filename": "huynh-quoc-bao-dotnet-angular.pdf",
+          "pdfContent": {
+            "fullName": "HUYNH QUOC BAO",
+            "headline": "FULLSTACK .NET & ANGULAR ENGINEER",
+            "contactLine": "Ho Chi Minh City, Viet Nam | github.com/quocbao-dotnet",
+            "summary": "Fullstack Software Engineer with 5 years of experience building enterprise SaaS platforms using ASP.NET Core, .NET, C#, Angular, TypeScript, and SQL Server.",
+            "experience": [
+              "Senior Fullstack Engineer - Enterprise ERP Systems | 01/2023 - Present",
+              "Design and implement ASP.NET Core Web APIs in C# with SQL Server, Redis, and RabbitMQ.",
+              "Build responsive Angular and TypeScript dashboards deployed on Microsoft Azure with CI/CD.",
+              ".NET Software Developer - Logistics Tech | 06/2020 - 12/2022",
+              "Developed .NET microservices, Angular portals, Docker containers, and automated SQL reporting."
+            ],
+            "skills": "ASP.NET Core, .NET, C#, Angular, TypeScript, JavaScript, SQL Server, PostgreSQL, Redis, RabbitMQ, Azure, Docker, CI/CD, Git, Scrum",
+            "projects": [
+              "Multi-Tenant Warehouse Portal: Built role-based Angular frontend and .NET 8 backend serving 200+ enterprise clients.",
+              "Order Event Dispatcher: Implemented reliable RabbitMQ message processing with dead-letter retry."
+            ],
+            "education": [
+              "Bachelor of Software Engineering - FPT University HCMC (2016 - 2020)"
+            ],
+            "languages": [
+              "English: IELTS 6.5 (Upper-intermediate)",
+              "Vietnamese: Native"
+            ],
+            "certificates": [
+              "Microsoft Certified: Azure Developer Associate (2024)"
+            ]
+          }
+        }
+      ],
+      "drafts": [],
+      "applications": [
+        {
+          "companySlug": "bosch-global-software",
+          "jobIndex": 0,
+          "cvKey": "cv-dotnet-angular",
+          "targetStage": "INTERVIEW",
+          "coverLetter": "Kính gửi Bosch Global Software Technologies Vietnam, tôi có 5 năm kinh nghiệm phát triển hệ thống doanh nghiệp với ASP.NET Core, C#, Angular và Azure.",
+          "stageReason": "Kinh nghiệm .NET 8 và Angular rất phù hợp với dự án Global ERP; mời phỏng vấn."
+        },
+        {
+          "companySlug": "vnpt-net",
+          "jobIndex": 1,
+          "cvKey": "cv-dotnet-angular",
+          "targetStage": "SUBMITTED",
+          "coverLetter": "Kính gửi VNPT-Net, tôi mong muốn ứng tuyển vị trí Cloud Architect với kinh nghiệm thiết kế kiến trúc hệ thống doanh nghiệp trên nền tảng Azure và Docker.",
+          "stageReason": ""
+        }
+      ]
+    },
+    {
+      "key": "ngoc-anh-qa",
+      "email": "ngocanh.vo@smart.local",
+      "profile": {
+        "displayName": "Võ Ngọc Ánh",
+        "headline": "Senior QA Automation Engineer (Playwright / Selenium / Cypress)",
+        "locationText": "Quận Hải Châu, Đà Nẵng",
+        "visibility": "APPLICATION_ONLY",
+        "phoneNumber": "+84900000107",
+        "contactEmail": "ngocanh.vo@smart.local",
+        "linkedinUrl": "https://linkedin.com/in/ngocanh-qa",
+        "githubUrl": "https://github.com/ngocanh-qa",
+        "portfolioUrl": "https://ngocanh-qa.id.vn",
+        "bio": "Kỹ sư Kiểm thử Tự động (QA Automation) chuyên xây dựng framework E2E với Playwright, Selenium, Cypress, API testing và tích hợp vào CI/CD."
+      },
+      "cvs": [
+        {
+          "key": "cv-qa-automation",
+          "title": "Vo Ngoc Anh - Senior QA Automation Engineer CV",
+          "filename": "vo-ngoc-anh-qa-automation.pdf",
+          "pdfContent": {
+            "fullName": "VO NGOC ANH",
+            "headline": "SENIOR QA AUTOMATION ENGINEER",
+            "contactLine": "Da Nang, Viet Nam | github.com/ngocanh-qa",
+            "summary": "QA Automation Engineer with 4 years of experience architecting end-to-end web and API test frameworks using Playwright, Selenium, Cypress, TypeScript, and Java.",
+            "experience": [
+              "Senior QA Automation Engineer - SaaS Commerce | 03/2023 - Present",
+              "Built Playwright TypeScript E2E test suite covering 400+ critical checkout and payment flows in GitHub Actions CI/CD.",
+              "Maintained API regression tests and SQL data verification scripts across staging environments.",
+              "QA Automation Engineer - Outsourcing Hub | 07/2021 - 02/2023",
+              "Implemented Selenium WebDriver (Java / JUnit) and Cypress test suites for banking and healthcare portals."
+            ],
+            "skills": "Playwright, Selenium, Cypress, TypeScript, JavaScript, Java, JUnit, SQL, GitHub Actions, GitLab CI, CI/CD, Docker, Git, Scrum",
+            "projects": [
+              "Parallel Playwright Runner: Cut E2E regression execution time from 50 minutes to 9 minutes using sharded Docker workers.",
+              "API Contract Verification Suite: Automated schema and status checks for 80+ REST endpoints."
+            ],
+            "education": [
+              "Bachelor of Information Technology - Da Nang University of Science and Technology (DUT) (2017 - 2021)"
+            ],
+            "languages": [
+              "English: TOEIC 850 (Fluent)",
+              "Vietnamese: Native"
+            ],
+            "certificates": [
+              "ISTQB Certified Tester Foundation Level (CTFL) (2022)"
+            ]
+          }
+        }
+      ],
+      "drafts": [],
+      "applications": [
+        {
+          "companySlug": "shopee-vietnam",
+          "jobIndex": 1,
+          "cvKey": "cv-qa-automation",
+          "targetStage": "SHORTLISTED",
+          "coverLetter": "Kính gửi Shopee Vietnam, tôi có kinh nghiệm xây dựng hệ thống kiểm thử tự động quy mô lớn bằng Playwright và TypeScript tích hợp CI/CD.",
+          "stageReason": "Kinh nghiệm Playwright song song hóa trên CI/CD rất ấn tượng; đưa vào shortlist."
+        },
+        {
+          "companySlug": "capgemini-vietnam",
+          "jobIndex": 1,
+          "cvKey": "cv-qa-automation",
+          "targetStage": "UNDER_REVIEW",
+          "coverLetter": "Kính gửi Capgemini Vietnam, tôi xin ứng tuyển vị trí QA Automation với kinh nghiệm thực chiến Selenium, Cypress và Playwright.",
+          "stageReason": "Đang xem xét kinh nghiệm Selenium Java và quy trình kiểm thử Agile."
+        }
+      ]
+    },
+    {
+      "key": "khanh-linh-data",
+      "email": "khanhlinh.dang@smart.local",
+      "profile": {
+        "displayName": "Đặng Khánh Linh",
+        "headline": "Senior Data Engineer & Platform Architect (Spark / Airflow / Delta Lake)",
+        "locationText": "Quận Ba Đình, Hà Nội",
+        "visibility": "APPLICATION_ONLY",
+        "phoneNumber": "+84900000108",
+        "contactEmail": "khanhlinh.dang@smart.local",
+        "linkedinUrl": "https://linkedin.com/in/khanhlinh-data",
+        "githubUrl": "https://github.com/khanhlinh-data",
+        "portfolioUrl": "https://khanhlinh-data.id.vn",
+        "bio": "Kỹ sư Dữ liệu với 5 năm kinh nghiệm thiết kế Data Lakehouse, luồng ETL/ELT thời gian thực bằng Apache Spark, Airflow, Delta Lake, Kafka và AWS."
+      },
+      "cvs": [
+        {
+          "key": "cv-data-architect",
+          "title": "Dang Khanh Linh - Senior Data Engineer & Architect CV",
+          "filename": "dang-khanh-linh-data-engineer.pdf",
+          "pdfContent": {
+            "fullName": "DANG KHANH LINH",
+            "headline": "SENIOR DATA ENGINEER & PLATFORM ARCHITECT",
+            "contactLine": "Ha Noi, Viet Nam | github.com/khanhlinh-data",
+            "summary": "Data Engineer and Architect with 5 years of experience designing Lakehouse architectures, streaming pipelines, and analytical data warehouses with Spark, Airflow, Delta Lake, Python, and SQL.",
+            "experience": [
+              "Senior Data Engineer - Digital Retail Group | 02/2023 - Present",
+              "Architected Lakehouse pipelines using Spark, Delta Lake, Airflow, Kafka, and AWS S3 processing 4TB+ daily data.",
+              "Designed dimensional data marts in PostgreSQL and MySQL with automated data quality checks.",
+              "Data Engineer - Financial Analytics | 06/2020 - 01/2023",
+              "Built Python and SQL ETL workflows, Kubernetes batch jobs, and MongoDB ingestion pipelines."
+            ],
+            "skills": "Spark, Airflow, Delta Lake, Python, SQL, PostgreSQL, MySQL, MongoDB, Apache Kafka, AWS, Docker, Kubernetes, Microservices, Git, Scrum, LangChain",
+            "projects": [
+              "Unified Customer Data Lakehouse: Consolidated 12 operational databases into Delta Lake with Airflow orchestration.",
+              "Real-time Fraud Feature Store: Streamed Kafka transaction events into low-latency analytical tables."
+            ],
+            "education": [
+              "Bachelor of Data Science - National Economics University (NEU) (2016 - 2020)"
+            ],
+            "languages": [
+              "English: IELTS 7.0 (Professional working proficiency)",
+              "Vietnamese: Native"
+            ],
+            "certificates": [
+              "Databricks Certified Data Engineer Associate (2024)"
+            ]
+          }
+        }
+      ],
+      "drafts": [],
+      "applications": [
+        {
+          "companySlug": "momo-fintech",
+          "jobIndex": 1,
+          "cvKey": "cv-data-architect",
+          "targetStage": "UNDER_REVIEW",
+          "coverLetter": "Kính gửi MoMo, tôi có 5 năm kinh nghiệm xây dựng nền tảng Data Lakehouse với Spark, Airflow, Delta Lake và Kafka, rất mong muốn tham gia đội ngũ Data Engineering của MoMo.",
+          "stageReason": "Đang đánh giá chi tiết kinh nghiệm xử lý dữ liệu lớn với Delta Lake và Spark."
+        },
+        {
+          "companySlug": "techcombank-software",
+          "jobIndex": 0,
+          "cvKey": "cv-data-architect",
+          "targetStage": "SUBMITTED",
+          "coverLetter": "Kính gửi Techcombank Software, tôi xin ứng tuyển vị trí Solution Architect với kinh nghiệm thiết kế kiến trúc dữ liệu, hệ thống phân tán và hạ tầng cloud AWS.",
+          "stageReason": ""
+        }
+      ]
+    }
+  ]
+}

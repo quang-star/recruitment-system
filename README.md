@@ -182,12 +182,30 @@ Tin đã đăng của công ty chưa ACTIVE được giữ nhưng tạm ẩn cho
 Duyệt hoạt động không đổi trạng thái xác minh thành `VERIFIED`.
 Với bộ seed mở rộng, thêm `--draft-only` ở lượt đầu, duyệt các công ty rồi chạy lại cùng bộ dữ liệu để đăng tin.
 
-| Vai trò | Email demo | Mật khẩu demo |
-| --- | --- | --- |
-| Ứng viên | `candidate.demo@smart.local` | `DemoCandidate!2026` |
-| Nhà tuyển dụng | `recruiter.demo@smart.local` | `DemoRecruiter!2026` |
+Để nạp **bộ dữ liệu showcase thực tế trọn gói** (`scripts/seed-showcase-data.json`: cây danh mục CNTT & 6 ngành ngoài CNTT, 42 kỹ năng CNTT bổ sung, **21 doanh nghiệp** gồm 20 `ACTIVE` + 1 `PENDING`, **53 tin tuyển dụng** chuẩn HTML có tỉnh/thành & lương VND, **8 ứng viên**, **9 CV PDF**, **2 bản nháp CV Builder tiếng Việt** và **22 đơn ứng tuyển** trải đều 7 cột Kanban có điểm đối sánh AI), chạy:
 
-Các tài khoản trên chỉ dành cho demo local. Có thể đổi bằng biến `DEMO_CANDIDATE_EMAIL`, `DEMO_CANDIDATE_PASSWORD`, `DEMO_RECRUITER_EMAIL` và `DEMO_RECRUITER_PASSWORD`. Seed không tạo tài khoản quản trị.
+```bash
+python scripts/seed-showcase.py --dry-run
+# Local dev (Gateway cổng 8080 + bootstrap tài khoản qua container postgres):
+python scripts/seed-showcase.py --auto-postgres --gateway-url http://127.0.0.1:8080
+```
+
+Trên máy chủ **Ubuntu chạy Coolify** (khi `SMTP_HOST` đã trỏ ra SMTP thật nên không gửi mail xác minh cho `@smart.local`, và cổng nội bộ `127.0.0.1:5173` của Nginx chuyển `/api/` tới Gateway):
+
+```bash
+python3 scripts/seed-showcase.py --auto-postgres --gateway-url http://127.0.0.1:5173
+```
+
+Có thể truyền thêm `--grant-admin-email <email-của-bạn>` để cấp quyền `SYSTEM_ADMIN` cho tài khoản thật bạn đã đăng nhập trên Coolify, hoặc đặt mật khẩu riêng qua `SHOWCASE_ADMIN_PASSWORD`, `SHOWCASE_RECRUITER_PASSWORD`, `SHOWCASE_CANDIDATE_PASSWORD`. Chạy lại script an toàn (idempotent), không tạo trùng công ty, tin tuyển dụng, CV hay đơn ứng tuyển. Toàn bộ hồ sơ ứng viên/CV trong fixture là dữ liệu hư cấu không chứa thông tin cá nhân thật và không gắn chữ `Demo` trên tên/nội dung hiển thị.
+
+| Bộ script | Vai trò | Email mặc định | Mật khẩu mặc định |
+| --- | --- | --- | --- |
+| `seed-showcase.py` | Quản trị | `quantri@smart.local` | `SmartAdmin!2026` |
+| `seed-showcase.py` | Nhà tuyển dụng | `tuyendung@smart.local` | `SmartRecruiter!2026` |
+| `seed-showcase.py` | Ứng viên chính (liên kết được Google Sign-In) | `nguyenquangit1612@gmail.com` | `SmartCandidate!2026` |
+| `seed-demo.py` / `seed-portal.py` | Ứng viên / Recruiter | `candidate.demo@smart.local` / `recruiter.demo@smart.local` | `DemoCandidate!2026` / `DemoRecruiter!2026` |
+
+Trên server công khai hãy đổi mật khẩu qua biến môi trường trước khi chạy `seed-showcase.py`. Các script `seed-demo.py` và `seed-portal.py` không tự tạo tài khoản quản trị.
 
 ## Chuẩn bị Coolify trên Ubuntu
 
