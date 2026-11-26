@@ -126,6 +126,20 @@ export function DashboardPanel({ session, companyId, onLogout, onNavigate, onOpe
     };
   }, [companyId, daysRange, isRecruiter, onLogout, session.accessToken]);
 
+  if (isRecruiter && !companyId) {
+    return (
+      <Card padding="lg" className="space-y-4">
+        <h2 className="m-0 text-lg font-semibold text-ink-900">Chưa có công ty tuyển dụng</h2>
+        <p className="m-0 text-sm text-ink-500">Tạo công ty hoặc tham gia đội ngũ tuyển dụng để xem tổng quan.</p>
+        {onNavigate && (
+          <Button variant="primary" onClick={() => onNavigate("company")}>
+            Công ty &amp; Đội ngũ
+          </Button>
+        )}
+      </Card>
+    );
+  }
+
   if (!dashboard && !error) {
     return (
       <Card padding="lg" className="space-y-4">

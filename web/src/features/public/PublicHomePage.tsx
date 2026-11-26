@@ -104,7 +104,7 @@ function PublicHomePageInner({ onLoginSuccess, session, candidate, children }: P
   const accountOpen = !!candidate && candidate.activeView !== "jobs";
 
   function closeAuth() {
-    if (location.pathname === routes.login || isProtectedPath) {
+    if (location.pathname === routes.login || location.pathname === routes.acceptInvitation || isProtectedPath) {
       safeNavigate(routes.home);
       return;
     }

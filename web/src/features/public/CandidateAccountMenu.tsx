@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { CvIcon, DashboardIcon, JobsIcon, LogoutIcon, ProfileIcon, SecurityIcon } from "../../shared/components/Icon";
+import { CompanyIcon, CvIcon, DashboardIcon, JobsIcon, LogoutIcon, ProfileIcon, SecurityIcon } from "../../shared/components/Icon";
 import { cn } from "../../shared/ui";
 import { candidateAccountLinks, CandidateAccountView, CandidateView } from "../candidate/navigation";
 
@@ -8,12 +8,13 @@ type Props = {
   avatarUrl?: string | null;
   activeView?: CandidateView;
   onNavigate: (view: CandidateView) => void;
+  onOpenRecruiter?: () => void;
   onLogout: () => void;
 };
 
 const icons = { dashboard: DashboardIcon, profile: ProfileIcon, cv: CvIcon, applications: JobsIcon, security: SecurityIcon };
 
-export function CandidateAccountMenu({ name, avatarUrl, activeView, onNavigate, onLogout }: Props) {
+export function CandidateAccountMenu({ name, avatarUrl, activeView, onNavigate, onOpenRecruiter, onLogout }: Props) {
   const [failedAvatar, setFailedAvatar] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
@@ -133,6 +134,20 @@ export function CandidateAccountMenu({ name, avatarUrl, activeView, onNavigate, 
                 </button>
               );
             })}
+            {onOpenRecruiter && (
+              <button
+                type="button"
+                onClick={() => {
+                  clearLeaveTimer();
+                  setOpen(false);
+                  onOpenRecruiter();
+                }}
+                className="hidden min-[1024px]:flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium text-ink-700 hover:bg-slate-50 cursor-pointer text-left"
+              >
+                <CompanyIcon size={16} aria-hidden="true" className="shrink-0 text-ink-400" />
+                Không gian Nhà tuyển dụng
+              </button>
+            )}
           </nav>
           <div className="mt-1 pt-1 border-t border-border-subtle">
             <button

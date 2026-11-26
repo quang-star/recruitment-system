@@ -18,6 +18,7 @@ import { useUnsavedChanges } from "../../shared/useUnsavedChanges";
 import { Badge, Button, Card, ErrorBanner, cn } from "../../shared/ui";
 import { formatJobLocation, workModeLabel } from "../public/jobPresentation";
 import { CategoryFilterValue, emptyCategoryFilter } from "./JobCategoryFilter";
+import { unclassifiedPositionName } from "./JobCategoryFields";
 import { RecruiterApplicationsPanel } from "./RecruiterApplicationsPanel";
 import { RecruiterJdReview } from "./RecruiterJdReview";
 import { RecruiterJobAnalytics } from "./RecruiterJobAnalytics";
@@ -403,7 +404,7 @@ function RecruiterJobBoardContent({
     setError(null);
     const payload = {
       ...form,
-      category: { ...form.category, positionName: form.category.positionName || form.title },
+      category: { ...form.category, positionName: form.category.positionName.trim() || unclassifiedPositionName },
       benefitsText: form.benefitsText || null,
       locationText: form.locationText || null,
       province: form.province.trim() || null,

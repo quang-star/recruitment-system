@@ -521,6 +521,10 @@ class CoreDatabaseMigrationTests {
         assertThat(member.orElseThrow().role()).isEqualTo("RECRUITER");
         assertThat(companies.findMember(company.id(), invitedUser)).isPresent();
         assertThat(invitations.findActiveByTokenHash("a".repeat(64), now.plusSeconds(2))).isEmpty();
+        assertThat(invitations.findAcceptedByTokenHash("a".repeat(64), invitedUser, invitation.normalizedEmail()))
+                .isPresent();
+        assertThat(invitations.findAcceptedByTokenHash("a".repeat(64), invitedUser, "other@example.test"))
+                .isEmpty();
         assertThat(invitations.accept(invitation, com.smartrecruitment.core.support.TestIds.next(), now.plusSeconds(2))).isEmpty();
     }
 

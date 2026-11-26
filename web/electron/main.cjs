@@ -4,22 +4,57 @@ const path = require("node:path");
 const { pathToFileURL } = require("node:url");
 
 const appOrigin = "app://smart-recruitment";
+const localWebOrigin = "http://127.0.0.1:5173";
+const apiHeaders = [
+  "accept", "authorization", "content-type", "idempotency-key", "range", "x-correlation-id"
+];
 
 protocol.registerSchemesAsPrivileged([{
   scheme: "app",
   privileges: { standard: true, secure: true, supportFetchAPI: true }
 }]);
 
+async function forwardApiRequest(request, url) {
+  if (request.initiatorOrigin !== appOrigin) {
+    return new Response("Forbidden", { status: 403 });
+  }
+
+  const upstream = new URL(localWebOrigin);
+  upstream.pathname = url.pathname;
+  upstream.search = url.search;
+  const headers = new Headers({ "accept-encoding": "identity" });
+  for (const name of apiHeaders) {
+    const value = request.headers.get(name);
+    if (value !== null) headers.set(name, value);
+  }
+
+  try {
+    return await fetch(upstream, {
+      method: request.method,
+      headers,
+      body: request.body,
+      duplex: "half",
+      redirect: "error",
+      signal: request.signal
+    });
+  } catch {
+    return Response.json({ message: "Không thể kết nối tới dịch vụ tuyển dụng." }, { status: 503 });
+  }
+}
+
 app.whenReady().then(() => {
   const distDir = path.join(app.getAppPath(), "dist");
 
   protocol.handle("app", (request) => {
     const url = new URL(request.url);
-    if (url.host !== "smart-recruitment" || !["GET", "HEAD"].includes(request.method)) {
+    if (url.host !== "smart-recruitment") {
       return new Response("Not found", { status: 404 });
     }
     if (url.pathname.startsWith("/api/")) {
-      return Response.json({ message: "Configure a public Gateway URL before packaging." }, { status: 503 });
+      return forwardApiRequest(request, url);
+    }
+    if (!["GET", "HEAD"].includes(request.method)) {
+      return new Response("Not found", { status: 404 });
     }
 
     let pathname;

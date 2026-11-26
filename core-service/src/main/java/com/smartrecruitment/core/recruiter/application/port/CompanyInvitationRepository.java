@@ -12,6 +12,7 @@ public interface CompanyInvitationRepository {
     List<CompanyInvitation> findAll(Long companyId);
     Optional<CompanyInvitation> findActive(Long companyId, String normalizedEmail, OffsetDateTime now);
     Optional<CompanyInvitation> findActiveByTokenHash(String tokenHash, OffsetDateTime now);
+    Optional<CompanyInvitation> findAcceptedByTokenHash(String tokenHash, Long userId, String normalizedEmail);
     int revokeExpired(Long companyId, String normalizedEmail, OffsetDateTime now);
     boolean revoke(Long companyId, Long invitationId, long expectedVersion, OffsetDateTime now);
     Optional<CompanyMember> accept(CompanyInvitation invitation, Long userId, OffsetDateTime now);

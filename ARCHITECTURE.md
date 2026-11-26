@@ -76,6 +76,13 @@ and a fixed 80/20 hybrid; it does not replace production scoring or supply human
 The rules below state architectural invariants;
 their presence in this document is not proof that every runtime path satisfies them.
 
+Authenticated company invitation acceptance uses an Auth endpoint for the role grant.
+Auth verifies the account and delegates invitation validation and membership creation
+to Core over HTTP (default `CORE_SERVICE_URL=http://core-service:8082`). Core commits
+membership before Auth adds `RECRUITER` to the same user. The gateway blocks the
+service-only Core endpoint. The same recipient can retry the accepted link while
+membership is active, and Web refreshes the session to obtain both roles.
+
 ## Backend code map
 
 Use this layout guide when locating or adding backend code:

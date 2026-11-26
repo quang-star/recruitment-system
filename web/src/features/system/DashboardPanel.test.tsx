@@ -21,6 +21,16 @@ describe("DashboardPanel Recruiter Action Center", () => {
     vi.mocked(apiRequest).mockReset();
   });
 
+  it("opens company setup from the empty recruiter dashboard", () => {
+    const onNavigate = vi.fn();
+    render(<DashboardPanel session={recruiterSession} onLogout={vi.fn()} onNavigate={onNavigate} />);
+
+    expect(screen.getByRole("heading", { name: "Chưa có công ty tuyển dụng" })).toBeInTheDocument();
+    expect(apiRequest).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Công ty & Đội ngũ" }));
+    expect(onNavigate).toHaveBeenCalledWith("company");
+  });
+
   it("shows urgent action banner with submitted and underReview counts and routes to pendingJobId", async () => {
     vi.mocked(apiRequest).mockImplementation(async (path) => {
       if (path.startsWith("/api/v2/dashboard")) {

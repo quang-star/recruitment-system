@@ -162,8 +162,6 @@ export function HotJobsVIP({
     };
   }, [quickFilter, savedKeys, jobs, extraSavedJobs]);
 
-  if (jobsError && !jobs.length && quickFilter === "ALL") return null;
-
   const savedJobsList = useMemo(
     () => [
       ...jobs.filter((job) => Boolean(savedIds[job.jobId])),
@@ -174,6 +172,8 @@ export function HotJobsVIP({
     ],
     [jobs, savedIds, savedKeys, extraSavedJobs]
   );
+
+  if (jobsError && !jobs.length && quickFilter === "ALL") return null;
 
   const isServerFilter = Boolean(SERVER_FILTER_QUERY[quickFilter]);
   const cachedServerResult = serverCache[quickFilter];

@@ -123,7 +123,8 @@ it("submits a new outside industry without waiting for catalog approval or Parse
   fireEvent.click(screen.getByRole("button", { name: "+ Tạo JD mới" }));
   fireEvent.change(screen.getByLabelText("Ngành", { exact: true }), { target: { value: "" } });
   fireEvent.change(screen.getByLabelText("Tên ngành mới"), { target: { value: "Kế toán" } });
-  fireEvent.change(screen.getByLabelText("Tiêu đề"), { target: { value: "Kế toán tổng hợp" } });
+  fireEvent.change(screen.getByLabelText("Tiêu đề"), { target: { value: "Tuyển kế toán tổng hợp tại Hà Nội" } });
+  fireEvent.change(screen.getByLabelText("Tên vị trí mới"), { target: { value: "Kế toán tổng hợp" } });
   await setRichText("Mô tả công việc", "Lập báo cáo tài chính");
   await setRichText("Yêu cầu", "Kinh nghiệm kế toán");
   fireEvent.click(screen.getByRole("button", { name: "Tạo bản nháp" }));
@@ -152,6 +153,7 @@ it.each([false, true])("submits the explicit JD external AI choice (%s) with the
   const body = JSON.parse(call[1]!.body as string);
   expect(body.externalAiConsent).toBe(consented);
   expect(body.externalAiPolicyVersion).toBe(consented ? "external-ai/1.0" : null);
+  expect(body.category.positionName).toBe("Chưa xác định");
 });
 
 it("starts a clean JD after returning from a saved job and still protects an unsaved draft", async () => {

@@ -77,10 +77,10 @@ export function createSampleCvDocument(templateId: TemplateId, accentColor?: str
   doc.title = `CV mẫu ${catalog?.title ?? templateId}`;
   doc.fullName = "Lê Quang Dũng";
   doc.headline = "Chuyên viên Phát triển Phần mềm";
-  doc.email = "quangdung.demo@example.invalid";
+  doc.email = "quangdung.le@smart.local";
   doc.phone = "0912 345 678";
   doc.location = "Quận Cầu Giấy, Hà Nội";
-  doc.links = "linkedin.com/in/quangdung-demo\ngithub.com/quangdung-demo";
+  doc.links = "linkedin.com/in/le-quang-dung\ngithub.com/lequangdung-dev";
   doc.introduction =
     "Hơn 3 năm kinh nghiệm phát triển ứng dụng web và dịch vụ hướng nghiệp bằng TypeScript, React và Spring Boot. Chú trọng kiến trúc sạch, tối ưu hiệu năng truy vấn và trải nghiệm người dùng.";
   doc.skills =

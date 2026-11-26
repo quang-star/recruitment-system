@@ -25,6 +25,8 @@ def test_observed_seed_never_fabricates_missing_job_details(tmp_path):
     item = records[0]
     job = seed.job_spec(item, '42')
     assert job['category']['industryId'] == '42'
+    assert job['category']['positionName'] == 'Chưa xác định'
+    assert job['title'] == 'Accountant'
     assert job['externalAiConsent'] is False
     assert job['applicationDeadline'] is None
     assert job['employmentType'] is None and job['salaryMin'] is None

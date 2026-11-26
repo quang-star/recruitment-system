@@ -19,6 +19,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.*;
 
 class CompanyInvitationServiceTests {
     private static final Instant NOW = Instant.parse("2026-08-25T10:00:00Z");
@@ -64,6 +65,30 @@ class CompanyInvitationServiceTests {
         assertThat(member.status()).isEqualTo("ACTIVE");
     }
 
+    @Test
+    void acceptanceCanReplayForTheSameRecipientOnlyWhileMembershipIsActive() {
+        var companies = mock(CompanyRepository.class);
+        var invitations = mock(CompanyInvitationRepository.class);
+        var sender = mock(CompanyInvitationSender.class);
+        var service = new CompanyInvitationService(companies, invitations, new FixedTokens(), sender,
+                Clock.fixed(NOW, ZoneOffset.UTC));
+        var source = new Fixture();
+        var invitation = source.service.invite(source.owner, source.company.id(), "member@example.com", "RECRUITER");
+        Long userId = 21L;
+        var member = new CompanyMember(22L, invitation.companyId(), userId, "RECRUITER", "ACTIVE",
+                OffsetDateTime.ofInstant(NOW, ZoneOffset.UTC), 0);
+        when(invitations.findAcceptedByTokenHash(invitation.tokenHash(), userId, "member@example.com"))
+                .thenReturn(Optional.of(invitation));
+        when(companies.findMember(invitation.companyId(), userId)).thenReturn(Optional.of(member), Optional.empty());
+
+        assertThat(service.acceptForAccount(userId, "MEMBER@example.com", "r".repeat(64))).isEqualTo(member);
+        assertThatThrownBy(() -> service.acceptForAccount(userId, "member@example.com", "r".repeat(64)))
+                .isInstanceOf(CompanyInvitationNotFoundException.class);
+        assertThatThrownBy(() -> service.acceptForAccount(23L, "member@example.com", "r".repeat(64)))
+                .isInstanceOf(CompanyInvitationNotFoundException.class);
+        verify(invitations, never()).accept(any(), any(), any());
+    }
+
     private static final class Fixture {
         private final Long owner = com.smartrecruitment.core.support.TestIds.next();
         private final Company company = Company.create(owner, "Acme Legal", "Acme", "invitation-test-acme",
@@ -96,6 +121,9 @@ class CompanyInvitationServiceTests {
         }
         @Override public Optional<CompanyInvitation> findActiveByTokenHash(String hash, OffsetDateTime now) {
             return values.stream().filter(value -> value.tokenHash().equals(hash)).filter(value -> value.activeAt(now)).findFirst();
+        }
+        @Override public Optional<CompanyInvitation> findAcceptedByTokenHash(String hash, Long userId, String email) {
+            return Optional.empty();
         }
         @Override public int revokeExpired(Long companyId, String email, OffsetDateTime now) { return 0; }
         @Override public boolean revoke(Long companyId, Long id, long version, OffsetDateTime now) { return false; }

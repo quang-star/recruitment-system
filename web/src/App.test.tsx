@@ -78,13 +78,33 @@ it("returns to the home route when logging out from a protected security route",
   expect(loadSession()).toBeNull();
 });
 
-it("shows a role switch notice when a non-recruiter visits accept-invitation while signed in", async () => {
-  window.history.replaceState(null, "", "/accept-invitation?token=invite-1");
-  vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(json(me));
+it("lets an existing candidate accept an invitation, retry refresh and enter either workspace", async () => {
+  const token = "a".repeat(64);
+  window.history.replaceState(null, "", "/accept-invitation?token=" + token);
+  const upgraded = { ...session, roles: ["CANDIDATE", "RECRUITER"], accessToken: "new-access", refreshToken: "new-refresh" };
+  let refreshAttempts = 0;
+  const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+    if (String(url).endsWith("/auth/me")) return json(me);
+    if (String(url).endsWith("/auth/refresh")) {
+      return ++refreshAttempts === 1 ? json({ code: "UNAVAILABLE", message: "Unavailable" }, 503) : json(upgraded);
+    }
+    return json({ companyId: "42", role: "RECRUITER", status: "ACTIVE" });
+  });
   render(<App />);
-  expect(await screen.findByRole("heading", { name: "Liên kết mời thành viên công ty" })).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Đăng xuất để dùng tài khoản nhà tuyển dụng" })).toBeInTheDocument();
-  expect(screen.queryByText("Candidate workspace")).not.toBeInTheDocument();
+  fireEvent.click(await screen.findByRole("button", { name: "Chấp nhận lời mời" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Cập nhật phiên đăng nhập" }));
+  const acceptCalls = fetchMock.mock.calls.filter(([url]) => String(url).endsWith("/auth/company-invitations/accept"));
+  expect(acceptCalls).toHaveLength(1);
+  expect(acceptCalls[0]?.[1]?.body).toBe(JSON.stringify({ token }));
+  expect(new Headers(acceptCalls[0]?.[1]?.headers).get("Authorization")).toBe("Bearer old-access");
+  fireEvent.click(await screen.findByRole("link", { name: "Mở không gian tuyển dụng" }));
+  expect(await screen.findByText("Recruiter workspace")).toBeInTheDocument();
+  expect(loadSession()).toEqual(upgraded);
+  act(() => {
+    window.history.pushState(null, "", "/candidate");
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  });
+  expect(await screen.findByText("Candidate workspace")).toBeInTheDocument();
   window.history.replaceState(null, "", "/");
 });
 

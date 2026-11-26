@@ -146,7 +146,7 @@ export function toForm(job: Job): JobForm {
     salaryNegotiable: job.salaryNegotiable,
     applicationDeadline: toLocalDateTimeInput(job.applicationDeadline),
     externalAiConsent: job.externalAiConsent === true && job.externalAiPolicyVersion === externalAiPolicyVersion,
-    category: job.category ?? { ...defaultCategory, positionName: job.title }
+    category: job.category ?? defaultCategory
   };
 }
 

@@ -120,7 +120,7 @@ def job_spec(item: dict, unknown_industry_id: str) -> dict:
         details.append('Ngày hạn nộp ghi nhận từ nguồn (chưa xác minh): ' + str(item['deadline']))
     is_it = _key(item['source']) == 'itviec'
     category = {'industryId': '1' if is_it else unknown_industry_id,
-                'positionName': item['title'] if len(item['title']) <= 160 else UNKNOWN_POSITION}
+                'positionName': UNKNOWN_POSITION}
     location = item['location'] if isinstance(item['location'], str) and len(item['location']) <= 300 else None
     return {'title': item['seedTitle'], 'description': '\n'.join(details),
             'requirementsText': 'Yêu cầu công việc chưa được thu thập.', 'benefitsText': None,

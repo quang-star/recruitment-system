@@ -114,11 +114,18 @@ export function extractSkillsFromJob(
     "Linux", "TailwindCSS", "Vitest", "C/C++", "AUTOSAR", "Embedded", "ARM",
     "Python", "PyTorch", "TensorFlow", "FastAPI", "NLP", "LLM", "Kafka",
     "Redis", "Microservices", "Event Sourcing", "DDD", "Go", "Elasticsearch",
-    "Milvus", "Vector DB", "Delta Lake", "Spark", "Airflow", "SQL", "AWS"
+    "Milvus", "Vector DB", "Delta Lake", "Spark", "Airflow", "SQL", "AWS",
+    "Node.js", "Vue.js", "Angular", "ASP.NET Core", ".NET", "C#", "Golang",
+    "PHP", "Laravel", "Kotlin", "Android", "Swift", "iOS", "Flutter",
+    "React Native", "Spring Security", "Hibernate", "MySQL", "MongoDB",
+    "Oracle", "SQL Server", "RabbitMQ", "GraphQL", "gRPC", "Azure", "GCP",
+    "CI/CD", "GitLab CI", "GitHub Actions", "Playwright", "Selenium",
+    "Cypress", "JUnit", "HTML", "CSS", "Tailwind CSS", "Scrum"
   ];
   const matched = candidates.filter((c) => {
     const escaped = c.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const regex = new RegExp(`(^|[^\\p{L}\\p{M}\\p{N}_#])${escaped}($|[^\\p{L}\\p{M}\\p{N}_#])`, "iu");
+    const prefix = c.startsWith(".") ? "(^|[\\s,(/;•|-])" : "(^|[^\\p{L}\\p{M}\\p{N}_#.])";
+    const regex = new RegExp(`${prefix}${escaped}($|[^\\p{L}\\p{M}\\p{N}_#])`, "iu");
     return texts.some((text) => regex.test(text));
   });
   return matched.slice(0, 5);

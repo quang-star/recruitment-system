@@ -32,6 +32,9 @@ export function PublicAuthModal({
   if (!open) return null;
 
   const modalTitle = authMode === "register" ? "Tạo tài khoản" : "Đăng nhập";
+  const showLocalDemoAccounts =
+    typeof window !== "undefined" &&
+    ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
 
   return (
     <div
@@ -93,34 +96,36 @@ export function PublicAuthModal({
           onSuccess={onLoginSuccess}
         />
 
-        <details className="mt-5 border-t border-border-subtle pt-4 text-xs text-ink-700">
-          <summary className="cursor-pointer font-semibold text-ink-700 hover:text-ink-900 select-none">
-            Dùng tài khoản demo local
-          </summary>
-          <div className="mt-3 space-y-2.5">
-            <p className="text-ink-600 m-0 leading-relaxed">
-              Chọn tài khoản để điền sẵn email, sau đó nhập mật khẩu đã thiết lập trong môi trường demo.
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => onSelectDemoAccount("CANDIDATE")}
-                className="flex flex-col items-start rounded-md border border-border-subtle bg-slate-50 px-3 py-2 text-left text-ink-900 hover:border-brand-300 hover:bg-brand-50/60 transition-colors cursor-pointer"
-              >
-                <span className="font-semibold">Chọn tài khoản ứng viên</span>
-                <small className="text-ink-500">candidate.demo@smart.local</small>
-              </button>
-              <button
-                type="button"
-                onClick={() => onSelectDemoAccount("RECRUITER")}
-                className="flex flex-col items-start rounded-md border border-border-subtle bg-slate-50 px-3 py-2 text-left text-ink-900 hover:border-brand-300 hover:bg-brand-50/60 transition-colors cursor-pointer"
-              >
-                <span className="font-semibold">Chọn tài khoản recruiter</span>
-                <small className="text-ink-500">recruiter.demo@smart.local</small>
-              </button>
+        {showLocalDemoAccounts && (
+          <details className="mt-5 border-t border-border-subtle pt-4 text-xs text-ink-700">
+            <summary className="cursor-pointer font-semibold text-ink-700 hover:text-ink-900 select-none">
+              Dùng tài khoản demo local
+            </summary>
+            <div className="mt-3 space-y-2.5">
+              <p className="text-ink-600 m-0 leading-relaxed">
+                Chọn tài khoản để điền sẵn email, sau đó nhập mật khẩu đã thiết lập trong môi trường demo.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => onSelectDemoAccount("CANDIDATE")}
+                  className="flex flex-col items-start rounded-md border border-border-subtle bg-slate-50 px-3 py-2 text-left text-ink-900 hover:border-brand-300 hover:bg-brand-50/60 transition-colors cursor-pointer"
+                >
+                  <span className="font-semibold">Chọn tài khoản ứng viên</span>
+                  <small className="text-ink-500">candidate.demo@smart.local</small>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSelectDemoAccount("RECRUITER")}
+                  className="flex flex-col items-start rounded-md border border-border-subtle bg-slate-50 px-3 py-2 text-left text-ink-900 hover:border-brand-300 hover:bg-brand-50/60 transition-colors cursor-pointer"
+                >
+                  <span className="font-semibold">Chọn tài khoản recruiter</span>
+                  <small className="text-ink-500">recruiter.demo@smart.local</small>
+                </button>
+              </div>
             </div>
-          </div>
-        </details>
+          </details>
+        )}
       </section>
     </div>
   );

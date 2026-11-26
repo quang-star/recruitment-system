@@ -33,3 +33,15 @@ it("preserves candidate ordering and the five-skill limit", () => {
     "Java", "Spring Boot", "React", "Next.js", "TypeScript"
   ]);
 });
+
+it("extracts extended IT stack skills including .NET, C#, Angular, Vue.js, Kotlin, Playwright, and Flutter", () => {
+  expect(extractSkillsFromJob("ASP.NET Core, .NET, C#, Angular, Vue.js")).toEqual([
+    "Vue.js", "Angular", "ASP.NET Core", ".NET", "C#"
+  ]);
+  expect(extractSkillsFromJob("ASP.NET Core and C#")).toEqual([
+    "ASP.NET Core", "C#"
+  ]);
+  expect(extractSkillsFromJob("Kotlin, Flutter, Playwright")).toEqual([
+    "Kotlin", "Flutter", "Playwright"
+  ]);
+});

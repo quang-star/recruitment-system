@@ -516,3 +516,20 @@ it("opens the sidebar Tài khoản popover for security navigation and logout", 
   fireEvent.click(screen.getByRole("button", { name: "Đăng xuất" }));
   expect(onLogout).toHaveBeenCalledOnce();
 });
+
+it("pre-fills kind and parent when adding a specialization under an active industry", async () => {
+  vi.mocked(apiRequest).mockImplementation(async (path) => {
+    if (path === "/api/v2/dashboard/catalog") {
+      return [{ id: "ind-it", kind: "INDUSTRY", parentId: null, name: "Công nghệ thông tin", status: "ACTIVE", version: 1 }];
+    }
+    return catalog;
+  });
+
+  render(<AdminWorkspace session={session} onLogout={vi.fn()} />);
+
+  fireEvent.click(await screen.findByRole("button", { name: "Thêm nhóm chuyên môn vào Công nghệ thông tin" }));
+
+  expect(screen.getByRole("dialog")).toBeInTheDocument();
+  expect(screen.getByLabelText("Cấp")).toHaveValue("SPECIALIZATION");
+  expect(screen.getByLabelText("Danh mục cha")).toHaveValue("ind-it");
+});

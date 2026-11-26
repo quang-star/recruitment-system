@@ -6,13 +6,14 @@ import { AuthSession } from "../../shared/auth/session";
 import { CompanyIcon, HistoryIcon, LayersIcon, SecurityIcon, SlidersIcon } from "../../shared/components/Icon";
 import { WorkspaceNavItem, WorkspaceShell } from "../../shared/layout/WorkspaceShell";
 import { EnsureRouter, useSafeNavigate } from "../../shared/router";
-import { Badge, Button, Card, EmptyState, ErrorBanner, Modal, Tabs, cn } from "../../shared/ui";
+import { Badge, Button, Card, ErrorBanner, Modal, Tabs, cn } from "../../shared/ui";
 import { AccountSecurityPanel } from "../auth/AccountSecurityPanel";
 import { CategoryEntry } from "../recruiter/JobCategoryFields";
 import { AdminAuditPanel } from "./AdminAuditPanel";
 import { CompanyReviewPanel } from "./CompanyReviewPanel";
 import { AdminCatalogForm } from "./AdminCatalogForm";
 import { CatalogChangeHistoryCard } from "./CatalogChangeHistoryCard";
+import { CategoryTree } from "./CategoryTree";
 import { PendingSkillQueue, PendingSkillSources } from "./PendingSkillQueue";
 import { SkillCandidateSuggestions } from "./SkillCandidateSuggestions";
 import {
@@ -24,7 +25,6 @@ import {
   SkillRelation,
   adminRouteMap,
   catalogStatusLabel,
-  categoryLabel,
   resolveAdminTab,
   skillCategories,
   skillCategoryLabel,
@@ -151,6 +151,14 @@ function AdminWorkspaceEditor({ session, onLogout, tab }: { session: AuthSession
   function openCreate() {
     if (busy) return;
     select("");
+    setModalOpen(true);
+  }
+
+  function openCreateChild(childKind: "SPECIALIZATION" | "POSITION", parentId: string) {
+    if (busy) return;
+    select("");
+    setKind(childKind);
+    setParent(parentId);
     setModalOpen(true);
   }
 
@@ -381,7 +389,7 @@ function AdminWorkspaceEditor({ session, onLogout, tab }: { session: AuthSession
               {tab === "categories" && (() => {
                 const categoryById = new Map(categories.map((c) => [c.id, c]));
                 const q = catQuery.trim().toLowerCase();
-                const filteredCategories = categories.filter((c) => {
+                const matchCategory = (c: CategoryEntry) => {
                   if (catKind && c.kind !== catKind) return false;
                   if (catStatus && c.status !== catStatus) return false;
                   if (q) {
@@ -389,7 +397,8 @@ function AdminWorkspaceEditor({ session, onLogout, tab }: { session: AuthSession
                     if (!c.name.toLowerCase().includes(q) && !parentName.includes(q)) return false;
                   }
                   return true;
-                });
+                };
+                const filteredCategories = categories.filter(matchCategory);
                 const pendingCount = categories.filter((c) => c.status === "PENDING").length;
                 const hasFilter = Boolean(q || catKind || catStatus);
                 return (
@@ -474,87 +483,15 @@ function AdminWorkspaceEditor({ session, onLogout, tab }: { session: AuthSession
                       </div>
                     )}
 
-                    {filteredCategories.length ? (
-                      <div className="overflow-x-auto rounded-lg border border-border-subtle bg-white">
-                        <table className="w-full border-collapse text-left text-sm">
-                          <caption className="sr-only">Danh mục nghề</caption>
-                          <thead className="bg-slate-50 border-b border-border-subtle">
-                            <tr className="text-xs font-semibold uppercase tracking-wider text-ink-500">
-                              <th className="px-4 py-2.5">Tên danh mục</th>
-                              <th className="px-3 py-2.5 whitespace-nowrap">Cấp</th>
-                              <th className="px-3 py-2.5 whitespace-nowrap">Trạng thái</th>
-                              <th className="px-4 py-2.5 text-right whitespace-nowrap">Thao tác</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-border-subtle">
-                            {filteredCategories.map((entry) => {
-                              const parentEntry = entry.parentId ? categoryById.get(entry.parentId) : undefined;
-                              const isSelected = entry.id === selected;
-                              return (
-                                <tr
-                                  key={entry.id}
-                                  className={cn(
-                                    "transition-colors hover:bg-slate-50/80",
-                                    isSelected && "bg-brand-50/60 border-l-4 border-l-brand-600"
-                                  )}
-                                >
-                                  <td className="px-4 py-2.5">
-                                    <button
-                                      type="button"
-                                      aria-pressed={isSelected}
-                                      disabled={busy || loadedTab !== tab}
-                                      onClick={() => openEdit(entry.id)}
-                                      className="text-left text-sm font-semibold text-ink-900 hover:text-brand-700 cursor-pointer disabled:cursor-not-allowed"
-                                    >
-                                      {entry.name}
-                                    </button>
-                                    {parentEntry && (
-                                      <span className="mt-0.5 block text-xs text-ink-500">
-                                        ↳ {parentEntry.name}
-                                      </span>
-                                    )}
-                                  </td>
-                                  <td className="px-3 py-2.5 text-xs text-ink-600 whitespace-nowrap">
-                                    {categoryLabel[entry.kind]}
-                                  </td>
-                                  <td className="px-3 py-2.5 whitespace-nowrap">
-                                    <Badge
-                                      tone={
-                                        entry.status === "ACTIVE"
-                                          ? "success"
-                                          : entry.status === "PENDING"
-                                            ? "warning"
-                                            : entry.status === "REJECTED"
-                                              ? "danger"
-                                              : "neutral"
-                                      }
-                                    >
-                                      {catalogStatusLabel[entry.status] ?? entry.status}
-                                    </Badge>
-                                  </td>
-                                  <td className="px-4 py-2.5 text-right whitespace-nowrap">
-                                    <Button
-                                      type="button"
-                                      variant="secondary"
-                                      size="sm"
-                                      disabled={busy || loadedTab !== tab}
-                                      onClick={() => openEdit(entry.id)}
-                                    >
-                                      Chi tiết
-                                    </Button>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    ) : (
-                      <EmptyState
-                        title="Không có danh mục phù hợp"
-                        description="Thử thay đổi từ khóa hoặc bộ lọc cấp/trạng thái."
-                      />
-                    )}
+                    <CategoryTree
+                      categories={categories}
+                      matches={matchCategory}
+                      hasFilter={hasFilter}
+                      selected={selected}
+                      disabled={busy || loadedTab !== tab}
+                      onOpen={openEdit}
+                      onCreateChild={openCreateChild}
+                    />
                   </Card>
                 );
               })()}

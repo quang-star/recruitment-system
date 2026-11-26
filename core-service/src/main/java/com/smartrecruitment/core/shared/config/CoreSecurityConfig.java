@@ -36,7 +36,9 @@ public class CoreSecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/actuator/health", "/api/v2/public/**").permitAll()
                         .requestMatchers("/api/v2/candidates/**", "/api/v2/cvs/**", "/api/v2/candidate/**").hasRole("CANDIDATE")
-                .requestMatchers("/api/v2/recruiter/**", "/api/v2/companies/**", "/api/v2/jobs/**").hasRole("RECRUITER")
+                        .requestMatchers(HttpMethod.POST, "/api/v2/companies/invitations/accept-for-account")
+                        .hasAnyRole("CANDIDATE", "RECRUITER")
+                        .requestMatchers("/api/v2/recruiter/**", "/api/v2/companies/**", "/api/v2/jobs/**").hasRole("RECRUITER")
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(resourceServer -> resourceServer.jwt(jwt ->
                         jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())));

@@ -1,21 +1,26 @@
 import { useState } from "react";
-import { ApiClientError, apiRequest } from "../../shared/api/client";
+import { Link, useLocation } from "react-router-dom";
+import { ApiClientError, apiRequest, refreshCurrentSession } from "../../shared/api/client";
 import { AuthSession } from "../../shared/auth/session";
 import { CheckCircleIcon, CompanyIcon } from "../../shared/components/Icon";
+import { routes } from "../../shared/router";
 import { Button, Card, ErrorBanner } from "../../shared/ui";
 
 type AcceptResult = { companyId: string; role: string; status: string };
 
 export function AcceptCompanyInvitationPage({
   session,
-  onLogout
+  onLogout,
+  isNarrowViewport
 }: {
   session: AuthSession;
   onLogout: () => void;
+  isNarrowViewport: boolean;
 }) {
-  const token = new URLSearchParams(window.location.search).get("token") ?? "";
+  const token = new URLSearchParams(useLocation().search).get("token") ?? "";
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<AcceptResult | null>(null);
+  const [workspaceReady, setWorkspaceReady] = useState(false);
   const [error, setError] = useState<string | null>(token ? null : "Thiếu mã lời mời công ty.");
 
   async function accept() {
@@ -23,12 +28,21 @@ export function AcceptCompanyInvitationPage({
     setSubmitting(true);
     setError(null);
     try {
-      const accepted = await apiRequest<AcceptResult>("/api/v2/companies/invitations/accept", {
-        method: "POST",
-        accessToken: session.accessToken,
-        body: JSON.stringify({ token })
-      });
-      setResult(accepted);
+      if (!result) {
+        const accepted = await apiRequest<AcceptResult>("/api/v2/auth/company-invitations/accept", {
+          method: "POST",
+          accessToken: session.accessToken,
+          body: JSON.stringify({ token })
+        });
+        setResult(accepted);
+      }
+      try {
+        const refreshed = await refreshCurrentSession(session.accessToken);
+        if (!refreshed.roles.includes("RECRUITER")) throw new Error("Recruiter role is not available in this session");
+        setWorkspaceReady(true);
+      } catch {
+        setError("Bạn đã tham gia công ty. Hãy thử cập nhật phiên đăng nhập để mở không gian tuyển dụng.");
+      }
     } catch (requestError) {
       if (requestError instanceof ApiClientError && requestError.status === 401) {
         onLogout();
@@ -55,6 +69,7 @@ export function AcceptCompanyInvitationPage({
         <p className="text-sm text-ink-600 m-0">
           Xác nhận lời mời để tham gia đội ngũ tuyển dụng của doanh nghiệp bằng tài khoản hiện tại.
         </p>
+        {session.email && <p className="text-sm text-ink-700 break-all m-0">{session.email}</p>}
 
         {result && (
           <div
@@ -69,13 +84,13 @@ export function AcceptCompanyInvitationPage({
         {error && <ErrorBanner tone="error" message={error} />}
 
         <div className="flex flex-wrap gap-2.5 pt-2">
-          {result ? (
-            <a
-              href="/"
+          {workspaceReady ? (
+            <Link
+              to={routes.recruiter.dashboard}
               className="inline-flex h-10 flex-1 items-center justify-center rounded-md bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700 transition-colors no-underline"
             >
-              Mở không gian tuyển dụng
-            </a>
+              {isNarrowViewport ? "Xem yêu cầu mở trên máy tính" : "Mở không gian tuyển dụng"}
+            </Link>
           ) : (
             <Button
               type="button"
@@ -83,7 +98,7 @@ export function AcceptCompanyInvitationPage({
               disabled={!token || submitting}
               onClick={() => void accept()}
             >
-              {submitting ? "Đang xử lý…" : "Chấp nhận lời mời"}
+              {submitting ? "Đang xử lý…" : result ? "Cập nhật phiên đăng nhập" : "Chấp nhận lời mời"}
             </Button>
           )}
           <Button type="button" variant="secondary" onClick={onLogout}>

@@ -46,6 +46,7 @@ public class GatewaySecurityConfig {
                                 "/api/v2/auth/google/config").permitAll()
                         .pathMatchers("/api/v2/candidates/**", "/api/v2/cvs/**", "/api/v2/candidate/**",
                                 "/api/v2/parsed-cvs/**").hasRole("CANDIDATE")
+                        .pathMatchers("/api/v2/companies/invitations/accept-for-account").denyAll()
                         .pathMatchers("/api/v2/recruiter/**", "/api/v2/companies/**", "/api/v2/jobs/**",
                                 "/api/v2/parsed-jds/**").hasRole("RECRUITER")
                         .pathMatchers("/api/v2/applications/**").hasAnyRole("CANDIDATE", "RECRUITER")
